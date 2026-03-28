@@ -47,11 +47,4 @@ A documentação técnica completa está no Notion do projeto.
 
 ## Licença
 
-Copyright (c) 2026 [Seu Nome / Nome da Empresa]
-
-Todos os direitos reservados.
-
-Este software e seu código-fonte são proprietários e confidenciais.
-É proibida a cópia, distribuição, modificação ou uso não autorizado
-de qualquer parte deste software sem permissão expressa por escrito
-do titular dos direitos autorais.
+Proprietária — todos os direitos reservados. Consulte o arquivo LICENSE.

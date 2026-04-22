@@ -18,12 +18,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ─── Erros de validação (@Valid no DTO) ───────────────────────
-    // Quando um campo obrigatório vem vazio, email inválido, senha curta, etc.
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidacao(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleValidacao(MethodArgumentNotValidException ex, HttpServletRequest request) {
 
         Map<String, String> campos = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
@@ -37,12 +33,8 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.ofValidacao(campos));
     }
 
-    // ─── Regra de negócio violada ─────────────────────────────────
-    // Email duplicado, CNPJ já cadastrado, etc.
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(
-            BusinessException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
 
         log.warn("Erro de negócio. path={}, mensagem={}", request.getRequestURI(), ex.getMessage());
 
@@ -51,12 +43,8 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(400, "ERRO_NEGOCIO", ex.getMessage()));
     }
 
-    // ─── Recurso não encontrado ───────────────────────────────────
-    // Membro, evento, movimentação com ID inexistente
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
 
         log.warn("Recurso não encontrado. path={}", request.getRequestURI());
 
@@ -65,8 +53,6 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(404, "NAO_ENCONTRADO", ex.getMessage()));
     }
 
-    // ─── Credenciais inválidas ────────────────────────────────────
-    // Email ou senha incorretos no login
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(HttpServletRequest request) {
 
@@ -75,11 +61,9 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of(401, "CREDENCIAIS_INVALIDAS", "E-mail ou senha incorretos"));
+                .body(ErrorResponse.of(401, "CREDENCIAIS_INVALIDAS", "E-mail ou senha incorretos. Verifique seus dados e tente novamente."));
     }
 
-    // ─── Usuário inativo ──────────────────────────────────────────
-    // Admin desativou o usuário
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ErrorResponse> handleDisabled(HttpServletRequest request) {
 
@@ -90,8 +74,6 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(401, "USUARIO_INATIVO", "Sua conta está desativada. Entre em contato com o administrador"));
     }
 
-    // ─── Acesso negado (permissão insuficiente) ───────────────────
-    // LIDER tentando acessar financeiro, MEMBRO tentando criar membro, etc.
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(HttpServletRequest request) {
 
@@ -102,14 +84,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(403, "ACESSO_NEGADO", "Você não tem permissão para acessar este recurso"));
     }
 
-    // ─── Violação de tenant (multi-tenant) ───────────────────────
-    // Usuário tentando acessar dado de outra igreja
     @ExceptionHandler(AcessoNegadoException.class)
-    public ResponseEntity<ErrorResponse> handleAcessoNegado(
-            AcessoNegadoException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleAcessoNegado(AcessoNegadoException ex, HttpServletRequest request) {
 
-        // Log com WARN — pode ser tentativa maliciosa
         log.warn("Tentativa de acesso a recurso de outro tenant. path={}", request.getRequestURI());
 
         return ResponseEntity
@@ -117,19 +94,23 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(403, "ACESSO_NEGADO", ex.getMessage()));
     }
 
-    // ─── Erro genérico — sempre o último ─────────────────────────
-    // Qualquer exception não tratada pelos handlers acima
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(
-            Exception ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
 
-        // ERROR — precisa de atenção, stack trace completo no log
         log.error("Erro inesperado. path={}", request.getRequestURI(), ex);
 
-        // NUNCA expõe detalhes internos para o cliente
         return ResponseEntity
                 .internalServerError()
                 .body(ErrorResponse.of(500, "ERRO_INTERNO", "Ocorreu um erro interno. Tente novamente mais tarde"));
+    }
+
+    @ExceptionHandler(ContaBloqueadaException.class)
+    public ResponseEntity<ErrorResponse> handleContaBloqueada(ContaBloqueadaException ex, HttpServletRequest request) {
+
+        log.warn("Tentativa de login em conta bloqueada. path={}", request.getRequestURI());
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(429, "CONTA_BLOQUEADA", ex.getMessage()));
     }
 }

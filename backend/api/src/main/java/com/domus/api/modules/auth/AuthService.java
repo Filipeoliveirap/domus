@@ -1,4 +1,59 @@
 package com.domus.api.modules.auth;
 
+import com.domus.api.config.TokenService;
+import com.domus.api.modules.auth.DTO.AuthenticationDTO;
+import com.domus.api.modules.auth.DTO.LoginResponseDTO;
+import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.shared.exception.ContaBloqueadaException;
+import com.domus.api.shared.security.LoginAttemptService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class AuthService {
+
+    private final AuthenticationManager authenticationManager;
+    private final TokenService tokenService;
+    private final LoginAttemptService loginAttemptService;
+
+    public LoginResponseDTO login(AuthenticationDTO data) {
+        log.info("Tentativa de login. email={}", data.email());
+
+        if (loginAttemptService.estaBloqueado(data.email())) {
+            long minutos = loginAttemptService.minutosRestantes(data.email());
+            log.warn("Tentativa de login em conta bloqueada. email={}", data.email());
+            throw new ContaBloqueadaException(minutos);
+        }
+
+        try {
+            var authToken = new UsernamePasswordAuthenticationToken(data.email(), data.senha());
+            var auth = authenticationManager.authenticate(authToken);
+
+            var usuario = (Usuario) auth.getPrincipal();
+            var token = tokenService.generateToken(usuario);
+
+            loginAttemptService.registrarSucesso(data.email());
+
+            log.info("Login bem-sucedido. email={}, igreja_id={}", usuario.getEmail(), usuario.getIgreja().getId());
+
+            return new LoginResponseDTO(
+                    usuario.getNome(),
+                    usuario.getRoles().stream().findFirst().map(role -> role.getNome()).orElse(""),
+                    usuario.getIgreja().getId(),
+                    token
+            );
+
+        } catch (BadCredentialsException | DisabledException e) {
+            loginAttemptService.registrarFalha(data.email());
+            log.warn("Login falhou. email={}", data.email());
+            throw e;
+        }
+    }
 }

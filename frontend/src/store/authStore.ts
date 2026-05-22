@@ -22,17 +22,13 @@ export const useAuthStore = create<AuthState>()(
 
       login: (data) => {
         localStorage.setItem('domus:token', data.token)
-        set({
-          token: data.token,
-          nome: data.nome,
-          role: data.role,
-          igrejaId: data.igrejaId,
-          isAuthenticated: true,
-        })
+        document.cookie = `domus:token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`
+        set({ ...data, isAuthenticated: true })
       },
 
       logout: () => {
         localStorage.removeItem('domus:token')
+        document.cookie = 'domus:token=; path=/; max-age=0'
         set({
           token: null,
           nome: null,
@@ -43,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'domus:auth', // chave no localStorage
+      name: 'domus:auth', //chave
     }
   )
 )

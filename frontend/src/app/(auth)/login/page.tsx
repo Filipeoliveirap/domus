@@ -7,7 +7,6 @@ import { useLogin } from '@/hooks/useLogin'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './page.module.css'
-import Image from 'next/image'
 
 export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)

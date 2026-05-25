@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useState } from 'react'
-import { useLogin } from '@/hooks/useLogin'
+import { useLogin } from '@/hooks/auth/useLogin'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './page.module.css'

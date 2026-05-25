@@ -1,6 +1,8 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.config.TokenService;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -24,8 +26,9 @@ public class IgrejaService {
     private final UsuarioRepository usuarioRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
-    public void registrar(RegistrarIgrejaAdminRequest request) {
+    public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
         log.info("Iniciando o cadastro da igreja. nome={}, emailAdmin={}", request.getNomeIgreja(), request.getEmailAdmin());
 
         if(usuarioRepository.existsByEmail(request.getEmailAdmin())) {
@@ -58,7 +61,18 @@ public class IgrejaService {
                 .roles(Set.of(roleAdmin))
                 .build();
         usuarioRepository.save(admin);
+
         log.info("Admin cadastrado. usuario_id={}, igreja_id={}",
                 admin.getId(), igreja.getId());
+
+        var token = tokenService.generateToken(admin);
+
+        return new RegistrarIgrejaResponse(
+                token,
+                admin.getNome(),
+                roleAdmin.getNome(),
+                admin.getIgreja().getId()
+        );
+
     }
 }

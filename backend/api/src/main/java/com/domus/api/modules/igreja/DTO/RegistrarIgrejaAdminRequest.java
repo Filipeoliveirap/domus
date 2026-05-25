@@ -14,7 +14,6 @@ public class RegistrarIgrejaAdminRequest {
     @NotBlank(message = "Nome da igreja é obrigatório")
     @Size(max = 255, message = "Nome da igreja deve ter no máximo 255 caracteres")
     private String nomeIgreja;
-
     @NotBlank(message = "E-mail de contato é obrigatório")
     @Email(message = "E-mail de contato inválido")
     private String emailContato;

@@ -1,4 +1,11 @@
 package com.domus.api.modules.igreja.DTO;
 
-public class RegistrarIgrejaResponse {
-}
+import java.util.UUID;
+
+public record RegistrarIgrejaResponse (
+        String token,
+        String nome,
+        String role,
+        UUID igrejaId
+)
+{ }

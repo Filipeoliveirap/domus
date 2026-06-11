@@ -5,6 +5,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant? : 'primary' | 'ghost' | 'secondary' | 'danger'
     size? : 'sm' | 'md' | 'lg'
     isLoading? : boolean
+    disabled? : boolean 
+    loadingText?: string;
     children: React.ReactNode
 }
 
@@ -12,30 +14,33 @@ export function Button({
     variant = 'primary',
     size = 'md',
     isLoading = false,
-    disabled,
+    disabled = false,
+    loadingText,
     children,
     className,
     ...props
 }: ButtonProps) {
+    const estaDesabilitado = disabled || isLoading;
     return (
         <button
             className={[
                 styles.button,
                 styles[variant],
                 styles[size],
-                isLoading ? styles.loading : '',
+                estaDesabilitado ? styles.disabled : '',
                 className ?? '',
             ].join(' ')}
-            disabled={disabled || isLoading}
+            disabled={estaDesabilitado}
             {...props}
         >
-            {/* quando isLoading, mostra um spinner + texto diferente */}
             {isLoading ? (
-                <span className={styles.loadingContent}>
-                    <span className={styles.spinner} aria-hidden="true"></span>
-                    {children}
+                <span className={styles.loadingContainer}>
+                    <span className={styles.spinner} />
+                    {loadingText ?? children} 
                 </span>
-            ): children}
+            ) : (
+                children
+            )}
         </button>
     )
 }

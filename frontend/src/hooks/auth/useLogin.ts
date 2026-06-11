@@ -16,11 +16,21 @@ export function useLogin() {
     const {
         register,
         handleSubmit,
-        formState: { errors, isValid },
+        watch,
+        formState: { errors },
     } = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
-        mode: 'onBlur',
+        mode: 'onTouched',
+        reValidateMode: 'onChange',
     })
+
+    const emailValue = watch('email')
+    const senhaValue = watch('senha')
+
+    const isButtonDisabled =
+        !emailValue?.trim() ||
+        !senhaValue?.trim() ||
+        isLoading
 
     const onSubmit = async (data: LoginFormData) => {
         setErroGeral(null)
@@ -53,6 +63,6 @@ export function useLogin() {
         erroGeral,
         isLoading,
         onSubmit,
-        isValid,
+        isButtonDisabled,
     }
 }

@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'domus:auth', //chave
+      name: 'domus:auth',
     }
   )
 )

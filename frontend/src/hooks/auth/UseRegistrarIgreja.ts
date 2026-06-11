@@ -28,6 +28,7 @@ export function useRegistrarIgreja () {
     const {
         register: register2,
         handleSubmit: handleSubmit2,
+        watch: watch2,
         formState: { errors: errors2, isValid: isValid2 },
     } = useForm<RegistrarIgrejaFormData2>({
         resolver: zodResolver(registrarIgrejaSchema2),
@@ -51,7 +52,11 @@ export function useRegistrarIgreja () {
         setIsLoading(true)
 
         try {
-            const response = await authService.registrarIgreja({ ...dataPasso1, ...dataPasso2 })
+            const { confirmarSenha, aceitouTermos, ...dadosAdmin } = dataPasso2
+            const response = await authService.registrarIgreja({
+                ...dataPasso1,
+                ...dadosAdmin,    // só nomeAdmin, emailAdmin, senhaAdmin
+            })
             login({
                 token : response.token,
                 nome : response.nome,
@@ -85,6 +90,7 @@ export function useRegistrarIgreja () {
         handleSubmit2,
         errors2,
         isValid2,
+        watch2,
         erroGeral,
         isLoading,
         onSubmit,

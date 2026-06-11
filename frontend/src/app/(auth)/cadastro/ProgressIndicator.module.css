@@ -1,0 +1,28 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 48px;  /* espaço antes do conteúdo do passo */
+}
+
+.bar {
+  flex: 1 0 0;            /* cada barra ocupa o mesmo espaço */
+  min-width: 0;           /* permite que o flex shrinke abaixo do conteúdo */
+  height: 4px;
+  border-radius: var(--radius-full);
+  background-color: #E2E7FF;  /* cor da barra inativa — azul muito claro */
+}
+
+.barActive {
+  background-color: #004AC6;  /* azul primário escuro do Domus */
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.6px;
+  color: #004AC6;
+  padding-left: 8px;     /* gap extra antes do label */
+  flex-shrink: 0;        /* label não encolhe */
+  white-space: nowrap;   /* nunca quebra em duas linhas */
+}

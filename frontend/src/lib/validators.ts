@@ -20,10 +20,16 @@ export const registrarIgrejaSchema1 = z.object({
   
 })
 
+
 export const registrarIgrejaSchema2 = z.object({
-    nomeAdmin: z.string().trim().min(1, 'Nome do administrador é obrigatório'),
-    emailAdmin: z.string().trim().min(1, 'E-mail do administrador é obrigatório').email('E-mail inválido'),
-    senhaAdmin: z.string().min(8, 'A senha deve conter no mínimo 8 caracteres'),
+  nomeAdmin: z.string().min(1, 'Nome é obrigatório'),
+  emailAdmin: z.string().email('E-mail inválido'),
+  senhaAdmin: z.string().min(8, 'Mínimo 8 caracteres'),
+  confirmarSenha: z.string().min(1, 'Confirme a senha'),
+  aceitouTermos: z.literal(true, { message: 'Você precisa aceitar os termos' }),
+}).refine(data => data.senhaAdmin === data.confirmarSenha, {
+  message: 'As senhas não coincidem',
+  path: ['confirmarSenha'],
 })
 
 

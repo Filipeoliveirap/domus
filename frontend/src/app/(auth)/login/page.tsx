@@ -7,20 +7,23 @@ import { useLogin } from '@/hooks/auth/useLogin'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './page.module.css'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
-  const { register, handleSubmit, errors, erroGeral, isLoading, isValid, onSubmit } = useLogin()
+  const { register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit } = useLogin()
 
   return (
     <div className={styles.page}>
       <div className={styles.card}>
 
         <div className={styles.header}>
-          <img
-              src="https://lh3.googleusercontent.com/aida/ADBb0ugF_LxPDfFGtOttlNuygD0fnCDraW0VvU9islvbAc3KgpucAjDgD5JO4SzNO3OpwJn7psp6ep4fHXZUUWq8_i7OJxjUDGKxjLaBTjtOgScF8ynQUdnoImjPGzQS6JlgVl83Y7dAKA7K63D3Mc7FIHHwJCe90Ws9t07akD_RH4KRzj32yCU2tdl3jj94MpldX5b0cirpPofxPy4fh3fBpYiRx9WMXCqmNpxMVuDhEV5uW1KrMQtmGKWnlZs=s1600?authuser=1"
-              alt="Domus"
-              className={styles.logoImg}
+          <Image
+            src="/images/logo.png"
+            alt="Domus"
+            width={280}
+            height={277}
+            className={styles.logoImg}
           />
           <p className={styles.subtitulo}>Bem vindo de volta! Entre na sua conta</p>
         </div>
@@ -70,7 +73,8 @@ export default function LoginPage() {
             variant="primary"
             size="lg"
             isLoading={isLoading}
-            disabled={!isValid || isLoading}
+            loadingText='Entrando...'
+            disabled={isButtonDisabled}
             style={{ width: '100%' }}
           >
             Entrar

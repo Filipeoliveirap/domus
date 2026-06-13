@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
         name = "usuario",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "unique_usuario_igreja_email",
-                        columnNames = {"igreja_id", "email"}
+                        name = "uq_usuario_igreja_email",
+                        columnNames = {"email"}
                 )
         }
 )

@@ -42,8 +42,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         //Usuários(somente ADMIN IGREJA)
-                        .requestMatchers("/usuarios/**",
-                                "auth/register")
+                        .requestMatchers("/usuarios/**")
                         .hasRole("ADMIN_IGREJA")
 
                         //Membros
@@ -52,7 +51,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/membros/**")
                         .hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.PUT, "/membros/**")
-                        .hasRole("ADMIN_IGREJA").requestMatchers(HttpMethod.DELETE, "/membros/**")
+                        .hasRole("ADMIN_IGREJA")
+                        .requestMatchers(HttpMethod.DELETE, "/membros/**")
                         .hasRole("ADMIN_IGREJA")
 
                         //Eventos

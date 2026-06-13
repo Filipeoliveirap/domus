@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from "react";
 import axios from 'axios'
 import { useAppForm } from "../forms/useAppForm";
+import type { ApiError } from "@/types/api.types";
 
 export function useLogin() {
     const router = useRouter()
@@ -42,9 +43,10 @@ export function useLogin() {
             })
             router.push('/')
         } catch (error: unknown) {
-            if (axios.isAxiosError(error)) {
+            if (axios.isAxiosError<ApiError>(error)) {
                 const mensagem = error.response?.data?.message
-                setErroGeral(mensagem || 'Erro ao fazer login. Tente novamente.')
+                setErroGeral(mensagem ?? 'Erro ao fazer login. Tente novamente.')
+                
             } else {
                 setErroGeral('Erro ao fazer login. Tente novamente.')
             }

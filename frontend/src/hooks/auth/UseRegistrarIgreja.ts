@@ -6,6 +6,7 @@ import { useState } from "react";
 import { authService } from "@/services/auth.service";
 import axios from "axios";
 import { useAppForm } from "../forms/useAppForm";
+import type { ApiError } from "@/types/api.types";
 
 
 export function useRegistrarIgreja () {
@@ -20,6 +21,7 @@ export function useRegistrarIgreja () {
         register,
         handleSubmit,
         setValue,
+        setError,
         formState: { errors },
         isFormIncomplete: passo1Incompleto,
     } = useAppForm<RegistrarIgrejaFormData1>({
@@ -36,6 +38,7 @@ export function useRegistrarIgreja () {
         register: register2,
         handleSubmit: handleSubmit2,
         watch: watch2,
+        setError: setError2,
         formState: { errors: errors2 },
         isFormIncomplete: passo2Incompleto,
     } = useAppForm<RegistrarIgrejaFormData2>({
@@ -87,9 +90,20 @@ export function useRegistrarIgreja () {
             router.push('/')
 
         } catch (error : unknown) {
-            if (axios.isAxiosError(error)) {
-                const mensagem = error.response?.data?.message
-                setErroGeral(mensagem || 'Erro ao registrar igreja. Tente novamente.')
+            if (axios.isAxiosError<ApiError>(error)) {
+                const data = error.response?.data
+                const codigo = data?.error
+                if (codigo === 'CNPJ_DUPLICADO') {
+                    setError('cnpj', { type: 'server', message: data?.message })
+                    setPasso(1)
+                    return
+                }
+                if (codigo === 'EMAIL_DUPLICADO') {
+                    setError2('emailAdmin', { type: 'server', message: data?.message })
+                    return
+                }
+
+                setErroGeral(data?.message ?? 'Erro ao registrar igreja. Tente novamente.')
             } else {
                 setErroGeral('Erro ao registrar igreja. Tente novamente.')
             }

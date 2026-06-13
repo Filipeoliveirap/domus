@@ -33,12 +33,12 @@ public class IgrejaService {
 
         if(usuarioRepository.existsByEmail(request.getEmailAdmin())) {
             log.warn("E-mail já cadastrado. email={}", request.getEmailAdmin());
-            throw new BusinessException("E-mail já cadastrado no sistema.");
+            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
         }
         if(request.getCnpj() != null && !request.getCnpj().isBlank()) {
             if(igrejaRepository.existsByCnpj(request.getCnpj())) {
                 log.warn("CNPJ já cadastrado. cnpj={}", request.getCnpj());
-                throw new BusinessException("CNPJ já cadastrado no sistema.");
+                throw new BusinessException("CNPJ_DUPLICADO", "CNPJ já cadastrado no sistema.");
             }
         }
         Igreja igreja = Igreja.builder()

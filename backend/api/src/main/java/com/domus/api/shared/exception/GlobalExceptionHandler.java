@@ -35,12 +35,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
-
-        log.warn("Erro de negócio. path={}, mensagem={}", request.getRequestURI(), ex.getMessage());
-
+        log.warn("Erro de negócio. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());
         return ResponseEntity
                 .badRequest()
-                .body(ErrorResponse.of(400, "ERRO_NEGOCIO", ex.getMessage()));
+                .body(ErrorResponse.of(400, ex.getCodigo(), ex.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

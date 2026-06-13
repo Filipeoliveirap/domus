@@ -2,21 +2,23 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Mail } from 'lucide-react'
-import type { UseFormRegister, UseFormHandleSubmit, FieldErrors } from 'react-hook-form'
+import type { UseFormRegister, UseFormHandleSubmit, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import type { RegistrarIgrejaFormData1 } from '@/lib/validators'
 import { Input } from '../../../components/common/input/Input'
 import { Button } from '../../../components/common/button/Button'
 import styles from './Passo1.module.css'
+import { formatarCnpj, formatarTelefone } from '@/lib/masks'
 
 interface Passo1Props {
   register: UseFormRegister<RegistrarIgrejaFormData1>
   handleSubmit: UseFormHandleSubmit<RegistrarIgrejaFormData1>
   errors: FieldErrors<RegistrarIgrejaFormData1>
-  isValid: boolean
+  passo1Incompleto: boolean
+  setValue: UseFormSetValue<RegistrarIgrejaFormData1>
   onAvancar: (data: RegistrarIgrejaFormData1) => void
 }
 
-export function Passo1({ register, handleSubmit, errors, isValid, onAvancar }: Passo1Props) {
+export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompleto, onAvancar }: Passo1Props) {
   return (
     <div className={styles.container}>
 
@@ -47,16 +49,34 @@ export function Passo1({ register, handleSubmit, errors, isValid, onAvancar }: P
             id="cnpj"
             label="CNPJ (OPCIONAL)"
             placeholder="00.000.000/0000-00"
+            inputMode="numeric"
             error={errors.cnpj?.message}
             {...register('cnpj')}
+            onChange={(e) => {
+              const formatado = formatarCnpj(e.target.value)
+              e.target.value = formatado
+              setValue('cnpj', formatado, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }}
           />
           <Input
             id="telefoneContato"
             label="TELEFONE DE CONTATO"
             placeholder="(00) 00000-0000"
             autoComplete="tel"
+            inputMode="numeric"
             error={errors.telefoneContato?.message}
             {...register('telefoneContato')}
+            onChange={(e) => {
+              const formatado = formatarTelefone(e.target.value)
+              e.target.value = formatado
+              setValue('telefoneContato', formatado, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }}
           />
         </div>
 
@@ -83,7 +103,7 @@ export function Passo1({ register, handleSubmit, errors, isValid, onAvancar }: P
             type="submit"
             variant="primary"
             size="md"
-            disabled={!isValid}
+            disabled={passo1Incompleto}
           >
             Próximo
             <ArrowRight size={12} />

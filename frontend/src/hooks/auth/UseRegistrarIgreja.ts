@@ -3,9 +3,9 @@ import { registrarIgrejaSchema1, type RegistrarIgrejaFormData1, registrarIgrejaS
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { authService } from "@/services/auth.service";
 import axios from "axios";
+import { useAppForm } from "../forms/useAppForm";
 
 
 export function useRegistrarIgreja () {
@@ -19,21 +19,36 @@ export function useRegistrarIgreja () {
     const {
         register,
         handleSubmit,
-        formState: { errors, isValid },
-    } = useForm<RegistrarIgrejaFormData1>({
+        setValue,
+        formState: { errors },
+        isFormIncomplete: passo1Incompleto,
+    } = useAppForm<RegistrarIgrejaFormData1>({
         resolver: zodResolver(registrarIgrejaSchema1),
-        mode : 'onBlur',
+        defaultValues: {
+            nomeIgreja: '',
+            emailContato: '',
+            telefoneContato: '',
+        },
+        requiredFields: ['nomeIgreja', 'emailContato', 'telefoneContato'],
     })
 
     const {
         register: register2,
         handleSubmit: handleSubmit2,
         watch: watch2,
-        formState: { errors: errors2, isValid: isValid2 },
-    } = useForm<RegistrarIgrejaFormData2>({
+        formState: { errors: errors2 },
+        isFormIncomplete: passo2Incompleto,
+    } = useAppForm<RegistrarIgrejaFormData2>({
         resolver: zodResolver(registrarIgrejaSchema2),
-        mode : 'onBlur',
-        
+        defaultValues: {
+            nomeAdmin: '',
+            emailAdmin: '',
+            senhaAdmin: '',
+            confirmarSenha: '',
+            aceitouTermos: false,
+        },
+        requiredFields: ['nomeAdmin', 'emailAdmin', 'senhaAdmin', 'confirmarSenha'],
+        requiredChecks: ['aceitouTermos'],
     })
 
     const irParaPasso2 = (data : RegistrarIgrejaFormData1) => {
@@ -53,9 +68,15 @@ export function useRegistrarIgreja () {
 
         try {
             const { confirmarSenha, aceitouTermos, ...dadosAdmin } = dataPasso2
-            const response = await authService.registrarIgreja({
+
+            const dadosIgreja = {
                 ...dataPasso1,
-                ...dadosAdmin,    // só nomeAdmin, emailAdmin, senhaAdmin
+                telefoneContato: dataPasso1.telefoneContato.replace(/\D/g, ''),
+                cnpj: dataPasso1.cnpj?.replace(/\D/g, '') || undefined,
+            }
+            const response = await authService.registrarIgreja({
+                ...dadosIgreja,
+                ...dadosAdmin,    
             })
             login({
                 token : response.token,
@@ -84,15 +105,16 @@ export function useRegistrarIgreja () {
         voltarParaPasso1,
         register,
         handleSubmit,
+        setValue,
         errors,
-        isValid,
+        watch2,
         register2,
         handleSubmit2,
         errors2,
-        isValid2,
-        watch2,
         erroGeral,
         isLoading,
         onSubmit,
+        passo1Incompleto,
+        passo2Incompleto
     }
 }

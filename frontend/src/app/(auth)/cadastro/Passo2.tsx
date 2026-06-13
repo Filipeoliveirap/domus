@@ -14,7 +14,7 @@ interface Passo2Props {
   register: UseFormRegister<RegistrarIgrejaFormData2>
   handleSubmit: UseFormHandleSubmit<RegistrarIgrejaFormData2>
   errors: FieldErrors<RegistrarIgrejaFormData2>
-  isValid: boolean
+  passo2Incompleto: boolean
   watch: UseFormWatch<RegistrarIgrejaFormData2>
   erroGeral: string | null
   isLoading: boolean
@@ -23,7 +23,7 @@ interface Passo2Props {
 }
 
 export function Passo2({
-  register, handleSubmit, errors, isValid, watch,
+  register, handleSubmit, errors, passo2Incompleto, watch,
   erroGeral, isLoading, onSubmit, onVoltar,
 }: Passo2Props) {
 
@@ -145,7 +145,7 @@ export function Passo2({
         variant="primary"
         size="lg"
         isLoading={isLoading}
-        disabled={!isValid || isLoading}
+        disabled={passo2Incompleto || isLoading}
         style={{ width: '100%' }}
       >
         Criar conta

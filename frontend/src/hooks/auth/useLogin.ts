@@ -4,8 +4,8 @@ import { useAuthStore } from "@/store/authStore";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from 'next/navigation'
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import axios from 'axios'
+import { useAppForm } from "../forms/useAppForm";
 
 export function useLogin() {
     const router = useRouter()
@@ -16,21 +16,18 @@ export function useLogin() {
     const {
         register,
         handleSubmit,
-        watch,
+        isFormIncomplete,
         formState: { errors },
-    } = useForm<LoginFormData>({
+    } = useAppForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
-        mode: 'onTouched',
-        reValidateMode: 'onChange',
+        defaultValues: {
+            email: '',
+            senha: '',
+        },
+        requiredFields: ['email', 'senha'],
     })
 
-    const emailValue = watch('email')
-    const senhaValue = watch('senha')
-
-    const isButtonDisabled =
-        !emailValue?.trim() ||
-        !senhaValue?.trim() ||
-        isLoading
+    const isButtonDisabled = isFormIncomplete || isLoading
 
     const onSubmit = async (data: LoginFormData) => {
         setErroGeral(null)

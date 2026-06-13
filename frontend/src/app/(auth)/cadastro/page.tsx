@@ -14,11 +14,8 @@ export default function CadastroPage() {
     passo,
     irParaPasso2,
     voltarParaPasso1,
-    // form passo 1
-    register, handleSubmit, errors, isValid,
-    // form passo 2
-    register2, handleSubmit2, errors2, isValid2, watch2,
-    // estado geral
+    register, handleSubmit,setValue, errors, passo1Incompleto,
+    register2, handleSubmit2, errors2, passo2Incompleto, watch2,
     erroGeral, isLoading, onSubmit,
   } = useRegistrarIgreja()
 
@@ -34,7 +31,8 @@ export default function CadastroPage() {
               register={register}
               handleSubmit={handleSubmit}
               errors={errors}
-              isValid={isValid}
+              passo1Incompleto={passo1Incompleto}
+              setValue={setValue}
               onAvancar={irParaPasso2}
             />
             <SecurityFooter />
@@ -51,7 +49,7 @@ export default function CadastroPage() {
       {/* Lado esquerdo — texto livre */}
       <div className={styles.leftSide}>
         <div className={styles.brandRow}>
-          <Image src="/images/logo2.png" alt="" width={40} height={60}/>
+          <Image src="/images/logo2.png" alt="domus" width={40} height={60}/>
           
           <span className={styles.brandName}>Domus</span>
         </div>
@@ -87,7 +85,7 @@ export default function CadastroPage() {
             register={register2}
             handleSubmit={handleSubmit2}
             errors={errors2}
-            isValid={isValid2}
+            passo2Incompleto={passo2Incompleto}
             watch={watch2}
             erroGeral={erroGeral}
             isLoading={isLoading}

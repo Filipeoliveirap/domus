@@ -16,7 +16,14 @@ export const registrarIgrejaSchema1 = z.object({
   nomeIgreja: z.string().trim().min(1, 'Nome da igreja é obrigatório'),
   emailContato: z.string().trim().min(1, 'E-mail de contato é obrigatório').email('E-mail inválido'),
   cnpj: z.string().trim().optional(),
-  telefoneContato: z.string().trim().optional(),
+  telefoneContato: z
+  .string()
+  .trim()
+  .min(1, 'Telefone de contato é obrigatório')
+  .regex(
+    /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+    'Telefone inválido. Use o formato (00) 00000-0000',
+  ),
   
 })
 
@@ -26,7 +33,9 @@ export const registrarIgrejaSchema2 = z.object({
   emailAdmin: z.string().email('E-mail inválido'),
   senhaAdmin: z.string().min(8, 'Mínimo 8 caracteres'),
   confirmarSenha: z.string().min(1, 'Confirme a senha'),
-  aceitouTermos: z.literal(true, { message: 'Você precisa aceitar os termos' }),
+  aceitouTermos: z.boolean().refine((val) => val === true, {
+    message: 'Você precisa aceitar os termos',
+  })
 }).refine(data => data.senhaAdmin === data.confirmarSenha, {
   message: 'As senhas não coincidem',
   path: ['confirmarSenha'],

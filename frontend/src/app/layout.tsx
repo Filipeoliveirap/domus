@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/common/Providers'
 import '@/styles/globals.css'
+import { Toaster } from 'sonner'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
+          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>

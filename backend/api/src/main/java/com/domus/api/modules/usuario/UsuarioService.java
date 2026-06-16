@@ -31,8 +31,8 @@ public class UsuarioService {
         log.info("Iniciando o cadastro de um usuario. nome={}, emailUsuario={}", data.nomeUsuario(), data.emailUsuario());
 
         if (usuarioRepository.existsByEmail(data.emailUsuario())) {
-            log.warn("E-mail já cadastrado nesta igreja. emailUsuario={}", data.emailUsuario());
-            throw new BusinessException("E-mail já  cadastrado nesta igreja.");
+            log.warn("E-mail já cadastrado. emailUsuario={}", data.emailUsuario());
+            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
         }
 
         Igreja igreja = igrejaRepository.findById(igrejaId)

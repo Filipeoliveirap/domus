@@ -22,7 +22,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    @PostMapping
+    @PostMapping("/registrar")
     public ResponseEntity<UsuarioResponseDTO> criar(@Valid @RequestBody UsuarioRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UsuarioResponseDTO response = usuarioService.registrarUsuario(data, igrejaId);

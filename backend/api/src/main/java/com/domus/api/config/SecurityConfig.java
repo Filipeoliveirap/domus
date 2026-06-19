@@ -40,6 +40,7 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/igrejas/*").permitAll()
 
                         //Usuários(somente ADMIN IGREJA)
                         .requestMatchers("/usuarios/**")

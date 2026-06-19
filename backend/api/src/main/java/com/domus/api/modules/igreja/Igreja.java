@@ -1,5 +1,6 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -49,8 +50,8 @@ public class Igreja {
     @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Usuario> usuarios;
 
-    // @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    // private List<Membro> membros;
+    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Membro> membros;
 
     // @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
     // private List<Evento> eventos;

@@ -45,7 +45,7 @@ public class AuthService {
 
             return new LoginResponseDTO(
                     usuario.getNome(),
-                    usuario.getRoles().stream().findFirst().map(role -> role.getNome()).orElse(""),
+                    usuario.getRole().getNome(),
                     usuario.getIgreja().getId(),
                     token
             );

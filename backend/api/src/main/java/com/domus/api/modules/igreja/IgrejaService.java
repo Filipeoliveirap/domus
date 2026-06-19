@@ -16,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -61,7 +60,7 @@ public class IgrejaService {
                 .email(request.getEmailAdmin())
                 .senhaHash(passwordEncoder.encode(request.getSenhaAdmin()))
                 .ativo(true)
-                .roles(Set.of(roleAdmin))
+                .role(roleAdmin)
                 .build();
         usuarioRepository.save(admin);
 

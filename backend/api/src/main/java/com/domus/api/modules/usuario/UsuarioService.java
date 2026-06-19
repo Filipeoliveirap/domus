@@ -12,12 +12,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Slf4j
-@Transactional
 @RequiredArgsConstructor
 public class UsuarioService {
 
@@ -26,7 +24,7 @@ public class UsuarioService {
     private final IgrejaRepository igrejaRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-
+    @Transactional
     public UsuarioResponseDTO registrarUsuario(UsuarioRequestDTO data, UUID igrejaId) {
         log.info("Iniciando o cadastro de um usuario. nome={}, emailUsuario={}", data.nomeUsuario(), data.emailUsuario());
 
@@ -46,7 +44,7 @@ public class UsuarioService {
                 .email(data.emailUsuario())
                 .senhaHash(passwordEncoder.encode(data.senhaUsuario()))
                 .ativo(true)
-                .roles(Set.of(role))
+                .role(role)
                 .build();
         Usuario salvo = usuarioRepository.save(usuario);
         log.info("Usuário cadastrado: id={}", salvo.getId());

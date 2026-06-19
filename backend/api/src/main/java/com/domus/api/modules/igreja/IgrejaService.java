@@ -1,6 +1,7 @@
 package com.domus.api.modules.igreja;
 
 import com.domus.api.config.TokenService;
+import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.usuario.Role;
@@ -8,6 +9,7 @@ import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
+import org.springframework.cache.annotation.Cacheable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,10 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class IgrejaService {
 
@@ -28,6 +30,7 @@ public class IgrejaService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
 
+    @Transactional
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
         log.info("Iniciando o cadastro da igreja. nome={}, emailAdmin={}", request.getNomeIgreja(), request.getEmailAdmin());
 
@@ -75,4 +78,15 @@ public class IgrejaService {
         );
 
     }
+
+    @Cacheable(value = "igreja", key = "#id")
+    public IgrejaDTO buscarPorId(UUID id) {
+        log.info("Buscando igreja no banco. id={}", id);
+        Igreja igreja = igrejaRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("IGREJA_NAO_ENCONTRADA", "Igreja não encontrada."));
+        return IgrejaDTO.from(igreja);
+    }
+
+
+
 }

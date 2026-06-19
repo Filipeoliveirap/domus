@@ -1,7 +1,10 @@
-import { Inter } from 'next/font/google'
+import { Inter, Geist } from 'next/font/google'
 import { Providers } from '@/components/common/Providers'
 import '@/styles/globals.css'
 import { Toaster } from 'sonner'
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ['latin'],
@@ -15,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={cn(inter.variable, geist.variable)}>
       <body>
         <Providers>
           {children}

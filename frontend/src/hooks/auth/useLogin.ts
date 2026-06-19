@@ -41,7 +41,7 @@ export function useLogin() {
                 igrejaId: response.igrejaId,
                 token: response.token,
             })
-            router.push('/')
+            router.push('/inicio')
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
                 const mensagem = error.response?.data?.message

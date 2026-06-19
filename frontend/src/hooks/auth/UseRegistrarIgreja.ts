@@ -9,6 +9,8 @@ import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
 
 
+
+
 export function useRegistrarIgreja () {
     const router = useRouter()
     const login = useAuthStore(state => state.login)
@@ -16,6 +18,7 @@ export function useRegistrarIgreja () {
     const [isLoading, setIsLoading] = useState(false)
     const [passo, setPasso] = useState<1 | 2>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
+    
 
     const {
         register,
@@ -87,7 +90,7 @@ export function useRegistrarIgreja () {
                 role : response.role,
                 igrejaId : response.igrejaId,
             })
-            router.push('/')
+            router.push('/inicio')
 
         } catch (error : unknown) {
             if (axios.isAxiosError<ApiError>(error)) {

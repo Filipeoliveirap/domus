@@ -1,3 +1,4 @@
+import { Role } from "./usuario.types";
 export interface LoginRequest {
     email: string;
     senha: string;
@@ -5,7 +6,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
     nome: string;
-    role: string;
+    role: Role;
     igrejaId: string;
     token: string;
 }
@@ -22,6 +23,6 @@ export interface RegistrarIgrejaRequest {
 export interface RegistrarIgrejaResponse {
     token : string;
     nome : string;
-    role : string;
+    role : Role;
     igrejaId : string;
 }

@@ -1,13 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { Role } from '@/types/usuario.types'
 
 interface AuthState {
   token: string | null
   nome: string | null
-  role: string | null
+  role: Role | null
   igrejaId: string | null
   isAuthenticated: boolean
-  login: (data: { token: string; nome: string; role: string; igrejaId: string }) => void
+  login: (data: { token: string; nome: string; role: Role; igrejaId: string }) => void
   logout: () => void
 }
 

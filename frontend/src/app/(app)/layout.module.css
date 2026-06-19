@@ -1,0 +1,10 @@
+.main {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+@media (min-width: 768px) {
+  .main {
+    margin-left: 16rem;
+  }
+}

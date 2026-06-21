@@ -30,7 +30,7 @@ export default function CadastrarUsuarioPage() {
     <div className={styles.container}>
       {/* Breadcrumb */}
       <div className={styles.breadcrumb}>
-        <Link href="/" className={styles.breadcrumbLink}>Início</Link>
+        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} />
         <Link href="/usuarios" className={styles.breadcrumbLink}>Usuários</Link>
         <ChevronRight size={16} />

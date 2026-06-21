@@ -6,5 +6,6 @@ export const Endpoints = {
 
     usuarios: {
         REGISTRAR_USUARIO: '/usuarios/registrar',
+        LISTAR_USUARIOS: '/usuarios',
     }
 }

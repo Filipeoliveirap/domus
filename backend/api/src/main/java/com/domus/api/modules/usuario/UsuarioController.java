@@ -1,16 +1,17 @@
 package com.domus.api.modules.usuario;
 
+import com.domus.api.modules.usuario.DTO.PagedResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioRequestDTO;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -27,5 +28,14 @@ public class UsuarioController {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UsuarioResponseDTO response = usuarioService.registrarUsuario(data, igrejaId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping
+    public PagedResponse<UsuarioResponseDTO> listar(@RequestParam(required = false) String q,
+                                                    @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
+
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String termo = (q == null || q.isBlank()) ? null : q.trim();
+        return usuarioService.listar(igrejaId, termo, pageable);
     }
 }

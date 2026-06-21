@@ -62,6 +62,8 @@ public class IgrejaService {
                 .ativo(true)
                 .role(roleAdmin)
                 .build();
+
+        admin.registrarLogin();
         usuarioRepository.save(admin);
 
         log.info("Admin cadastrado. usuario_id={}, igreja_id={}",

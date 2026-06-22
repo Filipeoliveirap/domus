@@ -36,6 +36,7 @@ export function useLogin() {
         try {
             const response = await authService.login(data)
             login({
+                id: response.id,
                 nome: response.nome,
                 role: response.role,
                 igrejaId: response.igrejaId,

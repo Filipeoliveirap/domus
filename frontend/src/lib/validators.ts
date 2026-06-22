@@ -50,6 +50,14 @@ export const registrarUsuarioSchema = z.object({
   path: ['confirmarSenha'],
 })
 
+export const editarUsuarioSchema = z.object({
+  nome: z.string().min(1, 'Nome é obrigatório'),
+  email: z.email('E-mail inválido').min(1, 'E-mail é obrigatório'),
+  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
+    message: 'Selecione um perfil para esse usuário.',
+  }),
+})
+
 
 
 
@@ -58,3 +66,4 @@ export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
 export type RegistrarUsuarioFormData = z.infer<typeof registrarUsuarioSchema>
+export type EditarUsuarioFormData = z.infer<typeof editarUsuarioSchema>

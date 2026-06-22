@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Pencil, Shield, Ban, Trash2 } from "lucide-react";
+import { ChevronRight, Pencil, Shield, Ban, Trash2, UserCheck } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import {
@@ -13,6 +13,10 @@ import {
 } from "@/lib/usuarioFormat";
 import { MenuAcoes, ItemAcao } from "@/components/common/menuacoes/MenuAcoes";
 import styles from "./usuarios.module.css";
+import { ModalEditarUsuario } from "./(editar)/ModalEditarUsuario";
+import { UsuarioResponse } from "@/types/usuario.types";
+import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
+import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
 
 const TAMANHO_PAGINA = 10;
 
@@ -20,6 +24,9 @@ export default function UsuariosPage() {
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(0);
   const buscaDebounced = useDebounce(busca, 350);
+  const [usuarioEditando, setUsuarioEditando] = useState<UsuarioResponse | null>(null)
+  const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
+  const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
 
   const { data, isLoading, isError, isFetching } = useUsuarios({
     q: buscaDebounced,
@@ -93,14 +100,16 @@ export default function UsuariosPage() {
             ) : (
               usuarios.map((u) => {
                 const acoes: ItemAcao[] = [
-                  { label: "Editar usuário",     icone: Pencil, onClick: () => console.log("editar", u.id) },
-                  { label: "Alterar permissões", icone: Shield, onClick: () => console.log("permissões", u.id) },
-                  { label: "Desativar acesso",   icone: Ban,    onClick: () => console.log("desativar", u.id) },
+                  { label: "Editar usuário",     icone: Pencil, onClick: () => setUsuarioEditando(u) },
+                  { label: "Alterar permissões", icone: Shield, onClick: () => setUsuarioPermissao(u) },
+                  ...(u.ativo
+                    ? [{ label: "Desativar acesso", icone: Ban, onClick: () => setUsuarioStatus(u), perigo: true }]
+                    : []),
                   { label: "Excluir", icone: Trash2, onClick: () => console.log("excluir", u.id), perigo: true, separadorAntes: true },
                 ];
 
                 return (
-                  <tr key={u.id}>
+                  <tr key={u.id} className={!u.ativo ? styles.linhaInativa : undefined}>
                     <td>
                       <div className={styles.celulaUsuario}>
                         <span className={styles.avatar}>{iniciais(u.nome)}</span>
@@ -123,7 +132,14 @@ export default function UsuariosPage() {
                       {formatarUltimoAcesso(u.ultimoLoginEm)}
                     </td>
                     <td className={styles.colunaAcoes}>
-                      <MenuAcoes itens={acoes} />
+                      <div className={styles.acoesCell}>
+                        {!u.ativo && (
+                          <button className={styles.btnReativar} onClick={() => setUsuarioStatus(u)}>
+                            <UserCheck size={14} /> Reativar
+                          </button>
+                        )}
+                        <MenuAcoes itens={acoes} />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -155,6 +171,18 @@ export default function UsuariosPage() {
           </footer>
         )}
       </div>
+      {usuarioEditando && (
+        <ModalEditarUsuario usuario={usuarioEditando} onClose={() => setUsuarioEditando(null)} />
+      )}
+
+      {usuarioStatus && (
+        <ModalStatusUsuario usuario={usuarioStatus} onClose={() => setUsuarioStatus(null)} />
+      )}
+
+      {usuarioPermissao && (
+        <ModalPermissaoUsuario usuario={usuarioPermissao} onClose={() => setUsuarioPermissao(null)} />
+      )}
+
     </div>
   );
 }

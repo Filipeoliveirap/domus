@@ -5,6 +5,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+    id: string;
     nome: string;
     role: Role;
     igrejaId: string;
@@ -21,6 +22,7 @@ export interface RegistrarIgrejaRequest {
 }
 
 export interface RegistrarIgrejaResponse {
+    id: string
     token : string;
     nome : string;
     role : Role;

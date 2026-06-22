@@ -289,3 +289,27 @@
   color: var(--color-text-secondary);
 }
 
+.linhaInativa { background: var(--color-bg-table-head); }
+.linhaInativa td:not(.colunaAcoes) { opacity: 0.5; }
+
+.acoesCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btnReativar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  transition: filter 150ms ease;
+}
+.btnReativar:hover { filter: brightness(0.96); }
+

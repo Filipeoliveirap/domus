@@ -85,6 +85,7 @@ export function useRegistrarIgreja () {
                 ...dadosAdmin,    
             })
             login({
+                id: response.id,
                 token : response.token,
                 nome : response.nome,
                 role : response.role,

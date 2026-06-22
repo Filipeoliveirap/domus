@@ -1,0 +1,52 @@
+.overlay {
+  position: absolute; inset: 0; z-index: var(--z-modal, 100);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(19, 27, 46, 0.10);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+}
+.modal {
+  width: 100%; max-width: 640px; max-height: 90%; overflow-y: auto;
+  background: var(--color-bg-white); border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.12);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.header { display: flex; align-items: flex-start; justify-content: space-between; padding: 32px 32px 16px; }
+.title { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-text-primary); letter-spacing: -0.025em; }
+.subtitle { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-top: 4px; }
+.btnClose { color: var(--color-text-muted); flex-shrink: 0; }
+.btnClose:hover { color: var(--color-text-primary); }
+.alertError { margin: 0 32px 16px; border-radius: 8px; background: var(--color-danger-bg); padding: 12px 16px; font-size: var(--font-size-sm); color: var(--color-danger); }
+
+.form { display: flex; flex-direction: column; gap: 24px; padding: 8px 32px 0; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.label { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); padding-inline: 4px; }
+.inputWrapper { position: relative; display: flex; align-items: center; }
+.inputIcon { position: absolute; left: 14px; color: var(--color-text-muted); pointer-events: none; }
+.input { width: 100%; background: var(--color-bg-page); border: 1px solid transparent; border-radius: 8px; padding: 12px 16px 12px 42px; font-size: var(--font-size-sm); outline: none; transition: box-shadow 150ms ease, border-color 150ms ease; }
+.input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+.input::placeholder { color: var(--color-placeholder); }
+.errorMsg { font-size: var(--font-size-xs); color: var(--color-danger); padding-inline: 4px; }
+
+.roleSection { display: flex; flex-direction: column; gap: 12px; }
+.roleGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 640px) { .roleGrid { grid-template-columns: 1fr; } }
+.roleOption { position: relative; cursor: pointer; display: block; }
+.roleInput { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.roleCard { position: relative; height: 100%; padding: 16px; border-radius: 12px; background: var(--color-bg-page); border: 2px solid transparent; display: flex; flex-direction: column; gap: 8px; transition: all 150ms ease; }
+.roleInput:checked ~ .roleCard { border-color: var(--color-primary); background: var(--color-primary-light); }
+.roleIcon { width: 40px; height: 40px; border-radius: 8px; background: var(--color-bg-white); display: flex; align-items: center; justify-content: center; color: var(--color-primary); }
+.roleName { font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+.roleInput:checked ~ .roleCard .roleName { color: var(--color-primary); }
+.roleDesc { font-size: var(--font-size-xs); color: var(--color-text-muted); line-height: var(--line-height-relaxed); }
+.roleCheck { position: absolute; top: 12px; right: 12px; color: var(--color-primary); opacity: 0; transition: opacity 150ms ease; }
+.roleInput:checked ~ .roleCard .roleCheck { opacity: 1; }
+
+.footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 24px 32px; margin-top: 8px; background: var(--color-bg-table-header); border-top: 1px solid var(--color-border); }
+.btnCancel { padding: 10px 20px; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-muted); border-radius: 8px; transition: background 150ms ease; }
+.btnCancel:hover { background: var(--color-bg-table-head); }
+.btnSubmit { display: flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 8px; color: #fff; font-weight: var(--font-weight-bold); font-size: var(--font-size-sm); background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%); box-shadow: var(--shadow-btn-primary); transition: all 150ms ease; }
+.btnSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }

@@ -17,6 +17,12 @@ export interface UsuarioResponse {
   criadoEm: string;
 }
 
+export interface UsuarioUpdateRequest {
+  nome: string;
+  email: string;
+  role: Role;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   pageNumber: number;

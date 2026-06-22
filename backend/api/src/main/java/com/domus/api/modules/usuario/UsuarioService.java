@@ -6,6 +6,7 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.usuario.DTO.PagedResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioRequestDTO;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
+import com.domus.api.modules.usuario.DTO.UsuarioUpdateRequestDTO;
 import com.domus.api.shared.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class UsuarioService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate  redisTemplate;
+    private static final String ROLE_ADMIN = "ADMIN_IGREJA";
 
     @Transactional
     public UsuarioResponseDTO registrarUsuario(UsuarioRequestDTO data, UUID igrejaId) {
@@ -87,5 +89,95 @@ public class UsuarioService {
             }
         }
     }
+
+    private void garantirNaoEhUltimoAdmin(Usuario usuario, UUID igrejaId) {
+        boolean eAdminAtivo = ROLE_ADMIN.equals(usuario.getRole().getNome()) && usuario.isAtivo();
+        if (!eAdminAtivo) return;
+
+        igrejaRepository.buscarComLock(igrejaId);
+
+        long adminsAtivos = usuarioRepository.countByIgrejaIdAndRole_NomeAndAtivoTrue(igrejaId, ROLE_ADMIN);
+        if (adminsAtivos <= 1) {
+            throw new BusinessException("ULTIMO_ADMIN",
+                    "A igreja precisa ter pelo menos um administrador ativo.");
+        }
+    }
+
+    @Transactional
+    public UsuarioResponseDTO usuarioUpdate(UUID id, UsuarioUpdateRequestDTO data, UUID igrejaId) {
+        log.info("Atualizando usuário. id={}, igreja_id={}", id, igrejaId);
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        if(!usuario.getEmail().equals(data.email()) && usuarioRepository.existsByEmail(data.email())) {
+            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        }
+
+        Role role = roleRepository.findByNome(data.role())
+                .orElseThrow(() -> new BusinessException("Perfil inválido"));
+        if (!ROLE_ADMIN.equals(role.getNome())) {
+            garantirNaoEhUltimoAdmin(usuario, igrejaId);
+        }
+
+        usuario.setNome(data.nome());
+        usuario.setEmail(data.email());
+        usuario.setRole(role);
+
+        Usuario salvo = usuarioRepository.save(usuario);
+        evictCacheUsuarios(igrejaId);
+
+        log.info("Usuário atualizado. id={}", salvo.getId());
+        return UsuarioResponseDTO.from(salvo);
+    }
+
+    @Transactional
+    public UsuarioResponseDTO updateStatus(UUID id, boolean ativo, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+        if (!ativo) {
+            garantirNaoEhUltimoAdmin(usuario, igrejaId);
+        }
+
+        usuario.setAtivo(ativo);
+        Usuario salvo = usuarioRepository.save(usuario);
+        evictCacheUsuarios(igrejaId);
+        return UsuarioResponseDTO.from(salvo);
+    }
+
+    @Transactional
+    public UsuarioResponseDTO updateRole(UUID id, String roleName, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        Role role = roleRepository.findByNome(roleName)
+                .orElseThrow(() -> new BusinessException("Perfil inválido"));
+
+        if (!ROLE_ADMIN.equals(role.getNome())) {
+            garantirNaoEhUltimoAdmin(usuario, igrejaId);
+        }
+
+        usuario.setRole(role);
+        Usuario salvo = usuarioRepository.save(usuario);
+        evictCacheUsuarios(igrejaId);
+        return UsuarioResponseDTO.from(salvo);
+    }
+
+    @Transactional(readOnly = true)
+    public UsuarioResponseDTO buscarPorId(UUID id, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+        return UsuarioResponseDTO.from(usuario);
+    }
+
+    @Transactional
+    public void deletarUsuario(UUID id, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new BusinessException("Usuario não encontrado."));
+        garantirNaoEhUltimoAdmin(usuario, igrejaId);
+
+        usuarioRepository.delete(usuario);
+        evictCacheUsuarios(igrejaId);
+    }
+
 
 }

@@ -48,6 +48,7 @@ public class AuthService {
             log.info("Login bem-sucedido. email={}, igreja_id={}", usuario.getEmail(), usuario.getIgreja().getId());
 
             return new LoginResponseDTO(
+                    usuario.getId(),
                     usuario.getNome(),
                     usuario.getRole().getNome(),
                     usuario.getIgreja().getId(),

@@ -17,6 +17,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     Optional<UserDetails> findByEmail(String username);
     Boolean existsByEmail(String email);
     Boolean existsByIgrejaIdAndEmail(UUID igrejaId, String email);
+    Optional<Usuario> findByIdAndIgrejaId(UUID id, UUID igrejaId);
+    long countByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
     @Query("""
     SELECT u FROM Usuario u

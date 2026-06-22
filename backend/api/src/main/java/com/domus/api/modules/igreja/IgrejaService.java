@@ -72,6 +72,7 @@ public class IgrejaService {
         var token = tokenService.generateToken(admin);
 
         return new RegistrarIgrejaResponse(
+                admin.getId(),
                 token,
                 admin.getNome(),
                 roleAdmin.getNome(),

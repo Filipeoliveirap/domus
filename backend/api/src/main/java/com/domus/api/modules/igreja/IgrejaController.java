@@ -2,9 +2,11 @@ package com.domus.api.modules.igreja;
 
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +19,10 @@ public class IgrejaController {
     private final IgrejaService igrejaService;
 
     @PostMapping("/registrar")
-    public ResponseEntity<Void> cadastrarIgreja(@RequestBody @Valid RegistrarIgrejaAdminRequest data) {
-        igrejaService.registrar(data);
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<RegistrarIgrejaResponse> cadastrarIgreja(
+            @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
+        RegistrarIgrejaResponse response = igrejaService.registrar(data);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")

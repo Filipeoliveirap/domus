@@ -18,6 +18,14 @@ public final class CacheKeys {
         return igrejaId + ":" + sha256Curto(bruto);
     }
 
+    public static String membros(UUID igrejaId, String q, Pageable pageable) {
+        String bruto = (q == null ? "" : q) + "|"
+                + pageable.getPageNumber() + "|"
+                + pageable.getPageSize() + "|"
+                + pageable.getSort().toString();
+        return igrejaId + ":" + sha256Curto(bruto);
+    }
+
     private static String sha256Curto(String valor) {
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256")

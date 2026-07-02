@@ -1,14 +1,16 @@
 package com.domus.api.modules.usuario;
 
+import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.usuario.DTO.*;
+import com.domus.api.shared.PagedResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -21,30 +23,30 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    @PostMapping("/registrar")
-    public ResponseEntity<UsuarioResponseDTO> criar(@Valid @RequestBody UsuarioRequestDTO data) {
+    @PostMapping("/conceder-acesso")
+    public ResponseEntity<UsuarioResponseDTO> concederAcesso(@Valid @RequestBody ConcederAcessoRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        UsuarioResponseDTO response = usuarioService.registrarUsuario(data, igrejaId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.concederAcesso(data, igrejaId));
     }
 
-    @GetMapping
-    public PagedResponse<UsuarioResponseDTO> listar(@RequestParam(required = false) String q,
-                                                    @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
-
+    @PostMapping("/reativar-acesso")
+    public ResponseEntity<UsuarioResponseDTO> reativarAcesso(@Valid @RequestBody ConcederAcessoRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        String termo = (q == null || q.isBlank()) ? null : q.trim();
-        return usuarioService.listar(igrejaId, termo, pageable);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<UsuarioResponseDTO> atualizar(
-            @PathVariable UUID id,
-            @Valid @RequestBody UsuarioUpdateRequestDTO data) {
-        UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        UsuarioResponseDTO response = usuarioService.usuarioUpdate(id, data, igrejaId);
+        UsuarioResponseDTO response = usuarioService.reativarAcesso(data, igrejaId);
         return ResponseEntity.ok(response);
     }
+
+
+    @GetMapping
+    public PagedResponse<UsuarioResponseDTO> listar(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 20) Pageable pageable) {  // sem sort no default
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String termo = (q == null || q.isBlank()) ? null : q.trim();
+        Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        return usuarioService.listar(igrejaId, termo, semSort);
+    }
+
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<UsuarioResponseDTO> updateStatus(
@@ -71,9 +73,9 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletarUsuario(@PathVariable UUID id) {
+    public ResponseEntity<Void> arquivarUsuario(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        usuarioService.deletarUsuario(id, igrejaId);
+        usuarioService.arquivarUsuario(id, igrejaId);
         return ResponseEntity.noContent().build();
     }
  }

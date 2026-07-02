@@ -1,12 +1,10 @@
 package com.domus.api.modules.usuario;
 
-
-import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.usuario.DTO.PagedResponse;
-import com.domus.api.modules.usuario.DTO.UsuarioRequestDTO;
+import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
-import com.domus.api.modules.usuario.DTO.UsuarioUpdateRequestDTO;
 import com.domus.api.shared.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +20,7 @@ import org.springframework.data.redis.core.ScanOptions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import com.domus.api.shared.PagedResponse;
 
 @Service
 @Slf4j
@@ -35,34 +34,70 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate  redisTemplate;
     private static final String ROLE_ADMIN = "ADMIN_IGREJA";
+    private final MembroRepository membroRepository;
 
     @Transactional
-    public UsuarioResponseDTO registrarUsuario(UsuarioRequestDTO data, UUID igrejaId) {
-        log.info("Iniciando o cadastro de um usuario. nome={}, emailUsuario={}", data.nomeUsuario(), data.emailUsuario());
+    public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
+        log.info("Concedendo acesso a membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
 
-        if (usuarioRepository.existsByEmail(data.emailUsuario())) {
-            log.warn("E-mail já cadastrado. emailUsuario={}", data.emailUsuario());
-            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
+                .orElseThrow(() -> new BusinessException("Membro não encontrado."));
+
+        if (membro.getEmail() == null || membro.getEmail().isBlank()) {
+            throw new BusinessException("MEMBRO_SEM_EMAIL",
+                    "O membro precisa ter um e-mail para receber acesso ao sistema.");
         }
 
-        Igreja igreja = igrejaRepository.findById(igrejaId)
-                .orElseThrow(() -> new BusinessException("Igreja não encontrada."));
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
 
+        Usuario existente = usuarioRepository
+                .findByMembroIdIncluindoArquivados(membro.getId())
+                .orElse(null);
+
+        if (existente != null) {
+            if (existente.getDeleteAt() == null) {
+                throw new BusinessException("MEMBRO_JA_TEM_ACESSO",
+                        "Este membro já possui acesso ao sistema.");
+            }
+            throw new BusinessException("MEMBRO_TEM_USUARIO_ARQUIVADO",
+                    "Este membro já teve acesso, que foi arquivado. Deseja reativar?");
+        }
+
         Usuario usuario = Usuario.builder()
-                .igreja(igreja)
-                .nome(data.nomeUsuario())
-                .email(data.emailUsuario())
-                .senhaHash(passwordEncoder.encode(data.senhaUsuario()))
+                .igreja(membro.getIgreja())
+                .membro(membro)
+                .senhaHash(passwordEncoder.encode(data.senha()))
                 .ativo(true)
                 .role(role)
                 .build();
-        Usuario salvo = usuarioRepository.save(usuario);
-        log.info("Usuário cadastrado: id={}", salvo.getId());
-        evictCacheUsuarios(igrejaId);
 
-        return  UsuarioResponseDTO.from(salvo);
+        Usuario salvo = usuarioRepository.save(usuario);
+        log.info("Acesso concedido (novo usuário). usuario_id={}, membro_id={}", salvo.getId(), membro.getId());
+        evictCacheUsuarios(igrejaId);
+        return UsuarioResponseDTO.from(salvo);
+    }
+
+    @Transactional
+    public UsuarioResponseDTO reativarAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
+        Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
+                .orElseThrow(() -> new BusinessException("Membro não encontrado."));
+
+        Usuario arquivado = usuarioRepository.findByMembroIdIncluindoArquivados(membro.getId())
+                .filter(u -> u.getDeleteAt() != null)
+                .orElseThrow(() -> new BusinessException("Nenhum acesso arquivado encontrado."));
+
+        Role role = roleRepository.findByNome(data.role())
+                .orElseThrow(() -> new BusinessException("Perfil inválido"));
+
+        arquivado.setDeleteAt(null);
+        arquivado.setAtivo(true);
+        arquivado.setSenhaHash(passwordEncoder.encode(data.senha()));
+        arquivado.setRole(role);
+
+        Usuario salvo = usuarioRepository.save(arquivado);
+        evictCacheUsuarios(igrejaId);
+        return UsuarioResponseDTO.from(salvo);
     }
 
     @Cacheable(
@@ -78,15 +113,16 @@ public class UsuarioService {
     }
 
     private void evictCacheUsuarios(UUID igrejaId) {
-        String pattern = "usuarios::" + igrejaId + ":*";
-        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
-
-        try (Cursor<String> cursor = redisTemplate.scan(options)) {
-            List<String> keys = new ArrayList<>();
-            cursor.forEachRemaining(keys::add);
-            if (!keys.isEmpty()) {
-                redisTemplate.delete(keys);
+        try {
+            String pattern = "usuarios::" + igrejaId + ":*";   // ← usuarios, não membros
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+            try (Cursor<String> cursor = redisTemplate.scan(options)) {
+                List<String> keys = new ArrayList<>();
+                cursor.forEachRemaining(keys::add);
+                if (!keys.isEmpty()) redisTemplate.delete(keys);
             }
+        } catch (RuntimeException ex) {
+            log.warn("Falha ao invalidar cache de usuários. igreja_id={}", igrejaId, ex);
         }
     }
 
@@ -103,32 +139,6 @@ public class UsuarioService {
         }
     }
 
-    @Transactional
-    public UsuarioResponseDTO usuarioUpdate(UUID id, UsuarioUpdateRequestDTO data, UUID igrejaId) {
-        log.info("Atualizando usuário. id={}, igreja_id={}", id, igrejaId);
-        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
-
-        if(!usuario.getEmail().equals(data.email()) && usuarioRepository.existsByEmail(data.email())) {
-            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
-        }
-
-        Role role = roleRepository.findByNome(data.role())
-                .orElseThrow(() -> new BusinessException("Perfil inválido"));
-        if (!ROLE_ADMIN.equals(role.getNome())) {
-            garantirNaoEhUltimoAdmin(usuario, igrejaId);
-        }
-
-        usuario.setNome(data.nome());
-        usuario.setEmail(data.email());
-        usuario.setRole(role);
-
-        Usuario salvo = usuarioRepository.save(usuario);
-        evictCacheUsuarios(igrejaId);
-
-        log.info("Usuário atualizado. id={}", salvo.getId());
-        return UsuarioResponseDTO.from(salvo);
-    }
 
     @Transactional
     public UsuarioResponseDTO updateStatus(UUID id, boolean ativo, UUID igrejaId) {
@@ -170,13 +180,21 @@ public class UsuarioService {
     }
 
     @Transactional
-    public void deletarUsuario(UUID id, UUID igrejaId) {
+    public void arquivarUsuario(UUID id, UUID igrejaId) {
         Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new BusinessException("Usuario não encontrado."));
         garantirNaoEhUltimoAdmin(usuario, igrejaId);
 
         usuarioRepository.delete(usuario);
         evictCacheUsuarios(igrejaId);
+    }
+
+    @Transactional
+    public void arquivarPorMembro(UUID membroId, UUID igrejaId) {
+        usuarioRepository.findByMembroId(membroId).ifPresent(usuario -> {
+            usuarioRepository.delete(usuario);
+            evictCacheUsuarios(igrejaId);
+        });
     }
 
 

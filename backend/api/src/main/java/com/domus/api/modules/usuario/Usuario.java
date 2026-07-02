@@ -1,9 +1,12 @@
 package com.domus.api.modules.usuario;
 
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.membro.Membro;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,20 +18,14 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "usuario",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uq_usuario_igreja_email",
-                        columnNames = {"email"}
-                )
-        }
-)
+@Table(name = "usuario")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Builder
+@SQLDelete(sql = "UPDATE usuario SET delete_at = NOW(), ativo = false WHERE id = ?")
+@SQLRestriction("delete_at IS NULL")
 public class Usuario implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,11 +36,9 @@ public class Usuario implements UserDetails {
     @JoinColumn(name = "igreja_id", nullable = false)
     private Igreja igreja;
 
-    @Column(name = "nome", nullable = false, length = 255)
-    private String nome;
-
-    @Column(name = "email", nullable = false, length = 255)
-    private String email;
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "membro_id", nullable = false)
+    private Membro membro;
 
     @Column(name = "senha_hash", nullable = false, length = 255)
     private String senhaHash;
@@ -62,11 +57,12 @@ public class Usuario implements UserDetails {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "delete_at")
+    private LocalDateTime deleteAt;
+
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
-
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -84,7 +80,7 @@ public class Usuario implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return membro.getEmail();
     }
 
     @Override
@@ -105,5 +101,14 @@ public class Usuario implements UserDetails {
     @Override
     public boolean isEnabled() {
         return ativo;
+    }
+
+
+    public String getNome() {
+        return membro.getNome();
+    }
+
+    public String getEmail() {
+        return membro.getEmail();
     }
 }

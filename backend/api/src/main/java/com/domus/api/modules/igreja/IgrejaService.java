@@ -4,6 +4,9 @@ import com.domus.api.config.TokenService;
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
+import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.membro.StatusMembro;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -28,12 +31,13 @@ public class IgrejaService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final MembroRepository  membroRepository;
 
     @Transactional
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
         log.info("Iniciando o cadastro da igreja. nome={}, emailAdmin={}", request.getNomeIgreja(), request.getEmailAdmin());
 
-        if(usuarioRepository.existsByEmail(request.getEmailAdmin())) {
+        if (membroRepository.existsByEmail(request.getEmailAdmin())) {
             log.warn("E-mail já cadastrado. email={}", request.getEmailAdmin());
             throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
         }
@@ -54,10 +58,17 @@ public class IgrejaService {
 
         Role roleAdmin = roleRepository.findByNome("ADMIN_IGREJA").orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
 
-        Usuario admin = Usuario.builder()
+        Membro membroAdmin = Membro.builder()
                 .igreja(igreja)
                 .nome(request.getNomeAdmin())
                 .email(request.getEmailAdmin())
+                .status(StatusMembro.ATIVO)
+                .build();
+        membroRepository.save(membroAdmin);
+
+        Usuario admin = Usuario.builder()
+                .igreja(igreja)
+                .membro(membroAdmin)        // ← liga ao membro
                 .senhaHash(passwordEncoder.encode(request.getSenhaAdmin()))
                 .ativo(true)
                 .role(roleAdmin)
@@ -74,7 +85,7 @@ public class IgrejaService {
         return new RegistrarIgrejaResponse(
                 admin.getId(),
                 token,
-                admin.getNome(),
+                request.getNomeAdmin(),
                 roleAdmin.getNome(),
                 admin.getIgreja().getId()
         );

@@ -1,20 +1,14 @@
 .container {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 48px;
+}
+
+.topo {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  padding-bottom: 48px;  /* espaço antes do conteúdo do passo */
-}
-
-.bar {
-  flex: 1 0 0;            /* cada barra ocupa o mesmo espaço */
-  min-width: 0;           /* permite que o flex shrinke abaixo do conteúdo */
-  height: 4px;
-  border-radius: var(--radius-full);
-  background-color: #E2E7FF;  /* cor da barra inativa — azul muito claro */
-}
-
-.barActive {
-  background-color: #004AC6;  /* azul primário escuro do Domus */
 }
 
 .label {
@@ -22,7 +16,27 @@
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.6px;
   color: #004AC6;
-  padding-left: 8px;     /* gap extra antes do label */
-  flex-shrink: 0;        /* label não encolhe */
-  white-space: nowrap;   /* nunca quebra em duas linhas */
+  white-space: nowrap;
+}
+
+.labelDireita {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.barras {
+  display: flex;
+  gap: 4px;
+}
+
+.bar {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background-color: #E2E7FF;
+}
+
+.barActive {
+  background-color: #004AC6;
 }

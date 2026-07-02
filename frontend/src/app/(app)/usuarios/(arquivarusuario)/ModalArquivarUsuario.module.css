@@ -1,0 +1,176 @@
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(19, 27, 46, 0.10);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-white);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.12);
+  padding: 40px 32px 28px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btnClose {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: var(--color-text-muted);
+}
+
+.btnClose:hover {
+  color: var(--color-text-primary);
+}
+
+.topo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.iconBox {
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--color-bg-table-head);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+}
+
+.text {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+  margin-top: 20px;
+}
+
+.text strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ─── Caixa de aviso — estilo warning (igual ao modal de desativar) ─── */
+.infoBox {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--color-warning-bg);
+  border-left: 4px solid var(--color-warning);
+  text-align: left;
+}
+
+.infoIcon {
+  color: var(--color-warning);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.infoText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.alertError {
+  margin-top: 16px;
+  border-radius: 8px;
+  background: var(--color-danger-bg);
+  padding: 12px 16px;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.btnConfirm {
+  padding: 10px 24px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  box-shadow: var(--shadow-btn-primary);
+  transition: all 150ms ease;
+}
+
+.btnConfirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnCancel {
+  padding: 10px 20px;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: background 150ms ease;
+}
+
+.btnCancel:hover {
+  background: var(--color-bg-page);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

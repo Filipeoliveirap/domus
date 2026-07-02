@@ -1,6 +1,6 @@
 import {z} from 'zod'
 
-// ─── Auth ──────────────────────────────────────────────────────
+// ─── Auth 
 
 export const loginSchema = z.object({
     email: z.email('Digite um email válido').min(1, 'E-mail é obrigatório'),
@@ -22,7 +22,6 @@ export const registrarIgrejaSchema1 = z.object({
   
 })
 
-
 export const registrarIgrejaSchema2 = z.object({
   nomeAdmin: z.string().min(1, 'Nome é obrigatório'),
   emailAdmin: z.email('E-mail inválido').min(1, 'E-mail é obrigatório'),
@@ -36,28 +35,72 @@ export const registrarIgrejaSchema2 = z.object({
   path: ['confirmarSenha'],
 })
 
+// Membro
 
-export const registrarUsuarioSchema = z.object({
-  nomeUsuario: z.string().min(1, 'Nome é obrigatório'),
-  emailUsuario: z.email('E-mail inválido').min(1, 'E-mail é obrigatório'),
-  senhaUsuario: z.string().min(8, 'Mínimo 8 caracteres'),
-  confirmarSenha: z.string().min(1, 'Confirme a senha'),
+const opcional = <T extends z.ZodType<string>>(schema: T) =>
+  z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    schema.optional(),
+  )
+
+export const membroSchema = z.object({
+  nome: z
+    .string()
+    .trim()
+    .min(1, 'Nome é obrigatório')
+    .max(255, 'O nome deve ter no máximo 255 caracteres'),
+
+  email: opcional(
+    z.email('E-mail inválido').max(255, 'O e-mail deve ter no máximo 255 caracteres'),
+  ),
+
+  telefone: opcional(
+    z.string().regex(
+      /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+      'Telefone inválido. Use o formato (00) 00000-0000',
+    ),
+  ),
+
+  dataNascimento: opcional(
+    z.string().refine(
+      (val) => new Date(val) < new Date(),
+      'A data de nascimento deve estar no passado',
+    ),
+  ),
+
+  endereco: opcional(
+    z.string().max(500, 'O endereço deve ter no máximo 500 caracteres'),
+  ),
+
+  status: z
+    .enum(['ATIVO', 'INATIVO', 'VISITANTE'])
+    .default('ATIVO'),
+
+  estadoCivil: z.enum(
+    ['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']
+  ).or(z.literal('')).optional(),
+
+  ministerio: opcional(
+    z.string().max(255, 'O ministério deve ter no máximo 255 caracteres'),
+  ),
+
+  observacoes: opcional(z.string()),
+})
+
+export const concederAcessoSchema = z.object({
   role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
-    message: 'Selecione um perfil para esse usuário.',
+    message: 'Selecione um perfil para o usuário',
   }),
-}).refine(data => data.senhaUsuario === data.confirmarSenha, {
+  senha: z
+    .string()
+    .min(8, 'A senha deve ter no mínimo 8 caracteres'),
+  confirmarSenha: z
+    .string()
+    .min(1, 'Confirme a senha'),
+}).refine(data => data.senha === data.confirmarSenha, {
   message: 'As senhas não coincidem',
   path: ['confirmarSenha'],
 })
-
-export const editarUsuarioSchema = z.object({
-  nome: z.string().min(1, 'Nome é obrigatório'),
-  email: z.email('E-mail inválido').min(1, 'E-mail é obrigatório'),
-  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
-    message: 'Selecione um perfil para esse usuário.',
-  }),
-})
-
 
 
 
@@ -65,5 +108,6 @@ export const editarUsuarioSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
-export type RegistrarUsuarioFormData = z.infer<typeof registrarUsuarioSchema>
-export type EditarUsuarioFormData = z.infer<typeof editarUsuarioSchema>
+export type MembroFormData = z.infer<typeof membroSchema> 
+export type MembroFormInput = z.input<typeof membroSchema>  
+export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>

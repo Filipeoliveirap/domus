@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/store/authStore'
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -9,11 +10,9 @@ export const api = axios.create({
 
 // Interceptor de request — injeta o token JWT em toda requisição autenticada
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('domus:token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
+  const token = useAuthStore.getState().token
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
@@ -25,8 +24,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const isLoginRequest = error.config?.url?.includes('/auth/login')
       if (!isLoginRequest) {
-        localStorage.removeItem('domus:token')
-        document.cookie = 'domus:token=; path=/; max-age=0'
+        useAuthStore.getState().logout()
         window.location.href = '/login'
       }
     }

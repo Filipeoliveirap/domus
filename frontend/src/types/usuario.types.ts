@@ -1,12 +1,5 @@
 export type Role = 'ADMIN_IGREJA' | 'LIDER' | 'MEMBRO';
 
-export interface UsuarioRequest {
-    nomeUsuario: string;
-    emailUsuario: string;
-    senhaUsuario: string;
-    role: Role;
-}
-
 export interface UsuarioResponse {
   id: string;
   nome: string;
@@ -15,12 +8,6 @@ export interface UsuarioResponse {
   ativo: boolean;
   ultimoLoginEm: string | null;
   criadoEm: string;
-}
-
-export interface UsuarioUpdateRequest {
-  nome: string;
-  email: string;
-  role: Role;
 }
 
 export interface PagedResponse<T> {

@@ -22,7 +22,6 @@ export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompl
   return (
     <div className={styles.container}>
 
-      {/* Cabeçalho — título + subtítulo */}
       <header className={styles.header}>
         <h2 className={styles.title}>Cadastre sua igreja</h2>
         <p className={styles.subtitle}>

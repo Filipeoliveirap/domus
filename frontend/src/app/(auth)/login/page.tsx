@@ -75,6 +75,7 @@ export default function LoginPage() {
             isLoading={isLoading}
             loadingText='Entrando...'
             disabled={isButtonDisabled}
+            suppressHydrationWarning
             style={{ width: '100%' }}
           >
             Entrar

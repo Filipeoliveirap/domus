@@ -1,4 +1,3 @@
-
 /* ─── Página ─────────────────────────────────────────────── */
 .pagina {
   display: flex;
@@ -6,6 +5,7 @@
   gap: 24px;
 }
 
+/* ─── Breadcrumb ─────────────────────────────────────────── */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -34,14 +34,12 @@
   justify-content: space-between;
   align-items: flex-end;
 }
-
 .titulo {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   color: var(--color-text-dark);
 }
-
 .subtitulo {
   margin-top: 4px;
   font-size: var(--font-size-md);
@@ -49,7 +47,22 @@
   color: var(--color-text-muted);
 }
 
-
+.botaoPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-bg-white);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  box-shadow: var(--shadow-btn-primary);
+  transition: opacity var(--transition-normal);
+}
+.botaoPrimario:hover {
+  opacity: 0.9;
+}
 
 /* ─── Barra de busca ─────────────────────────────────────── */
 .barraBusca {
@@ -125,8 +138,8 @@
   background-color: var(--color-bg-table-head);
 }
 
-/* ─── Célula de usuário (avatar + nome) ──────────────────── */
-.celulaUsuario {
+/* ─── Célula de membro (avatar + nome + email empilhados) ── */
+.celulaMembro {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -146,71 +159,60 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.membroInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .nome {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
 .email {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.telefone {
   color: var(--color-text-secondary);
 }
 
-.ultimoAcesso {
+.cadastro {
   color: var(--color-text-secondary);
 }
 
-/* ─── Badge de perfil ────────────────────────────────────── */
-.badgeRole {
+/* ─── Badge de status ────────────────────────────────────── */
+.statusBadge {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.admin {
+.statusAtivo {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.statusInativo {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.statusVisitante {
   background-color: var(--color-primary-light);
   color: var(--color-primary-dark);
 }
-.lider {
-  background-color: var(--color-warning-bg);
-  color: var(--color-warning-text);
-}
-.membro {
-  background-color: var(--color-bg-sidebar);
-  color: var(--color-text-secondary);
-}
-.outro {
-  background-color: var(--color-bg-sidebar);
-  color: var(--color-text-muted);
-}
 
-/* ─── Status (bolinha + texto) ───────────────────────────── */
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
+/* ─── Coluna de ações ────────────────────────────────────── */
+.colunaAcoes {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
 }
-.bolinha {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-}
-.ativo {
-  color: var(--color-success-text);
-}
-.ativo .bolinha {
-  background-color: var(--color-success);
-}
-.inativo {
-  color: var(--color-text-muted);
-}
-.inativo .bolinha {
-  background-color: #cbd5e1;
-}
-
 
 /* ─── Estados (vazio / erro) ─────────────────────────────── */
 .estadoVazio,
@@ -274,27 +276,6 @@
   color: var(--color-text-secondary);
 }
 
-.linhaInativa { background: var(--color-bg-table-head); }
-.linhaInativa td:not(.colunaAcoes) { opacity: 0.5; }
-
-.acoesCell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+.linhaClicavel {
+  cursor: pointer;
 }
-
-.btnReativar {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-success);
-  background: var(--color-success-bg);
-  transition: filter 150ms ease;
-}
-.btnReativar:hover { filter: brightness(0.96); }
-

@@ -16,8 +16,9 @@ export function useRegistrarIgreja () {
     const login = useAuthStore(state => state.login)
     const [erroGeral, setErroGeral] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [passo, setPasso] = useState<1 | 2>(1)
+    const [passo, setPasso] = useState<1 | 2 | 3>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
+    const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
     
 
     const {
@@ -91,7 +92,11 @@ export function useRegistrarIgreja () {
                 role : response.role,
                 igrejaId : response.igrejaId,
             })
-            router.push('/inicio')
+            setDadosSucesso({
+                nome: response.nome,
+                nomeIgreja: dataPasso1.nomeIgreja,
+            })
+            setPasso(3)
 
         } catch (error : unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
@@ -116,6 +121,10 @@ export function useRegistrarIgreja () {
             setIsLoading(false)
         }
     }
+
+    const irParaMembros = () => router.push('/membros/cadastrar')
+    const irParaPerfilIgreja = () => router.push('/configuracoes/igreja')
+    const irParaMeuPerfil = () => router.push('/perfil')
     
     return {
         passo,
@@ -133,6 +142,10 @@ export function useRegistrarIgreja () {
         isLoading,
         onSubmit,
         passo1Incompleto,
-        passo2Incompleto
+        passo2Incompleto,
+        dadosSucesso,
+        irParaMembros,
+        irParaPerfilIgreja,
+        irParaMeuPerfil,
     }
 }

@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
-   PÁGINA — fundo claro com decorações blur
-   ═══════════════════════════════════════════════════════════ */
+/* PÁGINA — fundo claro com decorações blur*/
 .page {
   min-height: 100vh;
   display: flex;
@@ -39,9 +37,7 @@
   pointer-events: none;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   CARD — container principal de 1152px
-   ═══════════════════════════════════════════════════════════ */
+/* CARD — container principal de 1152px */
 .card {
   width: 100%;
   max-width: 1152px;
@@ -55,9 +51,7 @@
   z-index: 1;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FORM PANEL — coluna direita branca onde os passos renderizam
-   ═══════════════════════════════════════════════════════════ */
+/* FORM PANEL — coluna direita branca onde os passos renderizam */
 .formPanel {
   display: flex;
   flex-direction: column;
@@ -66,9 +60,7 @@
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   PAGE 2 — fundo gradiente colorido, sem card outer
-   ═══════════════════════════════════════════════════════════ */
+/* PAGE 2 — fundo gradiente colorido, sem card outer*/
 .page2 {
   min-height: 100vh;
   display: grid;
@@ -85,7 +77,7 @@
   gap: 60px;
 }
 
-/* ─── Lado esquerdo — conteúdo livre sobre o gradiente ─── */
+/* Lado esquerdo — conteúdo livre sobre o gradiente  */
 .leftSide {
   display: flex;
   flex-direction: column;
@@ -124,16 +116,7 @@
   margin: 0;
 }
 
-
-
-
-
-
-
-
-
-
-/* ─── Lado direito — card do formulário ────────────────── */
+/* Lado direito — card do formulário */
 .rightSide {
   display: flex;
   justify-content: center;
@@ -156,39 +139,131 @@
   gap: 24px;
 }
 
-/* Header do card com PASSO 2 DE 2 + Configuração de Perfil */
-.cardHeader {
+.pageSucesso {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f8 100%);
+}
+
+.cardSucesso {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.sucessoIcone {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0 24px;
+}
+
+.sucessoTitulo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+.sucessoSubtitulo {
+  font-size: 15px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.sucessoSubtitulo strong { color: #2563EB; font-weight: 600; }
+
+.sucessoNota {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 28px;
+}
+
+.sucessoComecar {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.atalhos {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 24px;
 }
 
-.cardHeaderTop {
+.atalho {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.atalho:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.cardHeaderLabel {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.6px;
-  color: #004AC6;
+/* card primário — destaque */
+.atalhoPrimario {
+  background: #eff6ff;
+  border-color: #2563EB;
 }
+.atalhoPrimario:hover { border-color: #1d4ed8; }
 
-.cardHeaderRight {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.cardProgressBars {
+.atalhoIcone {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fff;
+  color: #2563EB;
+  flex-shrink: 0;
 }
+.atalhoPrimario .atalhoIcone { background: #2563EB; color: #fff; }
 
-.cardProgressBar {
-  flex: 1;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background-color: #004AC6;  /* ambas barras ativas no passo 2 */
+.atalhoTexto { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.atalhoTexto strong { font-size: 14px; font-weight: 600; color: #0f172a; }
+.atalhoTexto span { font-size: 12px; color: #64748b; }
+
+.atalhoSeta { color: #94a3b8; flex-shrink: 0; }
+
+.pularLink {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.15s ease;
 }
+.pularLink:hover { color: #2563EB; }

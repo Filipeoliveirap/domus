@@ -45,8 +45,12 @@ export function useLogin() {
             router.push('/inicio')
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
-                const mensagem = error.response?.data?.message
-                setErroGeral(mensagem ?? 'Erro ao fazer login. Tente novamente.')
+                const e = error.response?.data
+                if (e?.error === 'CONTA_ARQUIVADA') {
+                    setErroGeral(e.message)
+                    return
+                }
+                setErroGeral(e?.message ?? 'Erro ao fazer login. Tente novamente.')
                 
             } else {
                 setErroGeral('Erro ao fazer login. Tente novamente.')

@@ -18,4 +18,10 @@ export const Endpoints = {
     BY_ID: (id: string) => `/membros/${id}`,
     ARQUIVAR: (id: string) => `/membros/${id}`,
   },
+
+  eventos: {
+    LISTAR: '/eventos',
+    CRIAR: '/eventos',
+    BY_ID: (id: string) => `/eventos/${id}`,
+  },
 }

@@ -102,6 +102,26 @@ export const concederAcessoSchema = z.object({
   path: ['confirmarSenha'],
 })
 
+const eventoSchemaBase = z.object({
+  titulo: z.string().min(1, 'O título é obrigatório.'),
+  descricao: opcional(z.string()),
+  inicioData: z.string().min(1, 'A data de início é obrigatória.'),
+  inicioHora: z.string().min(1, 'A hora de início é obrigatória.'),
+  fimData: opcional(z.string()),
+  fimHora: opcional(z.string()),
+  local: opcional(z.string()),
+})
+
+export const eventoSchema = eventoSchemaBase.refine(
+  (data) => {
+    if (!data.fimData || !data.fimHora) return true
+    const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
+    const fim = new Date(`${data.fimData}T${data.fimHora}`)
+    return fim >= inicio
+  },
+  { message: 'O término não pode ser antes do início.', path: ['fimData'] }
+)
+
 
 
 
@@ -111,3 +131,5 @@ export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
 export type MembroFormData = z.infer<typeof membroSchema> 
 export type MembroFormInput = z.input<typeof membroSchema>  
 export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>
+export type EventoFormData = z.infer<typeof eventoSchema>
+export type EventoFormInput = z.input<typeof eventoSchemaBase>

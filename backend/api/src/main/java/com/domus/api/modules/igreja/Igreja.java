@@ -1,5 +1,6 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
@@ -53,8 +54,8 @@ public class Igreja {
     @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Membro> membros;
 
-    // @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    // private List<Evento> eventos;
+    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Evento> eventos;
 
     // @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
     // private List<CategoriaFinanceira> categorias;

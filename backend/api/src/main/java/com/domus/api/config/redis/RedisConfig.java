@@ -1,5 +1,6 @@
 package com.domus.api.config.redis;
 
+import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
@@ -65,11 +66,21 @@ public class RedisConfig implements CachingConfigurer {
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMembros));
 
+        JavaType tipoEventos = mapper.getTypeFactory()
+                .constructParametricType(PagedResponse.class, EventoResponse.class);
+        Jackson2JsonRedisSerializer<Object> serEventos =
+                new Jackson2JsonRedisSerializer<>(mapper, tipoEventos);
+
+        RedisCacheConfiguration eventosConfig = base
+                .entryTtl(Duration.ofMinutes(5))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serEventos));
+
         Map<String, RedisCacheConfiguration> caches = new HashMap<>();
 
         caches.put("igreja", igrejaConfig);
         caches.put("usuarios", usuariosConfig);
         caches.put("membros", membrosConfig);
+        caches.put("eventos", eventosConfig);
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(base.entryTtl(Duration.ofMinutes(10)))

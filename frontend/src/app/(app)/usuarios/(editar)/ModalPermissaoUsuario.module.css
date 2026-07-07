@@ -1,0 +1,126 @@
+.overlay { 
+    position: absolute; inset: 0; z-index: var(--z-modal, 100); display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(19,27,46,0.10); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: fadeIn 0.2s ease-out; 
+}
+
+.modal { 
+    width: 100%; max-width: 600px; max-height: 90%; overflow-y: auto; background: var(--color-bg-white); border-radius: 16px; box-shadow: 0 20px 40px rgba(19,27,46,0.12); animation: slideUp 0.25s cubic-bezier(0.16,1,0.3,1); 
+}
+
+.header { 
+    display: flex; align-items: flex-start; justify-content: space-between; padding: 28px 28px 8px; 
+}
+
+.title { 
+    font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-text-primary); 
+}
+
+.subtitle { 
+    font-size: var(--font-size-sm); color: var(--color-text-muted); margin-top: 4px; 
+}
+
+.subtitle strong { 
+    color: var(--color-text-primary); 
+}
+
+.btnClose { 
+    color: var(--color-text-muted); 
+}
+
+.btnClose:hover { 
+    color: var(--color-text-primary); 
+}
+
+.body { 
+    padding: 8px 28px 0; 
+}
+
+.descricaoTopo { 
+    font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: 16px; 
+}
+
+.lista { 
+    display: flex; flex-direction: column; gap: 12px; 
+}
+
+.card { 
+    display: flex; align-items: flex-start; gap: 16px; width: 100%; text-align: left; padding: 16px; border-radius: 12px; background: var(--color-bg-page); border: 2px solid transparent; cursor: pointer; transition: all 150ms ease; 
+}
+
+.card:hover { 
+    border-color: var(--color-border); 
+}
+
+.cardAtivo { 
+    border-color: var(--color-primary); background: var(--color-primary-light); 
+}
+
+.cardIcone { 
+    width: 40px; height: 40px; border-radius: 8px; background: var(--color-bg-white); display: flex; align-items: center; justify-content: center; color: var(--color-primary); flex-shrink: 0; 
+}
+
+.cardTexto { 
+    flex: 1; 
+}
+
+.cardTitulo { 
+    display: flex; align-items: center; gap: 8px; 
+}
+
+.cardNome { 
+    font-weight: var(--font-weight-bold); color: var(--color-text-primary); 
+}
+
+.cardBadge { 
+    font-size: 10px; text-transform: uppercase; font-weight: var(--font-weight-bold); color: var(--color-primary); letter-spacing: 0.03em; 
+}
+
+.cardDesc { 
+    font-size: var(--font-size-xs); color: var(--color-text-muted); line-height: var(--line-height-relaxed); margin-top: 4px; 
+}
+
+.radio { 
+    width: 24px; height: 24px; border-radius: 9999px; border: 2px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; transition: all 150ms ease; 
+}
+
+.radioAtivo { 
+    border-color: var(--color-primary); background: var(--color-primary); 
+}
+
+.alertError { 
+    margin-top: 16px; border-radius: 8px; background: var(--color-danger-bg); padding: 12px 16px; font-size: var(--font-size-sm); color: var(--color-danger); 
+}
+
+.footer { 
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 24px 28px; margin-top: 16px; background: var(--color-bg-table-header); border-top: 1px solid var(--color-border); 
+}
+
+.btnCancel { 
+    padding: 10px 20px; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-muted); border-radius: 8px; transition: background 150ms ease; 
+}
+
+.btnCancel:hover { 
+    background: var(--color-bg-table-head); 
+}
+
+.btnSubmit { 
+    padding: 10px 24px; border-radius: 8px; color: #fff; font-weight: var(--font-weight-bold); font-size: var(--font-size-sm); background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%); box-shadow: var(--shadow-btn-primary); transition: all 150ms ease; 
+}
+.btnSubmit:disabled { 
+    opacity: 0.5; cursor: not-allowed; 
+}
+
+@keyframes fadeIn { 
+    from { 
+        opacity: 0; 
+    } to { 
+        opacity: 1; 
+    } 
+}
+
+@keyframes slideUp { 
+    from { 
+        opacity: 0; transform: translateY(10px) scale(0.98); 
+    } to { 
+        opacity: 1; transform: translateY(0) scale(1); 
+    } 
+}

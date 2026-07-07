@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 48px;
+}
+
+.topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.6px;
+  color: #004AC6;
+  white-space: nowrap;
+}
+
+.labelDireita {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.barras {
+  display: flex;
+  gap: 4px;
+}
+
+.bar {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background-color: #E2E7FF;
+}
+
+.barActive {
+  background-color: #004AC6;
+}

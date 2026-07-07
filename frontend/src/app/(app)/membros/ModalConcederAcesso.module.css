@@ -1,0 +1,336 @@
+/* ─── Overlay + modal ────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(19, 27, 46, 0.10);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--color-bg-white);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.12);
+  padding: 32px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Header (ícone + fechar) ────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.btnClose {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.btnClose:hover {
+  color: var(--color-text-primary);
+}
+
+/* ─── Intro (título + subtítulo) ─────────────────────────── */
+.intro {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin-top: 8px;
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+.subtitle strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ─── Form ───────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── E-mail read-only ───────────────────────────────────── */
+.emailReadonly {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emailLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.emailBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background-color: var(--color-bg-page);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.emailIcon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ─── Grid de senha ──────────────────────────────────────── */
+.senhaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-placeholder);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+}
+.toggle:hover {
+  color: var(--color-text-secondary);
+}
+
+/* ─── Nível de acesso (roles) ────────────────────────────── */
+.roleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.roleLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.roleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background-color: var(--color-bg-white);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+.roleCard:hover {
+  border-color: var(--color-primary);
+}
+
+.roleCardAtivo {
+  border: 2px solid var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.roleRadio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.roleIcone {
+  color: var(--color-text-muted);
+}
+.roleCardAtivo .roleIcone {
+  color: var(--color-primary);
+}
+
+.roleTitulo {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text-primary);
+}
+
+.roleDescricao {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.erroCampo {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Info box ───────────────────────────────────────────── */
+.infoBox {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-page);
+}
+
+.infoIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.infoText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ─── Alerta de erro da API ──────────────────────────────── */
+.alertError {
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  padding: 12px 16px;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+/* ─── Footer ─────────────────────────────────────────────── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btnCancel {
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+.btnCancel:hover {
+  background: var(--color-bg-page);
+}
+
+/* ─── Estado bloqueado (membro sem email) ────────────────── */
+.bloqueado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 16px 8px 0;
+}
+
+.bloqueadoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  margin-bottom: 8px;
+}
+
+.bloqueadoTexto {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+.bloqueadoTexto strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bloqueadoDica {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: 12px;
+}
+
+/* ─── Animações ──────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.reativarIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.reativarAcoes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}

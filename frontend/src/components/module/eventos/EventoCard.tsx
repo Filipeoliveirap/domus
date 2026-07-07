@@ -1,0 +1,83 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { CalendarDays, MapPin, Pencil, Archive } from 'lucide-react'
+import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { useAuthStore } from '@/store/authStore'
+import {
+  dataAgenda,
+  statusEvento,
+  rotuloStatus,
+  varianteStatus,
+} from '@/lib/formats/eventoFormat'
+import { EventoResponse } from '@/types/evento.type'
+import styles from './EventoCard.module.css'
+
+interface EventoCardProps {
+  evento: EventoResponse
+  onAbrirDetalhe: (evento: EventoResponse) => void
+  onArquivar: (evento: EventoResponse) => void
+}
+
+export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardProps) {
+  const router = useRouter()
+  const role = useAuthStore((s) => s.role)
+
+  const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const status = statusEvento(evento)
+  const { dia, mes, ano } = dataAgenda(evento.inicioEm)
+
+  const acoes: ItemAcao[] = [
+    { label: 'Editar', icone: Pencil, onClick: () => router.push(`/eventos/${evento.id}`) },
+    { label: 'Arquivar', icone: Archive, onClick: () => onArquivar(evento), perigo: true, separadorAntes: true },
+  ]
+
+  return (
+    <article
+      className={`${styles.card} ${status === 'ENCERRADO' ? styles.cardEncerrado : ''}`}
+      onClick={() => onAbrirDetalhe(evento)}
+    >
+      <div className={styles.imagem}>
+        {evento.foto ? (
+          <img src={evento.foto} alt={evento.titulo} className={styles.imagemFoto} />
+        ) : (
+          <div className={styles.imagemPlaceholder}>
+            <CalendarDays size={32} />
+          </div>
+        )}
+        <span className={`${styles.selo} ${styles[varianteStatus(status)]}`}>
+          <span className={styles.seloDot} />
+          {rotuloStatus(status)}
+        </span>
+
+        {podeGerenciar && (
+          <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>
+            <MenuAcoes itens={acoes} />
+          </div>
+        )}
+      </div>
+
+      {/* Corpo */}
+      <div className={styles.corpo}>
+        <div className={styles.dataBox}>
+          <span className={styles.dataMes}>{mes}</span>
+          <span className={styles.dataDia}>{dia}</span>
+          {ano && <span className={styles.dataAno}>{ano}</span>}
+        </div>
+
+        <div className={styles.info}>
+          <h3 className={styles.titulo}>{evento.titulo}</h3>
+          {evento.descricao && (
+            <p className={styles.descricao}>{evento.descricao}</p>
+          )}
+          {evento.local && (
+            <div className={styles.local}>
+              <MapPin size={14} />
+              <span>{evento.local}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  )
+}

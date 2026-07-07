@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: domus-db
+    environment:
+      POSTGRES_DB: domus
+      POSTGRES_USER: domus
+      POSTGRES_PASSWORD: domus123
+    ports:
+      - "5432:5432"
+    volumes:
+      - domus-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: domus-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: domus-api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/domus
+      SPRING_DATASOURCE_USERNAME: domus
+      SPRING_DATASOURCE_PASSWORD: domus123
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+
+volumes:
+  domus-db-data:

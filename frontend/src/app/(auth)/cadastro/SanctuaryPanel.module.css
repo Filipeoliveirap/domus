@@ -1,0 +1,29 @@
+/* ═══════════════════════════════════════════════════════════
+   PAINEL ESQUERDO — fundo azul com imagem de igreja sobreposta
+   ═══════════════════════════════════════════════════════════ */
+.panel {
+  background-color: #004AC6;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  min-height: 828px;
+  color: var(--color-bg-white);
+}
+
+/* Imagem de fundo da igreja com mix-blend-mode para integrar com o azul */
+.bgImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+  opacity: 0.6;
+  mix-blend-mode: luminosity;
+  pointer-events: none;
+  z-index: 0;
+}
+

@@ -1,0 +1,99 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: var(--radius-md);
+
+    font-family: inherit;
+    font-weight: var(--font-weight-bold);
+
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+
+.sm {
+    height: 32px;
+    padding: 0 12px;
+    font-size: var(--font-size-sm);
+}
+
+.md {
+    height: 40px;
+    padding: 0 20px;
+    font-size: var(--font-size-base);
+}
+
+.lg {
+  height: 56px;
+  padding: 0 24px;
+  font-size: var(--font-size-md);
+}
+
+/* ─── Variantes ─────────────────────────────────────────── */
+.primary {
+  background-image: linear-gradient(171deg, #004AC6 0%, #2563EB 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-btn-primary);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--color-bg-page);
+  opacity: 1;
+}
+
+.secondary {
+  background: #E2E7FF;
+  color: #3E5980;
+  box-shadow: var(--shadow-sidebar-item);
+}
+
+.danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #ffffff;
+  opacity: 1;
+}
+
+
+
+/* Spinner — círculo animado com border trick */
+/* border-top transparente + border restante colorida + rotate infinito */
+.spinner {
+    width: 18px;
+    height: 18px;
+
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+
+    border-radius: 50%;
+
+    animation: spin 0.7s linear infinite;
+}
+.loadingContainer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

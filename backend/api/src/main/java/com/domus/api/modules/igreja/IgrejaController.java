@@ -1,14 +1,16 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/igrejas")
@@ -17,8 +19,15 @@ public class IgrejaController {
     private final IgrejaService igrejaService;
 
     @PostMapping("/registrar")
-    public ResponseEntity<Void> cadastrarIgreja(@RequestBody @Valid RegistrarIgrejaAdminRequest data) {
-        this.igrejaService.registrar(data);
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<RegistrarIgrejaResponse> cadastrarIgreja(
+            @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
+        RegistrarIgrejaResponse response = igrejaService.registrar(data);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<IgrejaDTO> buscarIgrejaPorId(@PathVariable UUID id) {
+        IgrejaDTO igreja = igrejaService.buscarPorId(id);
+        return ResponseEntity.ok(igreja);
     }
 }

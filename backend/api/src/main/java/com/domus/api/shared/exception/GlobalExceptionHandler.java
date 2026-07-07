@@ -10,6 +10,7 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,12 +36,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
-
-        log.warn("Erro de negócio. path={}, mensagem={}", request.getRequestURI(), ex.getMessage());
-
+        log.warn("Erro de negócio. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());
         return ResponseEntity
                 .badRequest()
-                .body(ErrorResponse.of(400, "ERRO_NEGOCIO", ex.getMessage()));
+                .body(ErrorResponse.of(400, ex.getCodigo(), ex.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -112,5 +111,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(ErrorResponse.of(429, "CONTA_BLOQUEADA", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Violação de integridade de dados. path={}", request.getRequestURI(), ex);
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "CONFLITO_DADOS",
+                        "A operação viola uma restrição de dados. Verifique se o registro já existe."));
     }
 }

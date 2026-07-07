@@ -1,0 +1,98 @@
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useAppForm } from '../../forms/useAppForm'
+import { movimentacaoSchema, type MovimentacaoFormInput, type MovimentacaoFormData } from '@/lib/validators'
+import { movimentacoesService } from '@/services/financeiro/movimentacao.service'
+import type { MovimentacaoRequest, MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
+import type { ApiError } from '@/types/api.types'
+import { useRouter } from 'next/navigation'
+
+interface UseMovimentacaoFormParams {
+  movimentacaoId?: string
+  movimentacaoInicial?: MovimentacaoResponse
+  onSuccess?: () => void
+}
+
+export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuccess }: UseMovimentacaoFormParams = {}) {
+  const [erroGeral, setErroGeral] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const queryClient = useQueryClient()
+  const ehEdicao = !!movimentacaoId
+  const router = useRouter()
+
+  const form = useAppForm<MovimentacaoFormInput, MovimentacaoFormData>({
+    resolver: zodResolver(movimentacaoSchema),
+    defaultValues: {
+      tipo: undefined,
+      valor: '',
+      categoriaId: '',
+      dataMovimentacao: '',
+      membroId: '',
+      descricao: '',
+    },
+    requiredFields: ['tipo', 'valor', 'categoriaId', 'dataMovimentacao'],
+  })
+
+  const { reset } = form
+
+  useEffect(() => {
+    if (movimentacaoInicial) {
+      reset({
+        tipo: movimentacaoInicial.tipo,
+        valor: String(movimentacaoInicial.valor),  
+        categoriaId: movimentacaoInicial.categoriaId,
+        dataMovimentacao: movimentacaoInicial.dataMovimentacao.split('T')[0],
+        membroId: movimentacaoInicial.membroId ?? '',
+        descricao: movimentacaoInicial.descricao ?? '',
+      })
+    }
+  }, [movimentacaoInicial, reset])
+
+  const onSubmit = async (data: MovimentacaoFormData) => {
+    setErroGeral(null)
+    setIsLoading(true)
+    try {
+      const payload: MovimentacaoRequest = {
+        tipo: data.tipo,
+        valor: data.valor,
+        categoriaId: data.categoriaId,
+        dataMovimentacao: data.dataMovimentacao,
+        membroId: data.membroId || undefined,    
+        descricao: data.descricao || undefined,
+      }
+
+      if (ehEdicao) {
+        await movimentacoesService.atualizar(movimentacaoId!, payload)
+        queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
+        queryClient.invalidateQueries({ queryKey: ['movimentacao', movimentacaoId] })
+        queryClient.invalidateQueries({ queryKey: ['relatorios'] })   
+        toast.success('Movimentação atualizada com sucesso!')
+      } else {
+        await movimentacoesService.criar(payload)
+        queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
+        queryClient.invalidateQueries({ queryKey: ['relatorios'] })
+        toast.success('Movimentação registrada com sucesso!')
+      }
+      onSuccess?.()
+      router.push('/financeiro/movimentacoes')
+    } catch (error: unknown) {
+      if (axios.isAxiosError<ApiError>(error)) {
+        const e = error.response?.data
+        if (e?.error === 'TIPO_INCOMPATIVEL') {
+          form.setError('categoriaId', { type: 'server', message: e.message })
+          return
+        }
+        setErroGeral(e?.message ?? 'Erro ao salvar movimentação. Tente novamente.')
+      } else {
+        setErroGeral('Erro ao salvar movimentação. Tente novamente.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+}

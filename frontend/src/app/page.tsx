@@ -1,5 +1,12 @@
 
 
 export default function Home() {
-  return <div>Domus</div>
+  return (
+    <>
+      
+      <main >
+        <h1 >Conteúdo da página</h1>
+      </main>
+    </>
+  )
 }

@@ -1,0 +1,52 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.subtitulo {
+  margin-top: 4px;
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+}
+
+/* Seletor de período */
+.seletorPeriodo {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+}
+
+.botaoPeriodo {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.botaoPeriodo:hover {
+  color: var(--color-text-primary);
+}
+
+.periodoAtivo {
+  background: var(--color-bg-white);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 1px 3px rgba(19, 27, 46, 0.1);
+}

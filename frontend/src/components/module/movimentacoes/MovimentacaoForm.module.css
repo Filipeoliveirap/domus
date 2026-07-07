@@ -1,0 +1,343 @@
+.form { width: 100%; }
+
+.colunas {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.colunaEsquerda {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.colunaDireita {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 24px;
+}
+
+/* ─── Seções ─── */
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
+}
+
+.secaoHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secaoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.secaoTitulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.opcional {
+  font-weight: var(--font-weight-normal);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+}
+
+/* ─── Seletor de tipo (entrada / saída) ─── */
+.tipoSelecao {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tipoBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.tipoBtn:hover {
+  border-color: var(--color-primary);
+}
+
+.tipoLabel {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.tipoDesc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.tipoEntradaAtivo {
+  border-color: var(--color-success-text);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.tipoEntradaAtivo .tipoLabel { color: var(--color-success-text); }
+
+.tipoSaidaAtivo {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.tipoSaidaAtivo .tipoLabel { color: var(--color-danger); }
+
+/* ─── Inputs ─── */
+.input,
+.select {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.select:disabled {
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Valor — campo destacado */
+.inputValor {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.inputValor::placeholder {
+  color: var(--color-placeholder);
+  font-weight: var(--font-weight-normal);
+}
+
+.inputValor:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Categoria + Data lado a lado */
+.linha2 {
+  display: flex;
+  gap: 16px;
+}
+.linha2 .campo {
+  flex: 1;
+}
+
+/* ─── Textarea ─── */
+.textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.textarea::placeholder { color: var(--color-placeholder); }
+.textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.erroCampo {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Coluna direita: resumo ─── */
+.resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--color-bg-igreja-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+}
+
+.resumoTitulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.resumoLinha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+.resumoLabel { color: var(--color-text-muted); }
+.resumoValor {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.resumoTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(19, 27, 46, 0.1);
+}
+.resumoTotalLabel {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.resumoTotalValor {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+.resumoTotalValor.entrada { color: var(--color-success-text); }
+.resumoTotalValor.saida { color: var(--color-danger); }
+
+.infoBox {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+}
+.infoIcon { color: var(--color-primary); flex-shrink: 0; margin-top: 1px; }
+.infoText {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ─── Erro geral ─── */
+.erroGeral {
+  padding: 12px 16px;
+  background: var(--color-danger-bg);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+}
+
+/* ─── Ações ─── */
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.btnSalvar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-bg-white);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+.btnSalvar:hover:not(:disabled) { opacity: 0.9; }
+.btnSalvar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cancelarLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-table-header);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+.cancelarLink:hover { background: var(--color-bg-table-head); }
+
+/* ─── Responsivo ─── */
+@media (max-width: 1024px) {
+  .colunas { grid-template-columns: 1fr; }
+  .colunaDireita { position: static; }
+}

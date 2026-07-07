@@ -1,0 +1,104 @@
+/* ─── Grupo completo (label + input + erro) ─────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ─── Linha do label (label + elemento direito opcional) ── */
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ─── Label ──────────────────────────────────────────────── */
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  cursor: pointer;  /* indica que clicar no label foca o input */
+}
+
+/* ─── Wrapper position:relative para ícones absolutos ───── */
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* ─── Ícone à esquerda ───────────────────────────────────── */
+.leftIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-placeholder);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* ─── Elemento à direita (botão, ícone, etc.) ────────────── */
+.rightElement {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+/* ─── Input base ─────────────────────────────────────────── */
+.input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background-color: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-dark);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-placeholder);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* padding extra esquerdo quando tem ícone */
+.withLeftIcon {
+  padding-left: 45px;
+}
+
+/* padding extra direito quando tem elemento à direita */
+.withRightElement {
+  padding-right: 45px;
+}
+
+/* ─── Estado de erro ─────────────────────────────────────── */
+.inputError {
+  border-color: var(--color-danger);
+}
+
+.inputError:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(186, 26, 26, 0.15);
+}
+
+/* ─── Mensagem de erro ───────────────────────────────────── */
+.fieldError {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}

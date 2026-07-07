@@ -1,0 +1,237 @@
+'use client'
+
+import { Suspense, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Pencil, Archive, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useMovimentacoes } from '@/hooks/financeiro/movimentacao/useMovimentacoes'
+import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
+import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/DrawerDetalheMovimentacao'
+import { ModalArquivarMovimentacao } from '@/app/(app)/financeiro/movimentacoes/ModalArquivarMovimentacao'
+import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
+import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
+import styles from './movimentacoes.module.css'
+import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
+
+const TAMANHO_PAGINA = 15
+
+function MovimentacoesConteudo() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const detalheId = searchParams.get('detalhe')
+
+  // filtros
+  const [tipo, setTipo] = useState<TipoMovimentacao | ''>('')
+  const [categoriaId, setCategoriaId] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
+  const [busca, setBusca] = useState('')
+  const [pagina, setPagina] = useState(0)
+  const buscaDebounced = useDebounce(busca, 350)
+
+  const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
+
+  const { data: categorias } = useCategoriasSelect()
+
+  const { data, isLoading, isError } = useMovimentacoes({
+    tipo: tipo || undefined,
+    categoriaId: categoriaId || undefined,
+    dataInicio: dataInicio || undefined,
+    dataFim: dataFim || undefined,
+    q: buscaDebounced || undefined,
+    page: pagina,
+    size: TAMANHO_PAGINA,
+  })
+
+  const movimentacoes = data?.content ?? []
+  const totalPaginas = data?.totalPages ?? 0
+  const totalElementos = data?.totalElements ?? 0
+
+  function resetarPagina() {
+    setPagina(0)
+  }
+
+  function limparFiltros() {
+    setTipo('')
+    setCategoriaId('')
+    setDataInicio('')
+    setDataFim('')
+    setBusca('')
+    setPagina(0)
+  }
+
+  const temFiltro = tipo || categoriaId || dataInicio || dataFim || busca
+
+  function abrirDetalhe(mov: MovimentacaoResponse) {
+    router.push(`/financeiro/movimentacoes?detalhe=${mov.id}`, { scroll: false })
+  }
+  function fecharDetalhe() {
+    router.push('/financeiro/movimentacoes', { scroll: false })
+  }
+
+  function acoesDaLinha(mov: MovimentacaoResponse): ItemAcao[] {
+    return [
+      { label: 'Editar', icone: Pencil, onClick: () => router.push(`/financeiro/movimentacoes/${mov.id}`) },
+      { label: 'Arquivar', icone: Archive, onClick: () => setMovArquivando(mov), perigo: true, separadorAntes: true },
+    ]
+  }
+
+  return (
+    <div className={styles.pagina}>
+      <header className={styles.cabecalho}>
+        <div>
+          <div className={styles.tituloLinha}>
+            <h1 className={styles.titulo}>Movimentações</h1>
+            {totalElementos > 0 && <span className={styles.contador}>{totalElementos}</span>}
+          </div>
+          <p className={styles.subtitulo}>Entradas e saídas registradas.</p>
+        </div>
+        <Link href="/financeiro/movimentacoes/cadastrar" className={styles.botaoPrimario}>
+          Nova movimentação
+        </Link>
+      </header>
+
+      {/* Filtros sempre visíveis */}
+      <div className={styles.filtros}>
+        <div className={styles.filtroCampo}>
+          <label className={styles.filtroLabel}>TIPO</label>
+          <select
+            className={styles.filtroSelect}
+            value={tipo}
+            onChange={(e) => { setTipo(e.target.value as TipoMovimentacao | ''); resetarPagina() }}
+          >
+            <option value="">Todos os tipos</option>
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+          </select>
+        </div>
+
+        <div className={styles.filtroCampo}>
+          <label className={styles.filtroLabel}>CATEGORIA</label>
+          <select
+            className={styles.filtroSelect}
+            value={categoriaId}
+            onChange={(e) => { setCategoriaId(e.target.value); resetarPagina() }}
+          >
+            <option value="">Todas as categorias</option>
+            {categorias?.map((c: CategoriaResponse) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filtroCampo}>
+          <label className={styles.filtroLabel}>DE</label>
+          <input
+            type="date"
+            className={styles.filtroInput}
+            value={dataInicio}
+            onChange={(e) => { setDataInicio(e.target.value); resetarPagina() }}
+          />
+        </div>
+
+        <div className={styles.filtroCampo}>
+          <label className={styles.filtroLabel}>ATÉ</label>
+          <input
+            type="date"
+            className={styles.filtroInput}
+            value={dataFim}
+            onChange={(e) => { setDataFim(e.target.value); resetarPagina() }}
+          />
+        </div>
+
+        <div className={styles.filtroCampo} style={{ flex: 1 }}>
+          <label className={styles.filtroLabel}>BUSCAR</label>
+          <input
+            type="text"
+            className={styles.filtroInput}
+            placeholder="Buscar na descrição..."
+            value={busca}
+            onChange={(e) => { setBusca(e.target.value); resetarPagina() }}
+          />
+        </div>
+
+        {temFiltro && (
+          <button className={styles.btnLimpar} onClick={limparFiltros}>Limpar</button>
+        )}
+      </div>
+
+      {/* Tabela */}
+      <div className={styles.painel}>
+        {isLoading ? (
+          <div className={styles.linhas}>
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
+          </div>
+        ) : isError ? (
+          <div className={styles.estadoErro}>Não foi possível carregar as movimentações.</div>
+        ) : movimentacoes.length === 0 ? (
+          <div className={styles.estadoVazio}>
+            {temFiltro ? 'Nenhuma movimentação encontrada com esses filtros.' : 'Nenhuma movimentação registrada ainda.'}
+          </div>
+        ) : (
+          <>
+            <div className={styles.tabelaHeader}>
+              <span className={styles.colDesc}>DESCRIÇÃO</span>
+              <span className={styles.colCat}>CATEGORIA</span>
+              <span className={styles.colData}>DATA</span>
+              <span className={styles.colTipo}>TIPO</span>
+              <span className={styles.colValor}>VALOR</span>
+              <span className={styles.colAcoes}>AÇÕES</span>
+            </div>
+
+            <div className={styles.linhas}>
+              {movimentacoes.map((mov) => (
+                <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
+                  <div className={styles.colDesc}>
+                    <span className={styles.descTexto}>{mov.descricao || '—'}</span>
+                    {mov.membroNome && <span className={styles.descMembro}>{mov.membroNome}</span>}
+                  </div>
+                  <div className={styles.colCat}>{mov.categoriaNome}</div>
+                  <div className={styles.colData}>{formatarData(mov.dataMovimentacao)}</div>
+                  <div className={styles.colTipo}>
+                    <span className={`${styles.selo} ${styles[varianteTipo(mov.tipo)]}`}>
+                      {mov.tipo === 'ENTRADA' ? <ArrowDownCircle size={14} /> : <ArrowUpCircle size={14} />}
+                      {rotuloTipo(mov.tipo)}
+                    </span>
+                  </div>
+                  <div className={`${styles.colValor} ${styles[varianteTipo(mov.tipo)]}`}>
+                    {mov.tipo === 'SAIDA' && '- '}{formatarMoeda(mov.valor)}
+                  </div>
+                  <div className={styles.colAcoes} onClick={(e) => e.stopPropagation()}>
+                    <MenuAcoes itens={acoesDaLinha(mov)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <footer className={styles.rodape}>
+              <span className={styles.contagem}>Exibindo {movimentacoes.length} de {totalElementos}</span>
+              <div className={styles.paginacao}>
+                <button onClick={() => setPagina((p) => Math.max(0, p - 1))} disabled={pagina === 0} className={styles.botaoPagina}>‹</button>
+                <span className={styles.infoPagina}>{pagina + 1} de {totalPaginas}</span>
+                <button onClick={() => setPagina((p) => p + 1)} disabled={pagina + 1 >= totalPaginas} className={styles.botaoPagina}>›</button>
+              </div>
+            </footer>
+          </>
+        )}
+      </div>
+
+      {detalheId && (
+        <DrawerDetalheMovimentacao movimentacaoId={detalheId} onClose={fecharDetalhe} />
+      )}
+      {movArquivando && (
+        <ModalArquivarMovimentacao movimentacao={movArquivando} onClose={() => setMovArquivando(null)} />
+      )}
+    </div>
+  )
+}
+
+export default function MovimentacoesPage() {
+  return (
+    <Suspense fallback={<div>Carregando…</div>}>
+      <MovimentacoesConteudo />
+    </Suspense>
+  )
+}

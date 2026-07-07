@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -26,19 +27,23 @@ public class SecurityFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.recoverToken(request);
-        if(token != null) {
-            var login = tokenService.validateToken(token);
-            if(login != null){
-                UserDetails user = usuarioRepository.findByEmail(login).orElse(null);
-                if(user != null) {
-                    var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.debug("Usuário autenticado via token. email={}", login);
-                } else {
-                    log.warn("Token válido mas usuário não encontrado. email={}", login);
+        if (token != null) {
+            var subject = tokenService.validateToken(token);
+            if (subject != null) {
+                try {
+                    UserDetails user = usuarioRepository.findById(UUID.fromString(subject)).orElse(null);
+                    if (user != null && user.isEnabled()) {
+                        var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("Usuário autenticado via token. id={}", subject);
+                    } else if (user == null) {
+                        log.warn("Token válido mas usuário não encontrado. id={}", subject);
+                    } else {
+                        log.warn("Usuário desativado tentou usar token. id={}", subject);
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("Subject do token não é um id válido (token legado?). subject={}", subject);
                 }
-            } else {
-                log.warn("Token inválido ou expirado. path={}", request.getRequestURI());
             }
         }
         filterChain.doFilter(request, response);

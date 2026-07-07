@@ -28,7 +28,7 @@ public class TokenService {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.create()
                     .withIssuer("domus-api")
-                    .withSubject(user.getEmail())
+                    .withSubject(user.getId().toString())
                     .withClaim("igreja_id", user.getIgreja().getId().toString())
                     .withExpiresAt(getExpirationDate())
                     .sign(algorithm);

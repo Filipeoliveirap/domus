@@ -1,6 +1,8 @@
 package com.domus.api.shared.security;
 
 import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.shared.exception.BusinessException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -10,10 +12,12 @@ import java.util.UUID;
 public class UsuarioAutenticado {
 
     public Usuario get() {
-        return (Usuario) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !(auth.getPrincipal() instanceof Usuario usuario)) {
+            throw new BusinessException("Usuário não autenticado.");
+        }
+        return usuario;
     }
 
     public UUID getIgrejaId() {

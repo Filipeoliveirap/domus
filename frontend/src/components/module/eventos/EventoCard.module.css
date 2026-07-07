@@ -1,0 +1,142 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
+  transform: translateY(-2px);
+}
+.cardEncerrado {
+  opacity: 0.7;
+}
+
+/* ─── Imagem ─── */
+.imagem {
+  position: relative;
+  height: 140px;
+  background: linear-gradient(135deg, var(--color-primary-light), #DAE2FD);
+}
+.imagemFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imagemPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  opacity: 0.4;
+}
+
+/* ─── Selo de status ─── */
+.selo {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.seloDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+.statusEmBreve { color: var(--color-primary); }
+.statusEmBreve .seloDot { background: var(--color-primary); }
+.statusHoje { color: var(--color-success-text); }
+.statusHoje .seloDot { background: var(--color-success-text); }
+.statusEncerrado { color: var(--color-text-muted); }
+.statusEncerrado .seloDot { background: var(--color-text-muted); }
+
+/* ─── Ações (3 pontinhos) ─── */
+.acoes {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* ─── Corpo ─── */
+.corpo {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+}
+
+.dataBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: fit-content;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border-subtle);
+}
+.dataMes {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+.dataDia {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+.dataAno {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;   /* permite o line-clamp funcionar dentro do flex */
+}
+.titulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.descricao {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-normal);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.local {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

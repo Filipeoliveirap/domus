@@ -13,6 +13,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,7 +29,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configure(httpSecurity))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
 
@@ -36,10 +40,10 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/igrejas/*").permitAll()
 
                         //Usuários(somente ADMIN IGREJA)
-                        .requestMatchers("/usuarios/**",
-                                "auth/register")
+                        .requestMatchers("/usuarios/**")
                         .hasRole("ADMIN_IGREJA")
 
                         //Membros
@@ -48,7 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/membros/**")
                         .hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.PUT, "/membros/**")
-                        .hasRole("ADMIN_IGREJA").requestMatchers(HttpMethod.DELETE, "/membros/**")
+                        .hasRole("ADMIN_IGREJA")
+                        .requestMatchers(HttpMethod.DELETE, "/membros/**")
                         .hasRole("ADMIN_IGREJA")
 
                         //Eventos
@@ -82,4 +87,26 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000"
+        ));
+
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+
 }

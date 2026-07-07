@@ -1,0 +1,159 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(19, 27, 46, 0.20);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drawer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  height: 100%;
+  background: var(--color-bg-white);
+  box-shadow: -8px 0 30px rgba(19, 27, 46, 0.15);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btnClose {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+  z-index: 1;
+}
+.btnClose:hover { color: var(--color-text-primary); }
+
+.carregando,
+.erro {
+  padding: 48px 32px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.erro { color: var(--color-danger); }
+
+.conteudo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 48px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Topo — tipo + valor */
+.topo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.selo {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.valor {
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+}
+
+/* Variantes de cor */
+.entrada { color: var(--color-success-text); }
+.selo.entrada { background: var(--color-success-bg); }
+.saida { color: var(--color-danger); }
+.selo.saida { background: var(--color-danger-bg); }
+
+/* Infos */
+.infos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.infoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.infoLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.infoValor {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+/* Descrição */
+.descricaoBloco {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+}
+.descricaoHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.descricaoTexto {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+}
+
+/* Auditoria (rodapé fixo) */
+.auditoria {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}

@@ -1,0 +1,33 @@
+/* wrapper cria a linha separadora acima e empurra para o final do container */
+.wrapper {
+  margin-top: auto;              /* empurra para o fim do flex column */
+  padding-top: 33px;
+  border-top: 1px solid rgba(195, 198, 215, 0.1);
+}
+
+.box {
+  background-color: #F2F3FF;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.icon {
+  color: #3E5980;
+  flex-shrink: 0;     /* ícone não encolhe */
+  margin-top: 2px;    /* alinha visualmente com a primeira linha do texto */
+}
+
+.text {
+  font-size: 11px;
+  font-weight: var(--font-weight-regular);
+  line-height: 17.88px;
+  color: #3E5980;
+  margin: 0;
+}
+
+.brand {
+  font-weight: var(--font-weight-bold);
+}

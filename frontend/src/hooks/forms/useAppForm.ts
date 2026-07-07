@@ -31,19 +31,22 @@ export function useAppForm<
   })
 
   const allWatchedNames = [...requiredFields, ...requiredChecks]
-  const watchedValues = useWatch({
+  
+  const watched = useWatch({
     control: form.control,
     name: allWatchedNames,
   })
 
-  const textValues = watchedValues.slice(0, requiredFields.length)
-  const checkValues = watchedValues.slice(requiredFields.length)
+  const valores = allWatchedNames.map((name, i) => watched?.[i] ?? form.getValues(name))
+
+  const textValues = valores.slice(0, requiredFields.length)
+  const checkValues = valores.slice(requiredFields.length)
 
   const hasEmptyField = textValues.some(
-    (value) => typeof value !== 'string' || value.trim().length === 0,
+    (value) => value == null || String(value).trim().length === 0,
   )
   const hasUncheckedRequired = checkValues.some((value) => value !== true)
   const isFormIncomplete = hasEmptyField || hasUncheckedRequired
-
+  
   return { ...form, isFormIncomplete }
 }

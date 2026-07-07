@@ -5,7 +5,7 @@ import type {
   MembroResponse,
   ConcederAcessoRequest,
 } from '@/types/membro.type'
-import type { PagedResponse } from '@/types/usuario.types'
+import type { PagedResponse } from '@/types/pagedResponse.type'
 import type { UsuarioResponse } from '@/types/usuario.types'
 
 interface ListarMembrosParams {

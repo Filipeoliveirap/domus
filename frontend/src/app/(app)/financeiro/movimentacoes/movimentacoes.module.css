@@ -1,0 +1,334 @@
+/* ─── Página ─── */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Cabeçalho ─── */
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.tituloLinha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.contador {
+  min-width: 28px;
+  padding: 2px 10px;
+  text-align: center;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-table-head);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtitulo {
+  margin-top: 4px;
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+}
+
+.botaoPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-bg-white);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-btn-primary);
+  transition: opacity var(--transition-normal);
+}
+
+.botaoPrimario:hover {
+  opacity: 0.9;
+}
+
+/* ─── Filtros ─── */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 16px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.filtroCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.filtroLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.filtroSelect,
+.filtroInput {
+  padding: 9px 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.filtroSelect:focus,
+.filtroInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.btnLimpar {
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+}
+
+.btnLimpar:hover {
+  background: var(--color-bg-page);
+}
+
+/* ─── Painel ─── */
+.painel {
+  min-height: 400px;
+  padding: 20px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-lg);
+}
+
+/* ─── Tabela ─── */
+.tabelaHeader {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1.2fr 60px;
+  gap: 16px;
+  padding: 0 16px 12px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linha {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1.2fr 60px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.linha:hover {
+  background: var(--color-bg-igreja-card);
+}
+
+/* ─── Colunas ─── */
+.colDesc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.descTexto {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.descMembro {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.colCat {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.colData {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.colValor {
+  text-align: right;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.colAcoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ─── Selo de tipo ─── */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Variantes de cor (aplicadas ao selo e ao valor) */
+.entrada {
+  color: var(--color-success-text);
+}
+
+.selo.entrada {
+  background: var(--color-success-bg);
+}
+
+.saida {
+  color: var(--color-danger);
+}
+
+.selo.saida {
+  background: var(--color-danger-bg);
+}
+
+/* ─── Skeleton ─── */
+.skeleton {
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-white) 25%,
+    var(--color-bg-igreja-card) 50%,
+    var(--color-bg-white) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ─── Estados ─── */
+.estadoVazio,
+.estadoErro {
+  padding: 64px 24px;
+  text-align: center;
+  font-size: var(--font-size-base);
+}
+
+.estadoVazio {
+  color: var(--color-text-muted);
+}
+
+.estadoErro {
+  color: var(--color-danger);
+}
+
+/* ─── Rodapé / paginação ─── */
+.rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.botaoPagina {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: background-color var(--transition-fast);
+}
+
+.botaoPagina:hover:not(:disabled) {
+  background: var(--color-bg-white);
+}
+
+.botaoPagina:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.infoPagina {
+  padding: 0 8px;
+}
+
+/* ─── Responsivo ─── */
+@media (max-width: 900px) {
+  .tabelaHeader {
+    display: none;
+  }
+
+  .linha {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .colCat,
+  .colData,
+  .colTipo {
+    display: none;
+  }
+
+  .filtroCampo {
+    min-width: 100%;
+  }
+}

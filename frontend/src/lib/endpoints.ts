@@ -24,4 +24,21 @@ export const Endpoints = {
     CRIAR: '/eventos',
     BY_ID: (id: string) => `/eventos/${id}`,
   },
+
+  categorias: {
+    base: '/categorias',
+    todas: '/categorias/todas',
+    porId: (id: string) => `/categorias/${id}`,
+  },
+
+  movimentacoes: {
+    base: '/movimentacoes',
+    porId: (id: string) => `/movimentacoes/${id}`,
+  },
+
+  relatorios: {
+    resumo: '/relatorios/resumo',
+    porCategoria: '/relatorios/por-categoria',
+    evolucaoMensal: '/relatorios/evolucao-mensal',
+  },
 }

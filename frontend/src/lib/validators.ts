@@ -122,6 +122,22 @@ export const eventoSchema = eventoSchemaBase.refine(
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }
 )
 
+export const categoriaSchema = z.object({
+  nome: z.string().trim().min(1, 'O nome é obrigatório.').max(255, 'Máximo 255 caracteres.'),
+  tipo: z.enum(['ENTRADA', 'SAIDA', 'AMBOS'], { message: 'Selecione o tipo da categoria.' }),
+})
+
+export const movimentacaoSchema = z.object({
+  tipo: z.enum(['ENTRADA', 'SAIDA'], { message: 'Selecione o tipo.' }),
+  valor: z.string()
+    .min(1, 'O valor é obrigatório.')
+    .refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
+  categoriaId: z.string().min(1, 'Selecione a categoria.'),
+  dataMovimentacao: z.string().min(1, 'A data é obrigatória.'),
+  membroId: opcional(z.string()),
+  descricao: opcional(z.string().max(1000, 'Máximo 1000 caracteres.')),
+})
+
 
 
 
@@ -133,3 +149,7 @@ export type MembroFormInput = z.input<typeof membroSchema>
 export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>
 export type EventoFormData = z.infer<typeof eventoSchema>
 export type EventoFormInput = z.input<typeof eventoSchemaBase>
+export type CategoriaFormData = z.infer<typeof categoriaSchema>
+export type CategoriaFormInput = z.input<typeof categoriaSchema>
+export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
+export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>

@@ -111,13 +111,13 @@
   gap: 10px;
 }
 .campoDataWrap {
-  flex: 2;   /* data mais larga */
+  flex: 2;   
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .campoHoraWrap {
-  flex: 1;   /* hora mais estreita */
+  flex: 1;   
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -159,7 +159,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* ─── Imagem (desabilitada) ─── */
+/* ─── Imagem  */
 .imagemWrap {
   display: flex;
   flex-direction: column;
@@ -248,4 +248,37 @@
 @media (max-width: 1024px) {
   .colunas { grid-template-columns: 1fr; }
   .colunaDireita { position: static; }
+}
+
+.breadcrumb {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.breadcrumbLink {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+}
+
+.breadcrumbSep {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.breadcrumbAtual {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import { Endpoints } from "@/lib/endpoints";
-import { UsuarioResponse, PagedResponse } from "@/types/usuario.types";
+import { UsuarioResponse} from "@/types/usuario.types";
+import { PagedResponse } from "@/types/pagedResponse.type";
 import type { Role } from "@/types/usuario.types";
 
 interface ListarUsuariosParams {

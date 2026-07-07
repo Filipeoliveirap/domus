@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type { EventoRequest, EventoResponse } from '@/types/evento.type'
-import type { PagedResponse } from '@/types/usuario.types'
+import type { PagedResponse } from '@/types/pagedResponse.type'
 
 interface ListarEventosParams {
   q?: string

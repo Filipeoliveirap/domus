@@ -14,7 +14,7 @@ const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] 
   { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
   { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER'] },
   { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
-  { href: '/financeiro', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
+  { href: '/financeiro/movimentacoes', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
 ]
 

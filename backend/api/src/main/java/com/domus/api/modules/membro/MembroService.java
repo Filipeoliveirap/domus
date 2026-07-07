@@ -1,5 +1,6 @@
 package com.domus.api.modules.membro;
 
+import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
@@ -7,18 +8,14 @@ import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.usuario.*;
 import com.domus.api.shared.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.Cursor;
-import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,9 +24,9 @@ import java.util.UUID;
 public class MembroService {
 
     private final MembroRepository membroRepository;
-    private final StringRedisTemplate redisTemplate;
     private final IgrejaRepository igrejaRepository;
     private final UsuarioService  usuarioService;
+    private final CacheEvictor cacheEvictor;
 
     @Cacheable(
             value = "membros",
@@ -42,21 +39,6 @@ public class MembroService {
         return PagedResponse.from(pagina);
     }
 
-    private void evictCacheMembros(UUID igrejaId) {
-        try {
-            String pattern = "membros::" + igrejaId + ":*";
-            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
-            try (Cursor<String> cursor = redisTemplate.scan(options)) {
-                List<String> keys = new ArrayList<>();
-                cursor.forEachRemaining(keys::add);
-                if (!keys.isEmpty()) {
-                    redisTemplate.delete(keys);
-                }
-            }
-        } catch (RuntimeException ex) {
-            log.warn("Falha ao invalidar cache de membros. igreja_id={}", igrejaId, ex);
-        }
-    }
 
     @Transactional
     public MembroResponse cadastrarMembro(MembroRequestDTO data, UUID igrejaId) {
@@ -70,7 +52,7 @@ public class MembroService {
         }
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
-                .orElseThrow(() -> new BusinessException("Igreja não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
         Membro membro = Membro.builder()
                 .igreja(igreja)
@@ -86,8 +68,8 @@ public class MembroService {
                 .build();
 
         Membro salvo = membroRepository.save(membro);
-        log.info("Membro cadastrado. id={}", salvo.getId());
-        evictCacheMembros(igrejaId);
+        log.info("Membro cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
+        cacheEvictor.evictPorIgreja("membros", igrejaId);
 
         return MembroResponse.from(salvo);
     }
@@ -101,7 +83,7 @@ public class MembroService {
         log.info("Atualizando membro. id={}, igreja_id={}", id, igrejaId);
 
         Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new BusinessException("Membro não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
         String emailNovo = normalizarEmail(data.email());
 
@@ -121,26 +103,26 @@ public class MembroService {
         membro.setObservacoes(data.observacoes());
 
         Membro salvo = membroRepository.save(membro);
-        evictCacheMembros(igrejaId);
+        cacheEvictor.evictPorIgreja("membros", igrejaId);
 
-        log.info("Membro atualizado. id={}", salvo.getId());
+        log.info("Membro atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
         return MembroResponse.from(salvo);
     }
 
     @Transactional
     public void arquivarMembro(UUID id, UUID igrejaId) {
         Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new BusinessException("Membro não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
-        evictCacheMembros(igrejaId);
+        cacheEvictor.evictPorIgreja("membros", igrejaId);
     }
 
     @Transactional(readOnly = true)
     public MembroResponse buscarPorId(UUID id, UUID igrejaId) {
         Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new BusinessException("Membro não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
         return MembroResponse.from(membro);
     }
 

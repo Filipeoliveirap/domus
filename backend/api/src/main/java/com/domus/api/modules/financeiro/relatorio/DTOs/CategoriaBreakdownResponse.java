@@ -1,4 +1,14 @@
 package com.domus.api.modules.financeiro.relatorio.DTOs;
 
-public record CategoriaBreakdownResponse() {
-}
+import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record CategoriaBreakdownResponse(
+        UUID categoriaId,
+        String categoriaNome,
+        TipoMovimentacao tipo,
+        BigDecimal total,
+        BigDecimal percentual
+) {}

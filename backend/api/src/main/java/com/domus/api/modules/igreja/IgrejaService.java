@@ -12,6 +12,7 @@ import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.springframework.cache.annotation.Cacheable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +69,7 @@ public class IgrejaService {
 
         Usuario admin = Usuario.builder()
                 .igreja(igreja)
-                .membro(membroAdmin)        // ← liga ao membro
+                .membro(membroAdmin)
                 .senhaHash(passwordEncoder.encode(request.getSenhaAdmin()))
                 .ativo(true)
                 .role(roleAdmin)
@@ -96,7 +97,7 @@ public class IgrejaService {
     public IgrejaDTO buscarPorId(UUID id) {
         log.info("Buscando igreja no banco. id={}", id);
         Igreja igreja = igrejaRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("IGREJA_NAO_ENCONTRADA", "Igreja não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
         return IgrejaDTO.from(igreja);
     }
 

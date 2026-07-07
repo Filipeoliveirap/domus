@@ -1,6 +1,8 @@
 package com.domus.api.config.redis;
 
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.financeiro.categoria.DTOs.CategoriaResponse;
+import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
@@ -75,12 +77,32 @@ public class RedisConfig implements CachingConfigurer {
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serEventos));
 
+        JavaType tipoCategorias = mapper.getTypeFactory()
+                .constructParametricType(PagedResponse.class, CategoriaResponse.class);
+        Jackson2JsonRedisSerializer<Object> serCategorias =
+                new Jackson2JsonRedisSerializer<>(mapper, tipoCategorias);
+
+        RedisCacheConfiguration categoriasConfig = base
+                .entryTtl(Duration.ofMinutes(5))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serCategorias));
+
+        JavaType tipoMovimentacoes = mapper.getTypeFactory()
+                .constructParametricType(PagedResponse.class, MovimentacaoResponse.class);
+        Jackson2JsonRedisSerializer<Object> serMovimentacoes =
+                new Jackson2JsonRedisSerializer<>(mapper, tipoMovimentacoes);
+
+        RedisCacheConfiguration movimentacoesConfig = base
+                .entryTtl(Duration.ofMinutes(5))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMovimentacoes));
+
         Map<String, RedisCacheConfiguration> caches = new HashMap<>();
 
         caches.put("igreja", igrejaConfig);
         caches.put("usuarios", usuariosConfig);
         caches.put("membros", membrosConfig);
         caches.put("eventos", eventosConfig);
+        caches.put("categorias", categoriasConfig);
+        caches.put("movimentacoes", movimentacoesConfig);
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(base.entryTtl(Duration.ofMinutes(10)))

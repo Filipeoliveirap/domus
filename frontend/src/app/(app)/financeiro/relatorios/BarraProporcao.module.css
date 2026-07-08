@@ -1,0 +1,91 @@
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.06), 0 10px 20px -3px rgba(19, 27, 46, 0.06);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.titulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.subtitulo {
+  margin-top: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.pctDestaque {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.pctNumero {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  line-height: 1;
+}
+.pctLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Barra */
+.barra {
+  display: flex;
+  height: 12px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-bg-page);
+}
+.barraEntrada {
+  background: var(--color-success-text);
+  transition: width 0.4s ease;
+}
+.barraSaida {
+  background: var(--color-danger);
+  transition: width 0.4s ease;
+}
+
+.legenda {
+  display: flex;
+  gap: 24px;
+}
+.legendaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.legendaDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+.dotEntrada { background: var(--color-success-text); }
+.dotSaida { background: var(--color-danger); }
+
+.skeleton {
+  height: 130px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--color-bg-white) 25%, var(--color-bg-page) 50%, var(--color-bg-white) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

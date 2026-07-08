@@ -40,5 +40,6 @@ export const Endpoints = {
     resumo: '/relatorios/resumo',
     porCategoria: '/relatorios/por-categoria',
     evolucaoMensal: '/relatorios/evolucao-mensal',
+    maiorLancamento: '/relatorios/maior-lancamento',
   },
 }

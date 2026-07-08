@@ -32,7 +32,6 @@ export function GraficoEvolucao({ data, isLoading, isError }: GraficoEvolucaoPro
     )
   }
 
-  // transforma os dados pro formato do Recharts
   const dadosGrafico = data.map((m) => ({
     mes: `${nomeMes(m.mes)}/${String(m.ano).slice(2)}`,
     Entradas: parseFloat(m.entradas),
@@ -59,7 +58,7 @@ export function GraficoEvolucao({ data, isLoading, isError }: GraficoEvolucaoPro
               tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
             />
             <Tooltip
-              formatter={(value: number) => formatarMoeda(String(value))}
+              formatter={(value) => formatarMoeda(String(value))}
               contentStyle={{
                 borderRadius: '8px',
                 border: '1px solid var(--color-border)',

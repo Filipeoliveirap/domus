@@ -27,7 +27,6 @@ export function CardsResumo({ data, isLoading, isError }: CardsResumoProps) {
 
   const entradas = formatarVariacao(data.comparacao.entradasVariacao)
   const saidas = formatarVariacao(data.comparacao.saidasVariacao)
-  const saldo = formatarVariacao(data.comparacao.saldoVariacao)
 
   return (
     <div className={styles.grid}>

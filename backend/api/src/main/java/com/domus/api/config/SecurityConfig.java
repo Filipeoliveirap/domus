@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.DELETE, "/membros/**")
                         .hasRole("ADMIN_IGREJA")
+                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole("ADMIN_IGREJA")
 
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
@@ -72,6 +73,7 @@ public class SecurityConfig {
                                 "/categorias/**",
                                 "/relatorios/**"
                         ).hasRole("ADMIN_IGREJA")
+                        .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole("ADMIN_IGREJA")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)

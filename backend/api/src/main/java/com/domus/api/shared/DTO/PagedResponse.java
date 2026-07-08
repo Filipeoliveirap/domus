@@ -1,4 +1,4 @@
-package com.domus.api.shared;
+package com.domus.api.shared.DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,8 +21,8 @@ public class PagedResponse<T> {
     private int totalPages;
     private boolean last;
 
-    public static <T> com.domus.api.shared.PagedResponse<T> from(Page<T> p) {
-        return new com.domus.api.shared.PagedResponse<>(p.getContent(), p.getNumber(), p.getSize(),
+    public static <T> PagedResponse<T> from(Page<T> p) {
+        return new PagedResponse<>(p.getContent(), p.getNumber(), p.getSize(),
                 p.getTotalElements(), p.getTotalPages(), p.isLast());
     }
 }

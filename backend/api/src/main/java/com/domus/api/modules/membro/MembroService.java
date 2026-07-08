@@ -5,8 +5,11 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.usuario.*;
-import com.domus.api.shared.PagedResponse;
+import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ public class MembroService {
     private final IgrejaRepository igrejaRepository;
     private final UsuarioService  usuarioService;
     private final CacheEvictor cacheEvictor;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Cacheable(
             value = "membros",
@@ -68,6 +72,12 @@ public class MembroService {
                 .build();
 
         Membro salvo = membroRepository.save(membro);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.CRIADO,
+                salvo.getId(),
+                igrejaId
+        );
         log.info("Membro cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("membros", igrejaId);
 
@@ -103,6 +113,13 @@ public class MembroService {
         membro.setObservacoes(data.observacoes());
 
         Membro salvo = membroRepository.save(membro);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.ATUALIZADO,
+                membro.getId(),
+                igrejaId
+        );
+        usuarioService.reindexarPorMembro(membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("membros", igrejaId);
 
         log.info("Membro atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
@@ -116,6 +133,12 @@ public class MembroService {
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.REMOVIDO,
+                membro.getId(),
+                igrejaId
+        );
         cacheEvictor.evictPorIgreja("membros", igrejaId);
     }
 

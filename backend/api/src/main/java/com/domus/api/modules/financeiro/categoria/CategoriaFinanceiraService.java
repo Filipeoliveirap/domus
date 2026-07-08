@@ -3,7 +3,7 @@ package com.domus.api.modules.financeiro.categoria;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.categoria.DTOs.*;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.shared.PagedResponse;
+import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;

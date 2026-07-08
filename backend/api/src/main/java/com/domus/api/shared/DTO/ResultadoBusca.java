@@ -1,4 +1,10 @@
 package com.domus.api.shared.DTO;
 
-public record ResultadoBusca() {
-}
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+
+public record ResultadoBusca(
+        String id,
+        TipoEntidadeOutbox tipo,
+        String titulo,
+        String subtitulo
+) {}

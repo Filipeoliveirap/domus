@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -191,5 +192,33 @@ public class MovimentacaoFinanceiraService {
                     log.warn("Membro informado na movimentação não encontrado na igreja. membro_id={}, igreja_id={}", membroId, igrejaId);
                     return new ResourceNotFoundException("Membro não encontrado.");
                 });
+    }
+
+    @Transactional
+    public void reindexarPorCategoria(UUID categoriaId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorCategoria(categoriaId, igrejaId);
+        if (ids.isEmpty()) return;
+        log.info("Reindexando {} movimentações por alteração na categoria. categoria_id={}, igreja_id={}",
+                ids.size(), categoriaId, igrejaId);
+        ids.forEach(id -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.ATUALIZADO,
+                id,
+                igrejaId
+        ));
+    }
+
+    @Transactional
+    public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorMembro(membroId, igrejaId);
+        if (ids.isEmpty()) return;
+        log.info("Reindexando {} movimentações por alteração no membro. membro_id={}, igreja_id={}",
+                ids.size(), membroId, igrejaId);
+        ids.forEach(id -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.ATUALIZADO,
+                id,
+                igrejaId
+        ));
     }
 }

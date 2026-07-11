@@ -1,7 +1,6 @@
-package com.domus.api.modules.usuario.busca;
+package com.domus.api.modules.financeiro.categoria.busca;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.shared.DTO.ResultadoBusca;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BuscaUsuarioService {
+public class BuscaCategoriaService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -35,20 +34,10 @@ public class BuscaUsuarioService {
                 )
         );
 
-        Query fuzzyEmail = Query.of(q -> q
-                .match(m -> m
-                        .field("email")
-                        .query(termo)
-                        .fuzziness("AUTO")
-                )
-        );
-
         Query prefixo = Query.of(q -> q
-                .multiMatch(m -> m
+                .match(m -> m
+                        .field("nome")
                         .query(termo)
-                        .fields("nome^3", "email^2", "role")
-                        .type(TextQueryType.BoolPrefix)
-                        .boost(2.0f)
                 )
         );
 
@@ -56,7 +45,6 @@ public class BuscaUsuarioService {
                 .bool(b -> b
                         .filter(filtroIgreja)
                         .should(fuzzyNome)
-                        .should(fuzzyEmail)
                         .should(prefixo)
                         .minimumShouldMatch("1")
                 )
@@ -67,16 +55,18 @@ public class BuscaUsuarioService {
                 .withMaxResults(limite)
                 .build();
 
-        SearchHits<UsuarioDocument> hits = elasticsearchOperations.search(nativeQuery, UsuarioDocument.class);
+        SearchHits<CategoriaDocument> hits = elasticsearchOperations.search(nativeQuery, CategoriaDocument.class);
 
         return hits.stream()
                 .map(hit -> {
-                    UsuarioDocument doc = hit.getContent();
+                    CategoriaDocument doc = hit.getContent();
+                    String subtitulo = "ENTRADA".equals(doc.getTipo()) ? "Entrada"
+                            : "SAIDA".equals(doc.getTipo()) ? "Saída" : "Ambos";
                     return new ResultadoBusca(
                             doc.getId(),
-                            TipoEntidadeOutbox.USUARIO,
+                            TipoEntidadeOutbox.CATEGORIA,
                             doc.getNome(),
-                            doc.getRole()
+                            subtitulo
                     );
                 })
                 .toList();

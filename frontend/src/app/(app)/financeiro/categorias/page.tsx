@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Archive } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useCategorias } from '@/hooks/financeiro/categoria/useCategorias'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { ModalCategoriaForm } from '@/app/(app)/financeiro/categorias/ModalCategoriaForm'
@@ -10,6 +9,7 @@ import { ModalArquivarCategoria } from '@/app/(app)/financeiro/categorias/ModalA
 import { rotuloTipoCategoria, varianteTipoCategoria } from '@/lib/formats/financeiro/categoriaFormat'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import styles from './categoria.module.css'
+import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 
 const TAMANHO_PAGINA = 20
 
@@ -19,11 +19,9 @@ function IconeTipo({ tipo }: { tipo: CategoriaResponse['tipo'] }) {
   return <ArrowLeftRight size={20} />
 }
 
-export default function CategoriasPage() {
-  const [busca, setBusca] = useState('')
+function CategoriasConteudo() {
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
   const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
-
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
 
@@ -160,5 +158,13 @@ export default function CategoriasPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function CategoriasPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <CategoriasConteudo />
+    </Suspense>
   )
 }

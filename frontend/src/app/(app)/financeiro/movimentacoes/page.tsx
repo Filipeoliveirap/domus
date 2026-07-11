@@ -14,6 +14,7 @@ import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/for
 import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
 import styles from './movimentacoes.module.css'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
+import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 
 const TAMANHO_PAGINA = 15
 
@@ -22,25 +23,26 @@ function MovimentacoesConteudo() {
   const searchParams = useSearchParams()
   const detalheId = searchParams.get('detalhe')
 
-  // filtros
-  const [tipo, setTipo] = useState<TipoMovimentacao | ''>('')
-  const [categoriaId, setCategoriaId] = useState('')
-  const [dataInicio, setDataInicio] = useState('')
-  const [dataFim, setDataFim] = useState('')
-  const [busca, setBusca] = useState('')
-  const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
+  const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
+    tipo: '',
+    categoriaId: '',
+    dataInicio: '',
+    dataFim: '',
+    q: '',
+  })
 
+  const [pagina, setPagina] = useState(0)
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
 
-  const { data: categorias } = useCategoriasSelect()
+  const qDebounced = useDebounce(filtros.q, 250)
 
+  const { data: categorias } = useCategoriasSelect()
   const { data, isLoading, isError } = useMovimentacoes({
-    tipo: tipo || undefined,
-    categoriaId: categoriaId || undefined,
-    dataInicio: dataInicio || undefined,
-    dataFim: dataFim || undefined,
-    q: buscaDebounced || undefined,
+    tipo: (filtros.tipo as TipoMovimentacao) || undefined,
+    categoriaId: filtros.categoriaId || undefined,
+    dataInicio: filtros.dataInicio || undefined,
+    dataFim: filtros.dataFim || undefined,
+    q: qDebounced || undefined,
     page: pagina,
     size: TAMANHO_PAGINA,
   })
@@ -54,15 +56,11 @@ function MovimentacoesConteudo() {
   }
 
   function limparFiltros() {
-    setTipo('')
-    setCategoriaId('')
-    setDataInicio('')
-    setDataFim('')
-    setBusca('')
+    setFiltros({ tipo: '', categoriaId: '', dataInicio: '', dataFim: '', q: '' })
     setPagina(0)
   }
 
-  const temFiltro = tipo || categoriaId || dataInicio || dataFim || busca
+  const temFiltro = filtros.tipo || filtros.categoriaId || filtros.dataInicio || filtros.dataFim || filtros.q
 
   function abrirDetalhe(mov: MovimentacaoResponse) {
     router.push(`/financeiro/movimentacoes?detalhe=${mov.id}`, { scroll: false })
@@ -93,14 +91,14 @@ function MovimentacoesConteudo() {
         </Link>
       </header>
 
-      {/* Filtros sempre visíveis */}
+      {/* Filtros */}
       <div className={styles.filtros}>
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>TIPO</label>
           <select
             className={styles.filtroSelect}
-            value={tipo}
-            onChange={(e) => { setTipo(e.target.value as TipoMovimentacao | ''); resetarPagina() }}
+            value={filtros.tipo}
+            onChange={(e) => { setFiltro('tipo', e.target.value); resetarPagina() }}
           >
             <option value="">Todos os tipos</option>
             <option value="ENTRADA">Entrada</option>
@@ -112,8 +110,8 @@ function MovimentacoesConteudo() {
           <label className={styles.filtroLabel}>CATEGORIA</label>
           <select
             className={styles.filtroSelect}
-            value={categoriaId}
-            onChange={(e) => { setCategoriaId(e.target.value); resetarPagina() }}
+            value={filtros.categoriaId}
+            onChange={(e) => { setFiltro('categoriaId', e.target.value); resetarPagina() }}
           >
             <option value="">Todas as categorias</option>
             {categorias?.map((c: CategoriaResponse) => (
@@ -127,8 +125,8 @@ function MovimentacoesConteudo() {
           <input
             type="date"
             className={styles.filtroInput}
-            value={dataInicio}
-            onChange={(e) => { setDataInicio(e.target.value); resetarPagina() }}
+            value={filtros.dataInicio}
+            onChange={(e) => { setFiltro('dataInicio', e.target.value); resetarPagina() }}
           />
         </div>
 
@@ -137,8 +135,8 @@ function MovimentacoesConteudo() {
           <input
             type="date"
             className={styles.filtroInput}
-            value={dataFim}
-            onChange={(e) => { setDataFim(e.target.value); resetarPagina() }}
+            value={filtros.dataFim}
+            onChange={(e) => { setFiltro('dataFim', e.target.value); resetarPagina() }}
           />
         </div>
 
@@ -148,8 +146,8 @@ function MovimentacoesConteudo() {
             type="text"
             className={styles.filtroInput}
             placeholder="Buscar na descrição..."
-            value={busca}
-            onChange={(e) => { setBusca(e.target.value); resetarPagina() }}
+            value={filtros.q}
+            onChange={(e) => { setFiltro('q', e.target.value); resetarPagina() }}
           />
         </div>
 

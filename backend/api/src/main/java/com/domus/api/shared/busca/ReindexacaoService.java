@@ -3,6 +3,9 @@ package com.domus.api.shared.busca;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.busca.EventoDocument;
 import com.domus.api.modules.evento.busca.EventoSearchRepository;
+import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
+import com.domus.api.modules.financeiro.categoria.busca.CategoriaDocument;
+import com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoDocument;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository;
@@ -33,6 +36,8 @@ public class ReindexacaoService {
     private final UsuarioSearchRepository usuarioSearchRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
     private final MovimentacaoSearchRepository  movimentacaoSearchRepository;
+    private final CategoriaSearchRepository  categoriaSearchRepository;
+    private final CategoriaFinanceiraRepository categoriaRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Long> reindexarTudo() {
@@ -42,7 +47,7 @@ public class ReindexacaoService {
         resultado.put("eventos", reindexarEventos());
         resultado.put("usuarios", reindexarUsuarios());
         resultado.put("movimentacoes", reindexarMovimentacoes());
-        // resultado.put("categorias", reindexarCategorias());
+        resultado.put("categorias", reindexarCategorias());
 
         log.info("Reindexação completa. resultado={}", resultado);
         return resultado;
@@ -81,6 +86,15 @@ public class ReindexacaoService {
                 .toList();
         movimentacaoSearchRepository.saveAll(docs);
         log.info("Reindexadas {} movimentações.", docs.size());
+        return docs.size();
+    }
+
+    private long reindexarCategorias() {
+        var docs = categoriaRepository.findAll().stream()
+                .map(CategoriaDocument::de)
+                .toList();
+        categoriaSearchRepository.saveAll(docs);
+        log.info("Reindexadas {} categorias.", docs.size());
         return docs.size();
     }
 }

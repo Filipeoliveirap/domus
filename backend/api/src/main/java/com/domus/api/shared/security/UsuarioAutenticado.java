@@ -1,5 +1,6 @@
 package com.domus.api.shared.security;
 
+import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.shared.exception.BusinessException;
 import org.springframework.security.core.Authentication;
@@ -27,4 +28,6 @@ public class UsuarioAutenticado {
     public UUID getUsuarioId() {
         return get().getId();
     }
+
+    public String getRole() { return get().getRole().getNome();}
 }

@@ -91,6 +91,7 @@ export function useRegistrarIgreja () {
                 nome : response.nome,
                 role : response.role,
                 igrejaId : response.igrejaId,
+                igrejaNome : response.igrejaNome,
             })
             setDadosSucesso({
                 nome: response.nome,

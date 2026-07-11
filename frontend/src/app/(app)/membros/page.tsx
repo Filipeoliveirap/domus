@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Pencil, KeyRound, Archive } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useMembros } from '@/hooks/membro/useMembros'
+import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import {
-  iniciais,
-  rotuloStatus,
-  varianteStatus,
-  formatarData,
-  formatarTelefoneExibicao,
+  iniciais, rotuloStatus, varianteStatus, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/membroFormat'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { MembroResponse } from '@/types/membro.type'
@@ -21,13 +17,11 @@ import { ModalArquivarMembro } from './(arquivar)/ArquivarMembro'
 
 const TAMANHO_PAGINA = 10
 
-export default function MembrosPage() {
-  const [busca, setBusca] = useState('')
-  const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
+function MembrosConteudo() {
   const router = useRouter()
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl()
+  const [pagina, setPagina] = useState(0)
 
-  // estados dos modais (conceder acesso / arquivar) — plugamos os modais depois
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)
 
@@ -175,5 +169,13 @@ export default function MembrosPage() {
         <ModalArquivarMembro membro={membroArquivando} onClose={() => setMembroArquivando(null)} />
       )}
     </div>
+  )
+}
+
+export default function MembrosPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <MembrosConteudo />
+    </Suspense>
   )
 }

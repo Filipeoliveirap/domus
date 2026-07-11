@@ -7,6 +7,7 @@ public record RegistrarIgrejaResponse (
         String token,
         String nome,
         String role,
-        UUID igrejaId
+        UUID igrejaId,
+        String igrejaNome
 )
 { }

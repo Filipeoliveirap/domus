@@ -7,5 +7,9 @@ public record LoginResponseDTO(
         String nome,
         String role,
         UUID igrejaId,
-        String token) {
+        String igrejaNome,
+        String token
+
+) {
+
 }

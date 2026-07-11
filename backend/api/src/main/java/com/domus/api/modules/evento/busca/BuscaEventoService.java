@@ -1,6 +1,7 @@
 package com.domus.api.modules.evento.busca;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.shared.DTO.ResultadoBusca;
 import lombok.RequiredArgsConstructor;
@@ -25,18 +26,39 @@ public class BuscaEventoService {
                 .term(t -> t.field("igrejaId").value(igrejaId.toString()))
         );
 
-        Query buscaTexto = Query.of(q -> q
+        Query fuzzyTitulo = Query.of(q -> q
+                .match(m -> m
+                        .field("titulo")
+                        .query(termo)
+                        .fuzziness("AUTO")
+                        .prefixLength(1)
+                )
+        );
+
+        Query fuzzyOutros = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("titulo", "descricao", "local")
+                        .fields("descricao", "local")
                         .fuzziness("AUTO")
+                )
+        );
+
+        Query prefixo = Query.of(q -> q
+                .multiMatch(m -> m
+                        .query(termo)
+                        .fields("titulo^3", "descricao", "local")
+                        .type(TextQueryType.BoolPrefix)
+                        .boost(2.0f)
                 )
         );
 
         Query queryFinal = Query.of(q -> q
                 .bool(b -> b
                         .filter(filtroIgreja)
-                        .must(buscaTexto)
+                        .should(fuzzyTitulo)
+                        .should(fuzzyOutros)
+                        .should(prefixo)
+                        .minimumShouldMatch("1")
                 )
         );
 

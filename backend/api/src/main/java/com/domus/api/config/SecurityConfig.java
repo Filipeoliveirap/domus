@@ -74,6 +74,7 @@ public class SecurityConfig {
                                 "/relatorios/**"
                         ).hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole("ADMIN_IGREJA")
+                        .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole("ADMIN_IGREJA")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)

@@ -1,5 +1,6 @@
 package com.domus.api.modules.membro.busca;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.domus.api.shared.DTO.ResultadoBusca;
@@ -25,18 +26,39 @@ public class BuscaMembroService {
                 .term(t -> t.field("igrejaId").value(igrejaId.toString()))
         );
 
-        Query buscaTexto = Query.of(q -> q
+        Query fuzzyNome = Query.of(q -> q
+                .match(m -> m
+                        .field("nome")
+                        .query(termo)
+                        .fuzziness("AUTO")
+                        .prefixLength(1)
+                )
+        );
+
+        Query fuzzyOutros = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("nome", "email", "telefone", "endereco", "ministerio")
+                        .fields("email^2", "endereco", "ministerio")
                         .fuzziness("AUTO")
+                )
+        );
+
+        Query prefixo = Query.of(q -> q
+                .multiMatch(m -> m
+                        .query(termo)
+                        .fields("nome^3", "email^2", "telefone", "endereco", "ministerio")
+                        .type(co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BoolPrefix)
+                        .boost(2.0f)
                 )
         );
 
         Query queryFinal = Query.of(q -> q
                 .bool(b -> b
                         .filter(filtroIgreja)
-                        .must(buscaTexto)
+                        .should(fuzzyNome)
+                        .should(fuzzyOutros)
+                        .should(prefixo)
+                        .minimumShouldMatch("1")
                 )
         );
 

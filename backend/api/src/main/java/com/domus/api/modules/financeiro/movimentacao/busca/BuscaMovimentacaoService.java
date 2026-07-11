@@ -1,6 +1,7 @@
 package com.domus.api.modules.financeiro.movimentacao.busca;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.shared.DTO.ResultadoBusca;
 import lombok.RequiredArgsConstructor;
@@ -25,18 +26,30 @@ public class BuscaMovimentacaoService {
                 .term(t -> t.field("igrejaId").value(igrejaId.toString()))
         );
 
-        Query buscaTexto = Query.of(q -> q
+        Query fuzzy = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("descricao", "categoriaNome", "membroNome")
+                        .fields("descricao^2", "categoriaNome", "membroNome")
                         .fuzziness("AUTO")
+                        .prefixLength(1)
+                )
+        );
+
+        Query prefixo = Query.of(q -> q
+                .multiMatch(m -> m
+                        .query(termo)
+                        .fields("descricao^2", "categoriaNome", "membroNome")
+                        .type(TextQueryType.BoolPrefix)
+                        .boost(2.0f)
                 )
         );
 
         Query queryFinal = Query.of(q -> q
                 .bool(b -> b
                         .filter(filtroIgreja)
-                        .must(buscaTexto)
+                        .should(fuzzy)
+                        .should(prefixo)
+                        .minimumShouldMatch("1")
                 )
         );
 

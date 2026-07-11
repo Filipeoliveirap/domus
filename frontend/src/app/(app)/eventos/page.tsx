@@ -4,13 +4,13 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useEventos } from '@/hooks/evento/useEventos'
 import { useAuthStore } from '@/store/authStore'
 import { EventoCard } from '@/components/module/eventos/EventoCard'
 import { DrawerDetalheEvento } from '@/app/(app)/eventos/(detalhe)/DrawerDetalheEvento'
 import { ModalArquivarEvento } from './ModalArquivarEvento'
 import { EventoResponse } from '@/types/evento.type'
+import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import styles from './Page.module.css'
 
 const TAMANHO_PAGINA = 12
@@ -22,9 +22,8 @@ function EventosConteudo() {
   const role = useAuthStore((s) => s.role)
   const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
 
-  const [busca, setBusca] = useState('')
   const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
 
   const [eventoArquivando, setEventoArquivando] = useState<EventoResponse | null>(null)
 

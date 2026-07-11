@@ -8,8 +8,9 @@ interface AuthState {
   nome: string | null
   role: Role | null
   igrejaId: string | null
+  igrejaNome: string | null
   isAuthenticated: boolean
-  login: (data: { token: string; id: string; nome: string; role: Role; igrejaId: string }) => void
+  login: (data: { token: string; id: string; nome: string; role: Role; igrejaId: string; igrejaNome: string }) => void
   logout: () => void
   atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role'>>) => void
 }
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthState>()(
       nome: null,
       role: null,
       igrejaId: null,
+      igrejaNome: null,
       isAuthenticated: false,
       login: (data) => {
         localStorage.setItem('domus:token', data.token)
@@ -31,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('domus:token')
         document.cookie = 'domus:token=; path=/; max-age=0'
-        set({ token: null, id: null, nome: null, role: null, igrejaId: null, isAuthenticated: false })
+        set({ token: null, id: null, nome: null, role: null, igrejaId: null, igrejaNome: null, isAuthenticated: false })
       },
       atualizarUsuarioLogado: (data) => set(data),
     }),

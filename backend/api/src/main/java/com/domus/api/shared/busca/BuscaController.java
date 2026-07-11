@@ -1,6 +1,7 @@
 package com.domus.api.shared.busca;
 
 import com.domus.api.modules.evento.busca.BuscaEventoService;
+import com.domus.api.modules.financeiro.categoria.busca.BuscaCategoriaService;
 import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoService;
 import com.domus.api.modules.membro.busca.BuscaMembroService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
@@ -21,6 +22,8 @@ public class BuscaController {
     private final BuscaEventoService buscaEventoService;
     private final BuscaUsuarioService buscaUsuarioService;
     private final BuscaMovimentacaoService buscaMovimentacaoService;
+    private final BuscaCategoriaService buscaCategoriaService;
+    private final BuscaGlobalService buscaGlobalService;
 
     @GetMapping("/membros")
     public List<ResultadoBusca> buscarMembros(@RequestParam String q) {
@@ -52,5 +55,25 @@ public class BuscaController {
             return List.of();
         }
         return buscaMovimentacaoService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(), 10);
+    }
+
+    @GetMapping("/categorias")
+    public List<ResultadoBusca> buscarCategorias(@RequestParam String q) {
+        if (q == null || q.isBlank()) {
+            return List.of();
+        }
+        return buscaCategoriaService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(), 10);
+    }
+
+    @GetMapping("/global")
+    public List<ResultadoBusca> buscarGlobal(@RequestParam String q) {
+        if (q == null || q.isBlank()) {
+            return List.of();
+        }
+        return buscaGlobalService.buscar(
+                q.trim(),
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getRole()
+        );
     }
 }

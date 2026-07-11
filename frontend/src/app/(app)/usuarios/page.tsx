@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense} from "react";
 import Link from "next/link";
 import { ChevronRight, Shield, Ban, Archive, UserCheck } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import {
   iniciais,
@@ -17,14 +16,14 @@ import { UsuarioResponse } from "@/types/usuario.types";
 import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
 import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
 import { ModalArquivarUsuario } from "./(arquivarusuario)/ModalArquivarUsuario";
+import { useBuscaUrl } from "@/hooks/busca/useBuscaUrl";
 
 
 const TAMANHO_PAGINA = 10;
 
-export default function UsuariosPage() {
-  const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(0);
-  const buscaDebounced = useDebounce(busca, 350);
+function UsuariosConteudo() {
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
+  const [pagina, setPagina] = useState(0)
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
@@ -33,15 +32,15 @@ export default function UsuariosPage() {
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
-  });
+  })
 
-  const usuarios = data?.content ?? [];
-  const totalPaginas = data?.totalPages ?? 0;
-  const totalElementos = data?.totalElements ?? 0;
+  const usuarios = data?.content ?? []
+  const totalPaginas = data?.totalPages ?? 0
+  const totalElementos = data?.totalElements ?? 0
 
   function aoBuscar(valor: string) {
-    setBusca(valor);
-    setPagina(0);
+    setBusca(valor)
+    setPagina(0)
   }
 
   return (
@@ -182,4 +181,12 @@ export default function UsuariosPage() {
 
     </div>
   );
+}
+
+export default function UsuariosPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <UsuariosConteudo />
+    </Suspense>
+  )
 }

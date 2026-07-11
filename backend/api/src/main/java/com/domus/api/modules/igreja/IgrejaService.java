@@ -88,7 +88,8 @@ public class IgrejaService {
                 token,
                 request.getNomeAdmin(),
                 roleAdmin.getNome(),
-                admin.getIgreja().getId()
+                admin.getIgreja().getId(),
+                igreja.getNome()
         );
 
     }

@@ -8,15 +8,20 @@ import styles from './cadastrar.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
 
-
 export default function CadastrarMovimentacaoPage() {
-  const form = useMovimentacaoForm({
-    onSuccess: () => {
-    },
-  })
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  
-  if (role !== 'ADMIN_IGREJA') {
+  const autorizado = role === 'ADMIN_IGREJA'
+
+  const form = useMovimentacaoForm({
+    onSuccess: () => {},
+  })
+
+  if (!hidratado) {
+    return <div className={styles.pagina} />
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 

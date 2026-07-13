@@ -24,8 +24,22 @@ import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonUsuarios } from "./SkeletonUsuarios";
 import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
 
-
 const TAMANHO_PAGINA = 10;
+
+function CabecalhoTabela() {
+  return (
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>E-mail</th>
+        <th>Perfil</th>
+        <th>Status</th>
+        <th>Último acesso</th>
+        <th className={styles.colunaAcoes}>Ações</th>
+      </tr>
+    </thead>
+  )
+}
 
 function UsuariosConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
@@ -33,14 +47,15 @@ function UsuariosConteudo() {
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const ehAdmin = role === 'ADMIN_IGREJA'
-  
-  const { data, isLoading, isError, isFetching, refetch} = useUsuarios({
+  const autorizado = role === 'ADMIN_IGREJA'
+
+  const { data, isLoading, isError, isFetching, refetch } = useUsuarios({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
-    enabled: ehAdmin,
+    enabled: autorizado,
   })
 
   const usuarios = data?.content ?? []
@@ -52,10 +67,25 @@ function UsuariosConteudo() {
     setPagina(0)
   }
 
-  if (!ehAdmin) {
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <div className={styles.containerTabela}>
+          <table className={styles.tabela}>
+            <CabecalhoTabela />
+            <tbody>
+              <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
-  
+
   return (
     <div className={styles.pagina}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
@@ -84,16 +114,7 @@ function UsuariosConteudo() {
 
       <div className={styles.containerTabela}>
         <table className={styles.tabela}>
-          <thead>
-            <tr>
-              <th>Usuário</th>
-              <th>E-mail</th>
-              <th>Perfil</th>
-              <th>Status</th>
-              <th>Último acesso</th>
-              <th className={styles.colunaAcoes}>Ações</th>
-            </tr>
-          </thead>
+          <CabecalhoTabela />
           <tbody>
             {isLoading ? (
               <SkeletonUsuarios linhas={TAMANHO_PAGINA} />

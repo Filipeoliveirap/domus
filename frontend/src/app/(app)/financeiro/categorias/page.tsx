@@ -25,19 +25,39 @@ function IconeTipo({ tipo }: { tipo: CategoriaResponse['tipo'] }) {
   return <ArrowLeftRight size={20} />
 }
 
+function CabecalhoTabela() {
+  return (
+    <div className={styles.tabelaHeader}>
+      <span className={styles.colNome}>NOME</span>
+      <span className={styles.colTipo}>TIPO</span>
+      <span className={styles.colAcoes}>AÇÕES</span>
+    </div>
+  )
+}
+
+function PainelCarregando() {
+  return (
+    <div className={styles.painel}>
+      <CabecalhoTabela />
+      <SkeletonCategorias linhas={8} />
+    </div>
+  )
+}
+
 function CategoriasConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
   const [pagina, setPagina] = useState(0)
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const ehAdmin = role === 'ADMIN_IGREJA'
+  const autorizado = role === 'ADMIN_IGREJA'
 
   const { data, isLoading, isError, refetch } = useCategorias({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
-    enabled: ehAdmin,
+    enabled: autorizado,
   })
 
   const categorias = data?.content ?? []
@@ -56,7 +76,15 @@ function CategoriasConteudo() {
     ]
   }
 
-  if (!ehAdmin) { 
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <PainelCarregando />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 
@@ -90,11 +118,7 @@ function CategoriasConteudo() {
       <div className={styles.painel}>
         {isLoading ? (
           <>
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colNome}>NOME</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
             <SkeletonCategorias linhas={8} />
           </>
         ) : isError ? (
@@ -117,12 +141,7 @@ function CategoriasConteudo() {
           />
         ) : (
           <>
-            {/* Cabeçalho da tabela */}
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colNome}>NOME</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
 
             <div className={styles.linhas}>
               {categorias.map((categoria) => (
@@ -168,7 +187,6 @@ function CategoriasConteudo() {
         )}
       </div>
 
-      {/* Modal criar/editar */}
       {modalForm.aberto && (
         <ModalCategoriaForm
           categoria={modalForm.categoria}
@@ -176,7 +194,6 @@ function CategoriasConteudo() {
         />
       )}
 
-      {/* Modal arquivar */}
       {categoriaArquivando && (
         <ModalArquivarCategoria
           categoria={categoriaArquivando}

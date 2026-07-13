@@ -16,24 +16,37 @@ export default function EditarMovimentacaoPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
+
   const { data: movimentacao, isPending, isError, refetch } = useMovimentacao(id)
   const form = useMovimentacaoForm({
     movimentacaoId: id,
     movimentacaoInicial: movimentacao,
     onSuccess: () => router.push('/financeiro/movimentacoes'),
   })
-  const role = useAuthStore((s) => s.role)
 
-  if (role !== 'ADMIN_IGREJA') {
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <SkeletonMovimentacaoForm />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 
   if (isPending) {
-    <div className={styles.pagina}>
-      <SkeletonMovimentacaoForm />
-    </div>
+    return (
+      <div className={styles.pagina}>
+        <SkeletonMovimentacaoForm />
+      </div>
+    )
   }
-  
+
   if (isError || !movimentacao) {
     return (
       <div className={styles.pagina}>

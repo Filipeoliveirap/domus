@@ -9,10 +9,17 @@ import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 
 export default function CadastrarEventoPage() {
-  const form = useEventoForm()
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  
-  if (role !== 'ADMIN_IGREJA' && role !== 'LIDER') {
+  const autorizado = role === 'ADMIN_IGREJA' || role === 'LIDER'
+
+  const form = useEventoForm()
+
+  if (!hidratado) {
+    return <div className={styles.pagina} />
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 

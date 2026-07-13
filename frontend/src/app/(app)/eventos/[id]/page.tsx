@@ -15,20 +15,33 @@ import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 export default function EditarEventoPage() {
   const params = useParams()
   const id = params.id as string
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA' || role === 'LIDER'
+
   const { data: evento, isPending, isError, refetch } = useEvento(id)
   const form = useEventoForm({ eventoId: id, eventoInicial: evento })
-  const role = useAuthStore((s) => s.role)
 
-  if (role !== 'ADMIN_IGREJA' && role !== 'LIDER') {
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <SkeletonEventoForm />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
+
   if (isPending) {
     return (
-    <div className={styles.pagina}>
-      <SkeletonEventoForm />
-    </div>
-  )
+      <div className={styles.pagina}>
+        <SkeletonEventoForm />
+      </div>
+    )
   }
+
   if (isError || !evento) {
     return (
       <div className={styles.pagina}>
@@ -40,8 +53,6 @@ export default function EditarEventoPage() {
       </div>
     )
   }
-
-  
 
   return (
     <div className={styles.pagina}>

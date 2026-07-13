@@ -23,6 +23,7 @@ function EventosConteudo() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const detalheId = searchParams.get('detalhe')
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
 
@@ -51,6 +52,14 @@ function EventosConteudo() {
   }
   function fecharDetalhe() {
     router.push('/eventos', { scroll: false })
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <SkeletonEventos cards={TAMANHO_PAGINA} />
+      </div>
+    )
   }
 
   return (
@@ -142,12 +151,10 @@ function EventosConteudo() {
         </>
       )}
 
-      {/* Drawer de detalhe*/}
       {detalheId && (
         <DrawerDetalheEvento eventoId={detalheId} onClose={fecharDetalhe} />
       )}
 
-      {/* Modal de arquivar */}
       {eventoArquivando && (
         <ModalArquivarEvento
           evento={eventoArquivando}

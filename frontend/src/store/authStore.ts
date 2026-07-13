@@ -10,9 +10,11 @@ interface AuthState {
   igrejaId: string | null
   igrejaNome: string | null
   isAuthenticated: boolean
+  hidratado: boolean
   login: (data: { token: string; id: string; nome: string; role: Role; igrejaId: string; igrejaNome: string }) => void
   logout: () => void
   atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role'>>) => void
+  setHidratado: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       igrejaId: null,
       igrejaNome: null,
       isAuthenticated: false,
+      hidratado: false,
       login: (data) => {
         localStorage.setItem('domus:token', data.token)
         document.cookie = `domus:token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`
@@ -36,7 +39,13 @@ export const useAuthStore = create<AuthState>()(
         set({ token: null, id: null, nome: null, role: null, igrejaId: null, igrejaNome: null, isAuthenticated: false })
       },
       atualizarUsuarioLogado: (data) => set(data),
+      setHidratado: () => set({ hidratado: true }),
     }),
-    { name: 'domus:auth' }
+    {
+      name: 'domus:auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHidratado()
+      },
+    }
   )
 )

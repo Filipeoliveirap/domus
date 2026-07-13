@@ -6,22 +6,31 @@ import { ChevronRight } from 'lucide-react'
 import { useMembro } from '@/hooks/membro/useMembro'
 import { useMembroForm } from '@/hooks/membro/useMembroForm'
 import { MembroForm } from '@/components/module/membros/MembroForm'
-import styles from '../cadastrar/page.module.css' 
+import styles from '../cadastrar/page.module.css'
 import { useAuthStore } from '@/store/authStore'
-import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito' 
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { SkeletonMembroForm } from './SkeletonMembroForm'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 export default function EditarMembroPage() {
   const params = useParams()
-  const role = useAuthStore((s) => s.role)
   const id = params.id as string
-  console.log('ID da rota:', id, 'params completo:', params)  
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
 
   const { data: membro, isLoading: carregando, isError, refetch } = useMembro(id)
   const form = useMembroForm({ membroId: id, membroInicial: membro })
 
-  if (role !== 'ADMIN_IGREJA') {
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <SkeletonMembroForm />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 
@@ -32,7 +41,7 @@ export default function EditarMembroPage() {
       </div>
     )
   }
-  
+
   if (isError || !membro) {
     return (
       <div className={styles.pagina}>

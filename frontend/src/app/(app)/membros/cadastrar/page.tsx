@@ -4,16 +4,23 @@ import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { useMembroForm } from '@/hooks/membro/useCadastrarMembro'
 import { MembroForm } from '@/components/module/membros/MembroForm'
-import styles from './page.module.css'  
+import styles from './page.module.css'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 
 export default function CadastrarMembroPage() {
-  const form = useMembroForm() 
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
 
-    if (role !== 'ADMIN_IGREJA') {
-      return <AcessoRestrito />
+  const form = useMembroForm()
+
+  if (!hidratado) {
+    return <div className={styles.pagina} />
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
   }
 
   return (

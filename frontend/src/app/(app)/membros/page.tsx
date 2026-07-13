@@ -26,13 +26,14 @@ function MembrosConteudo() {
   const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const [pagina, setPagina] = useState(0)
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const podeGerenciar = role === 'ADMIN_IGREJA'
 
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)
 
-  const { data, isLoading, isError, isFetching, refetch} = useMembros({
+  const { data, isLoading, isError, isFetching, refetch } = useMembros({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
@@ -45,6 +46,29 @@ function MembrosConteudo() {
   function aoBuscar(valor: string) {
     setBusca(valor)
     setPagina(0)
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <div className={styles.containerTabela}>
+          <table className={styles.tabela}>
+            <thead>
+              <tr>
+                <th>Membro</th>
+                <th>Telefone</th>
+                <th>Status</th>
+                <th>Cadastro</th>
+                <th className={styles.colunaAcoes}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <SkeletonMembros linhas={TAMANHO_PAGINA} podeGerenciar={false} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -67,8 +91,8 @@ function MembrosConteudo() {
             Novo membro
           </Link>
         )}
-
       </header>
+
       <div className={styles.barraBusca}>
         <input
           type="text"
@@ -119,7 +143,6 @@ function MembrosConteudo() {
                 </td>
               </tr>
             ) : (
-              
               membros.map((m) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => router.push(`/membros/${m.id}`) },

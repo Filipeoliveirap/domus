@@ -15,34 +15,57 @@ import { useMaiorLancamento } from '@/hooks/financeiro/relatorio/useMaiorLancame
 import styles from './relatorios.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import {
+  SkeletonCardsResumo,
+  SkeletonBarraProporcao,
+  SkeletonDestaques,
+  SkeletonBreakdownCategoria,
+  SkeletonGraficoEvolucao,
+} from './SkeletonRelatorios'
 
 const PRESETS: PresetPeriodo[] = ['ESTE_MES', 'MES_ANTERIOR', 'ULTIMOS_3_MESES', 'ULTIMOS_6_MESES', 'ESTE_ANO']
+
+function PaginaCarregando() {
+  return (
+    <div className={styles.pagina}>
+      <SkeletonCardsResumo />
+      <SkeletonBarraProporcao />
+      <SkeletonDestaques />
+      <SkeletonBreakdownCategoria />
+      <SkeletonGraficoEvolucao />
+    </div>
+  )
+}
 
 export default function RelatoriosPage() {
   const [preset, setPreset] = useState<PresetPeriodo>('ESTE_MES')
   const [custom, setCustom] = useState(false)
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const ehAdmin = role === 'ADMIN_IGREJA'
+  const autorizado = role === 'ADMIN_IGREJA'
 
   const periodo: PeriodoRelatorio =
     custom && dataInicio && dataFim
       ? { dataInicio, dataFim }
       : calcularPeriodo(preset)
 
-  const resumo = useResumo(periodo, ehAdmin)
-  const categorias = usePorCategoria(periodo, ehAdmin)
-  const evolucao = useEvolucaoMensal(periodo, ehAdmin)
-  const maiorLanc = useMaiorLancamento(periodo, ehAdmin)
+  const resumo = useResumo(periodo, autorizado)
+  const categorias = usePorCategoria(periodo, autorizado)
+  const evolucao = useEvolucaoMensal(periodo, autorizado)
+  const maiorLanc = useMaiorLancamento(periodo, autorizado)
 
   function escolherPreset(p: PresetPeriodo) {
     setPreset(p)
     setCustom(false)
   }
 
-  
-  if (!ehAdmin) {
+  if (!hidratado) {
+    return <PaginaCarregando />
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 
@@ -55,7 +78,6 @@ export default function RelatoriosPage() {
         </div>
       </header>
 
-      {/* Seletor de período */}
       <div className={styles.filtroPeriodo}>
         <div className={styles.presets}>
           {PRESETS.map((p) => (
@@ -112,9 +134,9 @@ export default function RelatoriosPage() {
         aoTentarNovamente={() => resumo.refetch()}
       />
 
-      <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => resumo.refetch()} />
+      <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => categorias.refetch()} />
 
-      <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => resumo.refetch()} />
+      <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => evolucao.refetch()} />
     </div>
   )
 }

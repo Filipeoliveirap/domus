@@ -22,15 +22,37 @@ import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
-
 const TAMANHO_PAGINA = 15
+
+function CabecalhoTabela() {
+  return (
+    <div className={styles.tabelaHeader}>
+      <span className={styles.colDesc}>DESCRIÇÃO</span>
+      <span className={styles.colCat}>CATEGORIA</span>
+      <span className={styles.colData}>DATA</span>
+      <span className={styles.colTipo}>TIPO</span>
+      <span className={styles.colValor}>VALOR</span>
+      <span className={styles.colAcoes}>AÇÕES</span>
+    </div>
+  )
+}
+
+function PainelCarregando() {
+  return (
+    <div className={styles.painel}>
+      <CabecalhoTabela />
+      <SkeletonMovimentacoes linhas={TAMANHO_PAGINA} />
+    </div>
+  )
+}
 
 function MovimentacoesConteudo() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const detalheId = searchParams.get('detalhe')
+  const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const ehAdmin = role === 'ADMIN_IGREJA'
+  const autorizado = role === 'ADMIN_IGREJA'
 
   const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
     tipo: '',
@@ -54,7 +76,7 @@ function MovimentacoesConteudo() {
     q: qDebounced || undefined,
     page: pagina,
     size: TAMANHO_PAGINA,
-  }, ehAdmin)
+  }, autorizado)
 
   const movimentacoes = data?.content ?? []
   const totalPaginas = data?.totalPages ?? 0
@@ -85,8 +107,15 @@ function MovimentacoesConteudo() {
     ]
   }
 
-  
-  if (!ehAdmin) {
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <PainelCarregando />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
     return <AcessoRestrito />
   }
 
@@ -174,14 +203,7 @@ function MovimentacoesConteudo() {
       <div className={styles.painel}>
         {isLoading ? (
           <>
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colDesc}>DESCRIÇÃO</span>
-              <span className={styles.colCat}>CATEGORIA</span>
-              <span className={styles.colData}>DATA</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colValor}>VALOR</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
             <SkeletonMovimentacoes linhas={TAMANHO_PAGINA} />
           </>
         ) : isError ? (
@@ -204,14 +226,7 @@ function MovimentacoesConteudo() {
           />
         ) : (
           <>
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colDesc}>DESCRIÇÃO</span>
-              <span className={styles.colCat}>CATEGORIA</span>
-              <span className={styles.colData}>DATA</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colValor}>VALOR</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
 
             <div className={styles.linhas}>
               {movimentacoes.map((mov) => (

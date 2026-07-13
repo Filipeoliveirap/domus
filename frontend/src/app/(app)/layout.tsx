@@ -10,9 +10,9 @@ export default function AppLayout({
 }) {
   return (
     <>
+      <FaixaOffline />
       <Sidebar />
       <TopBar />
-      <FaixaOffline />
       <main className={styles.main}>
         {children}
       </main>

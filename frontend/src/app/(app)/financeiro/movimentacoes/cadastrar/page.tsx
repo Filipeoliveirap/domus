@@ -5,6 +5,8 @@ import { ChevronRight } from 'lucide-react'
 import { useMovimentacaoForm } from '@/hooks/financeiro/movimentacao/useMovimentacaoForm'
 import { MovimentacaoForm } from '@/components/module/movimentacoes/MovimentacaoForm'
 import styles from './cadastrar.module.css'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
 
 
 export default function CadastrarMovimentacaoPage() {
@@ -12,6 +14,11 @@ export default function CadastrarMovimentacaoPage() {
     onSuccess: () => {
     },
   })
+  const role = useAuthStore((s) => s.role)
+  
+  if (role !== 'ADMIN_IGREJA') {
+    return <AcessoRestrito />
+  }
 
   return (
     <div className={styles.pagina}>

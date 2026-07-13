@@ -10,6 +10,12 @@ import { rotuloTipoCategoria, varianteTipoCategoria } from '@/lib/formats/financ
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import styles from './categoria.module.css'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonCategorias } from "./SkeletonCategorias";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 20
 
@@ -24,11 +30,14 @@ function CategoriasConteudo() {
   const [pagina, setPagina] = useState(0)
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
+  const role = useAuthStore((s) => s.role)
+  const ehAdmin = role === 'ADMIN_IGREJA'
 
-  const { data, isLoading, isError } = useCategorias({
+  const { data, isLoading, isError, refetch } = useCategorias({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
+    enabled: ehAdmin,
   })
 
   const categorias = data?.content ?? []
@@ -45,6 +54,10 @@ function CategoriasConteudo() {
       { label: 'Editar', icone: Pencil, onClick: () => setModalForm({ aberto: true, categoria }) },
       { label: 'Arquivar', icone: Archive, onClick: () => setCategoriaArquivando(categoria), perigo: true, separadorAntes: true },
     ]
+  }
+
+  if (!ehAdmin) { 
+    return <AcessoRestrito />
   }
 
   return (
@@ -76,19 +89,32 @@ function CategoriasConteudo() {
 
       <div className={styles.painel}>
         {isLoading ? (
-          <div className={styles.linhas}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={styles.skeleton} />
-            ))}
-          </div>
+          <>
+            <div className={styles.tabelaHeader}>
+              <span className={styles.colNome}>NOME</span>
+              <span className={styles.colTipo}>TIPO</span>
+              <span className={styles.colAcoes}>AÇÕES</span>
+            </div>
+            <SkeletonCategorias linhas={8} />
+          </>
         ) : isError ? (
-          <div className={styles.estadoErro}>Não foi possível carregar as categorias.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar as categorias"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : categorias.length === 0 ? (
-          <div className={styles.estadoVazio}>
-            {buscaDebounced
-              ? `Nenhuma categoria encontrada para "${buscaDebounced}".`
-              : 'Nenhuma categoria cadastrada ainda.'}
-          </div>
+          <EstadoVazio
+            icone={buscaDebounced ? SearchX : Inbox}
+            titulo={buscaDebounced ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}
+            mensagem={
+              buscaDebounced
+                ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                : 'Comece criando a primeira categoria financeira.'
+            }
+            acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+            acaoPrimaria={!buscaDebounced ? { label: 'Nova categoria', onClick: () => setModalForm({ aberto: true }) } : undefined}
+          />
         ) : (
           <>
             {/* Cabeçalho da tabela */}

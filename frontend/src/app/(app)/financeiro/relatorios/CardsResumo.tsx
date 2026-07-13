@@ -5,24 +5,29 @@ import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { formatarVariacao } from '@/lib/formats/financeiro/relatorioFormat'
 import type { ResumoPeriodo } from '@/types/financeiro/relatorio.type'
 import styles from './CardsResumo.module.css'
+import { SkeletonCardsResumo } from "./SkeletonRelatorios";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 interface CardsResumoProps {
   data: ResumoPeriodo | undefined
   isLoading: boolean
   isError: boolean
+  aoTentarNovamente: () => void
 }
 
-export function CardsResumo({ data, isLoading, isError }: CardsResumoProps) {
+export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: CardsResumoProps) {
   if (isLoading) {
-    return (
-      <div className={styles.grid}>
-        {[0, 1, 2].map((i) => <div key={i} className={styles.skeleton} />)}
-      </div>
-    )
+    return <SkeletonCardsResumo />;
   }
 
   if (isError || !data) {
-    return <div className={styles.erro}>Não foi possível carregar o resumo.</div>
+    return (
+    <EstadoErro
+      titulo="Não foi possível carregar o resumo"
+      mensagem="Tente novamente."
+      aoTentarNovamente={aoTentarNovamente}
+    />
+  )
   }
 
   const entradas = formatarVariacao(data.comparacao.entradasVariacao)

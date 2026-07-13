@@ -7,24 +7,43 @@ import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao
 import { useMovimentacaoForm } from '@/hooks/financeiro/movimentacao/useMovimentacaoForm'
 import { MovimentacaoForm } from '@/components/module/movimentacoes/MovimentacaoForm'
 import styles from '../cadastrar/cadastrar.module.css'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
+import { SkeletonMovimentacaoForm } from './SkeletonMovimentacaoForm'
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 export default function EditarMovimentacaoPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
-
-  const { data: movimentacao, isPending, isError } = useMovimentacao(id)
+  const { data: movimentacao, isPending, isError, refetch } = useMovimentacao(id)
   const form = useMovimentacaoForm({
     movimentacaoId: id,
     movimentacaoInicial: movimentacao,
     onSuccess: () => router.push('/financeiro/movimentacoes'),
   })
+  const role = useAuthStore((s) => s.role)
+
+  if (role !== 'ADMIN_IGREJA') {
+    return <AcessoRestrito />
+  }
 
   if (isPending) {
-    return <div className={styles.pagina}><p>Carregando movimentação…</p></div>
+    <div className={styles.pagina}>
+      <SkeletonMovimentacaoForm />
+    </div>
   }
+  
   if (isError || !movimentacao) {
-    return <div className={styles.pagina}><p>Movimentação não encontrada.</p></div>
+    return (
+      <div className={styles.pagina}>
+        <EstadoErro
+          titulo="Movimentação não encontrada"
+          mensagem="Não foi possível carregar esta movimentação. Verifique sua conexão e tente novamente."
+          aoTentarNovamente={() => refetch()}
+        />
+      </div>
+    )
   }
 
   return (

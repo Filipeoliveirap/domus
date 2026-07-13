@@ -13,6 +13,8 @@ import { GraficoEvolucao } from './GraficoEvolucao'
 import type { PeriodoRelatorio } from '@/types/financeiro/relatorio.type'
 import { useMaiorLancamento } from '@/hooks/financeiro/relatorio/useMaiorLancamento'
 import styles from './relatorios.module.css'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
 
 const PRESETS: PresetPeriodo[] = ['ESTE_MES', 'MES_ANTERIOR', 'ULTIMOS_3_MESES', 'ULTIMOS_6_MESES', 'ESTE_ANO']
 
@@ -21,20 +23,27 @@ export default function RelatoriosPage() {
   const [custom, setCustom] = useState(false)
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const role = useAuthStore((s) => s.role)
+  const ehAdmin = role === 'ADMIN_IGREJA'
 
   const periodo: PeriodoRelatorio =
     custom && dataInicio && dataFim
       ? { dataInicio, dataFim }
       : calcularPeriodo(preset)
 
-  const resumo = useResumo(periodo)
-  const categorias = usePorCategoria(periodo)
-  const evolucao = useEvolucaoMensal(periodo)
-  const maiorLanc = useMaiorLancamento(periodo)
+  const resumo = useResumo(periodo, ehAdmin)
+  const categorias = usePorCategoria(periodo, ehAdmin)
+  const evolucao = useEvolucaoMensal(periodo, ehAdmin)
+  const maiorLanc = useMaiorLancamento(periodo, ehAdmin)
 
   function escolherPreset(p: PresetPeriodo) {
     setPreset(p)
     setCustom(false)
+  }
+
+  
+  if (!ehAdmin) {
+    return <AcessoRestrito />
   }
 
   return (
@@ -90,20 +99,22 @@ export default function RelatoriosPage() {
         )}
       </div>
 
-      <CardsResumo data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} />
+      <CardsResumo data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
 
-      <BarraProporcao data={resumo.data} isLoading={resumo.isLoading} />
+      <BarraProporcao data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
 
       <Destaques
         resumo={resumo.data}
         categorias={categorias.data}
         maiorLancamento={maiorLanc.data}
         isLoading={resumo.isLoading || categorias.isLoading}
+        isError={resumo.isError}
+        aoTentarNovamente={() => resumo.refetch()}
       />
 
-      <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} />
+      <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => resumo.refetch()} />
 
-      <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} />
+      <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => resumo.refetch()} />
     </div>
   )
 }

@@ -1,24 +1,35 @@
+'use client'
+
 import { Award, Receipt, TrendingUp } from 'lucide-react'
 import { formatarMoeda, formatarData } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { ResumoPeriodo, CategoriaBreakdown, MaiorLancamento } from '@/types/financeiro/relatorio.type'
 import styles from './Destaques.module.css'
+import { SkeletonDestaques } from "./SkeletonRelatorios";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 interface DestaquesProps {
   resumo: ResumoPeriodo | undefined
   categorias: CategoriaBreakdown[] | undefined
   maiorLancamento: MaiorLancamento | null | undefined
   isLoading: boolean
+  isError?: boolean
+  aoTentarNovamente?: () => void
 }
 
-export function Destaques({ resumo, categorias, maiorLancamento, isLoading }: DestaquesProps) {
+export function Destaques({ resumo, categorias, maiorLancamento, isLoading, isError, aoTentarNovamente }: DestaquesProps) {
   if (isLoading) {
-    return (
-      <div className={styles.grid}>
-        {[0, 1, 2].map((i) => <div key={i} className={styles.skeleton} />)}
-      </div>
-    )
+    return <SkeletonDestaques />;
   }
-  if (!resumo || !categorias) return null
+
+  if (isError || !resumo || !categorias) {
+  return (
+    <EstadoErro
+      titulo="Não foi possível carregar a análise de destaques"
+      mensagem="Tente novamente."
+      aoTentarNovamente={aoTentarNovamente}
+    />
+  )
+}
 
   const entradas = categorias.filter((c) => c.tipo === 'ENTRADA')
   const topEntrada = entradas.length > 0

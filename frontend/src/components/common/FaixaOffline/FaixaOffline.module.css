@@ -1,0 +1,22 @@
+.faixa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 18px;
+  background: var(--color-text-dark);
+  color: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: descerFaixa 0.25s ease-out;
+}
+
+@keyframes descerFaixa {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faixa { animation: none; }
+}

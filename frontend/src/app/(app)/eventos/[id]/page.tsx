@@ -7,20 +7,41 @@ import { useEvento } from '@/hooks/evento/useEvento'
 import { useEventoForm } from '@/hooks/evento/useEventoForm'
 import { EventoForm } from '@/components/module/eventos/EventoForm'
 import styles from '@/components/module/eventos/EventoForm.module.css'
+import { useAuthStore } from '@/store/authStore'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { SkeletonEventoForm } from './SkeletonEventoForm'
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 export default function EditarEventoPage() {
   const params = useParams()
   const id = params.id as string
-
-  const { data: evento, isPending, isError } = useEvento(id)
+  const { data: evento, isPending, isError, refetch } = useEvento(id)
   const form = useEventoForm({ eventoId: id, eventoInicial: evento })
+  const role = useAuthStore((s) => s.role)
 
+  if (role !== 'ADMIN_IGREJA' && role !== 'LIDER') {
+    return <AcessoRestrito />
+  }
   if (isPending) {
-    return <div className={styles.pagina}><p>Carregando evento…</p></div>
+    return (
+    <div className={styles.pagina}>
+      <SkeletonEventoForm />
+    </div>
+  )
   }
   if (isError || !evento) {
-    return <div className={styles.pagina}><p>Evento não encontrado.</p></div>
+    return (
+      <div className={styles.pagina}>
+        <EstadoErro
+          titulo="Evento não encontrado"
+          mensagem="Não foi possível carregar este evento. Verifique sua conexão e tente novamente."
+          aoTentarNovamente={() => refetch()}
+        />
+      </div>
+    )
   }
+
+  
 
   return (
     <div className={styles.pagina}>

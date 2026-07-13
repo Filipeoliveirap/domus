@@ -8,13 +8,20 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useMovimentacoes } from '@/hooks/financeiro/movimentacao/useMovimentacoes'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
-import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/DrawerDetalheMovimentacao'
+import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/(detalhe)/DrawerDetalheMovimentacao'
 import { ModalArquivarMovimentacao } from '@/app/(app)/financeiro/movimentacoes/ModalArquivarMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
 import styles from './movimentacoes.module.css'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+
 
 const TAMANHO_PAGINA = 15
 
@@ -22,6 +29,8 @@ function MovimentacoesConteudo() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const detalheId = searchParams.get('detalhe')
+  const role = useAuthStore((s) => s.role)
+  const ehAdmin = role === 'ADMIN_IGREJA'
 
   const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
     tipo: '',
@@ -37,7 +46,7 @@ function MovimentacoesConteudo() {
   const qDebounced = useDebounce(filtros.q, 250)
 
   const { data: categorias } = useCategoriasSelect()
-  const { data, isLoading, isError } = useMovimentacoes({
+  const { data, isLoading, isError, refetch } = useMovimentacoes({
     tipo: (filtros.tipo as TipoMovimentacao) || undefined,
     categoriaId: filtros.categoriaId || undefined,
     dataInicio: filtros.dataInicio || undefined,
@@ -45,7 +54,7 @@ function MovimentacoesConteudo() {
     q: qDebounced || undefined,
     page: pagina,
     size: TAMANHO_PAGINA,
-  })
+  }, ehAdmin)
 
   const movimentacoes = data?.content ?? []
   const totalPaginas = data?.totalPages ?? 0
@@ -74,6 +83,11 @@ function MovimentacoesConteudo() {
       { label: 'Editar', icone: Pencil, onClick: () => router.push(`/financeiro/movimentacoes/${mov.id}`) },
       { label: 'Arquivar', icone: Archive, onClick: () => setMovArquivando(mov), perigo: true, separadorAntes: true },
     ]
+  }
+
+  
+  if (!ehAdmin) {
+    return <AcessoRestrito />
   }
 
   return (
@@ -159,15 +173,35 @@ function MovimentacoesConteudo() {
       {/* Tabela */}
       <div className={styles.painel}>
         {isLoading ? (
-          <div className={styles.linhas}>
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
-          </div>
+          <>
+            <div className={styles.tabelaHeader}>
+              <span className={styles.colDesc}>DESCRIÇÃO</span>
+              <span className={styles.colCat}>CATEGORIA</span>
+              <span className={styles.colData}>DATA</span>
+              <span className={styles.colTipo}>TIPO</span>
+              <span className={styles.colValor}>VALOR</span>
+              <span className={styles.colAcoes}>AÇÕES</span>
+            </div>
+            <SkeletonMovimentacoes linhas={TAMANHO_PAGINA} />
+          </>
         ) : isError ? (
-          <div className={styles.estadoErro}>Não foi possível carregar as movimentações.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar as movimentações"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : movimentacoes.length === 0 ? (
-          <div className={styles.estadoVazio}>
-            {temFiltro ? 'Nenhuma movimentação encontrada com esses filtros.' : 'Nenhuma movimentação registrada ainda.'}
-          </div>
+          <EstadoVazio
+            icone={temFiltro ? SearchX : Inbox}
+            titulo={temFiltro ? 'Nenhuma movimentação encontrada' : 'Nenhuma movimentação registrada'}
+            mensagem={
+              temFiltro
+                ? 'Nenhuma movimentação corresponde aos filtros aplicados. Tente ajustá-los.'
+                : 'Comece registrando a primeira entrada ou saída.'
+            }
+            acaoSecundaria={temFiltro ? { label: 'Limpar filtros', onClick: limparFiltros } : undefined}
+            acaoPrimaria={!temFiltro ? { label: 'Nova movimentação', onClick: () => router.push('/financeiro/movimentacoes/cadastrar') } : undefined}
+          />
         ) : (
           <>
             <div className={styles.tabelaHeader}>

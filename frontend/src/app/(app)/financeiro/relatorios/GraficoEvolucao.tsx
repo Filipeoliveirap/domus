@@ -7,20 +7,29 @@ import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { nomeMes } from '@/lib/formats/financeiro/relatorioFormat'
 import type { EvolucaoMensal } from '@/types/financeiro/relatorio.type'
 import styles from './GraficoEvolucao.module.css'
+import { SkeletonGraficoEvolucao } from "./SkeletonRelatorios";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 interface GraficoEvolucaoProps {
   data: EvolucaoMensal[] | undefined
   isLoading: boolean
   isError: boolean
+  aoTentarNovamente?: () => void
 }
 
-export function GraficoEvolucao({ data, isLoading, isError }: GraficoEvolucaoProps) {
+export function GraficoEvolucao({ data, isLoading, isError, aoTentarNovamente }: GraficoEvolucaoProps) {
   if (isLoading) {
-    return <div className={styles.skeleton} />
+    return <SkeletonGraficoEvolucao />;
   }
 
   if (isError || !data) {
-    return <div className={styles.erro}>Não foi possível carregar a evolução mensal.</div>
+    return (
+      <EstadoErro
+        titulo="Não foi possível carregar a evolução mensal"
+        mensagem="Tente novamente."
+        aoTentarNovamente={aoTentarNovamente}
+      />
+    )
   }
 
   if (data.length === 0) {

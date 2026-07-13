@@ -3,17 +3,29 @@
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { ResumoPeriodo } from '@/types/financeiro/relatorio.type'
 import styles from './BarraProporcao.module.css'
-
+import { SkeletonBarraProporcao } from "./SkeletonRelatorios";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 interface BarraProporcaoProps {
   data: ResumoPeriodo | undefined
   isLoading: boolean
+  isError?: boolean
+  aoTentarNovamente?: () => void
 }
 
-export function BarraProporcao({ data, isLoading }: BarraProporcaoProps) {
+export function BarraProporcao({ data, isLoading, isError, aoTentarNovamente }: BarraProporcaoProps) {
   if (isLoading) {
-    return <div className={styles.skeleton} />
+    return <SkeletonBarraProporcao />;
   }
-  if (!data) return null
+
+  if (isError || !data) {
+  return (
+    <EstadoErro
+      titulo="Não foi possível carregar a proporção de entradas e saídas"
+      mensagem="Tente novamente."
+      aoTentarNovamente={aoTentarNovamente}
+    />
+  )
+}
 
   const entradas = parseFloat(data.totalEntradas)
   const saidas = parseFloat(data.totalSaidas)

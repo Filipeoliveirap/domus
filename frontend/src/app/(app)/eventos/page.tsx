@@ -12,6 +12,10 @@ import { ModalArquivarEvento } from './ModalArquivarEvento'
 import { EventoResponse } from '@/types/evento.type'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import styles from './Page.module.css'
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonEventos } from "./SkeletonEventos";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 12
 
@@ -27,7 +31,7 @@ function EventosConteudo() {
 
   const [eventoArquivando, setEventoArquivando] = useState<EventoResponse | null>(null)
 
-  const { data, isLoading, isError, isFetching } = useEventos({
+  const { data, isLoading, isError, isFetching, refetch } = useEventos({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
@@ -83,21 +87,25 @@ function EventosConteudo() {
       </div>
 
       {isLoading ? (
-        <div className={styles.grid}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className={styles.skeleton} />
-          ))}
-        </div>
+        <SkeletonEventos cards={TAMANHO_PAGINA} />
       ) : isError ? (
-        <div className={styles.estadoErro}>
-          Não foi possível carregar os eventos. Tente novamente.
-        </div>
+        <EstadoErro
+          titulo="Não foi possível carregar os eventos"
+          mensagem="Verifique sua conexão e tente novamente."
+          aoTentarNovamente={() => refetch()}
+        />
       ) : eventos.length === 0 ? (
-        <div className={styles.estadoVazio}>
-          {buscaDebounced
-            ? `Nenhum evento encontrado para "${buscaDebounced}".`
-            : 'Nenhum evento cadastrado ainda.'}
-        </div>
+        <EstadoVazio
+          icone={buscaDebounced ? SearchX : Inbox}
+          titulo={buscaDebounced ? 'Nenhum evento encontrado' : 'Nenhum evento cadastrado'}
+          mensagem={
+            buscaDebounced
+              ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+              : 'Comece cadastrando o primeiro evento da agenda.'
+          }
+          acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+          acaoPrimaria={!buscaDebounced && podeGerenciar ? { label: 'Novo evento', onClick: () => router.push('/eventos/cadastrar') } : undefined}
+        />
       ) : (
         <>
           <div className={styles.grid}>

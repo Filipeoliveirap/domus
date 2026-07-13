@@ -14,6 +14,11 @@ import styles from './page.module.css'
 import { ModalConcederAcesso } from './ModalConcederAcesso'
 import { useRouter } from 'next/navigation'
 import { ModalArquivarMembro } from './(arquivar)/ArquivarMembro'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { SearchX, Inbox } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { SkeletonMembros } from "./SkeletonMembros";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 10
 
@@ -21,11 +26,13 @@ function MembrosConteudo() {
   const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const [pagina, setPagina] = useState(0)
+  const role = useAuthStore((s) => s.role)
+  const podeGerenciar = role === 'ADMIN_IGREJA'
 
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)
 
-  const { data, isLoading, isError, isFetching } = useMembros({
+  const { data, isLoading, isError, isFetching, refetch} = useMembros({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
@@ -55,11 +62,13 @@ function MembrosConteudo() {
           </h1>
           <p className={styles.subtitulo}>Pessoas registradas na igreja</p>
         </div>
-        <Link href="/membros/cadastrar" className={styles.botaoPrimario}>
-          Novo membro
-        </Link>
-      </header>
+        {podeGerenciar && (
+          <Link href="/membros/cadastrar" className={styles.botaoPrimario}>
+            Novo membro
+          </Link>
+        )}
 
+      </header>
       <div className={styles.barraBusca}>
         <input
           type="text"
@@ -84,18 +93,33 @@ function MembrosConteudo() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className={styles.estadoVazio}>Carregando…</td></tr>
+              <SkeletonMembros linhas={TAMANHO_PAGINA} podeGerenciar={podeGerenciar} />
             ) : isError ? (
-              <tr><td colSpan={5} className={styles.estadoErro}>
-                Não foi possível carregar os membros. Tente novamente.
+              <tr><td colSpan={5}>
+                <EstadoErro
+                  titulo="Não foi possível carregar os membros"
+                  mensagem="Verifique sua conexão e tente novamente."
+                  aoTentarNovamente={() => refetch()}
+                />
               </td></tr>
             ) : membros.length === 0 ? (
-              <tr><td colSpan={5} className={styles.estadoVazio}>
-                {buscaDebounced
-                  ? `Nenhum membro encontrado para "${buscaDebounced}".`
-                  : 'Nenhum membro cadastrado ainda.'}
-              </td></tr>
+              <tr>
+                <td colSpan={5}>
+                  <EstadoVazio
+                    icone={buscaDebounced ? SearchX : Inbox}
+                    titulo={buscaDebounced ? `Nenhum membro encontrado` : 'Nenhum membro cadastrado'}
+                    mensagem={
+                      buscaDebounced
+                        ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                        : 'Comece cadastrando o primeiro membro da sua igreja.'
+                    }
+                    acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+                    acaoPrimaria={!buscaDebounced && podeGerenciar ? { label: 'Novo membro', onClick: () => router.push('/membros/cadastrar') } : undefined}
+                  />
+                </td>
+              </tr>
             ) : (
+              
               membros.map((m) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => router.push(`/membros/${m.id}`) },
@@ -128,9 +152,11 @@ function MembrosConteudo() {
                     <td className={styles.cadastro}>
                       {formatarData(m.createdAt)}
                     </td>
-                    <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
-                      <MenuAcoes itens={acoes} />
-                    </td>
+                    {podeGerenciar && (
+                      <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
+                        <MenuAcoes itens={acoes} />
+                      </td>
+                    )}
                   </tr>
                 )
               })

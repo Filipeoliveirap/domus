@@ -17,6 +17,12 @@ import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
 import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
 import { ModalArquivarUsuario } from "./(arquivarusuario)/ModalArquivarUsuario";
 import { useBuscaUrl } from "@/hooks/busca/useBuscaUrl";
+import { useAuthStore } from "@/store/authStore";
+import { AcessoRestrito } from "@/components/common/AcessoRestrito/AcessoRestrito";
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonUsuarios } from "./SkeletonUsuarios";
+import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
 
 
 const TAMANHO_PAGINA = 10;
@@ -27,11 +33,14 @@ function UsuariosConteudo() {
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
-
-  const { data, isLoading, isError, isFetching } = useUsuarios({
+  const role = useAuthStore((s) => s.role)
+  const ehAdmin = role === 'ADMIN_IGREJA'
+  
+  const { data, isLoading, isError, isFetching, refetch} = useUsuarios({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
+    enabled: ehAdmin,
   })
 
   const usuarios = data?.content ?? []
@@ -43,6 +52,10 @@ function UsuariosConteudo() {
     setPagina(0)
   }
 
+  if (!ehAdmin) {
+    return <AcessoRestrito />
+  }
+  
   return (
     <div className={styles.pagina}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
@@ -83,17 +96,30 @@ function UsuariosConteudo() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className={styles.estadoVazio}>Carregando…</td></tr>
+              <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
             ) : isError ? (
-              <tr><td colSpan={6} className={styles.estadoErro}>
-                Não foi possível carregar os usuários. Tente novamente.
+              <tr><td colSpan={6}>
+                <EstadoErro
+                  titulo="Não foi possível carregar os usuários"
+                  mensagem="Verifique sua conexão e tente novamente."
+                  aoTentarNovamente={() => refetch()}
+                />
               </td></tr>
             ) : usuarios.length === 0 ? (
-              <tr><td colSpan={6} className={styles.estadoVazio}>
-                {buscaDebounced
-                  ? `Nenhum usuário encontrado para "${buscaDebounced}".`
-                  : "Nenhum usuário cadastrado ainda."}
-              </td></tr>
+              <tr>
+                <td colSpan={6}>
+                  <EstadoVazio
+                    icone={buscaDebounced ? SearchX : Inbox}
+                    titulo={buscaDebounced ? `Nenhum usuário encontrado` : 'Nenhum usuário cadastrado'}
+                    mensagem={
+                      buscaDebounced
+                        ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                        : 'Comece cadastrando o primeiro usuário da sua igreja.'
+                    }
+                    acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+                  />
+                </td>
+              </tr>
             ) : (
               usuarios.map((u) => {
                 const acoes: ItemAcao[] = [

@@ -5,6 +5,8 @@ import { X, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, Histo
 import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './DrawerDetalheMovimentacao.module.css'
+import { SkeletonDrawerMovimentacao } from "./SkeletonDrawerMovimentacao";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro' 
 
 interface DrawerDetalheMovimentacaoProps {
   movimentacaoId: string
@@ -12,7 +14,7 @@ interface DrawerDetalheMovimentacaoProps {
 }
 
 export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDetalheMovimentacaoProps) {
-  const { data: mov, isPending, isError } = useMovimentacao(movimentacaoId)
+  const { data: mov, isPending, isError, refetch } = useMovimentacao(movimentacaoId)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,9 +37,13 @@ export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDet
         </button>
 
         {isPending ? (
-          <div className={styles.carregando}>Carregando…</div>
+          <SkeletonDrawerMovimentacao />
         ) : isError || !mov ? (
-          <div className={styles.erro}>Não foi possível carregar a movimentação.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar as informações da movimentação"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : (
           <>
             <div className={styles.conteudo}>

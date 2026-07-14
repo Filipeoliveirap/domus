@@ -56,4 +56,27 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
     List<RelatorioProjections.MesAgregado> agregarEvolucaoMensal(@Param("igrejaId") UUID igrejaId,
                                                                  @Param("dataInicio") LocalDate dataInicio,
                                                                  @Param("dataFim") LocalDate dataFim);
+<<<<<<< HEAD
+=======
+
+    @Query("""
+        SELECT
+            m.id AS id,
+            m.descricao AS descricao,
+            c.nome AS categoriaNome,
+            m.tipo AS tipo,
+            m.valor AS valor,
+            m.dataMovimentacao AS dataMovimentacao
+        FROM MovimentacaoFinanceira m
+        JOIN m.categoria c
+        WHERE m.igreja.id = :igrejaId
+          AND m.dataMovimentacao >= :dataInicio
+          AND m.dataMovimentacao <= :dataFim
+        ORDER BY m.valor DESC
+        LIMIT 1
+    """)
+    RelatorioProjections.MaiorLancamento buscarMaiorLancamento(@Param("igrejaId") UUID igrejaId,
+                                                               @Param("dataInicio") LocalDate dataInicio,
+                                                               @Param("dataFim") LocalDate dataFim);
+>>>>>>> develop
 }

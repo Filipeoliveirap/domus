@@ -12,7 +12,7 @@ import styles from './Sidebar.module.css'
 const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
   { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
-  { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER'] },
+  { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/financeiro/movimentacoes', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },

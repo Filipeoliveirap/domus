@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+<<<<<<< HEAD
+=======
+import java.util.List;
+>>>>>>> develop
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,4 +52,19 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
                                                   @Param("dataFim") LocalDate dataFim,
                                                   @Param("q") String q,
                                                   Pageable pageable);
+<<<<<<< HEAD
+=======
+
+    @Query("""
+    SELECT m.id FROM MovimentacaoFinanceira m
+    WHERE m.categoria.id = :categoriaId AND m.igreja.id = :igrejaId
+""")
+    List<UUID> buscarIdsPorCategoria(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
+
+    @Query("""
+    SELECT m.id FROM MovimentacaoFinanceira m
+    WHERE m.membro.id = :membroId AND m.igreja.id = :igrejaId
+""")
+    List<UUID> buscarIdsPorMembro(@Param("membroId") UUID membroId, @Param("igrejaId") UUID igrejaId);
+>>>>>>> develop
 }

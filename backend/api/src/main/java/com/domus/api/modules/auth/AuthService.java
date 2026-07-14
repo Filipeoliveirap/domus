@@ -52,6 +52,7 @@ public class AuthService {
                     usuario.getNome(),
                     usuario.getRole().getNome(),
                     usuario.getIgreja().getId(),
+                    usuario.getIgreja().getNome(),
                     token
             );
 

@@ -1,15 +1,13 @@
 import {z} from 'zod'
 
-// ─── Auth 
-
 export const loginSchema = z.object({
-    email: z.email('Digite um email válido').min(1, 'E-mail é obrigatório'),
+    email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório'),
     senha: z.string().min(1, 'Senha é obrigatória')
 })
 
 export const registrarIgrejaSchema1 = z.object({
-  nomeIgreja: z.string().trim().min(1, 'Nome da igreja é obrigatório'),
-  emailContato: z.email('E-mail de contato é obrigatório').min(1, 'E-mail de contato é obrigatório'),
+  nomeIgreja: z.string().trim().min(2, 'Nome da igreja deve ter pelo menos 2 caracteres').max(255, 'Nome da igreja deve ter no máximo 255 caracteres'),
+  emailContato: z.email('E-mail de contato inválido').min(1, 'E-mail de contato é obrigatório').transform((v) => v.trim().toLowerCase()),
   cnpj: z.string().trim().optional(),
   telefoneContato: z
   .string()
@@ -23,8 +21,8 @@ export const registrarIgrejaSchema1 = z.object({
 })
 
 export const registrarIgrejaSchema2 = z.object({
-  nomeAdmin: z.string().min(1, 'Nome é obrigatório'),
-  emailAdmin: z.email('E-mail inválido').min(1, 'E-mail é obrigatório'),
+  nomeAdmin: z.string().trim().min(2, 'Nome do administrador deve ter pelo menos 2 caracteres').max(255, 'Nome do administrador deve ter no máximo 255 caracteres'),
+  emailAdmin: z.email('E-mail inválido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
   senhaAdmin: z.string().min(8, 'Mínimo 8 caracteres'),
   confirmarSenha: z.string().min(1, 'Confirme a senha'),
   aceitouTermos: z.boolean().refine((val) => val === true, {
@@ -34,8 +32,6 @@ export const registrarIgrejaSchema2 = z.object({
   message: 'As senhas não coincidem',
   path: ['confirmarSenha'],
 })
-
-// Membro
 
 const opcional = <T extends z.ZodType<string>>(schema: T) =>
   z.preprocess(
@@ -47,11 +43,11 @@ export const membroSchema = z.object({
   nome: z
     .string()
     .trim()
-    .min(1, 'Nome é obrigatório')
+    .min(2, 'Nome do membro deve ter pelo menos 2 caracteres')
     .max(255, 'O nome deve ter no máximo 255 caracteres'),
 
   email: opcional(
-    z.email('E-mail inválido').max(255, 'O e-mail deve ter no máximo 255 caracteres'),
+    z.email('E-mail inválido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
   ),
 
   telefone: opcional(
@@ -103,7 +99,7 @@ export const concederAcessoSchema = z.object({
 })
 
 const eventoSchemaBase = z.object({
-  titulo: z.string().min(1, 'O título é obrigatório.'),
+  titulo: z.string().trim().min(1, 'O título é obrigatório.'),
   descricao: opcional(z.string()),
   inicioData: z.string().min(1, 'A data de início é obrigatória.'),
   inicioHora: z.string().min(1, 'A hora de início é obrigatória.'),
@@ -123,7 +119,7 @@ export const eventoSchema = eventoSchemaBase.refine(
 )
 
 export const categoriaSchema = z.object({
-  nome: z.string().trim().min(1, 'O nome é obrigatório.').max(255, 'Máximo 255 caracteres.'),
+  nome: z.string().trim().min(2, 'O nome da categoria deve ter pelo menos 2 caracteres').max(255, 'Máximo 255 caracteres.'),
   tipo: z.enum(['ENTRADA', 'SAIDA', 'AMBOS'], { message: 'Selecione o tipo da categoria.' }),
 })
 

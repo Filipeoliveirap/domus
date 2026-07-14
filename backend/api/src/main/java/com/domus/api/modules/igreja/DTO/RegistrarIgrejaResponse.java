@@ -7,6 +7,11 @@ public record RegistrarIgrejaResponse (
         String token,
         String nome,
         String role,
+<<<<<<< HEAD
         UUID igrejaId
+=======
+        UUID igrejaId,
+        String igrejaNome
+>>>>>>> develop
 )
 { }

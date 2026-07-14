@@ -30,7 +30,6 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
 
   const tipoSelecionado = watch('tipo')
 
-  // fecha com ESC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLoading) onClose()

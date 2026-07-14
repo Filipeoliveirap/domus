@@ -40,8 +40,10 @@ export function useLogin() {
                 nome: response.nome,
                 role: response.role,
                 igrejaId: response.igrejaId,
+                igrejaNome: response.igrejaNome,
                 token: response.token,
             })
+            console.log('Login bem-sucedido:', response)
             router.push('/inicio')
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {

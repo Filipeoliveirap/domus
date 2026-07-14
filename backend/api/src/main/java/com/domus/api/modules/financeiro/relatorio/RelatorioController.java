@@ -37,4 +37,14 @@ public class RelatorioController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
         return service.evolucaoMensal(usuarioAutenticado.getIgrejaId(), dataInicio, dataFim);
     }
+<<<<<<< HEAD
+=======
+
+    @GetMapping("/maior-lancamento")
+    public MaiorLancamentoResponse maiorLancamento(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+        return service.maiorLancamento(usuarioAutenticado.getIgrejaId(), dataInicio, dataFim);
+    }
+>>>>>>> develop
 }

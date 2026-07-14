@@ -93,10 +93,9 @@ export default function LoginPage() {
             Cadastre sua igreja
           </Link>
         </div>
-
       </div>
 
-      <p className={styles.copyright}>© 2024 DOMUS Management System</p>
+      <p className={styles.copyright}>© 2026 DOMUS Gestão Eclesiástica</p>
     </div>
   )
 }

@@ -8,6 +8,11 @@ import axios from 'axios'
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
 
+function destinoSeguro(next: string | null) {
+    if (!next || !next.startsWith('/') || next.startsWith('//')) return '/inicio'
+    return next
+}
+
 export function useLogin() {
     const router = useRouter()
     const login = useAuthStore(state => state.login)
@@ -43,8 +48,8 @@ export function useLogin() {
                 igrejaNome: response.igrejaNome,
                 token: response.token,
             })
-            console.log('Login bem-sucedido:', response)
-            router.push('/inicio')
+            const next = new URLSearchParams(window.location.search).get('next')
+            router.push(destinoSeguro(next))
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
                 const e = error.response?.data

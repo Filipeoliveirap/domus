@@ -17,6 +17,7 @@ public class RefreshTokenService {
 
     private static final String PREFIXO_TOKEN = "refresh:";
     private static final String PREFIXO_FAMILIA = "refreshfam:";
+    private static final String PREFIXO_USUARIO_FAMILIAS = "usuariofamilias:";
     private static final String SEPARADOR = "|";
 
     private final StringRedisTemplate redisTemplate;
@@ -30,32 +31,21 @@ public class RefreshTokenService {
         this.ttl = Duration.ofMillis(refreshExpirationMs);
     }
 
-    /** Resultado de uma rotação bem-sucedida: o novo refresh token e de quem ele é. */
     public record ResultadoRotacao(String novoToken, UUID usuarioId) {}
 
-    /**
-     * Cria uma nova FAMÍLIA de refresh tokens para o usuário (usado no login e no cadastro).
-     * Uma família representa uma sessão: todos os tokens que nascem de rotações sucessivas
-     * do login pertencem a ela, e são revogados juntos.
-     */
     public String criar(UUID usuarioId) {
         String familyId = UUID.randomUUID().toString();
         String token = gerarTokenOpaco();
         redisTemplate.opsForValue().set(chaveToken(token), usuarioId + SEPARADOR + familyId, ttl);
         redisTemplate.opsForValue().set(chaveFamilia(familyId), token, ttl);
+        // Indexa a família sob o usuário, para permitir revogar todas as sessões dele de uma vez.
+        String chaveIndice = chaveUsuarioFamilias(usuarioId);
+        redisTemplate.opsForSet().add(chaveIndice, familyId);
+        redisTemplate.expire(chaveIndice, ttl);
         log.debug("Refresh token criado (nova família). usuario_id={}", usuarioId);
         return token;
     }
 
-    /**
-     * Consome o token apresentado e emite um novo na mesma família (rotação).
-     * <ul>
-     *   <li>Token desconhecido/expirado, ou família já revogada → devolve null.</li>
-     *   <li>Token conhecido mas que NÃO é o atual da família (reuso = sinal de roubo) →
-     *       revoga a família inteira e lança exceção.</li>
-     *   <li>Token atual → rotaciona e devolve o novo token.</li>
-     * </ul>
-     */
     public ResultadoRotacao rotacionar(String tokenApresentado) {
         if (tokenApresentado == null || tokenApresentado.isBlank()) return null;
 
@@ -84,7 +74,6 @@ public class RefreshTokenService {
         return new ResultadoRotacao(novoToken, usuarioId);
     }
 
-    /** Revoga a família inteira a que o token pertence. É o logout de verdade. */
     public void revogar(String token) {
         if (token == null || token.isBlank()) return;
         String valor = redisTemplate.opsForValue().get(chaveToken(token));
@@ -95,6 +84,22 @@ public class RefreshTokenService {
 
     private void revogarFamilia(String familyId) {
         redisTemplate.delete(chaveFamilia(familyId));
+    }
+
+    /**
+     * Revoga TODAS as sessões (famílias) de um usuário de uma vez. Usado na troca de
+     * senha: derruba qualquer sessão ativa, inclusive a de um eventual invasor.
+     */
+    public void revogarTodasSessoes(UUID usuarioId) {
+        String chaveIndice = chaveUsuarioFamilias(usuarioId);
+        var familias = redisTemplate.opsForSet().members(chaveIndice);
+        if (familias != null) {
+            for (String familyId : familias) {
+                revogarFamilia(familyId);
+            }
+        }
+        redisTemplate.delete(chaveIndice);
+        log.info("Todas as sessões revogadas. usuario_id={}", usuarioId);
     }
 
     private String gerarTokenOpaco() {
@@ -109,5 +114,9 @@ public class RefreshTokenService {
 
     private String chaveFamilia(String familyId) {
         return PREFIXO_FAMILIA + familyId;
+    }
+
+    private String chaveUsuarioFamilias(UUID usuarioId) {
+        return PREFIXO_USUARIO_FAMILIAS + usuarioId;
     }
 }

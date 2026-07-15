@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Mail, KeyRound, MailCheck, ArrowLeft } from 'lucide-react'
 import { useEsqueciSenha } from '@/hooks/auth/useEsqueciSenha'
@@ -7,12 +8,11 @@ import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './page.module.css'
 
-export default function EsqueciSenhaPage() {
+function EsqueciSenhaConteudo() {
   const { register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit, enviado, emailEnviado } =
     useEsqueciSenha()
 
   return (
-    <div className={styles.page}>
       <div className={styles.card}>
         {enviado ? (
           <>
@@ -84,7 +84,15 @@ export default function EsqueciSenhaPage() {
           </>
         )}
       </div>
+  )
+}
 
+export default function EsqueciSenhaPage() {
+  return (
+    <div className={styles.page}>
+      <Suspense fallback={null}>
+        <EsqueciSenhaConteudo />
+      </Suspense>
       <p className={styles.copyright}>© 2026 DOMUS Gestão Eclesiástica</p>
     </div>
   )

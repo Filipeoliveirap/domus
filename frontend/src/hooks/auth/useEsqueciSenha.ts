@@ -2,11 +2,15 @@ import { esqueciSenhaSchema, type EsqueciSenhaFormData } from "@/lib/validators"
 import { authService } from "@/services/auth.service";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import axios from 'axios'
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
 
 export function useEsqueciSenha() {
+    const searchParams = useSearchParams()
+    // Vindo de "Definir senha" na tela de login, o e-mail chega pré-preenchido.
+    const emailInicial = searchParams.get('email') ?? ''
     const [erroGeral, setErroGeral] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [enviado, setEnviado] = useState(false)
@@ -19,7 +23,7 @@ export function useEsqueciSenha() {
         formState: { errors },
     } = useAppForm<EsqueciSenhaFormData>({
         resolver: zodResolver(esqueciSenhaSchema),
-        defaultValues: { email: '' },
+        defaultValues: { email: emailInicial },
         requiredFields: ['email'],
     })
 

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useState } from 'react'
+import { GoogleLogin } from '@react-oauth/google'
 import { useLogin } from '@/hooks/auth/useLogin'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
@@ -11,7 +12,10 @@ import Image from 'next/image'
 
 export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
-  const { register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit } = useLogin()
+  const {
+    register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit,
+    onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado,
+  } = useLogin()
 
   return (
     <div className={styles.page}>
@@ -67,7 +71,19 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+          {contaSemSenha ? (
+            <div className={styles.avisoGoogle}>
+              <p>Esta conta usa login com Google. Entre com Google abaixo ou defina uma senha para acessar por e-mail.</p>
+              <Link
+                href={`/forgot-password?email=${encodeURIComponent(emailDigitado)}`}
+                className={styles.definirSenhaLink}
+              >
+                Definir senha
+              </Link>
+            </div>
+          ) : (
+            erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>
+          )}
 
           <Button
             type="submit"
@@ -86,6 +102,17 @@ export default function LoginPage() {
 
         <div className={styles.divider}>
           <span className={styles.dividerText}>OU</span>
+        </div>
+
+        <div className={styles.googleWrap}>
+          <GoogleLogin
+            onSuccess={(cred) => {
+              if (cred.credential) onGoogleLogin(cred.credential)
+            }}
+            onError={onGoogleError}
+            text="signin_with"
+            width="340"
+          />
         </div>
 
         <div className={styles.footer}>

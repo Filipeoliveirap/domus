@@ -40,48 +40,16 @@ public class IgrejaService {
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
         log.info("Iniciando o cadastro da igreja. nome={}, emailAdmin={}", request.getNomeIgreja(), request.getEmailAdmin());
 
-        if (membroRepository.existsByEmail(request.getEmailAdmin())) {
-            log.warn("E-mail já cadastrado. email={}", request.getEmailAdmin());
-            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
-        }
-        if(request.getCnpj() != null && !request.getCnpj().isBlank()) {
-            if(igrejaRepository.existsByCnpj(request.getCnpj())) {
-                log.warn("CNPJ já cadastrado. cnpj={}", request.getCnpj());
-                throw new BusinessException("CNPJ_DUPLICADO", "CNPJ já cadastrado no sistema.");
-            }
-        }
-        Igreja igreja = Igreja.builder()
-                .nome(request.getNomeIgreja())
-                .emailContato(request.getEmailContato())
-                .cnpj(request.getCnpj())
-                .telefoneContato(request.getTelefoneContato())
-                .build();
-        igrejaRepository.save(igreja);
-        log.info("Igreja criada. id={}, nome={}", igreja.getId(), igreja.getNome());
-
-        Role roleAdmin = roleRepository.findByNome("ADMIN_IGREJA").orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
-
-        Membro membroAdmin = Membro.builder()
-                .igreja(igreja)
-                .nome(request.getNomeAdmin())
-                .email(request.getEmailAdmin())
-                .status(StatusMembro.ATIVO)
-                .build();
-        membroRepository.save(membroAdmin);
-
-        Usuario admin = Usuario.builder()
-                .igreja(igreja)
-                .membro(membroAdmin)
-                .senhaHash(passwordEncoder.encode(request.getSenhaAdmin()))
-                .ativo(true)
-                .role(roleAdmin)
-                .build();
-
-        admin.registrarLogin();
-        usuarioRepository.save(admin);
-
-        log.info("Admin cadastrado. usuario_id={}, igreja_id={}",
-                admin.getId(), igreja.getId());
+        Usuario admin = criarIgrejaComAdmin(new DadosNovaIgreja(
+                request.getNomeIgreja(),
+                request.getEmailContato(),
+                request.getCnpj(),
+                request.getTelefoneContato(),
+                request.getNomeAdmin(),
+                request.getEmailAdmin(),
+                passwordEncoder.encode(request.getSenhaAdmin()),
+                null
+        ));
 
         var token = tokenService.generateToken(admin);
         var refreshToken = refreshTokenService.criar(admin.getId());
@@ -90,12 +58,62 @@ public class IgrejaService {
                 admin.getId(),
                 token,
                 refreshToken,
-                request.getNomeAdmin(),
-                roleAdmin.getNome(),
+                admin.getNome(),
+                admin.getRole().getNome(),
                 admin.getIgreja().getId(),
-                igreja.getNome()
+                admin.getIgreja().getNome()
         );
+    }
 
+    /**
+     * Cria igreja + membro + usuário ADMIN_IGREJA. Compartilhado entre o cadastro nativo
+     * (senha com hash) e o cadastro via Google (senha null + google_sub). NÃO emite tokens —
+     * isso é responsabilidade de quem chama.
+     */
+    @Transactional
+    public Usuario criarIgrejaComAdmin(DadosNovaIgreja dados) {
+        if (membroRepository.existsByEmail(dados.emailAdmin())) {
+            log.warn("E-mail já cadastrado. email={}", dados.emailAdmin());
+            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        }
+        if (dados.cnpj() != null && !dados.cnpj().isBlank()
+                && igrejaRepository.existsByCnpj(dados.cnpj())) {
+            log.warn("CNPJ já cadastrado. cnpj={}", dados.cnpj());
+            throw new BusinessException("CNPJ_DUPLICADO", "CNPJ já cadastrado no sistema.");
+        }
+
+        Igreja igreja = Igreja.builder()
+                .nome(dados.nomeIgreja())
+                .emailContato(dados.emailContato())
+                .cnpj(dados.cnpj())
+                .telefoneContato(dados.telefoneContato())
+                .build();
+        igrejaRepository.save(igreja);
+        log.info("Igreja criada. id={}, nome={}", igreja.getId(), igreja.getNome());
+
+        Role roleAdmin = roleRepository.findByNome("ADMIN_IGREJA")
+                .orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
+
+        Membro membroAdmin = Membro.builder()
+                .igreja(igreja)
+                .nome(dados.nomeAdmin())
+                .email(dados.emailAdmin())
+                .status(StatusMembro.ATIVO)
+                .build();
+        membroRepository.save(membroAdmin);
+
+        Usuario admin = Usuario.builder()
+                .igreja(igreja)
+                .membro(membroAdmin)
+                .senhaHash(dados.senhaHashOuNull())
+                .googleSub(dados.googleSubOuNull())
+                .ativo(true)
+                .role(roleAdmin)
+                .build();
+        admin.registrarLogin();
+        usuarioRepository.save(admin);
+        log.info("Igreja + admin criados. usuario_id={}, igreja_id={}", admin.getId(), igreja.getId());
+        return admin;
     }
 
     @Cacheable(value = "igreja", key = "#id")

@@ -2,6 +2,8 @@
 export const Endpoints = {
   auth: {
     LOGIN: '/auth/login',
+    GOOGLE_LOGIN: '/auth/google/login',
+    GOOGLE_REGISTRAR: '/auth/google/registrar',
     REFRESH: '/auth/refresh',
     LOGOUT: '/auth/logout',
     FORGOT_PASSWORD: '/auth/forgot-password',

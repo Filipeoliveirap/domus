@@ -4,6 +4,13 @@ export interface LoginRequest {
     senha: string;
 }
 
+export interface GoogleRegistrarRequest {
+    idToken: string;
+    nomeIgreja: string;
+    cnpj?: string;
+    telefoneContato: string;
+}
+
 export interface LoginResponse {
     id: string;
     nome: string;

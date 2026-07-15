@@ -19,6 +19,19 @@ export interface TokenPair {
     refreshToken: string;
 }
 
+export interface ForgotPasswordRequest {
+    email: string;
+}
+
+export interface ResetPasswordRequest {
+    token: string;
+    novaSenha: string;
+}
+
+export interface MensagemResponse {
+    message: string;
+}
+
 export interface RegistrarIgrejaRequest {
     nomeIgreja : string;
     emailContato : string;

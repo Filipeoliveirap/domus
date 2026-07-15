@@ -47,11 +47,6 @@ export default function LoginPage() {
             placeholder="••••••••"
             autoComplete="current-password"
             leftIcon={<Lock size={16} />}
-            labelRight={
-              <Link href="/esqueci-senha" className={styles.forgotLink}>
-                Esqueci minha senha
-              </Link>
-            }
             rightElement={
               <button
                 type="button"
@@ -65,6 +60,12 @@ export default function LoginPage() {
             error={errors.senha?.message}
             {...register('senha')}
           />
+
+          <div className={styles.forgotRow}>
+            <Link href="/forgot-password" className={styles.forgotLink}>
+              Esqueci minha senha
+            </Link>
+          </div>
 
           {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 

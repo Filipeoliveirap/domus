@@ -56,7 +56,7 @@ public class PasswordResetService {
                 usuario -> {
                     String token = gerarToken();
                     redisTemplate.opsForValue().set(chave(token), usuario.getId().toString(), TTL);
-                    String link = frontendUrl + "/redefinir-senha?token=" + token;
+                    String link = frontendUrl + "/reset-password?token=" + token;
                     try {
                         emailService.enviar(email, "Redefinição de senha — Domus",
                                 montarCorpo(usuario.getNome(), link));

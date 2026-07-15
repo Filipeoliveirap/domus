@@ -4,6 +4,8 @@ export const Endpoints = {
     LOGIN: '/auth/login',
     REFRESH: '/auth/refresh',
     LOGOUT: '/auth/logout',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
     REGISTER_IGREJA: '/igrejas/registrar',
   },
   usuarios: {

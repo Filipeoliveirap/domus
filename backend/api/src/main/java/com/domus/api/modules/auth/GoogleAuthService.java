@@ -1,7 +1,10 @@
 package com.domus.api.modules.auth;
 
 import com.domus.api.config.TokenService;
+import com.domus.api.modules.auth.DTO.GoogleRegistrarDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
+import com.domus.api.modules.igreja.DadosNovaIgreja;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.igreja.IgrejaService;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -71,6 +74,38 @@ public class GoogleAuthService {
                 usuario.getIgreja().getNome(),
                 token,
                 refreshToken
+        );
+    }
+
+    public RegistrarIgrejaResponse registrar(GoogleRegistrarDTO dados) {
+        GoogleIdToken.Payload payload = verificar(dados.idToken());
+        String sub = payload.getSubject();
+        String email = payload.getEmail();
+        String nome = (String) payload.get("name");
+
+        Usuario admin = igrejaService.criarIgrejaComAdmin(new DadosNovaIgreja(
+                dados.nomeIgreja(),
+                email,                     // emailContato = e-mail do dono (verificado pelo Google)
+                dados.cnpj(),
+                dados.telefoneContato(),
+                nome,
+                email,
+                null,                      // sem senha nativa (conta só-Google)
+                sub
+        ));
+
+        String token = tokenService.generateToken(admin);
+        String refreshToken = refreshTokenService.criar(admin.getId());
+        log.info("Cadastro Google concluído. usuario_id={}, igreja_id={}", admin.getId(), admin.getIgreja().getId());
+
+        return new RegistrarIgrejaResponse(
+                admin.getId(),
+                token,
+                refreshToken,
+                admin.getNome(),
+                admin.getRole().getNome(),
+                admin.getIgreja().getId(),
+                admin.getIgreja().getNome()
         );
     }
 

@@ -8,7 +8,8 @@ public record LoginResponseDTO(
         String role,
         UUID igrejaId,
         String igrejaNome,
-        String token
+        String token,
+        String refreshToken
 
 ) {
 

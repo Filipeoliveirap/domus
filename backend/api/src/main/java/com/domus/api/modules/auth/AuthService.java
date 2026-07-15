@@ -3,11 +3,13 @@ package com.domus.api.modules.auth;
 import com.domus.api.config.TokenService;
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
+import com.domus.api.modules.auth.DTO.TokenPairDTO;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ContaBloqueadaException;
 import com.domus.api.shared.security.LoginAttemptService;
+import com.domus.api.shared.security.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
@@ -21,6 +23,7 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
+    private final RefreshTokenService refreshTokenService;
     private final LoginAttemptService loginAttemptService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,6 +43,7 @@ public class AuthService {
 
             var usuario = (Usuario) auth.getPrincipal();
             var token = tokenService.generateToken(usuario);
+            var refreshToken = refreshTokenService.criar(usuario.getId());
 
             loginAttemptService.registrarSucesso(data.email());
 
@@ -53,7 +57,8 @@ public class AuthService {
                     usuario.getRole().getNome(),
                     usuario.getIgreja().getId(),
                     usuario.getIgreja().getNome(),
-                    token
+                    token,
+                    refreshToken
             );
 
         } catch (BadCredentialsException | InternalAuthenticationServiceException e) {
@@ -67,7 +72,35 @@ public class AuthService {
                         "Esta conta foi arquivada. Entre em contato com um administrador.");
             }
 
+            loginAttemptService.registrarFalha(data.email());
             throw new BusinessException("CREDENCIAIS_INVALIDAS", "E-mail ou senha incorretos.");
         }
+    }
+
+    public TokenPairDTO refresh(String refreshToken) {
+        // Rotaciona: valida, detecta reuso (lança SESSAO_REVOGADA) e emite o próximo token.
+        RefreshTokenService.ResultadoRotacao rotacao = refreshTokenService.rotacionar(refreshToken);
+        if (rotacao == null) {
+            log.warn("Tentativa de refresh com token inválido ou expirado.");
+            throw new BusinessException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
+        }
+
+        Usuario usuario = usuarioRepository.findById(rotacao.usuarioId())
+                .filter(Usuario::isEnabled)
+                .orElse(null);
+        if (usuario == null) {
+            refreshTokenService.revogar(rotacao.novoToken());
+            log.warn("Refresh de usuário inexistente ou desativado. usuario_id={}", rotacao.usuarioId());
+            throw new BusinessException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
+        }
+
+        String novoAccess = tokenService.generateToken(usuario);
+        log.info("Access token renovado via refresh. usuario_id={}", rotacao.usuarioId());
+        return new TokenPairDTO(novoAccess, rotacao.novoToken());
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokenService.revogar(refreshToken);
+        log.info("Logout efetuado (refresh token revogado).");
     }
 }

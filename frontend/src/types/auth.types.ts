@@ -11,7 +11,14 @@ export interface LoginResponse {
     igrejaId: string;
     igrejaNome: string;
     token: string;
+    refreshToken: string;
 }
+
+export interface TokenPair {
+    token: string;
+    refreshToken: string;
+}
+
 export interface RegistrarIgrejaRequest {
     nomeIgreja : string;
     emailContato : string;
@@ -25,6 +32,7 @@ export interface RegistrarIgrejaRequest {
 export interface RegistrarIgrejaResponse {
     id: string
     token : string;
+    refreshToken : string;
     nome : string;
     role : Role;
     igrejaId : string;

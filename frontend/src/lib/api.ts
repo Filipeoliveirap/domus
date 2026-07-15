@@ -1,5 +1,7 @@
-import axios from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/store/authStore'
+import { Endpoints } from '@/lib/endpoints'
+import type { TokenPair } from '@/types/auth.types'
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -8,7 +10,7 @@ export const api = axios.create({
   },
 })
 
-// Interceptor de request — injeta o token JWT em toda requisição autenticada
+// Interceptor de request — injeta o access token em toda requisição autenticada
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
   if (token) {
@@ -17,17 +19,63 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Interceptor de response — redireciona para login se o token expirar
+// Endpoints de auth que NÃO devem disparar uma tentativa de refresh ao receber 401.
+const rotasAuth = [Endpoints.auth.LOGIN, Endpoints.auth.REFRESH, Endpoints.auth.LOGOUT]
+
+// Single-flight: um único refresh em andamento por vez. Requisições 401 concorrentes
+// esperam nesta mesma promessa em vez de dispararem refreshes paralelos (que a rotação
+// do backend invalidaria entre si).
+let refreshPromise: Promise<string> | null = null
+
+function encerrarSessao() {
+  useAuthStore.getState().logout()
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login'
+  }
+}
+
+async function renovarAccessToken(): Promise<string> {
+  const refreshToken = useAuthStore.getState().refreshToken
+  if (!refreshToken) throw new Error('Sem refresh token')
+
+  const { data } = await api.post<TokenPair>(Endpoints.auth.REFRESH, { refreshToken })
+  useAuthStore.getState().setTokens({ token: data.token, refreshToken: data.refreshToken })
+  return data.token
+}
+
+// Interceptor de response — no 401, tenta renovar o access token uma vez e reenvia a
+// requisição original. Se o refresh falhar, encerra a sessão de verdade.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      const isLoginRequest = error.config?.url?.includes('/auth/login')
-      if (!isLoginRequest) {
-        useAuthStore.getState().logout()
-        window.location.href = '/login'
-      }
+  async (error: AxiosError) => {
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+    const status = error.response?.status
+    const url = original?.url ?? ''
+
+    const ehRotaAuth = rotasAuth.some((rota) => url.includes(rota))
+
+    if (status !== 401 || !original || ehRotaAuth) {
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
+
+    if (original._retry) {
+      encerrarSessao()
+      return Promise.reject(error)
+    }
+    original._retry = true
+
+    try {
+      if (!refreshPromise) {
+        refreshPromise = renovarAccessToken().finally(() => {
+          refreshPromise = null
+        })
+      }
+      const novoToken = await refreshPromise
+      original.headers.Authorization = `Bearer ${novoToken}`
+      return api(original)
+    } catch {
+      encerrarSessao()
+      return Promise.reject(error)
+    }
   }
 )

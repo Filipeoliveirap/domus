@@ -6,6 +6,7 @@ import {
   Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import styles from './Sidebar.module.css'
 
@@ -61,7 +62,15 @@ export function Sidebar() {
     )
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = useAuthStore.getState().refreshToken
+    if (refreshToken) {
+      try {
+        await authService.logout(refreshToken)
+      } catch {
+        // Best-effort: mesmo se a revogação no servidor falhar, limpamos a sessão local.
+      }
+    }
     logout()
     router.replace('/login')
   }

@@ -8,9 +8,6 @@ import axios from "axios";
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
 
-
-
-
 export function useRegistrarIgreja () {
     const router = useRouter()
     const login = useAuthStore(state => state.login)
@@ -88,6 +85,7 @@ export function useRegistrarIgreja () {
             login({
                 id: response.id,
                 token : response.token,
+                refreshToken : response.refreshToken,
                 nome : response.nome,
                 role : response.role,
                 igrejaId : response.igrejaId,

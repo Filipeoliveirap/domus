@@ -1,6 +1,7 @@
 package com.domus.api.modules.igreja;
 
 import com.domus.api.config.TokenService;
+import com.domus.api.shared.security.RefreshTokenService;
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
@@ -32,6 +33,7 @@ public class IgrejaService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final RefreshTokenService refreshTokenService;
     private final MembroRepository  membroRepository;
 
     @Transactional
@@ -82,10 +84,12 @@ public class IgrejaService {
                 admin.getId(), igreja.getId());
 
         var token = tokenService.generateToken(admin);
+        var refreshToken = refreshTokenService.criar(admin.getId());
 
         return new RegistrarIgrejaResponse(
                 admin.getId(),
                 token,
+                refreshToken,
                 request.getNomeAdmin(),
                 roleAdmin.getNome(),
                 admin.getIgreja().getId(),

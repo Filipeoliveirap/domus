@@ -37,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/igrejas/registrar",
                                 "/auth/login",
+                                "/auth/refresh",
+                                "/auth/logout",
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()

@@ -47,6 +47,7 @@ export function useLogin() {
                 igrejaId: response.igrejaId,
                 igrejaNome: response.igrejaNome,
                 token: response.token,
+                refreshToken: response.refreshToken,
             })
             const next = new URLSearchParams(window.location.search).get('next')
             router.push(destinoSeguro(next))
@@ -64,6 +65,7 @@ export function useLogin() {
             }
         } finally {
             setIsLoading(false)
+
         }
     }
 

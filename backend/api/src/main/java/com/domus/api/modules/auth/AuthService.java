@@ -37,6 +37,16 @@ public class AuthService {
             throw new ContaBloqueadaException(minutos);
         }
 
+        // Conta só-Google (senha_hash == null): login nativo não se aplica. Barra antes de
+        // deixar o passwordEncoder tropeçar no null, com mensagem que orienta a pessoa.
+        usuarioRepository.findByEmail(data.email())
+                .filter(u -> u.getSenhaHash() == null)
+                .ifPresent(u -> {
+                    log.warn("Login nativo em conta só-Google. email={}", data.email());
+                    throw new BusinessException("CONTA_SEM_SENHA",
+                            "Esta conta usa login com Google. Entre com Google ou defina uma senha para acessar por e-mail.");
+                });
+
         try {
             var authToken = new UsernamePasswordAuthenticationToken(data.email(), data.senha());
             var auth = authenticationManager.authenticate(authToken);

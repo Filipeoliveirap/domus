@@ -56,6 +56,16 @@
 
 ---
 
+## Warnings conhecidas e benignas (não são bug)
+
+- **Botão do Google Sign-In em dev:** o console loga `[GSI_LOGGER]: The given origin is not
+  allowed for the given client ID` (403 no render do botão) e `Cross-Origin-Opener-Policy would
+  block the window.postMessage call`. Ambas aparecem em Chrome e Firefox, mas **login e cadastro
+  funcionam** (o sign-in real usa popup). São do lado do Google (script `client:380`), não da
+  nossa CSP/COOP (não setamos COOP). Verificado em 2026-07-15. Em prod (HTTPS + domínio real)
+  tende a sumir. Se incomodar em dev: conferir a origem em "Authorized JavaScript origins" e
+  aguardar propagação.
+
 ## Bugs conhecidos (corrigir na fase apropriada)
 
 - **`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState` → erro de tipo

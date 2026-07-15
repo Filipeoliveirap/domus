@@ -157,12 +157,16 @@ rotação, revogação, roles, `igreja_id` no JWT e soft delete: intocados.
 
 ## 9. Códigos de erro
 
+Convenção do projeto: `BusinessException` é mapeada pelo `GlobalExceptionHandler.handleBusiness`
+para **HTTP 400 + `codigo`**. O front distingue pelo `codigo`, não pelo status. Seguimos esse
+padrão (o `EMAIL_DUPLICADO`, `CREDENCIAIS_INVALIDAS` etc. já funcionam assim).
+
 | Código | Quando | HTTP |
 |--------|--------|------|
-| `TOKEN_GOOGLE_INVALIDO` | assinatura/`aud`/expiração inválidos, ou `email_verified=false` | 401 |
-| `CONTA_NAO_ENCONTRADA` | login Google, e-mail sem conta | 409 |
-| `CONTA_SEM_SENHA` | login nativo numa conta só-Google | 409 |
-| `EMAIL_DUPLICADO` | cadastro Google, e-mail já existe | 409 |
+| `TOKEN_GOOGLE_INVALIDO` | assinatura/`aud`/expiração inválidos, ou `email_verified=false` | 400 |
+| `CONTA_NAO_ENCONTRADA` | login Google, e-mail sem conta | 400 |
+| `CONTA_SEM_SENHA` | login nativo numa conta só-Google | 400 |
+| `EMAIL_DUPLICADO` | cadastro Google, e-mail já existe | 400 |
 
 ---
 

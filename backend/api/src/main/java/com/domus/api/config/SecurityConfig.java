@@ -40,6 +40,8 @@ SecurityConfig {
                         .requestMatchers(
                                 "/igrejas/registrar",
                                 "/auth/login",
+                                "/auth/google/login",
+                                "/auth/google/registrar",
                                 "/auth/refresh",
                                 "/auth/logout",
                                 "/auth/forgot-password",

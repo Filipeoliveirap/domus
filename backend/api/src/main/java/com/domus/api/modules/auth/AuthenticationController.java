@@ -3,10 +3,13 @@ package com.domus.api.modules.auth;
 
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.auth.DTO.ForgotPasswordDTO;
+import com.domus.api.modules.auth.DTO.GoogleLoginDTO;
+import com.domus.api.modules.auth.DTO.GoogleRegistrarDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.RefreshRequestDTO;
 import com.domus.api.modules.auth.DTO.ResetPasswordDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +27,21 @@ public class AuthenticationController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final GoogleAuthService googleAuthService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO data ) {
         return ResponseEntity.ok(authService.login(data));
+    }
+
+    @PostMapping("/google/login")
+    public ResponseEntity<LoginResponseDTO> googleLogin(@RequestBody @Valid GoogleLoginDTO data) {
+        return ResponseEntity.ok(googleAuthService.login(data.idToken()));
+    }
+
+    @PostMapping("/google/registrar")
+    public ResponseEntity<RegistrarIgrejaResponse> googleRegistrar(@RequestBody @Valid GoogleRegistrarDTO data) {
+        return ResponseEntity.ok(googleAuthService.registrar(data));
     }
 
     @PostMapping("/refresh")

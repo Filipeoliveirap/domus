@@ -16,6 +16,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     @Query("SELECT u FROM Usuario u WHERE u.membro.email = :email")
     Optional<Usuario> findByEmail(@Param("email") String email);
+
+    Optional<Usuario> findByGoogleSub(String googleSub);
     Optional<Usuario> findByIdAndIgrejaId(UUID id, UUID igrejaId);
     long countByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 

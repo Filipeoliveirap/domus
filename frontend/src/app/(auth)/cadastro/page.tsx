@@ -18,6 +18,7 @@ export default function CadastroPage() {
     register, handleSubmit, setValue, errors, passo1Incompleto,
     register2, handleSubmit2, errors2, passo2Incompleto, watch2,
     erroGeral, isLoading, onSubmit,
+    googleData, onGoogleAuth, onGoogleError, onSubmitGoogle,
     dadosSucesso, irParaMembros, irParaPerfilIgreja, irParaMeuPerfil,
   } = useRegistrarIgreja()
 
@@ -36,6 +37,12 @@ export default function CadastroPage() {
               passo1Incompleto={passo1Incompleto}
               setValue={setValue}
               onAvancar={irParaPasso2}
+              googleData={googleData}
+              onGoogleAuth={onGoogleAuth}
+              onGoogleError={onGoogleError}
+              onSubmitGoogle={onSubmitGoogle}
+              erroGeral={erroGeral}
+              isLoading={isLoading}
             />
             <SecurityFooter />
           </div>

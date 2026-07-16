@@ -65,6 +65,20 @@
 
 ---
 
+## Frontend — robustez de sessão (a vigiar)
+
+- **Logout indevido ao falhar refresh (a vigiar).** Descoberto em 2026-07-16: um MEMBRO abrindo
+  `/financeiro/movimentacoes` era deslogado. Causa: a página disparava uma query de admin
+  **sem gate de permissão** (`useCategoriasSelect()`), que tomava 401 (token expirado) e o refresh
+  falhava → `encerrarSessao()`. **Corrigido** gateando a query por `autorizado` e adicionando o
+  `AuthGuard` no layout `(app)`. *Pulga que fica:* se um 401 + refresh problemático desloga, em
+  tese pode atingir um usuário autorizado num momento ruim (ex.: corrida na rotação/detecção de
+  reuso do refresh). Sem repro por ora — observar; se reaparecer, instrumentar o interceptor do
+  axios (`src/lib/api.ts`) e o fluxo de rotação.
+- **Padrão a varrer:** garantir que nenhuma página acessível a papéis sem permissão dispare
+  queries de admin (gate por `enabled: autorizado`). Só a de movimentações tinha o problema, mas
+  vale uma passada nas demais quando mexer nelas.
+
 ## Observabilidade — fora do escopo da entrega de Sentry (2026-07-16)
 
 O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:

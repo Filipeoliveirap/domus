@@ -67,7 +67,7 @@ function MovimentacoesConteudo() {
 
   const qDebounced = useDebounce(filtros.q, 250)
 
-  const { data: categorias } = useCategoriasSelect()
+  const { data: categorias } = useCategoriasSelect(autorizado)
   const { data, isLoading, isError, refetch } = useMovimentacoes({
     tipo: (filtros.tipo as TipoMovimentacao) || undefined,
     categoriaId: filtros.categoriaId || undefined,

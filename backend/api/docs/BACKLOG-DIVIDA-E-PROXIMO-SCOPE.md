@@ -71,6 +71,19 @@
 
 ## Segurança / autorização — a discutir (decisão de produto)
 
+- **Login CSRF (resíduo aceito na migração de cookie, 2026-07-16).** As rotas públicas de
+  auth (`/auth/login`, `/auth/google/*`, `/igrejas/registrar`, `/auth/forgot-password`,
+  `/auth/reset-password`) são isentas do double-submit: rodam sem sessão para um atacante
+  cavalgar, e protegê-las exigiria buscar um token CSRF antes de cada formulário público em
+  4 telas. Fica possível o **login CSRF** (forçar a vítima a logar na conta do atacante e
+  digitar dados achando que é a própria). Impacto modesto e o `SameSite=Lax` já o barra na
+  prática (é POST cross-site). Reavaliar se surgir fluxo sensível pré-login.
+
+- **Janela de convivência cookie+header.** A migração para cookie httpOnly matou toda sessão
+  existente (o `SecurityFilter` parou de ler o header `Authorization`). Foi aceitável porque
+  não havia usuário real. Se um dia for preciso migrar auth sem deslogar todo mundo, o
+  padrão é ler cookie **e** header por uma janela e só então remover o header.
+
 - **`CORS_ALLOWED_ORIGINS` virou item crítico de produção (2026-07-16).** Com a sessão em
   cookie, `allowCredentials(true)` + uma origem liberada = chamadas **plenamente
   autenticadas** feitas por aquela origem, porque o navegador anexa o `domus_access` sozinho.

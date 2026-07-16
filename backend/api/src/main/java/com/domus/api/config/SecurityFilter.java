@@ -2,8 +2,10 @@ package com.domus.api.config;
 
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.shared.security.AuthCookieFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +39,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                         var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                         // Enriquece o contexto de log com quem é o usuário e a igreja (multi-tenant).
-                        // O RequestContextFilter limpa o MDC ao fim da requisição.
+                        // O RequestIdFilter limpa o MDC ao fim da requisição.
                         org.slf4j.MDC.put("usuario_id", subject);
                         Usuario usuario = (Usuario) user;
                         if (usuario.getIgreja() != null) {
@@ -57,9 +59,22 @@ public class SecurityFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * O token vem do cookie httpOnly, nunca mais do header Authorization.
+     *
+     * <p>Não existe fallback pro header de propósito: mantê-lo deixaria o localStorage
+     * viável no front e a migração seria só decorativa.
+     */
     private String recoverToken(HttpServletRequest request) {
-        var authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        return authHeader.replace("Bearer ", "");
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+
+        for (Cookie cookie : cookies) {
+            if (AuthCookieFactory.COOKIE_ACCESS.equals(cookie.getName())) {
+                String valor = cookie.getValue();
+                return (valor == null || valor.isBlank()) ? null : valor;
+            }
+        }
+        return null;
     }
 }

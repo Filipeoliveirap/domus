@@ -8,6 +8,7 @@ interface AuthState {
   id: string | null
   nome: string | null
   role: Role | null
+  foto: string | null
   igrejaId: string | null
   igrejaNome: string | null
   isAuthenticated: boolean
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
       id: null,
       nome: null,
       role: null,
+      foto: null,
       igrejaId: null,
       igrejaNome: null,
       isAuthenticated: false,
@@ -44,7 +46,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('domus:token')
         document.cookie = 'domus:token=; path=/; max-age=0'
-        set({ token: null, refreshToken: null, id: null, nome: null, role: null, igrejaId: null, igrejaNome: null, isAuthenticated: false })
+        set({ token: null, refreshToken: null, id: null, nome: null, role: null, foto: null, igrejaId: null, igrejaNome: null, isAuthenticated: false })
       },
       atualizarUsuarioLogado: (data) => set(data),
       setHidratado: () => set({ hidratado: true }),

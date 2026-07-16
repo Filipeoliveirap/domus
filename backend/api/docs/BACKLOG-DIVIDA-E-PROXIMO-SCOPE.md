@@ -107,7 +107,6 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
 
 ## Bugs conhecidos (corrigir na fase apropriada)
 
-- **`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState` → erro de tipo
-  pré-existente. **⚠️ Quebra o `next build` inteiro** (typecheck do build de produção falha),
-  então hoje o front não fecha build de prod. Corrigir junto da feature de **upload de foto**
-  (Fase 2) — ou antes, se for necessário fechar um build de produção.
+- ~~**`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState`.~~ **RESOLVIDO**
+  (2026-07-16): adicionado `foto: string | null` ao `authStore` (fica `null` até a feature de
+  upload de foto da Fase 2 popular o campo). O `next build` de produção volta a passar.

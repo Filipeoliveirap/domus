@@ -11,19 +11,18 @@ export interface GoogleRegistrarRequest {
     telefoneContato: string;
 }
 
-export interface LoginResponse {
+/**
+ * O que o backend devolve sobre a sessão — em /auth/login, /auth/google/*,
+ * /igrejas/registrar e /auth/me.
+ *
+ * Sem token de propósito: eles viajam em cookie httpOnly e o JavaScript nunca os vê.
+ */
+export interface Sessao {
     id: string;
     nome: string;
     role: Role;
     igrejaId: string;
     igrejaNome: string;
-    token: string;
-    refreshToken: string;
-}
-
-export interface TokenPair {
-    token: string;
-    refreshToken: string;
 }
 
 export interface ForgotPasswordRequest {
@@ -47,14 +46,4 @@ export interface RegistrarIgrejaRequest {
     nomeAdmin : string;
     emailAdmin : string;
     senhaAdmin : string;
-}
-
-export interface RegistrarIgrejaResponse {
-    id: string
-    token : string;
-    refreshToken : string;
-    nome : string;
-    role : Role;
-    igrejaId : string;
-    igrejaNome : string;
 }

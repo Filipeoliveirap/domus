@@ -6,6 +6,7 @@ export const Endpoints = {
     GOOGLE_REGISTRAR: '/auth/google/registrar',
     REFRESH: '/auth/refresh',
     LOGOUT: '/auth/logout',
+    ME: '/auth/me',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     REGISTER_IGREJA: '/igrejas/registrar',

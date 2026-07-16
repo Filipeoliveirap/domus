@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Conversores de cor e propriedades padrão do Spring Boot. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- DEV/local/test: console legível, com request_id e usuário no contexto (MDC). -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %clr(%-5level) %clr([%X{request_id:-sem-req}]){magenta} %clr([usr:%X{usuario_id:-anon}]){cyan} %clr(%logger{36}){blue} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- PROD: um JSON por linha (LogstashEncoder inclui todo o MDC automaticamente). -->
+    <springProfile name="prod">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeContext>false</includeContext>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+</configuration>

@@ -98,6 +98,14 @@ public class GlobalExceptionHandler {
 
         log.error("Erro inesperado. path={}", request.getRequestURI(), ex);
 
+        // Só erros inesperados (500) viram alerta no Sentry — fluxo esperado (400/401/403/404/429)
+        // NÃO é bug e não polui o painel. Anexa o request_id do MDC para ligar o erro aos logs.
+        io.sentry.Sentry.withScope(scope -> {
+            String requestId = org.slf4j.MDC.get("request_id");
+            if (requestId != null) scope.setTag("request_id", requestId);
+            io.sentry.Sentry.captureException(ex);
+        });
+
         return ResponseEntity
                 .internalServerError()
                 .body(ErrorResponse.of(500, "ERRO_INTERNO", "Ocorreu um erro interno. Tente novamente mais tarde"));

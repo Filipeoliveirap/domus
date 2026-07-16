@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Origem da API (para o connect-src da CSP). Em prod, setar NEXT_PUBLIC_API_URL.
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -10,7 +11,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://accounts.google.com/gsi/client",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "frame-src https://accounts.google.com",
-  `connect-src 'self' ${apiUrl} https://accounts.google.com`,
+  `connect-src 'self' ${apiUrl} https://accounts.google.com https://*.sentry.io`,
   "img-src 'self' data: https://*.googleusercontent.com https://accounts.google.com",
   "font-src 'self'",
   "base-uri 'self'",
@@ -39,4 +40,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// withSentryConfig instrumenta o build. Upload de source maps só acontece com
+// SENTRY_AUTH_TOKEN (fica pra prod/CI; ver BACKLOG). Sem token, apenas segue o build.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+});

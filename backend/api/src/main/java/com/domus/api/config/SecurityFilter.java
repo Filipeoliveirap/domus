@@ -1,5 +1,6 @@
 package com.domus.api.config;
 
+import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,6 +36,13 @@ public class SecurityFilter extends OncePerRequestFilter {
                     if (user != null && user.isEnabled()) {
                         var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                         SecurityContextHolder.getContext().setAuthentication(authentication);
+                        // Enriquece o contexto de log com quem é o usuário e a igreja (multi-tenant).
+                        // O RequestContextFilter limpa o MDC ao fim da requisição.
+                        org.slf4j.MDC.put("usuario_id", subject);
+                        Usuario usuario = (Usuario) user;
+                        if (usuario.getIgreja() != null) {
+                            org.slf4j.MDC.put("igreja_id", String.valueOf(usuario.getIgreja().getId()));
+                        }
                         log.debug("Usuário autenticado via token. id={}", subject);
                     } else if (user == null) {
                         log.warn("Token válido mas usuário não encontrado. id={}", subject);

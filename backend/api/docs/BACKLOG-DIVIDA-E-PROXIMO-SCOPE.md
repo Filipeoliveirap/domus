@@ -46,6 +46,18 @@
 
 ---
 
+## Observabilidade — fora do escopo da entrega de Sentry (2026-07-16)
+
+O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
+- **Upload de source maps + release tracking** (front): precisa de `SENTRY_AUTH_TOKEN` no
+  build de CI/prod pra o stack trace do Sentry apontar pro código original (não o minificado).
+  `withSentryConfig` já está pronto pra isso; falta o token + pipeline.
+- **APM / performance tracing** (`tracesSampleRate` está 0 nos dois lados) — só se houver
+  necessidade real de medir latência; consome cota do tier grátis.
+- **Envio de logs pra um agregador central** (Loki/ELK/CloudWatch). Hoje os logs JSON saem no
+  stdout; em prod alguém precisa coletá-los. Depende de onde a app for hospedada.
+- **Afinação de regras de alerta** no painel do Sentry (quais erros notificam, para quem).
+
 ## Fora do scope do piloto (próximo scope / camada comercial)
 
 - **Integração com Google Calendar (agendar eventos).** Módulo **separado** de autorização de
@@ -77,4 +89,6 @@
 ## Bugs conhecidos (corrigir na fase apropriada)
 
 - **`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState` → erro de tipo
-  pré-existente. Corrigir junto da feature de **upload de foto** (Fase 2).
+  pré-existente. **⚠️ Quebra o `next build` inteiro** (typecheck do build de produção falha),
+  então hoje o front não fecha build de prod. Corrigir junto da feature de **upload de foto**
+  (Fase 2) — ou antes, se for necessário fechar um build de produção.

@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -34,7 +36,25 @@ SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
-                .csrf(csrf -> csrf.disable())
+                // Com o token em cookie, o navegador o envia SOZINHO em toda requisição —
+                // inclusive nas disparadas por outro site. É isso que abre CSRF e o que o
+                // header Authorization impedia de graça. Defesa em duas camadas:
+                // SameSite=Lax (o navegador não anexa o cookie em POST cross-site) e
+                // double-submit (o site atacante faz o cookie ser enviado, mas a Same-Origin
+                // Policy o impede de LER o valor para repetir no header).
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(csrfTokenRequestHandler())
+                        // Rotas públicas: rodam sem sessão, então não há cookie para um
+                        // atacante cavalgar. Resíduo aceito: login CSRF (ver BACKLOG);
+                        // o SameSite=Lax já o barra na prática.
+                        .ignoringRequestMatchers(
+                                "/auth/login",
+                                "/auth/google/login",
+                                "/auth/google/registrar",
+                                "/auth/forgot-password",
+                                "/auth/reset-password",
+                                "/igrejas/registrar"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -107,6 +127,23 @@ SecurityConfig {
                 // Rate limiting roda ANTES da autenticação: barra floods anônimos barato.
                 .addFilterBefore(rateLimitFilter, SecurityFilter.class)
                 .build();
+    }
+
+    /**
+     * O XSRF-TOKEN é deliberadamente legível por JS — e isso não contradiz o httpOnly dos
+     * cookies de sessão. Ele NÃO é credencial: não prova quem você é, só prova que quem
+     * montou a requisição enxerga a mesma origem. Um XSS lendo-o não ganha nada, porque XSS
+     * já roda dentro da origem. httpOnly defende do script injetado DENTRO da página; CSRF
+     * defende do site DE FORA.
+     *
+     * <p>setCsrfRequestAttributeName(null) desliga o carregamento adiado (padrão do Spring
+     * Security 6). Sem isso o token é resolvido tarde demais e o cookie não é escrito nas
+     * respostas — o front nunca teria o valor para devolver no header.
+     */
+    private CsrfTokenRequestAttributeHandler csrfTokenRequestHandler() {
+        CsrfTokenRequestAttributeHandler handler = new CsrfTokenRequestAttributeHandler();
+        handler.setCsrfRequestAttributeName(null);
+        return handler;
     }
 
     @Bean

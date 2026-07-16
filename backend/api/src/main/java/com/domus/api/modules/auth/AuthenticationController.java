@@ -11,7 +11,7 @@ import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.usuario.Usuario;
-import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.security.AuthCookieFactory;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -77,7 +77,7 @@ public class AuthenticationController {
     public ResponseEntity<Void> refresh(
             @CookieValue(name = AuthCookieFactory.COOKIE_REFRESH, required = false) String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new BusinessException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
+            throw new SessaoExpiradaException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
         }
         TokenPairDTO par = authService.refresh(refreshToken);
         return comCookies(par.token(), par.refreshToken()).build();

@@ -1,6 +1,6 @@
 package com.domus.api.config;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,12 +26,18 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@AllArgsConstructor
-public class
-SecurityConfig {
+@RequiredArgsConstructor
+public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
     private final com.domus.api.shared.security.RateLimitFilter rateLimitFilter;
+
+    /**
+     * Mesma property que rege os cookies de sessão (ver AuthCookieFactory): o XSRF-TOKEN
+     * precisa acompanhar, senão fica o único cookie sem Secure.
+     */
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -43,7 +49,7 @@ SecurityConfig {
                 // double-submit (o site atacante faz o cookie ser enviado, mas a Same-Origin
                 // Policy o impede de LER o valor para repetir no header).
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(csrfTokenRequestHandler())
                         // Rotas públicas: rodam sem sessão, então não há cookie para um
                         // atacante cavalgar. Resíduo aceito: login CSRF (ver BACKLOG);
@@ -108,7 +114,13 @@ SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers
-                        // HSTS: força HTTPS (só aplicado em requisições seguras; inofensivo em dev http).
+                        // HSTS: só é escrito quando request.isSecure() — e o Spring recebe o
+                        // salto interno do proxy em HTTP puro. Por isso depende de
+                        // server.forward-headers-strategy=framework, que faz o Spring confiar
+                        // no X-Forwarded-Proto do proxy. Sem isso este bloco seria letra morta.
+                        // A CAMADA QUE REALMENTE PROTEGE é o HSTS do front (next.config.ts),
+                        // que cobre a origem inteira; este aqui é defesa em profundidade para
+                        // quem alcançar a API direto.
                         .httpStrictTransportSecurity(hsts -> hsts
                                 .includeSubDomains(true)
                                 .maxAgeInSeconds(31536000))
@@ -124,9 +136,32 @@ SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-                // Rate limiting roda ANTES da autenticação: barra floods anônimos barato.
+                // Rate limiting roda antes da AUTENTICAÇÃO (barra floods anônimos barato),
+                // mas depois do CsrfFilter: um flood de POST sem X-XSRF-TOKEN leva 403 e não
+                // chega a ser contado. Respostas são baratas, então fica assim (ver BACKLOG).
+                // A ORDEM DESTAS DUAS LINHAS IMPORTA: addFilterBefore(_, SecurityFilter.class)
+                // só resolve porque a linha acima já registrou a ordem do SecurityFilter.
+                // Invertê-las quebra o boot com "does not have a registered order".
                 .addFilterBefore(rateLimitFilter, SecurityFilter.class)
                 .build();
+    }
+
+    /**
+     * Repositório do token CSRF.
+     *
+     * <p>O {@code Secure} é forçado pela nossa própria config em vez de herdado. O padrão do
+     * {@code CookieCsrfTokenRepository} é {@code request.isSecure()} — que aqui é SEMPRE
+     * false, porque o Spring só recebe o salto HTTP interno vindo do proxy do Next, nunca a
+     * conexão TLS do navegador. Herdar deixaria o XSRF-TOKEN sem {@code Secure} enquanto os
+     * cookies de sessão têm, abrindo cookie-tossing: um atacante de rede sobrescreve o
+     * XSRF-TOKEN por HTTP com um valor conhecido e casa com o header.
+     */
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie
+                .secure(cookieSecure)
+                .sameSite("Lax"));
+        return repository;
     }
 
     /**
@@ -156,6 +191,15 @@ SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * ATENÇÃO: com a sessão em cookie, esta lista virou um interruptor de comprometimento.
+     *
+     * <p>Antes, o token ia no header — uma origem liberada aqui só conseguia ler respostas se
+     * JÁ tivesse o token. Agora o navegador anexa o {@code domus_access} sozinho, então
+     * qualquer origem nesta lista faz chamadas plenamente autenticadas e lê o resultado.
+     * O tráfego do app é same-origin (proxy do Next) e não depende disto — mas o raio de
+     * explosão de um valor errado em {@code CORS_ALLOWED_ORIGINS} aumentou muito.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.allowed-origins}") String allowedOrigins) {

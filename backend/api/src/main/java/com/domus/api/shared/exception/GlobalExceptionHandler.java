@@ -42,6 +42,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(400, ex.getCodigo(), ex.getMessage()));
     }
 
+    @ExceptionHandler(SessaoExpiradaException.class)
+    public ResponseEntity<ErrorResponse> handleSessaoExpirada(SessaoExpiradaException ex, HttpServletRequest request) {
+        log.warn("Sessão expirada ou inválida. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of(401, ex.getCodigo(), ex.getMessage()));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
 

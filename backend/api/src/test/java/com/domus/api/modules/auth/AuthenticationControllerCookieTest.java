@@ -4,6 +4,12 @@ import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.auth.DTO.GoogleLoginDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.SessaoDTO;
+import com.domus.api.modules.auth.DTO.TokenPairDTO;
+import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.usuario.Role;
+import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.security.AuthCookieFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,7 +79,69 @@ class AuthenticationControllerCookieTest {
         List<String> cookies = resposta.getHeaders().get(HttpHeaders.SET_COOKIE);
         assertNotNull(cookies);
         assertEquals(2, cookies.size());
+        // Atributos também aqui: o caminho do Google é código separado do login nativo e
+        // poderia emitir dois cookies sem httpOnly sem que nenhum outro teste percebesse.
+        assertTrue(cookies.stream().allMatch(c -> c.contains("HttpOnly") && c.contains("SameSite=Lax")));
         assertEquals("Bia", resposta.getBody().nome());
+    }
+
+    @Test
+    void refreshDeveLerORefreshDoCookieEReemitirOsDois() {
+        when(authService.refresh("refresh-antigo"))
+                .thenReturn(new TokenPairDTO("jwt-novo", "refresh-novo"));
+
+        ResponseEntity<Void> resposta = controller().refresh("refresh-antigo");
+
+        List<String> cookies = resposta.getHeaders().get(HttpHeaders.SET_COOKIE);
+        assertNotNull(cookies);
+        assertTrue(cookies.stream().anyMatch(c -> c.startsWith("domus_access=jwt-novo")));
+        assertTrue(cookies.stream().anyMatch(c -> c.startsWith("domus_refresh=refresh-novo")),
+                "a rotação precisa reemitir o refresh, senão a próxima renovação usa um token morto");
+    }
+
+    @Test
+    void refreshSemCookieDeveSer401ENaoTocarNoService() {
+        SessaoExpiradaException erro =
+                assertThrows(SessaoExpiradaException.class, () -> controller().refresh(null));
+
+        assertEquals("REFRESH_INVALIDO", erro.getCodigo());
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void refreshComCookieEmBrancoTambemE401() {
+        assertThrows(SessaoExpiradaException.class, () -> controller().refresh("  "));
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void logoutComRefreshValidoRevogaASessao() {
+        controller().logout("refresh-vivo");
+
+        verify(authService).logout("refresh-vivo");
+    }
+
+    @Test
+    void meDeveDevolverASessaoDoUsuarioAutenticado() {
+        UUID id = UUID.randomUUID();
+        UUID igrejaId = UUID.randomUUID();
+
+        // Usuario.getNome() delega para membro.getNome() — usuário é credencial, membro é pessoa.
+        Usuario usuario = Usuario.builder()
+                .id(id)
+                .membro(Membro.builder().nome("Ana").build())
+                .role(Role.builder().nome("ADMIN_IGREJA").build())
+                .igreja(Igreja.builder().id(igrejaId).nome("Igreja Central").build())
+                .build();
+
+        SessaoDTO sessao = controller().me(usuario).getBody();
+
+        assertNotNull(sessao);
+        assertEquals(id, sessao.id());
+        assertEquals("Ana", sessao.nome());
+        assertEquals("ADMIN_IGREJA", sessao.role());
+        assertEquals(igrejaId, sessao.igrejaId());
+        assertEquals("Igreja Central", sessao.igrejaNome());
     }
 
     @Test

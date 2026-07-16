@@ -55,10 +55,18 @@ dois ambientes; o destino real do Spring vira uma env **server-side** do Next
 (`API_INTERNAL_URL`, ex.: `http://localhost:8080` em dev), consumida só pelo `rewrites`.
 Isso evita a classe de bug "passa em dev e quebra em prod" por caminhos divergentes.
 
-**CORS é mantido, mas sai do caminho crítico.** A config atual (`app.cors.allowed-origins`,
-`allowCredentials(true)`) fica como está: o tráfego do app passa a ser same-origin e não
-depende dela, mas a API continua alcançável direto (curl, testes, debug). Removê-la seria
-mexer em algo que não atrapalha — YAGNI.
+**CORS é mantido, mas muda de natureza.** A config atual (`app.cors.allowed-origins`,
+`allowCredentials(true)`) fica como está e o tráfego do app não depende dela (é same-origin).
+Mas o **raio de explosão dela aumentou**: antes, uma origem liberada só lia respostas se já
+tivesse o token (que ia no header); agora o navegador anexa o `domus_access` sozinho, então
+qualquer origem da lista faz chamadas plenamente autenticadas. `CORS_ALLOWED_ORIGINS` em prod
+virou um interruptor de comprometimento de sessão, não uma conveniência.
+
+**Acesso direto à API (sem o proxy) é só para curl/testes, não para navegador.** Com
+`COOKIE_PATH_PREFIX=/api`, um navegador que fale direto com `localhost:8080/auth/login`
+recebe o cookie com `Path=/api` e nunca mais o envia para `/membros`. Com `curl -b` é
+indiferente (o envio é explícito). Não é defeito — é consequência de o `Path` ser escrito na
+visão do navegador; só não se deve esperar depurar pelo navegador sem passar pelo proxy.
 
 ### Alternativas descartadas
 
@@ -230,7 +238,13 @@ Significado dos status:
 |---|---|---|
 | `401` no `/auth/me` do load | não há sessão | `AuthGuard` → `/login`, sem barulho |
 | `401` em rota qualquer | access expirado | fluxo de refresh de sempre |
+| `401` no `/auth/refresh` | sessão morta/revogada | encerra a sessão de vez |
 | `403` de CSRF | header ausente/divergente | não deve ocorrer em uso normal; se ocorrer é bug nosso → deve chegar no Sentry, não ser engolido |
+
+**`SessaoExpiradaException` → 401.** `REFRESH_INVALIDO` e `SESSAO_REVOGADA` eram
+`BusinessException`, que o `GlobalExceptionHandler` mapeia para **400**. Sessão morta não é
+erro de regra de negócio — é falta de autenticação, e o front inteiro chaveia refresh/logout
+em 401. Por isso ganharam exceção própria, mapeada para 401.
 
 ## Migração
 

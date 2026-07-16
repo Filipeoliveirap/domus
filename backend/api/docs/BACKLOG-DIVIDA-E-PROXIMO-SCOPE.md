@@ -40,6 +40,20 @@
     - **Limites por rota individual.** Hoje há só dois tiers (global e auth). Se algum endpoint
       específico precisar de teto próprio, generalizar a configuração.
 
+- **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
+  migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
+  `RateLimitFilter` em ~1898, então um flood de POST sem `X-XSRF-TOKEN` leva 403 e **nunca
+  incrementa** `rl:global:<ip>`. As respostas são baratas (403 seco, sem tocar no banco),
+  por isso ficou assim. Se virar vetor de abuso, mover o `RateLimitFilter` para antes do
+  `CsrfFilter`.
+
+- **HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.** O Spring só vê
+  o salto HTTP interno do proxy, então `request.isSecure()` é false e o `HstsHeaderWriter`
+  não escreve nada. A property foi adicionada (default `none`, como o `trust-forwarded-for`),
+  mas **precisa virar `framework` em produção** — senão o bloco de HSTS do `SecurityConfig`
+  é letra morta. Quem protege de fato é o HSTS do front (`next.config.ts`), que cobre a
+  origem inteira; o do back é defesa em profundidade.
+
 - **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
   auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito
   como Java agent no surefire.
@@ -47,6 +61,14 @@
 ---
 
 ## Segurança / autorização — a discutir (decisão de produto)
+
+- **`CORS_ALLOWED_ORIGINS` virou item crítico de produção (2026-07-16).** Com a sessão em
+  cookie, `allowCredentials(true)` + uma origem liberada = chamadas **plenamente
+  autenticadas** feitas por aquela origem, porque o navegador anexa o `domus_access` sozinho.
+  Antes, com o token no header, uma origem liberada não conseguia nada sem já ter o token.
+  O valor atual (`http://localhost:3000`) está correto; o ponto é que essa env deixou de ser
+  conveniência e virou interruptor de comprometimento de sessão. Conferir com cuidado ao
+  configurar produção.
 
 - **Acesso horizontal a dados de membro dentro da mesma igreja (a decidir a intenção).**
   Hoje `GET /membros/**` permite o perfil `MEMBRO`, e `buscarPorId` escopa **só por igreja**

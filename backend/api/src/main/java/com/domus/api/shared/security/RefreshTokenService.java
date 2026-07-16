@@ -1,6 +1,6 @@
 package com.domus.api.shared.security;
 
-import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.SessaoExpiradaException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -63,7 +63,7 @@ public class RefreshTokenService {
             revogarFamilia(familyId);
             log.warn("Reuso de refresh token detectado — família revogada. usuario_id={}, family_id={}",
                     usuarioId, familyId);
-            throw new BusinessException("SESSAO_REVOGADA",
+            throw new SessaoExpiradaException("SESSAO_REVOGADA",
                     "Detectamos um uso suspeito da sua sessão. Faça login novamente.");
         }
 

@@ -7,6 +7,7 @@ import com.domus.api.modules.auth.DTO.TokenPairDTO;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.exception.ContaBloqueadaException;
 import com.domus.api.shared.security.LoginAttemptService;
 import com.domus.api.shared.security.RefreshTokenService;
@@ -92,7 +93,7 @@ public class AuthService {
         RefreshTokenService.ResultadoRotacao rotacao = refreshTokenService.rotacionar(refreshToken);
         if (rotacao == null) {
             log.warn("Tentativa de refresh com token inválido ou expirado.");
-            throw new BusinessException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
+            throw new SessaoExpiradaException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
         }
 
         Usuario usuario = usuarioRepository.findById(rotacao.usuarioId())
@@ -101,7 +102,7 @@ public class AuthService {
         if (usuario == null) {
             refreshTokenService.revogar(rotacao.novoToken());
             log.warn("Refresh de usuário inexistente ou desativado. usuario_id={}", rotacao.usuarioId());
-            throw new BusinessException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
+            throw new SessaoExpiradaException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
         }
 
         String novoAccess = tokenService.generateToken(usuario);

@@ -28,9 +28,17 @@
   e `'unsafe-eval'` (concessão ao Next.js sem nonce). Hardening real = CSP com nonce por
   requisição (via middleware), removendo os `unsafe-*`. Tarefa própria, considerável.
 
-- **Rate limiting: migrar bloqueio de login para Redis.** Hoje o `LoginAttemptService` é em
-  memória (some no restart, não escala entre instâncias). Migrar para Redis. (Parte do item de
-  rate limiting da Fase 1 — mas o *storage* em Redis é a dívida específica.)
+- ~~**Rate limiting: migrar bloqueio de login para Redis.**~~ **FEITO** (2026-07-16): o
+  `LoginAttemptService` agora usa Redis (`login:attempt:*`/`login:block:*`). Junto entrou o
+  rate limiting geral por IP (`RateLimitFilter`, janela fixa, global 100/min + auth 10/min).
+  O que ficou **de fora** e pode virar dívida no futuro:
+    - **Algoritmo sliding window / token bucket.** A janela fixa tem efeito de borda (pode-se
+      mandar ~2x o limite na virada do minuto). Irrelevante pro piloto; trocar por Bucket4j se
+      o volume exigir (o filtro é o único ponto de troca).
+    - **Limite por usuário autenticado.** Hoje é só por IP. Um limite por `usuario_id` daria
+      granularidade extra (ex.: um usuário abusando de dentro de uma rede compartilhada/NAT).
+    - **Limites por rota individual.** Hoje há só dois tiers (global e auth). Se algum endpoint
+      específico precisar de teto próprio, generalizar a configuração.
 
 - **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
   auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito

@@ -29,6 +29,7 @@ public class
 SecurityConfig {
 
     private final SecurityFilter securityFilter;
+    private final com.domus.api.shared.security.RateLimitFilter rateLimitFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -103,6 +104,8 @@ SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+                // Rate limiting roda ANTES da autenticação: barra floods anônimos barato.
+                .addFilterBefore(rateLimitFilter, SecurityFilter.class)
                 .build();
     }
 

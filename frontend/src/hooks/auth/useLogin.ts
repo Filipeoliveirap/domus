@@ -14,6 +14,15 @@ function destinoSeguro(next: string | null) {
     return next
 }
 
+// Mensagem de rate limit (429), enriquecida com o tempo de espera do header Retry-After.
+function mensagemRateLimit(error: import('axios').AxiosError<ApiError>) {
+    const retryAfter = Number(error.response?.headers?.['retry-after'])
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        return `Muitas tentativas em pouco tempo. Aguarde ${retryAfter} segundos e tente novamente.`
+    }
+    return error.response?.data?.message ?? 'Muitas tentativas em pouco tempo. Aguarde um instante e tente novamente.'
+}
+
 export function useLogin() {
     const router = useRouter()
     const login = useAuthStore(state => state.login)
@@ -74,6 +83,10 @@ export function useLogin() {
                     setErroGeral(e.message)
                     return
                 }
+                if (e?.error === 'RATE_LIMIT_EXCEDIDO') {
+                    setErroGeral(mensagemRateLimit(error))
+                    return
+                }
                 setErroGeral(e?.message ?? 'Erro ao fazer login. Tente novamente.')
             } else {
                 setErroGeral('Erro ao fazer login. Tente novamente.')
@@ -95,6 +108,10 @@ export function useLogin() {
                 const e = error.response?.data
                 if (e?.error === 'CONTA_NAO_ENCONTRADA') {
                     setErroGeral(e.message)
+                    return
+                }
+                if (e?.error === 'RATE_LIMIT_EXCEDIDO') {
+                    setErroGeral(mensagemRateLimit(error))
                     return
                 }
                 setErroGeral(e?.message ?? 'Não foi possível entrar com o Google. Tente novamente.')

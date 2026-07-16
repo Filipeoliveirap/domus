@@ -3,6 +3,7 @@ package com.domus.api.modules.auth;
 import com.domus.api.config.TokenService;
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
+import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -16,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -113,5 +116,21 @@ public class AuthService {
     public void logout(String refreshToken) {
         refreshTokenService.revogar(refreshToken);
         log.info("Logout efetuado (refresh token revogado).");
+    }
+
+    /**
+     * Dados de sessão de quem está autenticado (usado pelo {@code GET /auth/me}).
+     *
+     * <p>Consulta pelo id em vez de ler o principal: o principal é uma entidade desanexada
+     * (o SecurityFilter roda antes do open-in-view), então seus campos LAZY — como
+     * {@code igreja} — explodiriam ao serem lidos aqui. Ver {@code findSessaoById}.
+     */
+    public SessaoDTO sessaoDe(UUID usuarioId) {
+        return usuarioRepository.findSessaoById(usuarioId)
+                .orElseThrow(() -> {
+                    log.warn("Sessão pedida para usuário inexistente. usuario_id={}", usuarioId);
+                    return new SessaoExpiradaException("SESSAO_INVALIDA",
+                            "Sessão expirada. Faça login novamente.");
+                });
     }
 }

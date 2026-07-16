@@ -62,15 +62,15 @@ public class AuthenticationController {
      * <p>Com o cookie httpOnly o JavaScript não consegue mais ler a sessão, então o servidor
      * vira o dono da verdade e o front pergunta. Rota autenticada: sem cookie válido o
      * Spring Security devolve 401 pelo HttpStatusEntryPoint, antes de chegar aqui.
+     *
+     * <p>Usa só o ID do principal e vai buscar o resto: o principal é uma entidade
+     * DESANEXADA (carregada no SecurityFilter, um servlet filter, que roda antes do
+     * open-in-view), então ler dele um campo LAZY como {@code igreja} lançaria
+     * LazyInitializationException.
      */
     @GetMapping("/me")
     public ResponseEntity<SessaoDTO> me(@AuthenticationPrincipal Usuario usuario) {
-        return ResponseEntity.ok(new SessaoDTO(
-                usuario.getId(),
-                usuario.getNome(),
-                usuario.getRole().getNome(),
-                usuario.getIgreja().getId(),
-                usuario.getIgreja().getNome()));
+        return ResponseEntity.ok(authService.sessaoDe(usuario.getId()));
     }
 
     @PostMapping("/refresh")

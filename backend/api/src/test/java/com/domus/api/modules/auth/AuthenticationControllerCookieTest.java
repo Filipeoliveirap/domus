@@ -5,9 +5,6 @@ import com.domus.api.modules.auth.DTO.GoogleLoginDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
-import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.security.AuthCookieFactory;
@@ -121,27 +118,30 @@ class AuthenticationControllerCookieTest {
         verify(authService).logout("refresh-vivo");
     }
 
+    /**
+     * O /auth/me NÃO pode ler campos do principal além do id.
+     *
+     * <p>O principal é uma entidade desanexada (carregada no SecurityFilter, que roda antes
+     * do open-in-view), e `igreja` é LAZY: lê-la de lá lança LazyInitializationException em
+     * produção. Este teste trava o contrato — o principal entra só com o id, e a sessão vem
+     * de uma consulta.
+     */
     @Test
-    void meDeveDevolverASessaoDoUsuarioAutenticado() {
+    void meDeveBuscarASessaoPeloIdSemTocarNoPrincipalDesanexado() {
         UUID id = UUID.randomUUID();
         UUID igrejaId = UUID.randomUUID();
+        SessaoDTO esperada = new SessaoDTO(id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central");
 
-        // Usuario.getNome() delega para membro.getNome() — usuário é credencial, membro é pessoa.
-        Usuario usuario = Usuario.builder()
-                .id(id)
-                .membro(Membro.builder().nome("Ana").build())
-                .role(Role.builder().nome("ADMIN_IGREJA").build())
-                .igreja(Igreja.builder().id(igrejaId).nome("Igreja Central").build())
-                .build();
+        when(authService.sessaoDe(id)).thenReturn(esperada);
 
-        SessaoDTO sessao = controller().me(usuario).getBody();
+        // Principal com APENAS o id: se o controller tentar ler membro/role/igreja daqui,
+        // estoura NullPointerException — que é o teste falhando, como tem que ser.
+        Usuario principal = Usuario.builder().id(id).build();
 
-        assertNotNull(sessao);
-        assertEquals(id, sessao.id());
-        assertEquals("Ana", sessao.nome());
-        assertEquals("ADMIN_IGREJA", sessao.role());
-        assertEquals(igrejaId, sessao.igrejaId());
-        assertEquals("Igreja Central", sessao.igrejaNome());
+        SessaoDTO sessao = controller().me(principal).getBody();
+
+        assertSame(esperada, sessao);
+        verify(authService).sessaoDe(id);
     }
 
     @Test

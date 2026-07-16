@@ -63,6 +63,35 @@
   é letra morta. Quem protege de fato é o HSTS do front (`next.config.ts`), que cobre a
   origem inteira; o do back é defesa em profundidade.
 
+- **Armadilha do principal desanexado (documentar para não repetir).** Descoberto por um bug
+  real no `/auth/me` (2026-07-16, corrigido): o `Usuario` que chega em
+  `@AuthenticationPrincipal` / `UsuarioAutenticado.get()` é uma entidade **desanexada**. O
+  `SecurityFilter` é um *servlet filter* e roda **antes** do open-in-view (que é um
+  *interceptor de MVC*), então o `EntityManager` do `findById()` dele já fechou quando o
+  controller executa. Consequência prática:
+    - ler `usuario.getIgreja().getId()` **funciona** (o proxy já sabe o id);
+    - ler `usuario.getIgreja().getNome()` **lança LazyInitializationException** (`igreja` é LAZY);
+    - `membro` (EAGER) e `role` (`@ManyToOne` sem fetch = EAGER) são seguros.
+  Varredura feita em 2026-07-16: `UsuarioAutenticado` só expõe `getIgrejaId`/`getUsuarioId`/
+  `getRole` (todos seguros) e `get()` cru nunca é chamado de fora. **Regra:** de dados do
+  principal, use só o **id**; qualquer outro campo, consulte. Ver `findSessaoById`.
+  *Nenhum teste com Mockito pega isso* — a entidade é montada na mão e lazy não existe.
+
+- **O outbox só é seguro por causa do `@Transactional` (frágil por construção).**
+  `MovimentacaoDocument.de()` lê `getCategoria().getNome()` e `getMembro().getNome()` — os
+  dois **LAZY**. Isso roda em `OutboxProcessador.processar()`, que é `@Scheduled` **e**
+  `@Transactional`, e é só a transação que mantém a sessão aberta (num job agendado não há
+  open-in-view). Remover esse `@Transactional`, ou chamar `SincronizadorEntidade.indexar()`
+  de um contexto sem transação (ex.: um `@Async` futuro), reintroduz a
+  LazyInitializationException na hora. Verificado em 2026-07-16: é o único `@Scheduled` do
+  projeto, não há `@Async` nem event listener, e as reindexações são todas `@Transactional`.
+
+- **Coleções `@OneToMany` da `Igreja` não são lidas por ninguém.** `usuarios`, `membros`,
+  `eventos`, `categorias` e `movimentacoes` (`Igreja.java:54-66`) estão mapeadas mas nenhum
+  código as acessa (verificado em 2026-07-16). São mapeamento morto e uma arma engatilhada:
+  o dia em que alguém serializar uma `Igreja` ou tocar nelas fora de sessão, carrega a
+  igreja inteira ou estoura. Avaliar remover (YAGNI) — nada as usa hoje.
+
 - **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
   auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito
   como Java agent no surefire.

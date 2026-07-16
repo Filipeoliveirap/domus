@@ -1,31 +1,30 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { Endpoints } from '@/lib/endpoints'
-import type { TokenPair } from '@/types/auth.types'
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // Cookies same-origin já iriam de qualquer forma; explícito porque a sessão depende disso.
+  withCredentials: true,
 })
 
-// Interceptor de request — injeta o access token em toda requisição autenticada
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// Não há interceptor de request: o token vive em cookie httpOnly e o navegador o envia
+// sozinho. O header X-XSRF-TOKEN do CSRF também é automático — os defaults do axios já são
+// xsrfCookieName 'XSRF-TOKEN' e xsrfHeaderName 'X-XSRF-TOKEN', e como o proxy nos deixa
+// same-origin ele faz isso sem configuração.
 
 // Endpoints de auth que NÃO devem disparar uma tentativa de refresh ao receber 401.
+// /auth/me NÃO entra aqui de propósito: se o access expirou mas o refresh é válido,
+// queremos justamente que o load renove a sessão em vez de deslogar o usuário.
 const rotasAuth = [Endpoints.auth.LOGIN, Endpoints.auth.REFRESH, Endpoints.auth.LOGOUT]
 
 // Single-flight: um único refresh em andamento por vez. Requisições 401 concorrentes
 // esperam nesta mesma promessa em vez de dispararem refreshes paralelos (que a rotação
 // do backend invalidaria entre si).
-let refreshPromise: Promise<string> | null = null
+let refreshPromise: Promise<void> | null = null
 
 function encerrarSessao() {
   useAuthStore.getState().logout()
@@ -34,13 +33,9 @@ function encerrarSessao() {
   }
 }
 
-async function renovarAccessToken(): Promise<string> {
-  const refreshToken = useAuthStore.getState().refreshToken
-  if (!refreshToken) throw new Error('Sem refresh token')
-
-  const { data } = await api.post<TokenPair>(Endpoints.auth.REFRESH, { refreshToken })
-  useAuthStore.getState().setTokens({ token: data.token, refreshToken: data.refreshToken })
-  return data.token
+// O servidor reemite os cookies na resposta; o front não vê nem toca em token nenhum.
+async function renovarAccessToken(): Promise<void> {
+  await api.post(Endpoints.auth.REFRESH)
 }
 
 // Interceptor de response — no 401, tenta renovar o access token uma vez e reenvia a
@@ -70,10 +65,11 @@ api.interceptors.response.use(
           refreshPromise = null
         })
       }
-      const novoToken = await refreshPromise
-      original.headers.Authorization = `Bearer ${novoToken}`
+      await refreshPromise
       return api(original)
     } catch {
+      // Sem sessão renovável: limpa o estado. Não chamamos /auth/logout aqui — o refresh
+      // já está morto, e o cookie de access expira sozinho em 10 min.
       encerrarSessao()
       return Promise.reject(error)
     }

@@ -85,15 +85,8 @@ export function useRegistrarIgreja () {
                 ...dadosIgreja,
                 ...dadosAdmin,    
             })
-            login({
-                id: response.id,
-                token : response.token,
-                refreshToken : response.refreshToken,
-                nome : response.nome,
-                role : response.role,
-                igrejaId : response.igrejaId,
-                igrejaNome : response.igrejaNome,
-            })
+            // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.
+            login(response)
             setDadosSucesso({
                 nome: response.nome,
                 nomeIgreja: dataPasso1.nomeIgreja,
@@ -151,15 +144,7 @@ export function useRegistrarIgreja () {
                 cnpj: dataIgreja.cnpj?.replace(/\D/g, '') || undefined,
                 telefoneContato: dataIgreja.telefoneContato.replace(/\D/g, ''),
             })
-            login({
-                id: response.id,
-                token: response.token,
-                refreshToken: response.refreshToken,
-                nome: response.nome,
-                role: response.role,
-                igrejaId: response.igrejaId,
-                igrejaNome: response.igrejaNome,
-            })
+            login(response)
             setDadosSucesso({ nome: response.nome, nomeIgreja: dataIgreja.nomeIgreja })
             setPasso(3)
         } catch (error: unknown) {

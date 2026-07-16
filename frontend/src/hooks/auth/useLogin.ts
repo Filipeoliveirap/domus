@@ -7,7 +7,7 @@ import { useState } from "react";
 import axios from 'axios'
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
-import type { LoginResponse } from "@/types/auth.types";
+import type { Sessao } from "@/types/auth.types";
 
 function destinoSeguro(next: string | null) {
     if (!next || !next.startsWith('/') || next.startsWith('//')) return '/inicio'
@@ -50,16 +50,9 @@ export function useLogin() {
     const isButtonDisabled = isFormIncomplete || isLoading
 
     // Grava a sessão no store e redireciona. Compartilhado entre login nativo e Google.
-    function aplicarSessao(response: LoginResponse) {
-        login({
-            id: response.id,
-            nome: response.nome,
-            role: response.role,
-            igrejaId: response.igrejaId,
-            igrejaNome: response.igrejaNome,
-            token: response.token,
-            refreshToken: response.refreshToken,
-        })
+    // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.
+    function aplicarSessao(sessao: Sessao) {
+        login(sessao)
         const next = new URLSearchParams(window.location.search).get('next')
         router.push(destinoSeguro(next))
     }

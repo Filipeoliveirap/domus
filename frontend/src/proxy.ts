@@ -1,36 +1,23 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/', '/login', '/cadastro', '/forgot-password', '/reset-password']
-
-const HOME_ROUTE = '/inicio'
-
-function matchesRoute(pathname: string, route: string) {
-  if (route === '/') return pathname === '/'
-  return pathname === route || pathname.startsWith(`${route}/`)
-}
-
-export function proxy(request: NextRequest) {
-  const token = request.cookies.get('domus:token')?.value
-  const { pathname, search } = request.nextUrl
-
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => matchesRoute(pathname, route))
-
-  if (!token && !isPublicRoute) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('next', `${pathname}${search}`)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  if (token && isPublicRoute) {
-    return NextResponse.redirect(new URL(HOME_ROUTE, request.url))
-  }
-
+/**
+ * A decisão de sessão saiu daqui.
+ *
+ * Este middleware checava a PRESENÇA de um cookie que qualquer JS podia forjar
+ * (`document.cookie = 'domus:token=banana'` passava) — nunca foi um porteiro, era conforto
+ * visual. O porteiro sempre foi o backend.
+ *
+ * Além de inútil, hoje quebraria: o `domus_access` dura 10 minutos reais, então ficar idle
+ * e dar F5 chutaria o usuário para o `/login` com a sessão válida. E ele não tem como olhar
+ * o `domus_refresh` (7 dias), porque o `Path=/api/auth` faz o navegador não enviá-lo numa
+ * requisição de página.
+ *
+ * Quem decide no cliente agora é o `AuthGuard` + `GET /auth/me`, que é a verdade real.
+ */
+export function proxy() {
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|images|favicon.ico).*)',
-  ],
+  matcher: [],
 }

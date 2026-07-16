@@ -63,13 +63,12 @@ export function Sidebar() {
   }
 
   const handleLogout = async () => {
-    const refreshToken = useAuthStore.getState().refreshToken
-    if (refreshToken) {
-      try {
-        await authService.logout(refreshToken)
-      } catch {
-        // Best-effort: mesmo se a revogação no servidor falhar, limpamos a sessão local.
-      }
+    // Sem argumento: o refresh vai no cookie. E é o servidor quem apaga os cookies —
+    // sendo httpOnly, o JS não consegue.
+    try {
+      await authService.logout()
+    } catch {
+      // Best-effort: mesmo se a revogação no servidor falhar, limpamos a sessão local.
     }
     logout()
     router.replace('/login')

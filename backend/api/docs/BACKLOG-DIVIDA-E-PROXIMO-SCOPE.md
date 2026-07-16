@@ -40,6 +40,15 @@
     - **Limites por rota individual.** Hoje há só dois tiers (global e auth). Se algum endpoint
       específico precisar de teto próprio, generalizar a configuração.
 
+- **`X-Forwarded-For`: pegamos o PRIMEIRO elemento da lista.** `RateLimitFilter.resolverIp()`
+  faz `forwarded.split(",")[0]`. Isso só é correto se o proxy **substituir** o header
+  (`proxy_set_header X-Forwarded-For $remote_addr`). Se ele **acrescentar** (o mais comum:
+  `$proxy_add_x_forwarded_for`), a lista fica `<forjado pelo cliente>, <ip real>` e o
+  primeiro elemento é o **forjado** — um atacante escaparia do rate limiting só mandando o
+  header. Hoje é inofensivo (`trust-forwarded-for=false`), mas vira crítico no dia em que
+  for ligado. Decidir junto com a hospedagem: ou configurar o proxy para substituir, ou
+  trocar o código para pegar o **último** elemento (o mais próximo do proxy confiável).
+
 - **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
   migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
   `RateLimitFilter` em ~1898, então um flood de POST sem `X-XSRF-TOKEN` leva 403 e **nunca
@@ -97,6 +106,15 @@
   tese pode atingir um usuário autorizado num momento ruim (ex.: corrida na rotação/detecção de
   reuso do refresh). Sem repro por ora — observar; se reaparecer, instrumentar o interceptor do
   axios (`src/lib/api.ts`) e o fluxo de rotação.
+- **403 de CSRF não tem caminho de recuperação no front (a vigiar).** O interceptor do
+  `api.ts` só reage a 401. Se o cookie `XSRF-TOKEN` faltar quando um POST dispara, o Spring
+  devolve 403 e o usuário vê um erro genérico sem saída além de recarregar. Hoje isso não
+  deve acontecer: o `setCsrfRequestAttributeName(null)` força a resolução ansiosa do token,
+  então **toda** resposta traz `Set-Cookie: XSRF-TOKEN` — inclusive o 401 do `/auth/me`, que
+  sempre precede qualquer POST. Ou seja, funciona por causa da ORDEM dos eventos, não por
+  uma defesa explícita. Se aparecer 403 inexplicado, tratar o código de erro de CSRF
+  refazendo a busca do token.
+
 - **Padrão a varrer:** garantir que nenhuma página acessível a papéis sem permissão dispare
   queries de admin (gate por `enabled: autorizado`). Só a de movimentações tinha o problema, mas
   vale uma passada nas demais quando mexer nelas.

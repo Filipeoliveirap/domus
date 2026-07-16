@@ -77,6 +77,36 @@ visão do navegador; só não se deve esperar depurar pelo navegador sem passar 
   cookie de terceiro é bloqueado por padrão em Safari e Brave, e o Chrome segue o mesmo
   caminho. Construir sobre algo que os navegadores estão matando.
 
+### Consequência não prevista: o proxy quebra o rate limiting por IP
+
+Descoberto na revisão de código (2026-07-16), **depois** de o design ser aprovado. Com o
+proxy, toda requisição chega no Spring a partir do **socket do Next**, não do navegador.
+Como `app.ratelimit.trust-forwarded-for` é `false` por padrão, o `RateLimitFilter` cai no
+`getRemoteAddr()` e vê **o mesmo IP para todos**: o limite vira um balde único do sistema
+(a 11ª pessoa a logar no mesmo minuto leva 429) e a proteção contra força bruta por IP
+perde o sentido.
+
+**Verificado empiricamente** (não deduzido) apontando o rewrite do Next para um servidor que
+registra os headers recebidos:
+
+| Cenário | O que o Spring recebe |
+|---|---|
+| Navegador → Next → Spring | **Sem** `X-Forwarded-For`; só `x-forwarded-host` |
+| Cliente com `X-Forwarded-For` → Next → Spring | `X-Forwarded-For` e `X-Forwarded-Proto` **repassados intactos** |
+
+Ou seja: **o Next não gera esses headers, mas repassa os que receber.**
+
+**Requisito de deploy que isso cria** (entra na decisão de hospedagem):
+
+1. Precisa haver um **proxy reverso real** (nginx, Caddy, CDN) na frente do Next, setando
+   `X-Forwarded-For` e `X-Forwarded-Proto`.
+2. Em produção: `RATELIMIT_TRUST_FORWARDED_FOR=true` e `FORWARD_HEADERS_STRATEGY=framework`.
+3. O **Spring não pode ficar alcançável direto** — se ficar, qualquer cliente forja o
+   `X-Forwarded-For` e escapa do rate limiting.
+
+Sem os três, o rate limiting fica **silenciosamente quebrado** em produção. Em dev não há
+problema: todo mundo é `127.0.0.1` e há um usuário só.
+
 ## Arquitetura da sessão
 
 ### Os dois cookies

@@ -29,7 +29,14 @@ let refreshPromise: Promise<void> | null = null
 function encerrarSessao() {
   useAuthStore.getState().logout()
   if (typeof window !== 'undefined') {
-    window.location.href = '/login'
+    // Preserva o destino para o usuário voltar onde estava depois de entrar de novo.
+    // Rotas públicas ficam de fora: não faz sentido "voltar" para o próprio /login.
+    const { pathname, search } = window.location
+    const ehPublica = ['/login', '/cadastro', '/forgot-password', '/reset-password', '/']
+      .some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
+    window.location.href = ehPublica
+      ? '/login'
+      : `/login?next=${encodeURIComponent(pathname + search)}`
   }
 }
 

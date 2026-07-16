@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/auth.service'
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 /**
  * Guard de autenticação da área logada (grupo de rotas `(app)`).
@@ -11,27 +13,24 @@ import { authService } from '@/services/auth.service'
  * Como o token vive em cookie httpOnly, o JS não consegue olhar e saber se há sessão —
  * então perguntamos ao servidor (`GET /auth/me`) uma vez, no load, e ele é a verdade.
  *
- * Distingue dois estados que as páginas confundiam:
- *  - **não autenticado** (logout ou sessão ausente) → redireciona para `/login`;
+ * Distingue TRÊS estados que não podem ser confundidos:
+ *  - **não autenticado** (401) → redireciona para `/login`, preservando o destino;
+ *  - **falha de infra** (500, rede, timeout) → mostra erro com "tentar novamente". NÃO
+ *    desloga: a sessão pode estar perfeitamente válida e o backend é que tossiu;
  *  - **autenticado mas sem permissão** → segue e deixa a página mostrar `AcessoRestrito`.
- *
- * Enquanto a resposta do `/auth/me` não chega, nada é renderizado. Isso evita o flash de
- * `AcessoRestrito` que acontecia na corrida entre limpar a sessão e navegar para o login.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const hidratado = useAuthStore((s) => s.hidratado)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const login = useAuthStore((s) => s.login)
   const setHidratado = useAuthStore((s) => s.setHidratado)
+  const [falhaInfra, setFalhaInfra] = useState(false)
+  const [tentativa, setTentativa] = useState(0)
 
-  // Limpeza única da migração: chaves órfãs da era do localStorage. Sem isso, token velho
-  // fica apodrecendo na máquina de quem já usou o sistema.
-  useEffect(() => {
-    localStorage.removeItem('domus:token')
-    localStorage.removeItem('domus:auth')
-    document.cookie = 'domus:token=; path=/; max-age=0'
-  }, [])
+  // (A limpeza das chaves órfãs do localStorage vive em LimpezaSessaoLegada, no root
+  // layout: aqui ela nunca rodaria para quem abre o app e não chega a logar.)
 
   useEffect(() => {
     if (hidratado) return
@@ -42,21 +41,46 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       .then((sessao) => {
         if (!cancelado) login(sessao)
       })
-      .catch(() => {
-        // 401 aqui não é erro, é resposta: "não há sessão".
-        if (!cancelado) setHidratado()
+      .catch((erro: unknown) => {
+        if (cancelado) return
+        // Só 401 significa "não há sessão". Qualquer outra coisa (500, rede, timeout) é
+        // falha de infra: deslogar aqui expulsaria alguém com sessão válida.
+        const semSessao = axios.isAxiosError(erro) && erro.response?.status === 401
+        if (semSessao) {
+          setHidratado()
+        } else {
+          setFalhaInfra(true)
+        }
       })
 
     return () => {
       cancelado = true
     }
-  }, [hidratado, login, setHidratado])
+  }, [hidratado, login, setHidratado, tentativa])
 
   useEffect(() => {
     if (hidratado && !isAuthenticated) {
-      router.replace('/login')
+      // Preserva o destino: quem abre um link direto e está deslogado volta pra ele depois
+      // de entrar, em vez de cair sempre no /inicio. A query vem do window (e não de
+      // useSearchParams) porque este componente vive num layout: o hook forçaria toda a
+      // área (app) a exigir um Suspense e a virar renderização dinâmica.
+      const destino = pathname + window.location.search
+      router.replace(`/login?next=${encodeURIComponent(destino)}`)
     }
-  }, [hidratado, isAuthenticated, router])
+  }, [hidratado, isAuthenticated, router, pathname])
+
+  if (falhaInfra) {
+    return (
+      <EstadoErro
+        titulo="Não foi possível verificar sua sessão"
+        mensagem="Verifique sua conexão e tente novamente."
+        aoTentarNovamente={() => {
+          setFalhaInfra(false)
+          setTentativa((t) => t + 1)
+        }}
+      />
+    )
+  }
 
   if (!hidratado || !isAuthenticated) return null
 

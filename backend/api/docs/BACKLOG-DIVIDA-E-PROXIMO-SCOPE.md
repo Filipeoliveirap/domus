@@ -46,6 +46,25 @@
 
 ---
 
+## Segurança / autorização — a discutir (decisão de produto)
+
+- **Acesso horizontal a dados de membro dentro da mesma igreja (a decidir a intenção).**
+  Hoje `GET /membros/**` permite o perfil `MEMBRO`, e `buscarPorId` escopa **só por igreja**
+  (`findByIdAndIgrejaId`), **sem checagem de dono**. Consequência: qualquer `MEMBRO` da igreja
+  vê os dados completos de qualquer outro membro (`email`, `telefone`, `endereco`,
+  `dataNascimento`, `observacoes`, etc.) — seja por `GET /membros/{id}` ou pela listagem
+  `GET /membros`. **Não é falha de sigilo de id** (o id não é segredo; a autorização é que
+  decide) — é uma decisão de controle de acesso.
+  - *Perguntar:* isso é intencional (lista de contatos aberta a toda a igreja) ou os campos
+    sensíveis (endereço, telefone, `observacoes` — possíveis notas pastorais privadas) deveriam
+    ser restritos a ADMIN/LÍDER?
+  - *Opções se for restringir:* (a) tirar `MEMBRO` do `GET /membros`; (b) filtrar campos por
+    perfil (membro vê perfil reduzido); (c) membro só vê o próprio registro.
+  - *Escopo maior:* fazer uma **revisão de autorização por perfil em todos os módulos** (quem vê
+    o quê) — não só membros. Descoberto em 2026-07-16 discutindo o risco de id em localStorage.
+
+---
+
 ## Observabilidade — fora do escopo da entrega de Sentry (2026-07-16)
 
 O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:

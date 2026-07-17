@@ -33,7 +33,10 @@ fi
 # quebra. Usamos 16 (e não 17) para o teste restaurar na MESMA versão da
 # produção — num desastre real é num Neon 16 que o dump vai entrar.
 PG_IMAGE="postgres:16"
-AWS_IMAGE="amazon/aws-cli:2"
+# Versão cravada, não "latest": latest muda sozinho e um dia o backup quebraria
+# às 3 da manhã porque a AWS publicou uma versão nova. (E não existe tag "2" —
+# o amazon/aws-cli só publica "latest" e versões completas.)
+AWS_IMAGE="amazon/aws-cli:2.36.1"
 
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 WORKDIR="$(mktemp -d)"

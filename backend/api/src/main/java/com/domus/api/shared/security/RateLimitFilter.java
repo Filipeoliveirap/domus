@@ -115,12 +115,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * IP de origem. Por padrão usa o IP do socket. Só lê {@code X-Forwarded-For} quando
-     * explicitamente configurado (proxy confiável na frente) — confiar nesse header sem
-     * proxy permitiria forjar o IP e escapar/poluir o limite.
+     * IP de origem. Por padrão usa o IP do socket. Só confia em headers quando há um proxy
+     * confiável na frente (trust-forwarded-for=true) — confiar sem proxy permitiria forjar o
+     * IP e escapar/poluir o limite.
+     *
+     * <p>Atrás da Cloudflare, prefere {@code CF-Connecting-IP}: é o IP real do cliente, sempre,
+     * sem a ambiguidade do {@code X-Forwarded-For} (que pode conter itens forjados pelo cliente
+     * antes de chegar na Cloudflare). Cai no XFF só se o CF não vier.
      */
     private String resolverIp(HttpServletRequest request) {
         if (trustForwardedFor) {
+            String cf = request.getHeader("CF-Connecting-IP");
+            if (cf != null && !cf.isBlank()) {
+                return cf.trim();
+            }
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
                 // Primeiro IP da lista = cliente original.

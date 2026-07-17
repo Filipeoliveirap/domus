@@ -5,6 +5,16 @@
 - **Status:** design aprovado, pendente plano de implementação
 - **Implementação:** **depois de fechar a Fase 1** (backup, hospedagem/prod, CI/CD, Resend)
 
+> ⚠️ **ANTES DE IMPLEMENTAR: reler este spec com o autor.** Pedido explícito dele em
+> 2026-07-16 — o design foi fechado numa conversa longa e ele quer reconferir as decisões
+> com calma antes de virar código.
+
+**Validado com o pastor:** o autor já conversou com o pastor sobre esta feature antes deste
+design, e o que ele descreveu aqui é o que o pastor pediu. **O essencial é o relatório dos
+números de todas as congregações** — isso está confirmado, não é suposição. A única dúvida em
+aberto do lado do pastor é se ele vai querer **abrir a lista de membros/eventos** de cada
+congregação; o autor decidiu que isso se atualiza depois (ver "Fora de escopo").
+
 ## Problema
 
 O piloto não é uma igreja: são **4** — a **sede (mãe)** e **3 congregações**. Todas usarão o

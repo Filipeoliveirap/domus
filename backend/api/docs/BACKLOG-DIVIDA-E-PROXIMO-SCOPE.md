@@ -63,6 +63,21 @@
   é letra morta. Quem protege de fato é o HSTS do front (`next.config.ts`), que cobre a
   origem inteira; o do back é defesa em profundidade.
 
+- **Backup: janela de perda de 24h e restauração manual.** O backup roda 1×/dia, então o
+  pior caso é perder um dia de lançamentos. Aceito: a igreja lança dízimo no domingo e
+  cadastra membro na quarta; redigitar isso é barato perto de dobrar as peças. Também **não
+  há automação de restore** — restaurar é manual **de propósito**: restauração automática é
+  como se apaga produção por engano. Se o volume crescer, avaliar 2×/dia.
+
+- **Backup depende do GitHub Actions seguir habilitado.** Workflows agendados são
+  desativados após **60 dias sem commit** no repositório. Mitigado pelo Sentry Crons (avisa
+  em ~24h), não eliminado. Se o projeto hibernar, reativar na mão.
+
+- **O agendamento só funciona na branch PADRÃO.** Descoberto em 2026-07-17: o workflow
+  vivia só na `producao` e **nunca teria rodado** — o GitHub só executa `schedule` na branch
+  default (`main`). Foi o que motivou o merge da Fase 1 para a `main` (PR #18). Lembrar
+  disso ao criar qualquer workflow agendado novo.
+
 - **Armadilha do principal desanexado (documentar para não repetir).** Descoberto por um bug
   real no `/auth/me` (2026-07-16, corrigido): o `Usuario` que chega em
   `@AuthenticationPrincipal` / `UsuarioAutenticado.get()` é uma entidade **desanexada**. O

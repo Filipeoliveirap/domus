@@ -4,25 +4,29 @@ import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { CategoriaBreakdown } from '@/types/financeiro/relatorio.type'
 import styles from './BreakdownCategoria.module.css'
+import { SkeletonBreakdownCategoria } from "./SkeletonRelatorios";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 interface BreakdownCategoriaProps {
   data: CategoriaBreakdown[] | undefined
   isLoading: boolean
   isError: boolean
+  aoTentarNovamente?: () => void
 }
 
-export function BreakdownCategoria({ data, isLoading, isError }: BreakdownCategoriaProps) {
+export function BreakdownCategoria({ data, isLoading, isError, aoTentarNovamente }: BreakdownCategoriaProps) {
   if (isLoading) {
-    return (
-      <div className={styles.grid}>
-        <div className={styles.skeleton} />
-        <div className={styles.skeleton} />
-      </div>
-    )
+    return <SkeletonBreakdownCategoria />;
   }
 
   if (isError || !data) {
-    return <div className={styles.erro}>Não foi possível carregar o detalhamento por categoria.</div>
+    return (
+      <EstadoErro
+        titulo="Não foi possível carregar o detalhamento por categoria"
+        mensagem="Tente novamente."
+        aoTentarNovamente={aoTentarNovamente}
+      />
+    )
   }
 
   const entradas = data.filter((c) => c.tipo === 'ENTRADA')

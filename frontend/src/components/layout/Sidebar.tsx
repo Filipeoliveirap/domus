@@ -6,13 +6,14 @@ import {
   Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import styles from './Sidebar.module.css'
 
 const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
   { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
-  { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER'] },
+  { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
   { href: '/financeiro/movimentacoes', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
@@ -61,7 +62,14 @@ export function Sidebar() {
     )
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Sem argumento: o refresh vai no cookie. E é o servidor quem apaga os cookies —
+    // sendo httpOnly, o JS não consegue.
+    try {
+      await authService.logout()
+    } catch {
+      // Best-effort: mesmo se a revogação no servidor falhar, limpamos a sessão local.
+    }
     logout()
     router.replace('/login')
   }

@@ -5,13 +5,25 @@ import { ChevronRight } from 'lucide-react'
 import { useMovimentacaoForm } from '@/hooks/financeiro/movimentacao/useMovimentacaoForm'
 import { MovimentacaoForm } from '@/components/module/movimentacoes/MovimentacaoForm'
 import styles from './cadastrar.module.css'
-
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
 
 export default function CadastrarMovimentacaoPage() {
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
+
   const form = useMovimentacaoForm({
-    onSuccess: () => {
-    },
+    onSuccess: () => {},
   })
+
+  if (!hidratado) {
+    return <div className={styles.pagina} />
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
+  }
 
   return (
     <div className={styles.pagina}>

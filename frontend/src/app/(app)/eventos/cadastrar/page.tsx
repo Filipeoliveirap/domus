@@ -5,9 +5,23 @@ import { ChevronRight } from 'lucide-react'
 import { useEventoForm } from '@/hooks/evento/useEventoForm'
 import { EventoForm } from '@/components/module/eventos/EventoForm'
 import styles from '@/components/module/eventos/EventoForm.module.css'
+import { useAuthStore } from '@/store/authStore'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 
 export default function CadastrarEventoPage() {
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA' || role === 'LIDER'
+
   const form = useEventoForm()
+
+  if (!hidratado) {
+    return <div className={styles.pagina} />
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
+  }
 
   return (
     <div className={styles.pagina}>

@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authService } from "@/services/auth.service";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
-
-
-
 
 export function useRegistrarIgreja () {
     const router = useRouter()
@@ -19,6 +17,8 @@ export function useRegistrarIgreja () {
     const [passo, setPasso] = useState<1 | 2 | 3>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
     const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
+    // Modo Google: quando preenchido, o Passo2 (senha) é dispensado — nome/e-mail vêm do Google.
+    const [googleData, setGoogleData] = useState<{ idToken: string; nome: string; email: string } | null>(null)
     
 
     const {
@@ -85,13 +85,8 @@ export function useRegistrarIgreja () {
                 ...dadosIgreja,
                 ...dadosAdmin,    
             })
-            login({
-                id: response.id,
-                token : response.token,
-                nome : response.nome,
-                role : response.role,
-                igrejaId : response.igrejaId,
-            })
+            // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.
+            login(response)
             setDadosSucesso({
                 nome: response.nome,
                 nomeIgreja: dataPasso1.nomeIgreja,
@@ -122,9 +117,57 @@ export function useRegistrarIgreja () {
         }
     }
 
+    // Google identificou a pessoa: decodifica o token só para EXIBIR nome/e-mail
+    // (a verificação real é no backend) e entra no modo Google.
+    const onGoogleAuth = (idToken: string) => {
+        try {
+            const payload = jwtDecode<{ email: string; name: string }>(idToken)
+            setGoogleData({ idToken, nome: payload.name, email: payload.email })
+            setValue('emailContato', payload.email, { shouldValidate: true, shouldDirty: true })
+            setErroGeral(null)
+        } catch {
+            setErroGeral('Não foi possível ler seus dados do Google. Tente novamente.')
+        }
+    }
+
+    const onGoogleError = () => setErroGeral('Não foi possível iniciar o cadastro com Google.')
+
+    // Finaliza o cadastro Google usando os dados da igreja do Passo1.
+    const onSubmitGoogle = async (dataIgreja: RegistrarIgrejaFormData1) => {
+        if (!googleData) return
+        setErroGeral(null)
+        setIsLoading(true)
+        try {
+            const response = await authService.googleRegistrar({
+                idToken: googleData.idToken,
+                nomeIgreja: dataIgreja.nomeIgreja,
+                cnpj: dataIgreja.cnpj?.replace(/\D/g, '') || undefined,
+                telefoneContato: dataIgreja.telefoneContato.replace(/\D/g, ''),
+            })
+            login(response)
+            setDadosSucesso({ nome: response.nome, nomeIgreja: dataIgreja.nomeIgreja })
+            setPasso(3)
+        } catch (error: unknown) {
+            if (axios.isAxiosError<ApiError>(error)) {
+                const data = error.response?.data
+                const codigo = data?.error
+                if (codigo === 'CNPJ_DUPLICADO') {
+                    setError('cnpj', { type: 'server', message: data?.message })
+                    return
+                }
+                setErroGeral(data?.message ?? 'Erro ao cadastrar com Google. Tente novamente.')
+            } else {
+                setErroGeral('Erro ao cadastrar com Google. Tente novamente.')
+            }
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     const irParaMembros = () => router.push('/membros/cadastrar')
     const irParaPerfilIgreja = () => router.push('/configuracoes/igreja')
     const irParaMeuPerfil = () => router.push('/perfil')
+    const irParaPainelInicial = () => router.push('/inicial')
     
     return {
         passo,
@@ -143,9 +186,14 @@ export function useRegistrarIgreja () {
         onSubmit,
         passo1Incompleto,
         passo2Incompleto,
+        googleData,
+        onGoogleAuth,
+        onGoogleError,
+        onSubmitGoogle,
         dadosSucesso,
         irParaMembros,
         irParaPerfilIgreja,
         irParaMeuPerfil,
+        irParaPainelInicial,
     }
 }

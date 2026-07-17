@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Archive } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useCategorias } from '@/hooks/financeiro/categoria/useCategorias'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { ModalCategoriaForm } from '@/app/(app)/financeiro/categorias/ModalCategoriaForm'
@@ -10,6 +9,13 @@ import { ModalArquivarCategoria } from '@/app/(app)/financeiro/categorias/ModalA
 import { rotuloTipoCategoria, varianteTipoCategoria } from '@/lib/formats/financeiro/categoriaFormat'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import styles from './categoria.module.css'
+import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonCategorias } from "./SkeletonCategorias";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 20
 
@@ -19,18 +25,39 @@ function IconeTipo({ tipo }: { tipo: CategoriaResponse['tipo'] }) {
   return <ArrowLeftRight size={20} />
 }
 
-export default function CategoriasPage() {
-  const [busca, setBusca] = useState('')
-  const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
+function CabecalhoTabela() {
+  return (
+    <div className={styles.tabelaHeader}>
+      <span className={styles.colNome}>NOME</span>
+      <span className={styles.colTipo}>TIPO</span>
+      <span className={styles.colAcoes}>AÇÕES</span>
+    </div>
+  )
+}
 
+function PainelCarregando() {
+  return (
+    <div className={styles.painel}>
+      <CabecalhoTabela />
+      <SkeletonCategorias linhas={8} />
+    </div>
+  )
+}
+
+function CategoriasConteudo() {
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
+  const [pagina, setPagina] = useState(0)
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
 
-  const { data, isLoading, isError } = useCategorias({
+  const { data, isLoading, isError, refetch } = useCategorias({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
+    enabled: autorizado,
   })
 
   const categorias = data?.content ?? []
@@ -47,6 +74,18 @@ export default function CategoriasPage() {
       { label: 'Editar', icone: Pencil, onClick: () => setModalForm({ aberto: true, categoria }) },
       { label: 'Arquivar', icone: Archive, onClick: () => setCategoriaArquivando(categoria), perigo: true, separadorAntes: true },
     ]
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <PainelCarregando />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
   }
 
   return (
@@ -78,27 +117,31 @@ export default function CategoriasPage() {
 
       <div className={styles.painel}>
         {isLoading ? (
-          <div className={styles.linhas}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={styles.skeleton} />
-            ))}
-          </div>
+          <>
+            <CabecalhoTabela />
+            <SkeletonCategorias linhas={8} />
+          </>
         ) : isError ? (
-          <div className={styles.estadoErro}>Não foi possível carregar as categorias.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar as categorias"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : categorias.length === 0 ? (
-          <div className={styles.estadoVazio}>
-            {buscaDebounced
-              ? `Nenhuma categoria encontrada para "${buscaDebounced}".`
-              : 'Nenhuma categoria cadastrada ainda.'}
-          </div>
+          <EstadoVazio
+            icone={buscaDebounced ? SearchX : Inbox}
+            titulo={buscaDebounced ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}
+            mensagem={
+              buscaDebounced
+                ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                : 'Comece criando a primeira categoria financeira.'
+            }
+            acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+            acaoPrimaria={!buscaDebounced ? { label: 'Nova categoria', onClick: () => setModalForm({ aberto: true }) } : undefined}
+          />
         ) : (
           <>
-            {/* Cabeçalho da tabela */}
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colNome}>NOME</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
 
             <div className={styles.linhas}>
               {categorias.map((categoria) => (
@@ -144,7 +187,6 @@ export default function CategoriasPage() {
         )}
       </div>
 
-      {/* Modal criar/editar */}
       {modalForm.aberto && (
         <ModalCategoriaForm
           categoria={modalForm.categoria}
@@ -152,7 +194,6 @@ export default function CategoriasPage() {
         />
       )}
 
-      {/* Modal arquivar */}
       {categoriaArquivando && (
         <ModalArquivarCategoria
           categoria={categoriaArquivando}
@@ -160,5 +201,13 @@ export default function CategoriasPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function CategoriasPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <CategoriasConteudo />
+    </Suspense>
   )
 }

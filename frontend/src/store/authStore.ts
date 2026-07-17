@@ -1,40 +1,47 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Role } from '@/types/usuario.types'
+import type { Sessao } from '@/types/auth.types'
 
+/**
+ * Estado da sessão — em MEMÓRIA, nunca em localStorage.
+ *
+ * Os tokens vivem em cookie httpOnly (o JS não os lê) e a verdade sobre a sessão é do
+ * servidor: no load, o AuthGuard pergunta via GET /auth/me e popula este store.
+ * Persistir isso no localStorage seria o front ADIVINHAR — o cookie pode ter expirado
+ * enquanto o localStorage segue afirmando que há sessão.
+ */
 interface AuthState {
-  token: string | null
   id: string | null
   nome: string | null
   role: Role | null
+  foto: string | null
   igrejaId: string | null
+  igrejaNome: string | null
   isAuthenticated: boolean
-  login: (data: { token: string; id: string; nome: string; role: Role; igrejaId: string }) => void
+  /** true = já perguntamos ao servidor quem somos (não "o localStorage foi lido"). */
+  hidratado: boolean
+  login: (data: Sessao) => void
   logout: () => void
   atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role'>>) => void
+  setHidratado: () => void
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      token: null,
-      id: null,
-      nome: null,
-      role: null,
-      igrejaId: null,
-      isAuthenticated: false,
-      login: (data) => {
-        localStorage.setItem('domus:token', data.token)
-        document.cookie = `domus:token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`
-        set({ ...data, isAuthenticated: true })
-      },
-      logout: () => {
-        localStorage.removeItem('domus:token')
-        document.cookie = 'domus:token=; path=/; max-age=0'
-        set({ token: null, id: null, nome: null, role: null, igrejaId: null, isAuthenticated: false })
-      },
-      atualizarUsuarioLogado: (data) => set(data),
-    }),
-    { name: 'domus:auth' }
-  )
-)
+const estadoDeslogado = {
+  id: null,
+  nome: null,
+  role: null,
+  foto: null,
+  igrejaId: null,
+  igrejaNome: null,
+  isAuthenticated: false,
+} as const
+
+export const useAuthStore = create<AuthState>()((set) => ({
+  ...estadoDeslogado,
+  hidratado: false,
+  // foto fica null até a feature de upload da Fase 2 popular o campo.
+  login: (data) => set({ ...data, foto: null, isAuthenticated: true, hidratado: true }),
+  logout: () => set({ ...estadoDeslogado, hidratado: true }),
+  atualizarUsuarioLogado: (data) => set(data),
+  setHidratado: () => set({ hidratado: true }),
+}))

@@ -8,42 +8,75 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useMovimentacoes } from '@/hooks/financeiro/movimentacao/useMovimentacoes'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
-import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/DrawerDetalheMovimentacao'
+import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/(detalhe)/DrawerDetalheMovimentacao'
 import { ModalArquivarMovimentacao } from '@/app/(app)/financeiro/movimentacoes/ModalArquivarMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
 import styles from './movimentacoes.module.css'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
+import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { useAuthStore } from '@/store/authStore'
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 15
+
+function CabecalhoTabela() {
+  return (
+    <div className={styles.tabelaHeader}>
+      <span className={styles.colDesc}>DESCRIÇÃO</span>
+      <span className={styles.colCat}>CATEGORIA</span>
+      <span className={styles.colData}>DATA</span>
+      <span className={styles.colTipo}>TIPO</span>
+      <span className={styles.colValor}>VALOR</span>
+      <span className={styles.colAcoes}>AÇÕES</span>
+    </div>
+  )
+}
+
+function PainelCarregando() {
+  return (
+    <div className={styles.painel}>
+      <CabecalhoTabela />
+      <SkeletonMovimentacoes linhas={TAMANHO_PAGINA} />
+    </div>
+  )
+}
 
 function MovimentacoesConteudo() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const detalheId = searchParams.get('detalhe')
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
 
-  // filtros
-  const [tipo, setTipo] = useState<TipoMovimentacao | ''>('')
-  const [categoriaId, setCategoriaId] = useState('')
-  const [dataInicio, setDataInicio] = useState('')
-  const [dataFim, setDataFim] = useState('')
-  const [busca, setBusca] = useState('')
+  const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
+    tipo: '',
+    categoriaId: '',
+    dataInicio: '',
+    dataFim: '',
+    q: '',
+  })
+
   const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
-
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
 
-  const { data: categorias } = useCategoriasSelect()
+  const qDebounced = useDebounce(filtros.q, 250)
 
-  const { data, isLoading, isError } = useMovimentacoes({
-    tipo: tipo || undefined,
-    categoriaId: categoriaId || undefined,
-    dataInicio: dataInicio || undefined,
-    dataFim: dataFim || undefined,
-    q: buscaDebounced || undefined,
+  const { data: categorias } = useCategoriasSelect(autorizado)
+  const { data, isLoading, isError, refetch } = useMovimentacoes({
+    tipo: (filtros.tipo as TipoMovimentacao) || undefined,
+    categoriaId: filtros.categoriaId || undefined,
+    dataInicio: filtros.dataInicio || undefined,
+    dataFim: filtros.dataFim || undefined,
+    q: qDebounced || undefined,
     page: pagina,
     size: TAMANHO_PAGINA,
-  })
+  }, autorizado)
 
   const movimentacoes = data?.content ?? []
   const totalPaginas = data?.totalPages ?? 0
@@ -54,15 +87,11 @@ function MovimentacoesConteudo() {
   }
 
   function limparFiltros() {
-    setTipo('')
-    setCategoriaId('')
-    setDataInicio('')
-    setDataFim('')
-    setBusca('')
+    setFiltros({ tipo: '', categoriaId: '', dataInicio: '', dataFim: '', q: '' })
     setPagina(0)
   }
 
-  const temFiltro = tipo || categoriaId || dataInicio || dataFim || busca
+  const temFiltro = filtros.tipo || filtros.categoriaId || filtros.dataInicio || filtros.dataFim || filtros.q
 
   function abrirDetalhe(mov: MovimentacaoResponse) {
     router.push(`/financeiro/movimentacoes?detalhe=${mov.id}`, { scroll: false })
@@ -76,6 +105,18 @@ function MovimentacoesConteudo() {
       { label: 'Editar', icone: Pencil, onClick: () => router.push(`/financeiro/movimentacoes/${mov.id}`) },
       { label: 'Arquivar', icone: Archive, onClick: () => setMovArquivando(mov), perigo: true, separadorAntes: true },
     ]
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <PainelCarregando />
+      </div>
+    )
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
   }
 
   return (
@@ -93,14 +134,14 @@ function MovimentacoesConteudo() {
         </Link>
       </header>
 
-      {/* Filtros sempre visíveis */}
+      {/* Filtros */}
       <div className={styles.filtros}>
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>TIPO</label>
           <select
             className={styles.filtroSelect}
-            value={tipo}
-            onChange={(e) => { setTipo(e.target.value as TipoMovimentacao | ''); resetarPagina() }}
+            value={filtros.tipo}
+            onChange={(e) => { setFiltro('tipo', e.target.value); resetarPagina() }}
           >
             <option value="">Todos os tipos</option>
             <option value="ENTRADA">Entrada</option>
@@ -112,8 +153,8 @@ function MovimentacoesConteudo() {
           <label className={styles.filtroLabel}>CATEGORIA</label>
           <select
             className={styles.filtroSelect}
-            value={categoriaId}
-            onChange={(e) => { setCategoriaId(e.target.value); resetarPagina() }}
+            value={filtros.categoriaId}
+            onChange={(e) => { setFiltro('categoriaId', e.target.value); resetarPagina() }}
           >
             <option value="">Todas as categorias</option>
             {categorias?.map((c: CategoriaResponse) => (
@@ -127,8 +168,8 @@ function MovimentacoesConteudo() {
           <input
             type="date"
             className={styles.filtroInput}
-            value={dataInicio}
-            onChange={(e) => { setDataInicio(e.target.value); resetarPagina() }}
+            value={filtros.dataInicio}
+            onChange={(e) => { setFiltro('dataInicio', e.target.value); resetarPagina() }}
           />
         </div>
 
@@ -137,8 +178,8 @@ function MovimentacoesConteudo() {
           <input
             type="date"
             className={styles.filtroInput}
-            value={dataFim}
-            onChange={(e) => { setDataFim(e.target.value); resetarPagina() }}
+            value={filtros.dataFim}
+            onChange={(e) => { setFiltro('dataFim', e.target.value); resetarPagina() }}
           />
         </div>
 
@@ -148,8 +189,8 @@ function MovimentacoesConteudo() {
             type="text"
             className={styles.filtroInput}
             placeholder="Buscar na descrição..."
-            value={busca}
-            onChange={(e) => { setBusca(e.target.value); resetarPagina() }}
+            value={filtros.q}
+            onChange={(e) => { setFiltro('q', e.target.value); resetarPagina() }}
           />
         </div>
 
@@ -161,25 +202,31 @@ function MovimentacoesConteudo() {
       {/* Tabela */}
       <div className={styles.painel}>
         {isLoading ? (
-          <div className={styles.linhas}>
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
-          </div>
+          <>
+            <CabecalhoTabela />
+            <SkeletonMovimentacoes linhas={TAMANHO_PAGINA} />
+          </>
         ) : isError ? (
-          <div className={styles.estadoErro}>Não foi possível carregar as movimentações.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar as movimentações"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : movimentacoes.length === 0 ? (
-          <div className={styles.estadoVazio}>
-            {temFiltro ? 'Nenhuma movimentação encontrada com esses filtros.' : 'Nenhuma movimentação registrada ainda.'}
-          </div>
+          <EstadoVazio
+            icone={temFiltro ? SearchX : Inbox}
+            titulo={temFiltro ? 'Nenhuma movimentação encontrada' : 'Nenhuma movimentação registrada'}
+            mensagem={
+              temFiltro
+                ? 'Nenhuma movimentação corresponde aos filtros aplicados. Tente ajustá-los.'
+                : 'Comece registrando a primeira entrada ou saída.'
+            }
+            acaoSecundaria={temFiltro ? { label: 'Limpar filtros', onClick: limparFiltros } : undefined}
+            acaoPrimaria={!temFiltro ? { label: 'Nova movimentação', onClick: () => router.push('/financeiro/movimentacoes/cadastrar') } : undefined}
+          />
         ) : (
           <>
-            <div className={styles.tabelaHeader}>
-              <span className={styles.colDesc}>DESCRIÇÃO</span>
-              <span className={styles.colCat}>CATEGORIA</span>
-              <span className={styles.colData}>DATA</span>
-              <span className={styles.colTipo}>TIPO</span>
-              <span className={styles.colValor}>VALOR</span>
-              <span className={styles.colAcoes}>AÇÕES</span>
-            </div>
+            <CabecalhoTabela />
 
             <div className={styles.linhas}>
               {movimentacoes.map((mov) => (

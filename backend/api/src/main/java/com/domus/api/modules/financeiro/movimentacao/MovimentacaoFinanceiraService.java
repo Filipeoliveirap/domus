@@ -9,7 +9,10 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
-import com.domus.api.shared.PagedResponse;
+import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -34,8 +38,7 @@ public class MovimentacaoFinanceiraService {
     private final MembroRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final CacheEvictor cacheEvictor;
-
-
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional(readOnly = true)
     public PagedResponse<MovimentacaoResponse> listar(UUID igrejaId, TipoMovimentacao tipo, UUID categoriaId,
@@ -100,6 +103,12 @@ public class MovimentacaoFinanceiraService {
                 .build();
 
         repository.save(mov);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.CRIADO,
+                mov.getId(),
+                igrejaId
+        );
         log.info("Movimentação cadastrada. id={}, tipo={}, valor={}, criado_por={}, igreja_id={}",
                 mov.getId(), dto.tipo(), dto.valor(), usuarioId, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
@@ -127,6 +136,12 @@ public class MovimentacaoFinanceiraService {
         mov.setAtualizadoPor(usuarioRepository.getReferenceById(usuarioId));   // ← quem editou
 
         repository.save(mov);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.ATUALIZADO,
+                mov.getId(),
+                igrejaId
+        );
         log.info("Movimentação atualizada. id={}, valor={}, atualizado_por={}, igreja_id={}",
                 id, dto.valor(), usuarioId, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
@@ -143,6 +158,12 @@ public class MovimentacaoFinanceiraService {
         log.info("Arquivando movimentação. id={}, tipo={}, valor={}, igreja_id={}",
                 id, mov.getTipo(), mov.getValor(), igrejaId);
         repository.delete(mov);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.REMOVIDO,
+                mov.getId(),
+                igrejaId
+        );
         log.info("Movimentação arquivada. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
     }
@@ -171,5 +192,33 @@ public class MovimentacaoFinanceiraService {
                     log.warn("Membro informado na movimentação não encontrado na igreja. membro_id={}, igreja_id={}", membroId, igrejaId);
                     return new ResourceNotFoundException("Membro não encontrado.");
                 });
+    }
+
+    @Transactional
+    public void reindexarPorCategoria(UUID categoriaId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorCategoria(categoriaId, igrejaId);
+        if (ids.isEmpty()) return;
+        log.info("Reindexando {} movimentações por alteração na categoria. categoria_id={}, igreja_id={}",
+                ids.size(), categoriaId, igrejaId);
+        ids.forEach(id -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.ATUALIZADO,
+                id,
+                igrejaId
+        ));
+    }
+
+    @Transactional
+    public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorMembro(membroId, igrejaId);
+        if (ids.isEmpty()) return;
+        log.info("Reindexando {} movimentações por alteração no membro. membro_id={}, igreja_id={}",
+                ids.size(), membroId, igrejaId);
+        ids.forEach(id -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MOVIMENTACAO,
+                TipoEventoOutbox.ATUALIZADO,
+                id,
+                igrejaId
+        ));
     }
 }

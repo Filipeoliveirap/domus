@@ -14,8 +14,8 @@ import styles from './ModalConcederAcesso.module.css'
 
 const ROLES = [
   { value: 'ADMIN_IGREJA', titulo: 'Administrador', descricao: 'Controle total do sistema', icone: ShieldCheck },
-  { value: 'LIDER', titulo: 'Líder', descricao: 'Gestão de grupos e eventos', icone: Users },
-  { value: 'MEMBRO', titulo: 'Membro', descricao: 'Acesso básico ao perfil', icone: User },
+  { value: 'LIDER', titulo: 'Líder', descricao: 'Gestão de eventos e visualização de membros', icone: Users },
+  { value: 'MEMBRO', titulo: 'Membro', descricao: 'Acesso a membros e eventos', icone: User },
 ] as const
 
 export function ModalConcederAcesso({

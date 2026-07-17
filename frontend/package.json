@@ -10,11 +10,14 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@react-oauth/google": "^0.13.5",
+    "@sentry/nextjs": "^10.65.0",
     "@tanstack/react-query": "^5.100.6",
     "axios": "^1.15.2",
     "clsx": "^2.1.1",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^1.18.0",
-    "next": "16.2.4",
+    "next": "^16.2.10",
     "postcss": "^8.5.15",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -31,5 +34,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "^8.5.15"
   }
 }

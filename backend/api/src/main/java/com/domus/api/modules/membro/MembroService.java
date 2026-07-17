@@ -1,12 +1,16 @@
 package com.domus.api.modules.membro;
 
 import com.domus.api.config.redis.CacheEvictor;
+import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.usuario.*;
-import com.domus.api.shared.PagedResponse;
+import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,8 @@ public class MembroService {
     private final IgrejaRepository igrejaRepository;
     private final UsuarioService  usuarioService;
     private final CacheEvictor cacheEvictor;
+    private final OutboxRegistrador outboxRegistrador;
+    private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
 
     @Cacheable(
             value = "membros",
@@ -46,9 +52,14 @@ public class MembroService {
 
         String email = normalizarEmail(data.email());
 
-        if (email != null && membroRepository.existsByEmail(email)) {
-            log.warn("E-mail de membro já cadastrado. email={}", email);
-            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        if (email != null) {
+            if (membroRepository.existsByEmail(email)) {
+                throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+            }
+            if (membroRepository.existsByEmailIncluindoArquivados(email)) {
+                throw new BusinessException("EMAIL_ARQUIVADO",
+                        "Este e-mail pertence a um cadastro arquivado. Use outro e-mail ou restaure o cadastro.");
+            }
         }
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
@@ -68,6 +79,12 @@ public class MembroService {
                 .build();
 
         Membro salvo = membroRepository.save(membro);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.CRIADO,
+                salvo.getId(),
+                igrejaId
+        );
         log.info("Membro cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("membros", igrejaId);
 
@@ -81,15 +98,21 @@ public class MembroService {
     @Transactional
     public MembroResponse atualizarMembro(UUID id, MembroRequestDTO data, UUID igrejaId) {
         log.info("Atualizando membro. id={}, igreja_id={}", id, igrejaId);
-
         Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
-        String emailNovo = normalizarEmail(data.email());
+        String nomeAntigo = membro.getNome();
 
-        if (emailNovo != null && !emailNovo.equals(membro.getEmail())
-                && membroRepository.existsByEmail(emailNovo)) {
-            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        String emailNovo = normalizarEmail(data.email());
+        if (emailNovo != null && !emailNovo.equals(membro.getEmail())) {
+
+            if (membroRepository.existsByEmail(emailNovo)) {
+                throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+            }
+            if (membroRepository.existsByEmailIncluindoArquivados(emailNovo)) {
+                throw new BusinessException("EMAIL_ARQUIVADO",
+                        "Este e-mail pertence a um cadastro arquivado. Use outro e-mail.");
+            }
         }
 
         membro.setNome(data.nome());
@@ -103,8 +126,21 @@ public class MembroService {
         membro.setObservacoes(data.observacoes());
 
         Membro salvo = membroRepository.save(membro);
-        cacheEvictor.evictPorIgreja("membros", igrejaId);
 
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.ATUALIZADO,
+                membro.getId(),
+                igrejaId
+        );
+
+        boolean nomeMudou = !java.util.Objects.equals(nomeAntigo, membro.getNome());
+        if (nomeMudou) {
+            usuarioService.reindexarPorMembro(membro.getId(), igrejaId);
+            reindexacaoMovimentacaoService.reindexarPorMembro(membro.getId(), igrejaId);
+        }
+
+        cacheEvictor.evictPorIgreja("membros", igrejaId);
         log.info("Membro atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
         return MembroResponse.from(salvo);
     }
@@ -116,6 +152,12 @@ public class MembroService {
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
+        outboxRegistrador.registrar(
+                TipoEntidadeOutbox.MEMBRO,
+                TipoEventoOutbox.REMOVIDO,
+                membro.getId(),
+                igrejaId
+        );
         cacheEvictor.evictPorIgreja("membros", igrejaId);
     }
 

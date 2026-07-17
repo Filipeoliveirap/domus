@@ -2,6 +2,13 @@
 export const Endpoints = {
   auth: {
     LOGIN: '/auth/login',
+    GOOGLE_LOGIN: '/auth/google/login',
+    GOOGLE_REGISTRAR: '/auth/google/registrar',
+    REFRESH: '/auth/refresh',
+    LOGOUT: '/auth/logout',
+    ME: '/auth/me',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
     REGISTER_IGREJA: '/igrejas/registrar',
   },
   usuarios: {
@@ -40,5 +47,6 @@ export const Endpoints = {
     resumo: '/relatorios/resumo',
     porCategoria: '/relatorios/por-categoria',
     evolucaoMensal: '/relatorios/evolucao-mensal',
+    maiorLancamento: '/relatorios/maior-lancamento',
   },
 }

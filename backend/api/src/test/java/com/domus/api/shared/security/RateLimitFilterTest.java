@@ -117,4 +117,30 @@ class RateLimitFilterTest {
 
         verify(valueOps).increment(startsWith("rl:global:9.9.9.9:"));
     }
+
+    @Test
+    void comTrust_prefereCfConnectingIp() throws Exception {
+        // Atrás da Cloudflare, o CF-Connecting-IP é o IP real do cliente, sem a ambiguidade
+        // do X-Forwarded-For (que pode ter itens forjados antes de chegar na Cloudflare).
+        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getHeader("CF-Connecting-IP")).thenReturn("9.9.9.9");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("6.6.6.6, 1.1.1.1");
+        incrementaPara("rl:global:", 1L);
+
+        filtro(100, 10, true).doFilter(request, response, chain);
+
+        verify(valueOps).increment(startsWith("rl:global:9.9.9.9:"));
+    }
+
+    @Test
+    void semTrust_ignoraOsHeadersEUsaOSocket() throws Exception {
+        // Sem proxy confiável, os headers seriam forjáveis: usa o IP do socket (getRemoteAddr).
+        when(request.getRequestURI()).thenReturn("/membros");
+        lenient().when(request.getHeader("CF-Connecting-IP")).thenReturn("9.9.9.9");
+        incrementaPara("rl:global:", 1L);
+
+        filtro(100, 10, false).doFilter(request, response, chain);
+
+        verify(valueOps).increment(startsWith("rl:global:1.2.3.4:")); // getRemoteAddr do setup
+    }
 }

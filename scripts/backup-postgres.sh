@@ -145,4 +145,26 @@ docker run --rm \
   --only-show-errors
 
 echo "    enviado: s3://${R2_BUCKET}/domus-${TS}.dump.age"
+
+# CONFERE que o objeto existe mesmo. "o aws s3 cp saiu 0" NÃO é a mesma coisa que
+# "o arquivo está no bucket" — e backup é o último lugar para confiar sem verificar.
+# Sem isto, um upload que silenciosamente não persiste passaria como sucesso, e só
+# se descobriria no dia de restaurar.
+echo "==> Conferindo no R2 que o objeto realmente existe"
+TAM_REMOTO=$(docker run --rm \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=auto \
+  "$AWS_IMAGE" \
+  s3api head-object --bucket "$R2_BUCKET" --key "domus-${TS}.dump.age" \
+  --endpoint-url "$R2_ENDPOINT" --query ContentLength --output text 2>&1) || {
+    echo "ERRO: o upload retornou sucesso, mas o objeto NÃO está no bucket." >&2
+    echo "      resposta do R2: $TAM_REMOTO" >&2
+    exit 1
+  }
+
+if [[ "$TAM_REMOTO" != "$TAM_CIFRADO" ]]; then
+  echo "ERRO: o objeto no bucket tem ${TAM_REMOTO} bytes, mas o arquivo enviado tinha ${TAM_CIFRADO}." >&2
+  exit 1
+fi
+echo "    confirmado: ${TAM_REMOTO} bytes no bucket (bate com o enviado)"
+
 echo "==> Backup concluído."

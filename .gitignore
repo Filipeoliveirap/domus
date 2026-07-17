@@ -37,3 +37,4 @@ backend/target/
 .env
 .DS_Store
 *.log
+deploy/.env.prod

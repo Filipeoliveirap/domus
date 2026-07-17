@@ -1,0 +1,68 @@
+name: domus
+
+services:
+  api:
+    image: ghcr.io/filipeoliveirap/domus-api:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    # SEM ports: — só a rede interna alcança o Spring.
+    networks: [interna]
+
+  front:
+    image: ghcr.io/filipeoliveirap/domus-front:latest
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8080
+    depends_on: [api]
+    networks: [interna]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: [interna]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      # Trava o heap: sem isso o ES tenta usar metade da RAM da máquina.
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks: [interna]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on: [front]
+    networks: [interna]
+
+networks:
+  interna:
+
+volumes:
+  es-data:

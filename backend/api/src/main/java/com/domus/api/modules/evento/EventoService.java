@@ -5,14 +5,10 @@ import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-<<<<<<< HEAD
-import com.domus.api.shared.PagedResponse;
-=======
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.shared.DTO.PagedResponse;
->>>>>>> develop
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +28,7 @@ public class EventoService {
     private final EventoRepository eventoRepository;
     private final IgrejaRepository igrejaRepository;
     private final CacheEvictor cacheEvictor;
-<<<<<<< HEAD
-=======
     private final OutboxRegistrador outboxRegistrador;
->>>>>>> develop
 
     @Cacheable(
             value = "eventos",
@@ -74,15 +67,12 @@ public class EventoService {
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.CRIADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
         return EventoResponse.from(salvo);
@@ -104,15 +94,12 @@ public class EventoService {
         evento.setFoto(data.foto());
 
         Evento salvo = eventoRepository.save(evento);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.ATUALIZADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
         return EventoResponse.from(salvo);
@@ -124,15 +111,12 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         eventoRepository.delete(evento);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.REMOVIDO,
                 evento.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
     }

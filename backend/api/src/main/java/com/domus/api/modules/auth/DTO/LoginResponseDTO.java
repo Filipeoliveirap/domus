@@ -7,13 +7,10 @@ public record LoginResponseDTO(
         String nome,
         String role,
         UUID igrejaId,
-<<<<<<< HEAD
-        String token) {
-=======
         String igrejaNome,
-        String token
+        String token,
+        String refreshToken
 
 ) {
 
->>>>>>> develop
 }

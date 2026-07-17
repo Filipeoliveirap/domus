@@ -18,7 +18,9 @@ export default function CadastroPage() {
     register, handleSubmit, setValue, errors, passo1Incompleto,
     register2, handleSubmit2, errors2, passo2Incompleto, watch2,
     erroGeral, isLoading, onSubmit,
+    googleData, onGoogleAuth, onGoogleError, onSubmitGoogle,
     dadosSucesso, irParaMembros, irParaPerfilIgreja, irParaMeuPerfil,
+      irParaPainelInicial,
   } = useRegistrarIgreja()
 
   // ─── PASSO 1 ──────────────────────────────────────────────────────
@@ -28,7 +30,7 @@ export default function CadastroPage() {
         <div className={styles.card}>
           <SanctuaryPanel />
           <div className={styles.formPanel}>
-            <ProgressIndicator passoAtual={1} totalPassos={3} />
+            <ProgressIndicator passoAtual={1} totalPassos={googleData ? 2 : 3} />
             <Passo1
               register={register}
               handleSubmit={handleSubmit}
@@ -36,6 +38,12 @@ export default function CadastroPage() {
               passo1Incompleto={passo1Incompleto}
               setValue={setValue}
               onAvancar={irParaPasso2}
+              googleData={googleData}
+              onGoogleAuth={onGoogleAuth}
+              onGoogleError={onGoogleError}
+              onSubmitGoogle={onSubmitGoogle}
+              erroGeral={erroGeral}
+              isLoading={isLoading}
             />
             <SecurityFooter />
           </div>
@@ -49,7 +57,7 @@ export default function CadastroPage() {
     return (
       <div className={styles.pageSucesso}>
         <div className={styles.cardSucesso}>
-          <ProgressIndicator passoAtual={3} totalPassos={3} />
+          <ProgressIndicator passoAtual={googleData ? 2 : 3} totalPassos={googleData ? 2 : 3} />
 
           <div className={styles.sucessoIcone}>
             <Check size={32} strokeWidth={3} />
@@ -102,8 +110,8 @@ export default function CadastroPage() {
             </button>
           </div>
 
-          <button type="button" className={styles.pularLink} onClick={irParaMeuPerfil}>
-            Pular e ir para o painel
+          <button type="button" className={styles.pularLink} onClick={irParaPainelInicial}>
+            Pular e ir para o painel inicial
           </button>
         </div>
       </div>

@@ -2,11 +2,7 @@ package com.domus.api.modules.evento;
 
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
-<<<<<<< HEAD
-import com.domus.api.shared.PagedResponse;
-=======
 import com.domus.api.shared.DTO.PagedResponse;
->>>>>>> develop
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

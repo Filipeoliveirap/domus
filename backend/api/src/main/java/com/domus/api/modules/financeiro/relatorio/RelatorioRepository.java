@@ -56,8 +56,6 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
     List<RelatorioProjections.MesAgregado> agregarEvolucaoMensal(@Param("igrejaId") UUID igrejaId,
                                                                  @Param("dataInicio") LocalDate dataInicio,
                                                                  @Param("dataFim") LocalDate dataFim);
-<<<<<<< HEAD
-=======
 
     @Query("""
         SELECT
@@ -78,5 +76,4 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
     RelatorioProjections.MaiorLancamento buscarMaiorLancamento(@Param("igrejaId") UUID igrejaId,
                                                                @Param("dataInicio") LocalDate dataInicio,
                                                                @Param("dataFim") LocalDate dataFim);
->>>>>>> develop
 }

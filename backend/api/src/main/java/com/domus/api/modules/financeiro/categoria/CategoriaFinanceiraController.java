@@ -1,21 +1,13 @@
 package com.domus.api.modules.financeiro.categoria;
 
 import com.domus.api.modules.financeiro.categoria.DTOs.*;
-<<<<<<< HEAD
-import com.domus.api.shared.PagedResponse;
-=======
 import com.domus.api.shared.DTO.PagedResponse;
->>>>>>> develop
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-<<<<<<< HEAD
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-=======
->>>>>>> develop
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

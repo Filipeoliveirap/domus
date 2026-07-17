@@ -9,14 +9,10 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
-<<<<<<< HEAD
-import com.domus.api.shared.PagedResponse;
-=======
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
->>>>>>> develop
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-<<<<<<< HEAD
-=======
 import java.util.List;
->>>>>>> develop
 import java.util.UUID;
 
 @Service
@@ -45,12 +38,7 @@ public class MovimentacaoFinanceiraService {
     private final MembroRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final CacheEvictor cacheEvictor;
-<<<<<<< HEAD
-
-
-=======
     private final OutboxRegistrador outboxRegistrador;
->>>>>>> develop
 
     @Transactional(readOnly = true)
     public PagedResponse<MovimentacaoResponse> listar(UUID igrejaId, TipoMovimentacao tipo, UUID categoriaId,
@@ -115,15 +103,12 @@ public class MovimentacaoFinanceiraService {
                 .build();
 
         repository.save(mov);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO,
                 TipoEventoOutbox.CRIADO,
                 mov.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Movimentação cadastrada. id={}, tipo={}, valor={}, criado_por={}, igreja_id={}",
                 mov.getId(), dto.tipo(), dto.valor(), usuarioId, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
@@ -151,15 +136,12 @@ public class MovimentacaoFinanceiraService {
         mov.setAtualizadoPor(usuarioRepository.getReferenceById(usuarioId));   // ← quem editou
 
         repository.save(mov);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO,
                 TipoEventoOutbox.ATUALIZADO,
                 mov.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Movimentação atualizada. id={}, valor={}, atualizado_por={}, igreja_id={}",
                 id, dto.valor(), usuarioId, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
@@ -176,15 +158,12 @@ public class MovimentacaoFinanceiraService {
         log.info("Arquivando movimentação. id={}, tipo={}, valor={}, igreja_id={}",
                 id, mov.getTipo(), mov.getValor(), igrejaId);
         repository.delete(mov);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO,
                 TipoEventoOutbox.REMOVIDO,
                 mov.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Movimentação arquivada. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
     }
@@ -214,8 +193,6 @@ public class MovimentacaoFinanceiraService {
                     return new ResourceNotFoundException("Membro não encontrado.");
                 });
     }
-<<<<<<< HEAD
-=======
 
     @Transactional
     public void reindexarPorCategoria(UUID categoriaId, UUID igrejaId) {
@@ -244,5 +221,4 @@ public class MovimentacaoFinanceiraService {
                 igrejaId
         ));
     }
->>>>>>> develop
 }

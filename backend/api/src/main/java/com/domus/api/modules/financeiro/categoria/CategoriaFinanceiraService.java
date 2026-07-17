@@ -2,12 +2,6 @@ package com.domus.api.modules.financeiro.categoria;
 
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.categoria.DTOs.*;
-<<<<<<< HEAD
-import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.shared.PagedResponse;
-import com.domus.api.shared.exception.BusinessException;
-import com.domus.api.shared.exception.ResourceNotFoundException;
-=======
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.shared.DTO.PagedResponse;
@@ -16,7 +10,6 @@ import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
->>>>>>> develop
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,11 +28,8 @@ public class CategoriaFinanceiraService {
     private final CategoriaFinanceiraRepository repository;
     private final IgrejaRepository  igrejaRepository;
     private final CacheEvictor cacheEvictor;
-<<<<<<< HEAD
-=======
     private final ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
     private final OutboxRegistrador outboxRegistrador;
->>>>>>> develop
     private static final UUID SEM_IGNORAR = new UUID(0L, 0L);
 
     @Transactional(readOnly = true)
@@ -75,15 +65,12 @@ public class CategoriaFinanceiraService {
                 .tipo(dto.tipo())
                 .build();
         repository.save(categoria);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.CATEGORIA,
                 TipoEventoOutbox.CRIADO,
                 categoria.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Categoria cadastrada. id={}, igreja_id={}", categoria.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("categorias", igrejaId);
         return CategoriaResponse.de(categoria);
@@ -93,14 +80,10 @@ public class CategoriaFinanceiraService {
     public CategoriaResponse atualizar(UUID id, CategoriaRequestDTO dto, UUID igrejaId) {
         log.info("Atualizando categoria. id={}, igreja_id={}", id, igrejaId);
         CategoriaFinanceira categoria = buscarEntidade(id, igrejaId);
-<<<<<<< HEAD
-        String nome = dto.nome().trim();
-=======
 
         String nomeAntigo = categoria.getNome();
         String nome = dto.nome().trim();
 
->>>>>>> develop
         if (repository.existeComNome(igrejaId, nome, id)) {
             log.warn("Categoria duplicada na atualização. nome={}, igreja_id={}", nome, igrejaId);
             throw new BusinessException("CATEGORIA_DUPLICADA", "Já existe uma categoria com esse nome.");
@@ -108,10 +91,6 @@ public class CategoriaFinanceiraService {
         categoria.setNome(nome);
         categoria.setTipo(dto.tipo());
         repository.save(categoria);
-<<<<<<< HEAD
-        log.info("Categoria atualizada. id={}, igreja_id={}", id, igrejaId);
-        cacheEvictor.evictPorIgreja("categorias", igrejaId);
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.CATEGORIA,
                 TipoEventoOutbox.ATUALIZADO,
@@ -125,7 +104,6 @@ public class CategoriaFinanceiraService {
             reindexacaoMovimentacaoService.reindexarPorCategoria(id, igrejaId);
         }
 
->>>>>>> develop
         return CategoriaResponse.de(categoria);
     }
 
@@ -134,15 +112,12 @@ public class CategoriaFinanceiraService {
         log.info("Arquivando categoria. id={}, igreja_id={}", id, igrejaId);
         CategoriaFinanceira categoria = buscarEntidade(id, igrejaId);
         repository.delete(categoria);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.CATEGORIA,
                 TipoEventoOutbox.REMOVIDO,
                 categoria.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Categoria arquivada. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("categorias", igrejaId);
     }

@@ -1,11 +1,13 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
+import com.domus.api.shared.security.AuthCookieFactory;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,12 +19,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class IgrejaController {
     private final IgrejaService igrejaService;
+    private final AuthCookieFactory cookieFactory;
 
+    /** Registrar a igreja já deixa a pessoa logada — então emite os cookies de sessão. */
     @PostMapping("/registrar")
-    public ResponseEntity<RegistrarIgrejaResponse> cadastrarIgreja(
+    public ResponseEntity<SessaoDTO> cadastrarIgreja(
             @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
         RegistrarIgrejaResponse response = igrejaService.registrar(data);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(HttpHeaders.SET_COOKIE, cookieFactory.access(response.token()).toString())
+                .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(response.refreshToken()).toString())
+                .body(new SessaoDTO(
+                        response.id(), response.nome(), response.role(),
+                        response.igrejaId(), response.igrejaNome()));
     }
 
     @GetMapping("/{id}")

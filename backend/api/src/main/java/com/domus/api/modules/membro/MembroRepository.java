@@ -29,13 +29,10 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
 
     Optional<Membro> findByIdAndIgrejaId(UUID id, UUID igrejaId);
     boolean existsByEmail(String email);
-<<<<<<< HEAD
-=======
 
     @Query(value = """
     SELECT COUNT(*) > 0 FROM membro
     WHERE LOWER(email) = LOWER(:email)
     """, nativeQuery = true)
     boolean existsByEmailIncluindoArquivados(@Param("email") String email);
->>>>>>> develop
 }

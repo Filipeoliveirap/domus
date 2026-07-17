@@ -2,10 +2,7 @@ package com.domus.api.modules.financeiro.relatorio;
 
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
 import java.math.BigDecimal;
-<<<<<<< HEAD
-=======
 import java.time.LocalDate;
->>>>>>> develop
 import java.util.UUID;
 
 public interface RelatorioProjections {
@@ -29,8 +26,6 @@ public interface RelatorioProjections {
         BigDecimal getEntradas();
         BigDecimal getSaidas();
     }
-<<<<<<< HEAD
-=======
 
     interface MaiorLancamento {
         UUID getId();
@@ -40,5 +35,4 @@ public interface RelatorioProjections {
         BigDecimal getValor();
         LocalDate getDataMovimentacao();
     }
->>>>>>> develop
 }

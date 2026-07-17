@@ -6,6 +6,7 @@ import {
   Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import styles from './Sidebar.module.css'
 
@@ -61,7 +62,14 @@ export function Sidebar() {
     )
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Sem argumento: o refresh vai no cookie. E é o servidor quem apaga os cookies —
+    // sendo httpOnly, o JS não consegue.
+    try {
+      await authService.logout()
+    } catch {
+      // Best-effort: mesmo se a revogação no servidor falhar, limpamos a sessão local.
+    }
     logout()
     router.replace('/login')
   }

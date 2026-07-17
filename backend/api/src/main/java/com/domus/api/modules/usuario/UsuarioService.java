@@ -5,18 +5,12 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
-<<<<<<< HEAD
-import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
-import com.domus.api.shared.exception.BusinessException;
-import com.domus.api.shared.exception.ResourceNotFoundException;
-=======
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
->>>>>>> develop
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,11 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
 import java.util.UUID;
-<<<<<<< HEAD
-import com.domus.api.shared.PagedResponse;
-=======
 import com.domus.api.shared.DTO.PagedResponse;
->>>>>>> develop
 
 @Service
 @Slf4j
@@ -45,10 +35,7 @@ public class UsuarioService {
     private static final String ROLE_ADMIN = "ADMIN_IGREJA";
     private final MembroRepository membroRepository;
     private final CacheEvictor cacheEvictor;
-<<<<<<< HEAD
-=======
     private final OutboxRegistrador outboxRegistrador;
->>>>>>> develop
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -87,15 +74,12 @@ public class UsuarioService {
                 .build();
 
         Usuario salvo = usuarioRepository.save(usuario);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
                 TipoEventoOutbox.CRIADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Acesso concedido (novo usuário). usuario_id={}, membro_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
@@ -120,15 +104,12 @@ public class UsuarioService {
         arquivado.setRole(role);
 
         Usuario salvo = usuarioRepository.save(arquivado);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
                 TipoEventoOutbox.ATUALIZADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Acesso reativado. usuario_id={}, membro_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
@@ -173,15 +154,12 @@ public class UsuarioService {
 
         usuario.setAtivo(ativo);
         Usuario salvo = usuarioRepository.save(usuario);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
                 TipoEventoOutbox.ATUALIZADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("status de usuário alterado. id={}, ativo={}, igreja_id={}", id, ativo, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
@@ -202,15 +180,12 @@ public class UsuarioService {
 
         usuario.setRole(role);
         Usuario salvo = usuarioRepository.save(usuario);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
                 TipoEventoOutbox.ATUALIZADO,
                 salvo.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("role de usuário alterado. id={}, role={}, igreja_id={}", id, roleName, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
@@ -231,15 +206,12 @@ public class UsuarioService {
         garantirNaoEhUltimoAdmin(usuario, igrejaId);
 
         usuarioRepository.delete(usuario);
-<<<<<<< HEAD
-=======
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
                 TipoEventoOutbox.REMOVIDO,
                 usuario.getId(),
                 igrejaId
         );
->>>>>>> develop
         log.info("Usuário arquivado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
     }
@@ -249,21 +221,16 @@ public class UsuarioService {
         usuarioRepository.findByMembroId(membroId).ifPresent(usuario -> {
             log.info("Arquivando usuário em cascata (membro arquivado). usuario_id={}, membro_id={}, igrejaId={}", usuario.getId(), membroId, igrejaId);
             usuarioRepository.delete(usuario);
-<<<<<<< HEAD
-=======
             outboxRegistrador.registrar(
                     TipoEntidadeOutbox.USUARIO,
                     TipoEventoOutbox.REMOVIDO,
                     usuario.getId(),
                     igrejaId
             );
->>>>>>> develop
             cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         });
     }
 
-<<<<<<< HEAD
-=======
     @Transactional
     public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
         usuarioRepository.findByMembroId(membroId).ifPresent(usuario -> {
@@ -277,6 +244,5 @@ public class UsuarioService {
         });
     }
 
->>>>>>> develop
 
 }

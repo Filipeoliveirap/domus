@@ -137,6 +137,18 @@ export const movimentacaoSchema = z.object({
 
 
 
+export const esqueciSenhaSchema = z.object({
+  email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
+})
+
+export const redefinirSenhaSchema = z.object({
+  novaSenha: z.string().min(8, 'Mínimo 8 caracteres'),
+  confirmarSenha: z.string().min(1, 'Confirme a senha'),
+}).refine(data => data.novaSenha === data.confirmarSenha, {
+  message: 'As senhas não coincidem',
+  path: ['confirmarSenha'],
+})
+
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
@@ -149,3 +161,5 @@ export type CategoriaFormData = z.infer<typeof categoriaSchema>
 export type CategoriaFormInput = z.input<typeof categoriaSchema>
 export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
 export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>
+export type EsqueciSenhaFormData = z.infer<typeof esqueciSenhaSchema>
+export type RedefinirSenhaFormData = z.infer<typeof redefinirSenhaSchema>

@@ -40,8 +40,11 @@ public class Usuario implements UserDetails {
     @JoinColumn(name = "membro_id", nullable = false)
     private Membro membro;
 
-    @Column(name = "senha_hash", nullable = false, length = 255)
+    @Column(name = "senha_hash", length = 255)
     private String senhaHash;
+
+    @Column(name = "google_sub", length = 255, unique = true)
+    private String googleSub;
 
     @Column(name = "ativo", nullable = false)
     private boolean ativo;

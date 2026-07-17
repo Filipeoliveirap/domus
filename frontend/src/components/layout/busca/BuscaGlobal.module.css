@@ -1,0 +1,114 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 42px;
+  background: #f2f3ff;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.inputWrap:focus-within {
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.iconeBusca {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+.input::placeholder { color: #94a3b8; }
+
+.spinner {
+  color: #2563eb;
+  animation: girar 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.limpar {
+  display: flex;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+.limpar:hover { color: #64748b; }
+
+/* Dropdown */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 440px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px -5px rgba(19, 27, 46, 0.15);
+  padding: 8px;
+  z-index: 50;
+}
+
+.vazio {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.grupo {
+  margin-bottom: 4px;
+}
+.grupo:last-child { margin-bottom: 0; }
+
+.grupoHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: left;
+  transition: background-color 120ms ease;
+}
+.item:hover { background: #f2f3ff; }
+
+.itemTitulo {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+.itemSubtitulo {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}

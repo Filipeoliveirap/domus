@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Pencil, KeyRound, Archive } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useMembros } from '@/hooks/membro/useMembros'
+import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import {
-  iniciais,
-  rotuloStatus,
-  varianteStatus,
-  formatarData,
-  formatarTelefoneExibicao,
+  iniciais, rotuloStatus, varianteStatus, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/membroFormat'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { MembroResponse } from '@/types/membro.type'
@@ -18,20 +14,26 @@ import styles from './page.module.css'
 import { ModalConcederAcesso } from './ModalConcederAcesso'
 import { useRouter } from 'next/navigation'
 import { ModalArquivarMembro } from './(arquivar)/ArquivarMembro'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { SearchX, Inbox } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { SkeletonMembros } from "./SkeletonMembros";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 10
 
-export default function MembrosPage() {
-  const [busca, setBusca] = useState('')
-  const [pagina, setPagina] = useState(0)
-  const buscaDebounced = useDebounce(busca, 350)
+function MembrosConteudo() {
   const router = useRouter()
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl()
+  const [pagina, setPagina] = useState(0)
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const podeGerenciar = role === 'ADMIN_IGREJA'
 
-  // estados dos modais (conceder acesso / arquivar) — plugamos os modais depois
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)
 
-  const { data, isLoading, isError, isFetching } = useMembros({
+  const { data, isLoading, isError, isFetching, refetch } = useMembros({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
@@ -44,6 +46,29 @@ export default function MembrosPage() {
   function aoBuscar(valor: string) {
     setBusca(valor)
     setPagina(0)
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <div className={styles.containerTabela}>
+          <table className={styles.tabela}>
+            <thead>
+              <tr>
+                <th>Membro</th>
+                <th>Telefone</th>
+                <th>Status</th>
+                <th>Cadastro</th>
+                <th className={styles.colunaAcoes}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <SkeletonMembros linhas={TAMANHO_PAGINA} podeGerenciar={false} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -61,9 +86,11 @@ export default function MembrosPage() {
           </h1>
           <p className={styles.subtitulo}>Pessoas registradas na igreja</p>
         </div>
-        <Link href="/membros/cadastrar" className={styles.botaoPrimario}>
-          Novo membro
-        </Link>
+        {podeGerenciar && (
+          <Link href="/membros/cadastrar" className={styles.botaoPrimario}>
+            Novo membro
+          </Link>
+        )}
       </header>
 
       <div className={styles.barraBusca}>
@@ -90,17 +117,31 @@ export default function MembrosPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className={styles.estadoVazio}>Carregando…</td></tr>
+              <SkeletonMembros linhas={TAMANHO_PAGINA} podeGerenciar={podeGerenciar} />
             ) : isError ? (
-              <tr><td colSpan={5} className={styles.estadoErro}>
-                Não foi possível carregar os membros. Tente novamente.
+              <tr><td colSpan={5}>
+                <EstadoErro
+                  titulo="Não foi possível carregar os membros"
+                  mensagem="Verifique sua conexão e tente novamente."
+                  aoTentarNovamente={() => refetch()}
+                />
               </td></tr>
             ) : membros.length === 0 ? (
-              <tr><td colSpan={5} className={styles.estadoVazio}>
-                {buscaDebounced
-                  ? `Nenhum membro encontrado para "${buscaDebounced}".`
-                  : 'Nenhum membro cadastrado ainda.'}
-              </td></tr>
+              <tr>
+                <td colSpan={5}>
+                  <EstadoVazio
+                    icone={buscaDebounced ? SearchX : Inbox}
+                    titulo={buscaDebounced ? `Nenhum membro encontrado` : 'Nenhum membro cadastrado'}
+                    mensagem={
+                      buscaDebounced
+                        ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                        : 'Comece cadastrando o primeiro membro da sua igreja.'
+                    }
+                    acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+                    acaoPrimaria={!buscaDebounced && podeGerenciar ? { label: 'Novo membro', onClick: () => router.push('/membros/cadastrar') } : undefined}
+                  />
+                </td>
+              </tr>
             ) : (
               membros.map((m) => {
                 const acoes: ItemAcao[] = [
@@ -134,9 +175,11 @@ export default function MembrosPage() {
                     <td className={styles.cadastro}>
                       {formatarData(m.createdAt)}
                     </td>
-                    <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
-                      <MenuAcoes itens={acoes} />
-                    </td>
+                    {podeGerenciar && (
+                      <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
+                        <MenuAcoes itens={acoes} />
+                      </td>
+                    )}
                   </tr>
                 )
               })
@@ -175,5 +218,13 @@ export default function MembrosPage() {
         <ModalArquivarMembro membro={membroArquivando} onClose={() => setMembroArquivando(null)} />
       )}
     </div>
+  )
+}
+
+export default function MembrosPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <MembrosConteudo />
+    </Suspense>
   )
 }

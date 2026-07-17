@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense} from "react";
 import Link from "next/link";
 import { ChevronRight, Shield, Ban, Archive, UserCheck } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import {
   iniciais,
@@ -17,31 +16,74 @@ import { UsuarioResponse } from "@/types/usuario.types";
 import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
 import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
 import { ModalArquivarUsuario } from "./(arquivarusuario)/ModalArquivarUsuario";
-
+import { useBuscaUrl } from "@/hooks/busca/useBuscaUrl";
+import { useAuthStore } from "@/store/authStore";
+import { AcessoRestrito } from "@/components/common/AcessoRestrito/AcessoRestrito";
+import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
+import { SearchX, Inbox } from 'lucide-react'
+import { SkeletonUsuarios } from "./SkeletonUsuarios";
+import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
 
 const TAMANHO_PAGINA = 10;
 
-export default function UsuariosPage() {
-  const [busca, setBusca] = useState("");
-  const [pagina, setPagina] = useState(0);
-  const buscaDebounced = useDebounce(busca, 350);
+function CabecalhoTabela() {
+  return (
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>E-mail</th>
+        <th>Perfil</th>
+        <th>Status</th>
+        <th>Último acesso</th>
+        <th className={styles.colunaAcoes}>Ações</th>
+      </tr>
+    </thead>
+  )
+}
+
+function UsuariosConteudo() {
+  const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
+  const [pagina, setPagina] = useState(0)
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const role = useAuthStore((s) => s.role)
+  const autorizado = role === 'ADMIN_IGREJA'
 
-  const { data, isLoading, isError, isFetching } = useUsuarios({
+  const { data, isLoading, isError, isFetching, refetch } = useUsuarios({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
-  });
+    enabled: autorizado,
+  })
 
-  const usuarios = data?.content ?? [];
-  const totalPaginas = data?.totalPages ?? 0;
-  const totalElementos = data?.totalElements ?? 0;
+  const usuarios = data?.content ?? []
+  const totalPaginas = data?.totalPages ?? 0
+  const totalElementos = data?.totalElements ?? 0
 
   function aoBuscar(valor: string) {
-    setBusca(valor);
-    setPagina(0);
+    setBusca(valor)
+    setPagina(0)
+  }
+
+  if (!hidratado) {
+    return (
+      <div className={styles.pagina}>
+        <div className={styles.containerTabela}>
+          <table className={styles.tabela}>
+            <CabecalhoTabela />
+            <tbody>
+              <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  if (!autorizado) {
+    return <AcessoRestrito />
   }
 
   return (
@@ -72,29 +114,33 @@ export default function UsuariosPage() {
 
       <div className={styles.containerTabela}>
         <table className={styles.tabela}>
-          <thead>
-            <tr>
-              <th>Usuário</th>
-              <th>E-mail</th>
-              <th>Perfil</th>
-              <th>Status</th>
-              <th>Último acesso</th>
-              <th className={styles.colunaAcoes}>Ações</th>
-            </tr>
-          </thead>
+          <CabecalhoTabela />
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className={styles.estadoVazio}>Carregando…</td></tr>
+              <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
             ) : isError ? (
-              <tr><td colSpan={6} className={styles.estadoErro}>
-                Não foi possível carregar os usuários. Tente novamente.
+              <tr><td colSpan={6}>
+                <EstadoErro
+                  titulo="Não foi possível carregar os usuários"
+                  mensagem="Verifique sua conexão e tente novamente."
+                  aoTentarNovamente={() => refetch()}
+                />
               </td></tr>
             ) : usuarios.length === 0 ? (
-              <tr><td colSpan={6} className={styles.estadoVazio}>
-                {buscaDebounced
-                  ? `Nenhum usuário encontrado para "${buscaDebounced}".`
-                  : "Nenhum usuário cadastrado ainda."}
-              </td></tr>
+              <tr>
+                <td colSpan={6}>
+                  <EstadoVazio
+                    icone={buscaDebounced ? SearchX : Inbox}
+                    titulo={buscaDebounced ? `Nenhum usuário encontrado` : 'Nenhum usuário cadastrado'}
+                    mensagem={
+                      buscaDebounced
+                        ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                        : 'Comece cadastrando o primeiro usuário da sua igreja.'
+                    }
+                    acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+                  />
+                </td>
+              </tr>
             ) : (
               usuarios.map((u) => {
                 const acoes: ItemAcao[] = [
@@ -182,4 +228,12 @@ export default function UsuariosPage() {
 
     </div>
   );
+}
+
+export default function UsuariosPage() {
+  return (
+    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+      <UsuariosConteudo />
+    </Suspense>
+  )
 }

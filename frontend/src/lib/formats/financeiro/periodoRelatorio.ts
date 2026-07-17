@@ -1,6 +1,6 @@
 import type { PeriodoRelatorio } from '@/types/financeiro/relatorio.type'
 
-export type PresetPeriodo = 'ESTE_MES' | 'MES_ANTERIOR' | 'ESTE_ANO'
+export type PresetPeriodo = 'ESTE_MES' | 'MES_ANTERIOR' | 'ULTIMOS_3_MESES' | 'ULTIMOS_6_MESES' | 'ESTE_ANO'
 
 function iso(data: Date): string {
   const ano = data.getFullYear()
@@ -16,19 +16,19 @@ export function calcularPeriodo(preset: PresetPeriodo): PeriodoRelatorio {
 
   switch (preset) {
     case 'ESTE_MES': {
-      const inicio = new Date(ano, mes, 1)
-      const fim = new Date(ano, mes + 1, 0)   
-      return { dataInicio: iso(inicio), dataFim: iso(fim) }
+      return { dataInicio: iso(new Date(ano, mes, 1)), dataFim: iso(new Date(ano, mes + 1, 0)) }
     }
     case 'MES_ANTERIOR': {
-      const inicio = new Date(ano, mes - 1, 1)
-      const fim = new Date(ano, mes, 0)
-      return { dataInicio: iso(inicio), dataFim: iso(fim) }
+      return { dataInicio: iso(new Date(ano, mes - 1, 1)), dataFim: iso(new Date(ano, mes, 0)) }
+    }
+    case 'ULTIMOS_3_MESES': {
+      return { dataInicio: iso(new Date(ano, mes - 2, 1)), dataFim: iso(new Date(ano, mes + 1, 0)) }
+    }
+    case 'ULTIMOS_6_MESES': {
+      return { dataInicio: iso(new Date(ano, mes - 5, 1)), dataFim: iso(new Date(ano, mes + 1, 0)) }
     }
     case 'ESTE_ANO': {
-      const inicio = new Date(ano, 0, 1)      
-      const fim = new Date(ano, 11, 31)      
-      return { dataInicio: iso(inicio), dataFim: iso(fim) }
+      return { dataInicio: iso(new Date(ano, 0, 1)), dataFim: iso(new Date(ano, 11, 31)) }
     }
   }
 }
@@ -36,5 +36,7 @@ export function calcularPeriodo(preset: PresetPeriodo): PeriodoRelatorio {
 export const ROTULOS_PRESET: Record<PresetPeriodo, string> = {
   ESTE_MES: 'Este mês',
   MES_ANTERIOR: 'Mês anterior',
+  ULTIMOS_3_MESES: 'Últimos 3 meses',
+  ULTIMOS_6_MESES: 'Últimos 6 meses',
   ESTE_ANO: 'Este ano',
 }

@@ -56,3 +56,6 @@ desktop.ini
 # ─── Cobertura de testes ───────────────────────────────────────
 /coverage/
 jacoco.exec
+
+# ─── claude ─────────
+CLAUDE.md

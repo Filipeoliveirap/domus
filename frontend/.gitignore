@@ -45,5 +45,11 @@ yarn-error.log*
 next-env.d.ts
 
 # IDEs
-.idea/          # IntelliJ / WebStorm
-.vscode/        # VS Code (settings pessoais)
+# (git não aceita comentário na mesma linha do padrão — precisa ser linha própria)
+# IntelliJ / WebStorm
+.idea/
+# VS Code (settings pessoais)
+.vscode/
+
+# claude
+CLAUDE.md

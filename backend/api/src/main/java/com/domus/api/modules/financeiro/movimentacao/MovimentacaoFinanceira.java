@@ -43,7 +43,6 @@ public class MovimentacaoFinanceira {
     @JoinColumn(name = "criado_por_usuario_id", nullable = false)
     private Usuario criadoPor;
 
-    // opcional — contribuinte (entrada) ou beneficiário (saída)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "membro_id")
     private Membro membro;

@@ -93,21 +93,6 @@
   gap: 20px;
 }
 
-/* ─── Skeleton ─── */
-.skeleton {
-  height: 260px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(90deg,
-    var(--color-bg-table-head) 25%,
-    var(--color-bg-page) 50%,
-    var(--color-bg-table-head) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
-}
 
 /* ─── Estados ─── */
 .estadoVazio,

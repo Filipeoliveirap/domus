@@ -11,6 +11,8 @@ import {
   hora,
 } from '@/lib/formats/eventoFormat'
 import styles from './DrawerDetalheEvento.module.css'
+import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 interface DrawerDetalheEventoProps {
   eventoId: string
@@ -18,7 +20,7 @@ interface DrawerDetalheEventoProps {
 }
 
 export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoProps) {
-  const { data: evento, isPending, isError } = useEvento(eventoId)
+  const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,9 +45,13 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
         </button>
 
         {isPending ? (
-          <div className={styles.carregando}>Carregando…</div>
+          <SkeletonDrawerEvento />
         ) : isError || !evento ? (
-          <div className={styles.erro}>Não foi possível carregar o evento.</div>
+          <EstadoErro
+            titulo="Não foi possível carregar o evento"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
         ) : (
           <div className={styles.conteudo}>
             {/* Cabeçalho */}

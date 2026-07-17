@@ -1,6 +1,5 @@
 package com.domus.api.modules.financeiro.relatorio;
 
-import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
 import com.domus.api.modules.financeiro.relatorio.DTOs.*;
 import lombok.RequiredArgsConstructor;
@@ -86,5 +85,17 @@ public class RelatorioService {
         return atual.subtract(anterior)
                 .multiply(BigDecimal.valueOf(100))
                 .divide(anterior, 1, RoundingMode.HALF_UP);
+    }
+
+    @Transactional(readOnly = true)
+    public MaiorLancamentoResponse maiorLancamento(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim) {
+        log.info("Buscando maior lançamento. periodo={} a {}, igreja_id={}", dataInicio, dataFim, igrejaId);
+        var m = repository.buscarMaiorLancamento(igrejaId, dataInicio, dataFim);
+        if (m == null) {
+            return null;
+        }
+        return new MaiorLancamentoResponse(
+                m.getId(), m.getDescricao(), m.getCategoriaNome(),
+                m.getTipo(), m.getValor(), m.getDataMovimentacao());
     }
 }

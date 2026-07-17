@@ -34,3 +34,12 @@ export interface PeriodoRelatorio {
   dataInicio: string   
   dataFim: string      
 }
+
+export interface MaiorLancamento {
+  id: string
+  descricao: string | null
+  categoriaNome: string
+  tipo: TipoMovimentacao
+  valor: string
+  dataMovimentacao: string
+}

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Mail } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google'
 import type { UseFormRegister, UseFormHandleSubmit, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import type { RegistrarIgrejaFormData1 } from '@/lib/validators'
 import { Input } from '../../../components/common/input/Input'
@@ -16,9 +17,20 @@ interface Passo1Props {
   passo1Incompleto: boolean
   setValue: UseFormSetValue<RegistrarIgrejaFormData1>
   onAvancar: (data: RegistrarIgrejaFormData1) => void
+  googleData: { nome: string; email: string } | null
+  onGoogleAuth: (idToken: string) => void
+  onGoogleError: () => void
+  onSubmitGoogle: (data: RegistrarIgrejaFormData1) => void
+  erroGeral: string | null
+  isLoading: boolean
 }
 
-export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompleto, onAvancar }: Passo1Props) {
+export function Passo1({
+  register, handleSubmit, setValue, errors, passo1Incompleto, onAvancar,
+  googleData, onGoogleAuth, onGoogleError, onSubmitGoogle, erroGeral, isLoading,
+}: Passo1Props) {
+  const modoGoogle = googleData !== null
+
   return (
     <div className={styles.container}>
 
@@ -29,8 +41,30 @@ export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompl
         </p>
       </header>
 
+      {modoGoogle ? (
+        <div className={styles.googleBanner}>
+          Cadastrando como <strong>{googleData!.nome}</strong> ({googleData!.email})
+        </div>
+      ) : (
+        <>
+          <div className={styles.googleWrap}>
+            <GoogleLogin
+              onSuccess={(cred) => {
+                if (cred.credential) onGoogleAuth(cred.credential)
+              }}
+              onError={onGoogleError}
+              text="signup_with"
+              width="340"
+            />
+          </div>
+          <div className={styles.divider}>
+            <span className={styles.dividerText}>OU PREENCHA MANUALMENTE</span>
+          </div>
+        </>
+      )}
+
       {/* Formulário */}
-      <form className={styles.form} onSubmit={handleSubmit(onAvancar)}>
+      <form className={styles.form} onSubmit={handleSubmit(modoGoogle ? onSubmitGoogle : onAvancar)}>
 
         {/* Campo 1: Nome da igreja — full width */}
         <Input
@@ -88,10 +122,13 @@ export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompl
           autoComplete="email"
           leftIcon={<Mail size={16} />}
           error={errors.emailContato?.message}
+          readOnly={modoGoogle}
           {...register('emailContato')}
         />
 
-        {/* Action bar — Voltar (para login) + Próximo */}
+        {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+
+        {/* Action bar — Voltar (para login) + Próximo/Concluir */}
         <div className={styles.actions}>
           <Link href="/login" className={styles.voltarLink}>
             <ArrowLeft size={12} />
@@ -102,10 +139,12 @@ export function Passo1({ register, handleSubmit, setValue, errors, passo1Incompl
             type="submit"
             variant="primary"
             size="md"
-            disabled={passo1Incompleto}
+            disabled={passo1Incompleto || isLoading}
+            isLoading={modoGoogle && isLoading}
+            loadingText="Cadastrando..."
           >
-            Próximo
-            <ArrowRight size={12} />
+            {modoGoogle ? 'Concluir cadastro' : 'Próximo'}
+            {!modoGoogle && <ArrowRight size={12} />}
           </Button>
         </div>
 

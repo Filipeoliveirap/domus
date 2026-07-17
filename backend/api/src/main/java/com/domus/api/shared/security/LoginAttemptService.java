@@ -1,74 +1,79 @@
 package com.domus.api.shared.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
 
+/**
+ * Anti-força-bruta por conta: conta falhas de login por e-mail e bloqueia após
+ * {@link #MAX_TENTATIVAS} erros. O estado vive no Redis (não em memória), para
+ * sobreviver a reinícios e ser compartilhado entre instâncias do backend.
+ *
+ * <p>Duas chaves por e-mail:
+ * <ul>
+ *   <li>{@code login:attempt:<email>} — contador de falhas (expira em {@link #BLOQUEIO});
+ *   <li>{@code login:block:<email>} — marca de bloqueio com TTL; o Redis a apaga sozinho,
+ *       o que já entrega o "desbloqueio automático".
+ * </ul>
+ */
 @Slf4j
 @Service
 public class LoginAttemptService {
 
     private static final int MAX_TENTATIVAS = 5;
+    private static final Duration BLOQUEIO = Duration.ofMinutes(15);
 
-    private static final int MINUTOS_BLOQUEIO = 15;
+    private static final String PREFIXO_TENTATIVA = "login:attempt:";
+    private static final String PREFIXO_BLOQUEIO = "login:block:";
 
-    private final ConcurrentHashMap<String, TentativaLogin> tentativas = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
 
-    private static class TentativaLogin {
-        int contador;
-        LocalDateTime bloqueadoAte;
-
-        TentativaLogin() {
-            this.contador = 0;
-            this.bloqueadoAte = null;
-        }
+    public LoginAttemptService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
 
     public void registrarFalha(String email) {
-        TentativaLogin tentativa = tentativas.getOrDefault(email, new TentativaLogin());
-        tentativa.contador++;
-
-        if (tentativa.contador >= MAX_TENTATIVAS) {
-            tentativa.bloqueadoAte = LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEIO);
-            log.warn("Email bloqueado por {} minutos após {} tentativas. email={}",
-                    MINUTOS_BLOQUEIO, MAX_TENTATIVAS, email);
+        String chave = chaveTentativa(email);
+        Long contador = redisTemplate.opsForValue().increment(chave);
+        if (contador != null && contador == 1L) {
+            // Primeira falha da janela: define validade para as falhas expirarem sozinhas.
+            redisTemplate.expire(chave, BLOQUEIO);
         }
 
-        tentativas.put(email, tentativa);
-        log.debug("Tentativa de login falha registrada. email={}, contador={}",
-                email, tentativa.contador);
+        if (contador != null && contador >= MAX_TENTATIVAS) {
+            redisTemplate.opsForValue().set(chaveBloqueio(email), "1", BLOQUEIO);
+            redisTemplate.delete(chave);
+            log.warn("Email bloqueado por {} min após {} tentativas. email={}",
+                    BLOQUEIO.toMinutes(), MAX_TENTATIVAS, email);
+        }
+
+        log.debug("Tentativa de login falha registrada. email={}, contador={}", email, contador);
     }
 
     public void registrarSucesso(String email) {
-        tentativas.remove(email);
+        redisTemplate.delete(chaveTentativa(email));
+        redisTemplate.delete(chaveBloqueio(email));
         log.debug("Tentativas resetadas após login bem-sucedido. email={}", email);
     }
 
     public boolean estaBloqueado(String email) {
-        TentativaLogin tentativa = tentativas.get(email);
-
-        if (tentativa == null || tentativa.bloqueadoAte == null) {
-            return false;
-        }
-
-        if (LocalDateTime.now().isAfter(tentativa.bloqueadoAte)) {
-            tentativas.remove(email);
-            log.debug("Bloqueio expirado, email desbloqueado automaticamente. email={}", email);
-            return false;
-        }
-
-        return true;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(chaveBloqueio(email)));
     }
 
     public long minutosRestantes(String email) {
-        TentativaLogin tentativa = tentativas.get(email);
-        if (tentativa == null || tentativa.bloqueadoAte == null) return 0;
+        Long segundos = redisTemplate.getExpire(chaveBloqueio(email));
+        if (segundos == null || segundos <= 0) return 0;
+        // Arredonda para cima: 1s restante ainda é "1 minuto".
+        return (segundos + 59) / 60;
+    }
 
-        return java.time.Duration.between(
-                LocalDateTime.now(),
-                tentativa.bloqueadoAte
-        ).toMinutes() + 1;
+    private String chaveTentativa(String email) {
+        return PREFIXO_TENTATIVA + email;
+    }
+
+    private String chaveBloqueio(String email) {
+        return PREFIXO_BLOQUEIO + email;
     }
 }

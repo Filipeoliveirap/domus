@@ -54,6 +54,12 @@
   gap: 20px;
 }
 
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
 .forgotLink {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -63,6 +69,37 @@
 }
 
 .forgotLink:hover {
+  opacity: 0.75;
+}
+
+.googleWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.avisoGoogle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: var(--color-danger-bg);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+  line-height: var(--line-height-snug);
+}
+
+.definirSenhaLink {
+  align-self: flex-start;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.definirSenhaLink:hover {
   opacity: 0.75;
 }
 

@@ -64,7 +64,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     setErroGeral(null)
     setIsLoading(true)
     try {
-      // combina data + hora em ISO pro backend: "2026-03-05" + "19:30" → "2026-03-05T19:30:00"
       const inicioEm = `${data.inicioData}T${data.inicioHora}:00`
       const fimEm = (data.fimData && data.fimHora)
         ? `${data.fimData}T${data.fimHora}:00`

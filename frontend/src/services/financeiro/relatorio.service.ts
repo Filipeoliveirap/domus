@@ -5,6 +5,7 @@ import type {
   CategoriaBreakdown,
   EvolucaoMensal,
   PeriodoRelatorio,
+  MaiorLancamento,
 } from '@/types/financeiro/relatorio.type'
 
 export const relatorioService = {
@@ -20,6 +21,11 @@ export const relatorioService = {
 
   evolucaoMensal: async (periodo: PeriodoRelatorio): Promise<EvolucaoMensal[]> => {
     const { data } = await api.get(Endpoints.relatorios.evolucaoMensal, { params: periodo })
+    return data
+  },
+
+  maiorLancamento: async (periodo: PeriodoRelatorio): Promise<MaiorLancamento | null> => {
+    const { data } = await api.get(Endpoints.relatorios.maiorLancamento, { params: periodo })
     return data
   },
 }

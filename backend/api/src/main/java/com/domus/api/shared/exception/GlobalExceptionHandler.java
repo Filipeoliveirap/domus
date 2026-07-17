@@ -42,6 +42,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(400, ex.getCodigo(), ex.getMessage()));
     }
 
+    @ExceptionHandler(SessaoExpiradaException.class)
+    public ResponseEntity<ErrorResponse> handleSessaoExpirada(SessaoExpiradaException ex, HttpServletRequest request) {
+        log.warn("Sessão expirada ou inválida. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of(401, ex.getCodigo(), ex.getMessage()));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
 
@@ -97,6 +105,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
 
         log.error("Erro inesperado. path={}", request.getRequestURI(), ex);
+
+        // Só erros inesperados (500) viram alerta no Sentry — fluxo esperado (400/401/403/404/429)
+        // NÃO é bug e não polui o painel. Anexa o request_id do MDC para ligar o erro aos logs.
+        io.sentry.Sentry.withScope(scope -> {
+            String requestId = org.slf4j.MDC.get("request_id");
+            if (requestId != null) scope.setTag("request_id", requestId);
+            io.sentry.Sentry.captureException(ex);
+        });
 
         return ResponseEntity
                 .internalServerError()

@@ -1,11 +1,11 @@
-/* ─── Página ─────────────────────────────────────────────── */
+/*  Página */
 .pagina {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-/* ─── Breadcrumb ─────────────────────────────────────────── */
+/* Breadcrumb */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -28,7 +28,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* ─── Cabeçalho ──────────────────────────────────────────── */
+/*  Cabeçalho */
 .cabecalho {
   display: flex;
   justify-content: space-between;
@@ -64,7 +64,7 @@
   opacity: 0.9;
 }
 
-/* ─── Barra de busca ─────────────────────────────────────── */
+/*  Barra de busca */
 .barraBusca {
   display: flex;
   align-items: center;
@@ -98,7 +98,7 @@
   color: var(--color-text-muted);
 }
 
-/* ─── Tabela ─────────────────────────────────────────────── */
+/*  Tabela */
 .containerTabela {
   background-color: var(--color-bg-table-header);
   border: 1px solid var(--color-border-subtle);
@@ -138,7 +138,6 @@
   background-color: var(--color-bg-table-head);
 }
 
-/* ─── Célula de membro (avatar + nome + email empilhados) ── */
 .celulaMembro {
   display: flex;
   align-items: center;
@@ -183,7 +182,7 @@
   color: var(--color-text-secondary);
 }
 
-/* ─── Badge de status ────────────────────────────────────── */
+/* Badge de status */
 .statusBadge {
   display: inline-flex;
   align-items: center;
@@ -207,14 +206,14 @@
   color: var(--color-primary-dark);
 }
 
-/* ─── Coluna de ações ────────────────────────────────────── */
+/*  Coluna de ações */
 .colunaAcoes {
   text-align: right;
   width: 1%;
   white-space: nowrap;
 }
 
-/* ─── Estados (vazio / erro) ─────────────────────────────── */
+/*  Estados (vazio / erro) */
 .estadoVazio,
 .estadoErro {
   padding: 48px 24px;
@@ -228,7 +227,7 @@
   color: var(--color-danger);
 }
 
-/* ─── Rodapé / paginação ─────────────────────────────────── */
+/* Rodapé / paginação  */
 .rodape {
   background-color: var(--color-bg-table-head);
   display: flex;
@@ -279,3 +278,4 @@
 .linhaClicavel {
   cursor: pointer;
 }
+

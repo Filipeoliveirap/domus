@@ -32,6 +32,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Empacota um servidor mínimo (sem node_modules inteiro) — imagem Docker enxuta (~150MB).
+  output: "standalone",
   // O front chama /api/* na PRÓPRIA origem e o Next repassa pro Spring. Assim o cookie de
   // sessão é sempre first-party (SameSite=Lax) independente de onde a API for hospedada —
   // e a decisão de hospedagem sai do caminho crítico. Custo: um salto de rede a mais.

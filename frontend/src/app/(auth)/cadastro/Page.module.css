@@ -267,3 +267,32 @@
   transition: color 0.15s ease;
 }
 .pularLink:hover { color: #2563EB; }
+
+/* ---- Mobile ---- */
+@media (max-width: 900px) {
+  /* Passo 1: some o painel decorativo (1º filho) e o card vira coluna única. */
+  .card {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+  .card > :first-child {
+    display: none;
+  }
+  .formPanel {
+    min-height: auto;
+    padding: 32px 24px;
+  }
+  /* Passo 2: some o lado esquerdo de marca; o form ocupa tudo. */
+  .page2 {
+    grid-template-columns: 1fr;
+  }
+  .leftSide {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .formPanel {
+    padding: 24px 18px;
+  }
+}

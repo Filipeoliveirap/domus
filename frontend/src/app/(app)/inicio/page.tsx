@@ -1,6 +1,7 @@
 'use client'
 
 import { Cake, Calendar, MapPin, Clock, BookOpen } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { versiculoDoDia } from '@/lib/versiculos'
@@ -20,6 +21,7 @@ function dataEvento(iso: string): { dia: string; mes: string; hora: string } {
 }
 
 export default function InicioPage() {
+  const router = useRouter()
   const nome = useAuthStore((s) => s.nome)
   const primeiroNome = nome?.trim().split(/\s+/)[0] ?? ''
   const versiculo = versiculoDoDia()
@@ -89,7 +91,14 @@ export default function InicioPage() {
               {data!.proximosEventos.map((e: EventoResumo) => {
                 const d = dataEvento(e.inicio)
                 return (
-                  <li key={e.id} className={styles.itemEvento}>
+                  <li
+                    key={e.id}
+                    className={`${styles.itemEvento} ${styles.clicavel}`}
+                    onClick={() => router.push(`/eventos?detalhe=${e.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(ev) => ev.key === 'Enter' && router.push(`/eventos?detalhe=${e.id}`)}
+                  >
                     <div className={styles.dataChip}>
                       <span className={styles.dataMes}>{d.mes}</span>
                       <span className={styles.dataDia}>{d.dia}</span>

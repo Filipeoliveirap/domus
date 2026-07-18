@@ -152,6 +152,8 @@
   border-radius: var(--radius-md);
 }
 .itemEvento:hover { background: var(--color-bg-page); }
+.clicavel { cursor: pointer; }
+.clicavel:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .dataChip {
   display: flex;
   flex-direction: column;

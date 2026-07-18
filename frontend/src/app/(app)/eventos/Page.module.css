@@ -153,3 +153,15 @@
   .grid { grid-template-columns: 1fr; }
   .inputBusca { width: 100%; }
 }
+/* ---- Mobile: header empilha (botão 'Novo evento' para de vazar) ---- */
+@media (max-width: 767px) {
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .botaoPrimario {
+    width: 100%;
+    justify-content: center;
+  }
+}

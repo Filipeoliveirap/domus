@@ -56,8 +56,7 @@ services:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    env_file: .env.prod
     depends_on: [front]
     networks: [interna]
 

@@ -4,6 +4,7 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.membro.DTO.EnderecoDTO;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -33,6 +34,11 @@ public class MembroService {
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
+
+    @Transactional(readOnly = true)
+    public java.util.List<String> listarBairros(UUID igrejaId) {
+        return membroRepository.bairrosDistintos(igrejaId);
+    }
 
     @Cacheable(
             value = "membros",
@@ -71,7 +77,7 @@ public class MembroService {
                 .email(email)
                 .telefone(data.telefone())
                 .dataNascimento(data.dataNascimento())
-                .endereco(data.endereco())
+                .endereco(paraEndereco(data.endereco()))
                 .status(data.status())
                 .estadoCivil(data.estadoCivil())
                 .ministerio(data.ministerio())
@@ -119,7 +125,7 @@ public class MembroService {
         membro.setEmail(emailNovo);
         membro.setTelefone(data.telefone());
         membro.setDataNascimento(data.dataNascimento());
-        membro.setEndereco(data.endereco());
+        membro.setEndereco(paraEndereco(data.endereco()));
         membro.setStatus(data.status());
         membro.setEstadoCivil(data.estadoCivil());
         membro.setMinisterio(data.ministerio());
@@ -168,5 +174,27 @@ public class MembroService {
         return MembroResponse.from(membro);
     }
 
+    private Endereco paraEndereco(EnderecoDTO dto) {
+        if (dto == null) return null;
+        return Endereco.builder()
+                .cep(dto.cep()).logradouro(dto.logradouro()).numero(dto.numero())
+                .complemento(dto.complemento())
+                .bairro(normalizar(dto.bairro()))
+                .cidade(normalizar(dto.cidade()))
+                .uf(dto.uf())
+                .build();
+    }
 
+    static String normalizar(String v) {
+        if (v == null) return null;
+        String limpo = v.trim().replaceAll("\\s+", " ");
+        if (limpo.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder(limpo.length());
+        for (String palavra : limpo.split(" ")) {
+            sb.append(Character.toUpperCase(palavra.charAt(0)))
+              .append(palavra.substring(1).toLowerCase())
+              .append(' ');
+        }
+        return sb.toString().trim();
+    }
 }

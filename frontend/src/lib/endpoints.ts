@@ -24,6 +24,7 @@ export const Endpoints = {
     CRIAR: '/membros',
     BY_ID: (id: string) => `/membros/${id}`,
     ARQUIVAR: (id: string) => `/membros/${id}`,
+    BAIRROS: '/membros/bairros',
   },
 
   eventos: {

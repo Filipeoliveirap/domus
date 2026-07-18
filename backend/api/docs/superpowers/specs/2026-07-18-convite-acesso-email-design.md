@@ -27,9 +27,14 @@ direto com **Google** (o e-mail é a chave).
 
 ## Backend
 
-### Migration V12
-- `ALTER TABLE usuario ADD COLUMN convite_pendente BOOLEAN NOT NULL DEFAULT false;`
-- Só o fluxo de convite marca `true`. Usuários existentes ficam `false`.
+### Status pendente — SEM coluna nova (derivado de `ultimo_login_em`)
+- O `Usuario` já tem `ultimo_login_em`, setado por `registrarLogin()` em **todo** login
+  (nativo `AuthService`, Google `GoogleAuthService`) e no cadastro do admin fundador
+  (`IgrejaService`). Logo: `convitePendente = (ultimoLoginEm == null)`.
+- Convidado é criado **sem** `registrarLogin()` → `ultimo_login_em = null` → pendente.
+  No primeiro login (qualquer método) o `registrarLogin()` existente já limpa. **Sem migration,
+  sem hook novo.**
+- **Reativação** zera `ultimo_login_em` (`registrarLogin` reverso) para voltar a pendente.
 
 ### Token (refatorar `PasswordResetService`)
 - Extrair a geração/armazenamento do token para aceitar um **TTL** (hoje fixo `Duration.ofMinutes(30)`).

@@ -35,6 +35,11 @@ public class MembroService {
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
 
+    @Transactional(readOnly = true)
+    public java.util.List<String> listarBairros(UUID igrejaId) {
+        return membroRepository.bairrosDistintos(igrejaId);
+    }
+
     @Cacheable(
             value = "membros",
             key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable)"
@@ -173,8 +178,23 @@ public class MembroService {
         if (dto == null) return null;
         return Endereco.builder()
                 .cep(dto.cep()).logradouro(dto.logradouro()).numero(dto.numero())
-                .complemento(dto.complemento()).bairro(dto.bairro())
-                .cidade(dto.cidade()).uf(dto.uf())
+                .complemento(dto.complemento())
+                .bairro(normalizar(dto.bairro()))
+                .cidade(normalizar(dto.cidade()))
+                .uf(dto.uf())
                 .build();
+    }
+
+    static String normalizar(String v) {
+        if (v == null) return null;
+        String limpo = v.trim().replaceAll("\\s+", " ");
+        if (limpo.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder(limpo.length());
+        for (String palavra : limpo.split(" ")) {
+            sb.append(Character.toUpperCase(palavra.charAt(0)))
+              .append(palavra.substring(1).toLowerCase())
+              .append(' ');
+        }
+        return sb.toString().trim();
     }
 }

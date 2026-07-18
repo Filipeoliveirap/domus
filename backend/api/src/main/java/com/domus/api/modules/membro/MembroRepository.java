@@ -30,6 +30,14 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
     Optional<Membro> findByIdAndIgrejaId(UUID id, UUID igrejaId);
     boolean existsByEmail(String email);
 
+    /** Bairros distintos já cadastrados na igreja — alimenta a sugestão (datalist) do form. */
+    @Query("""
+        SELECT DISTINCT m.endereco.bairro FROM Membro m
+        WHERE m.igreja.id = :igrejaId AND m.endereco.bairro IS NOT NULL
+        ORDER BY m.endereco.bairro
+        """)
+    java.util.List<String> bairrosDistintos(@Param("igrejaId") UUID igrejaId);
+
     @Query(value = """
     SELECT COUNT(*) > 0 FROM membro
     WHERE LOWER(email) = LOWER(:email)

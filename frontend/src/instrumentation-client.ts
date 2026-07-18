@@ -11,6 +11,11 @@ if (dsn) {
         tracesSampleRate: 0,
         // Não enviar PII automaticamente (IP, etc.) — LGPD.
         sendDefaultPii: false,
+        // Ruído não acionável: promise rejeitada sem valor (ex.: fetch cancelado pelo
+        // react-query ao trocar de tela). Sem stack, "value: undefined" — nada a corrigir.
+        ignoreErrors: [
+            'Non-Error promise rejection captured',
+        ],
         beforeSend(event) {
             // Reforço de scrubbing: nunca vazar credenciais/sessão para terceiro.
             if (event.request?.headers) {

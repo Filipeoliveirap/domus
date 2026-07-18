@@ -336,6 +336,48 @@
 }
 .cancelarLink:hover { background: var(--color-bg-table-head); }
 
+/* ─── Aviso: sem categoria cadastrada ─── */
+.avisoCategoria {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+.avisoCategoriaTexto {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+  line-height: var(--line-height-relaxed, 1.5);
+}
+.avisoCategoriaLink {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+.avisoCategoriaLink:hover { opacity: 0.9; }
+
+/* Aviso menor: existe categoria, mas nenhuma do tipo escolhido */
+.avisoCategoriaTipo {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
+.avisoCategoriaTipo .avisoCategoriaLink {
+  padding: 0;
+  background: none;
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
 /* ─── Responsivo ─── */
 @media (max-width: 1024px) {
   .colunas { grid-template-columns: 1fr; }

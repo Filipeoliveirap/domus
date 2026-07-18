@@ -1,11 +1,13 @@
 .main {
   min-height: 100vh;
-  padding: 2rem;
-  padding-top: calc(72px + 2rem); 
+  padding: 1rem;
+  padding-top: calc(72px + 1rem);
 }
 
 @media (min-width: 768px) {
   .main {
     margin-left: 16rem;
+    padding: 2rem;
+    padding-top: calc(72px + 2rem);
   }
 }

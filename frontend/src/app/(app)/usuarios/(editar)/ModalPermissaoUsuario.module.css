@@ -124,3 +124,7 @@
         opacity: 1; transform: translateY(0) scale(1); 
     } 
 }
+@media (max-width: 480px) {
+  .modal { padding: 22px; }
+  .overlay { padding: 16px; }
+}

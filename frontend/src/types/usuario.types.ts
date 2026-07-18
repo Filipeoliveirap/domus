@@ -7,6 +7,7 @@ export interface UsuarioResponse {
   role: string;
   ativo: boolean;
   ultimoLoginEm: string | null;
+  convitePendente: boolean;
   criadoEm: string;
 }
 

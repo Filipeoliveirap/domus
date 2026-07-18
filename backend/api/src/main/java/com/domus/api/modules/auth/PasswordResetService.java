@@ -51,12 +51,27 @@ public class PasswordResetService {
      * Segurança: retorna sempre sem sinalizar se o e-mail existe (evita enumeração de contas);
      * quem não tem conta simplesmente não recebe e-mail.
      */
+    /**
+     * Gera um token de definição de senha (uso único), guarda no Redis com o TTL dado e
+     * devolve o token. Reutilizado pelo reset (TTL curto) e pelo convite de acesso (TTL longo) —
+     * o {@link #redefinir} serve os dois porque a mecânica é idêntica.
+     */
+    public String gerarTokenDefinicaoSenha(UUID usuarioId, Duration ttl) {
+        String token = gerarToken();
+        redisTemplate.opsForValue().set(chave(token), usuarioId.toString(), ttl);
+        return token;
+    }
+
+    /** Monta o link da tela de definição de senha. `convite=1` sinaliza o modo convite (mostra o Google). */
+    public String linkDefinicaoSenha(String token, boolean convite) {
+        return frontendUrl + "/reset-password?token=" + token + (convite ? "&convite=1" : "");
+    }
+
     public void solicitar(String email) {
         usuarioRepository.findByEmail(email).ifPresentOrElse(
                 usuario -> {
-                    String token = gerarToken();
-                    redisTemplate.opsForValue().set(chave(token), usuario.getId().toString(), TTL);
-                    String link = frontendUrl + "/reset-password?token=" + token;
+                    String token = gerarTokenDefinicaoSenha(usuario.getId(), TTL);
+                    String link = linkDefinicaoSenha(token, false);
                     try {
                         emailService.enviar(email, "Redefinição de senha — Domus",
                                 montarCorpo(usuario.getNome(), link));

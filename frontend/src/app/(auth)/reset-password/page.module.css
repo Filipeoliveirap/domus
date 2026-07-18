@@ -162,3 +162,34 @@
   .page { padding: 16px; }
   .card { padding: 28px 20px; }
 }
+
+/* Divisor "OU" e botão do Google (modo convite) */
+.divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+.divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background-color: var(--color-border-subtle, #e2e8f0);
+}
+.dividerText {
+  position: relative;
+  background-color: var(--color-bg-white, #fff);
+  padding: 0 12px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1px;
+  color: var(--color-text-secondary);
+}
+.googleWrap {
+  display: flex;
+  justify-content: center;
+}

@@ -42,6 +42,9 @@ export const membrosService = {
   reativarAcesso: (data: ConcederAcessoRequest): Promise<UsuarioResponse> =>
     api.post<UsuarioResponse>(Endpoints.usuarios.REATIVAR_ACESSO, data).then(res => res.data),
 
+  reenviarConvite: (usuarioId: string): Promise<void> =>
+    api.post(Endpoints.usuarios.REENVIAR_CONVITE(usuarioId)).then(() => undefined),
+
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.membros.BY_ID(id)).then(() => undefined),
 }

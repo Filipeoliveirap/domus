@@ -13,6 +13,9 @@ public record UsuarioResponseDTO(
         String role,
         boolean ativo,
         LocalDateTime ultimoLoginEm,
+        // Convite ainda não aceito: usuário criado por convite que nunca fez login
+        // (nem nativo nem Google). Derivado de ultimoLoginEm == null.
+        boolean convitePendente,
         LocalDateTime criadoEm
 ) {
     public static UsuarioResponseDTO from(Usuario u) {
@@ -23,6 +26,7 @@ public record UsuarioResponseDTO(
                 u.getRole().getNome(),
                 u.isAtivo(),
                 u.getUltimoLoginEm(),
+                u.getUltimoLoginEm() == null,
                 u.getCreatedAt()
         );
     }

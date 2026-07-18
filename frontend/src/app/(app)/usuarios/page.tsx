@@ -2,7 +2,10 @@
 
 import { useState, Suspense} from "react";
 import Link from "next/link";
-import { ChevronRight, Shield, Ban, Archive, UserCheck } from "lucide-react";
+import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { membrosService } from "@/services/membro.service";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import {
   iniciais,
@@ -47,6 +50,18 @@ function UsuariosConteudo() {
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
+  const queryClient = useQueryClient()
+
+  async function reenviarConvite(u: UsuarioResponse) {
+    try {
+      await membrosService.reenviarConvite(u.id)
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      toast.success(`Convite reenviado para ${u.nome}.`)
+    } catch {
+      toast.error('Não foi possível reenviar o convite.')
+    }
+  }
+
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const autorizado = role === 'ADMIN_IGREJA'
@@ -144,6 +159,9 @@ function UsuariosConteudo() {
             ) : (
               usuarios.map((u) => {
                 const acoes: ItemAcao[] = [
+                  ...(u.convitePendente
+                    ? [{ label: "Reenviar convite", icone: Send, onClick: () => reenviarConvite(u) }]
+                    : []),
                   { label: "Alterar perfil", icone: Shield, onClick: () => setUsuarioPermissao(u) },
                   ...(u.ativo
                     ? [{ label: "Desativar acesso", icone: Ban, onClick: () => setUsuarioStatus(u), perigo: true }]
@@ -166,10 +184,17 @@ function UsuariosConteudo() {
                       </span>
                     </td>
                     <td>
-                      <span className={`${styles.status} ${u.ativo ? styles.ativo : styles.inativo}`}>
-                        <span className={styles.bolinha} />
-                        {u.ativo ? "Ativo" : "Inativo"}
-                      </span>
+                      {u.convitePendente ? (
+                        <span className={`${styles.status} ${styles.pendente}`} title="Ainda não fez login no sistema">
+                          <span className={styles.bolinha} />
+                          Convite pendente
+                        </span>
+                      ) : (
+                        <span className={`${styles.status} ${u.ativo ? styles.ativo : styles.inativo}`}>
+                          <span className={styles.bolinha} />
+                          {u.ativo ? "Ativo" : "Inativo"}
+                        </span>
+                      )}
                     </td>
                     <td className={styles.ultimoAcesso}>
                       {formatarUltimoAcesso(u.ultimoLoginEm)}

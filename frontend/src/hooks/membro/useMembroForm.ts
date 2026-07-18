@@ -1,4 +1,3 @@
-// hooks/membro/useMembroForm.ts
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
@@ -28,7 +27,8 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
     resolver: zodResolver(membroSchema),
     defaultValues: {
       nome: '', email: '', telefone: '', dataNascimento: '',
-      endereco: '', status: 'ATIVO', estadoCivil: '',
+      endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
+      status: 'ATIVO', estadoCivil: '',
       ministerio: '', observacoes: '',
     },
     requiredFields: ['nome'],
@@ -43,7 +43,15 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
         email: membroInicial.email ?? '',
         telefone: membroInicial.telefone ? formatarTelefone(membroInicial.telefone) : '',
         dataNascimento: membroInicial.dataNascimento ?? '',
-        endereco: membroInicial.endereco ?? '',
+        endereco: {
+          cep: membroInicial.endereco?.cep ?? '',
+          logradouro: membroInicial.endereco?.logradouro ?? '',
+          numero: membroInicial.endereco?.numero ?? '',
+          complemento: membroInicial.endereco?.complemento ?? '',
+          bairro: membroInicial.endereco?.bairro ?? '',
+          cidade: membroInicial.endereco?.cidade ?? '',
+          uf: membroInicial.endereco?.uf ?? '',
+        },
         status: membroInicial.status,
         estadoCivil: membroInicial.estadoCivil ?? '',
         ministerio: membroInicial.ministerio ?? '',

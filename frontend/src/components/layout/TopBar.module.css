@@ -16,6 +16,19 @@
   z-index: 30;
 }
 
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: #1e293b;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+}
+.hamburger:hover { background: #eff6ff; }
+
 .igreja {
   display: flex;
   align-items: center;
@@ -47,5 +60,17 @@
 @media (max-width: 767px) {
   .topbar {
     left: 0;
+    padding: 0 1rem;
+    gap: 12px;
+  }
+  .hamburger {
+    display: flex;
+  }
+  /* No mobile o espaço é curto: mantém o ícone da igreja, esconde o nome. */
+  .igrejaNome {
+    display: none;
+  }
+  .igreja {
+    padding: 8px;
   }
 }

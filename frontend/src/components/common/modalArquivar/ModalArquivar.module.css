@@ -138,3 +138,7 @@
   line-height: var(--line-height-relaxed);
   text-align: left;
 }
+@media (max-width: 480px) {
+  .modal { padding: 22px 18px 18px; }
+  .overlay { padding: 12px; }
+}

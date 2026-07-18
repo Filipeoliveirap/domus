@@ -178,3 +178,7 @@
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+@media (max-width: 480px) {
+  .conteudo { padding: 40px 20px 20px; }
+}

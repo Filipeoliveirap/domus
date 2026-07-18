@@ -1,20 +1,48 @@
+/* Mobile-first: a sidebar é um drawer que desliza da esquerda. Fica fora da tela por
+   padrão e entra quando .sidebarAberta. Em ≥768px vira fixa e sempre visível. */
 .sidebar {
-  display: none;
+  display: flex;
   flex-direction: column;
   height: 100vh;
   width: 16rem;
+  max-width: 85vw;
   position: fixed;
   left: 0;
   top: 0;
   background-color: #f2f3ff;
   padding: 1rem;
   gap: 0.5rem;
-  z-index: 20;
+  z-index: 40;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+}
+
+.sidebarAberta {
+  transform: translateX(0);
+  box-shadow: 8px 0 30px rgba(19, 27, 46, 0.18);
+}
+
+/* Overlay escuro por trás do drawer (só no mobile, só quando aberto). */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(19, 27, 46, 0.4);
+  z-index: 35;
+}
+.overlayVisivel {
+  display: block;
 }
 
 @media (min-width: 768px) {
   .sidebar {
-    display: flex;
+    transform: none;
+    box-shadow: none;
+    max-width: 16rem;
+    z-index: 20;
+  }
+  .overlay {
+    display: none !important;
   }
 }
 

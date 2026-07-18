@@ -65,7 +65,7 @@ export const membroSchema = z.object({
   ),
 
   endereco: z.object({
-    cep: opcional(z.string().regex(/^\d{8}$/, 'CEP deve ter 8 dígitos')),
+    cep: opcional(z.string().regex(/^\d{5}-\d{3}$/, 'CEP inválido. Use o formato 00000-000')),
     logradouro: opcional(z.string().max(255)),
     numero: opcional(z.string().max(20)),
     complemento: opcional(z.string().max(255)),

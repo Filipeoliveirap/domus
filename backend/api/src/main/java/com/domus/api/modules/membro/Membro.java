@@ -43,8 +43,8 @@ public class Membro {
     @Column(name = "data_nascimento")
     private LocalDate dataNascimento;
 
-    @Column(name = "endereco", length = 500)
-    private String endereco;
+    @Embedded
+    private Endereco endereco;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

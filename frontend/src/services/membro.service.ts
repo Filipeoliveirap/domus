@@ -27,6 +27,9 @@ export const membrosService = {
   buscar: (id: string): Promise<MembroResponse> =>
     api.get<MembroResponse>(Endpoints.membros.BY_ID(id)).then(res => res.data),
 
+  listarBairros: (): Promise<string[]> =>
+    api.get<string[]>(Endpoints.membros.BAIRROS).then(res => res.data),
+
   criar: (data: MembroRequest): Promise<MembroResponse> =>
     api.post<MembroResponse>(Endpoints.membros.CRIAR, data).then(res => res.data),
 

@@ -210,6 +210,12 @@
 .inativo .bolinha {
   background-color: #cbd5e1;
 }
+.pendente {
+  color: var(--color-warning, #b45309);
+}
+.pendente .bolinha {
+  background-color: var(--color-warning, #d97706);
+}
 
 
 /* ─── Estados (vazio / erro) ─────────────────────────────── */

@@ -298,3 +298,46 @@
 }
 .btnReativar:hover { filter: brightness(0.96); }
 
+/* ---- Mobile ---- */
+@media (max-width: 767px) {
+  .pagina {
+    gap: 16px;
+  }
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .inputBusca {
+    width: 100%;
+  }
+  .containerTabela {
+    overflow-x: auto;
+  }
+  /* Aperta as células e esconde E-mail e Último acesso.
+     Ficam: Usuário, Perfil, Status e Ações. */
+  .tabela thead th,
+  .tabela tbody td {
+    padding: 12px 14px;
+  }
+  .tabela thead th:nth-child(2),
+  .tabela tbody td:nth-child(2),
+  .tabela thead th:nth-child(5),
+  .tabela tbody td:nth-child(5) {
+    display: none;
+  }
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+  .rodape {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    text-align: center;
+  }
+  .paginacao {
+    justify-content: center;
+  }
+}
+

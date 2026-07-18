@@ -279,3 +279,49 @@
   cursor: pointer;
 }
 
+/* ---- Mobile ---- */
+@media (max-width: 767px) {
+  .pagina {
+    gap: 16px;
+  }
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .botaoPrimario {
+    justify-content: center;
+  }
+  .inputBusca {
+    width: 100%;
+  }
+  .containerTabela {
+    overflow-x: auto;
+  }
+  /* Aperta as células e esconde as colunas menos essenciais (Telefone e Cadastro).
+     Ficam: Membro (com e-mail embaixo), Status e Ações. */
+  .tabela thead th,
+  .tabela tbody td {
+    padding: 12px 14px;
+  }
+  .tabela thead th:nth-child(2),
+  .tabela tbody td:nth-child(2),
+  .tabela thead th:nth-child(4),
+  .tabela tbody td:nth-child(4) {
+    display: none;
+  }
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+  .rodape {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    text-align: center;
+  }
+  .paginacao {
+    justify-content: center;
+  }
+}
+

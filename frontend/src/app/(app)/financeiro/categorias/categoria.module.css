@@ -177,3 +177,15 @@
   .colTipo { grid-column: 1; }
   .inputBusca { width: 100%; }
 }
+/* ---- Mobile: header empilha (botão para de vazar) ---- */
+@media (max-width: 767px) {
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .botaoPrimario {
+    width: 100%;
+    justify-content: center;
+  }
+}

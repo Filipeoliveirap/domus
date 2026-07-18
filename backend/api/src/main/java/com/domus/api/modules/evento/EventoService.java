@@ -58,11 +58,11 @@ public class EventoService {
 
         Evento evento = Evento.builder()
                 .igreja(igreja)
-                .titulo(data.titulo())
+                .titulo(com.domus.api.shared.util.TextoUtil.capitalizar(data.titulo()))
                 .descricao(data.descricao())
                 .inicioEm(data.inicioEm())
                 .fimEm(data.fimEm())
-                .local(data.local())
+                .local(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()))
                 .foto(data.foto())
                 .build();
 
@@ -86,11 +86,11 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        evento.setTitulo(data.titulo());
+        evento.setTitulo(com.domus.api.shared.util.TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
         evento.setInicioEm(data.inicioEm());
         evento.setFimEm(data.fimEm());
-        evento.setLocal(data.local());
+        evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
         evento.setFoto(data.foto());
 
         Evento salvo = eventoRepository.save(evento);

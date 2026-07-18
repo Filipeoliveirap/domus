@@ -123,3 +123,10 @@
 .voltarLink:hover {
   color: var(--color-text-primary);
 }
+/* ---- Mobile: CNPJ e Telefone empilham ---- */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

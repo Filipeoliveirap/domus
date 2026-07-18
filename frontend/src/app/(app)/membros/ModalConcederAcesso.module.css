@@ -1,12 +1,13 @@
 /* ─── Overlay + modal ────────────────────────────────────── */
 .overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: var(--z-modal, 100);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
   background: rgba(19, 27, 46, 0.10);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -312,6 +313,34 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 560px) {
+  .overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+  .modal {
+    padding: 22px 20px;
+    margin: auto 0;
+  }
+  /* Empilha os campos de senha e os cards de perfil. */
+  .senhaGrid {
+    grid-template-columns: 1fr;
+  }
+  .roleGrid {
+    grid-template-columns: 1fr;
+  }
+  /* Botões do rodapé ocupam a largura toda. */
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .btnCancel {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 .reativarIcone {

@@ -13,6 +13,14 @@ import java.util.UUID;
 
 public interface MovimentacaoFinanceiraRepository extends JpaRepository<MovimentacaoFinanceira, UUID> {
 
+    /** Movimentações mais recentes (para o dashboard). Usar Pageable para limitar. */
+    @Query("""
+        SELECT m FROM MovimentacaoFinanceira m
+        WHERE m.igreja.id = :igrejaId
+        ORDER BY m.dataMovimentacao DESC, m.createdAt DESC
+    """)
+    List<MovimentacaoFinanceira> recentes(@Param("igrejaId") UUID igrejaId, Pageable pageable);
+
     @Query("""
         SELECT m FROM MovimentacaoFinanceira m
         JOIN FETCH m.categoria

@@ -289,6 +289,9 @@
   .leftSide {
     display: none;
   }
+  .sucessoTitulo {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 480px) {

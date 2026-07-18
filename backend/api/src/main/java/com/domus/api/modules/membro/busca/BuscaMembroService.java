@@ -38,7 +38,7 @@ public class BuscaMembroService {
         Query fuzzyOutros = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("email^2", "endereco", "ministerio")
+                        .fields("email^2", "ministerio")
                         .fuzziness("AUTO")
                 )
         );
@@ -46,7 +46,7 @@ public class BuscaMembroService {
         Query prefixo = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("nome^3", "email^2", "telefone", "endereco", "ministerio")
+                        .fields("nome^3", "email^2", "telefone", "ministerio")
                         .type(co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BoolPrefix)
                         .boost(2.0f)
                 )

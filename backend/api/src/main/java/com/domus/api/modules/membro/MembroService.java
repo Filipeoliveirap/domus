@@ -4,6 +4,7 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.membro.DTO.EnderecoDTO;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -71,7 +72,7 @@ public class MembroService {
                 .email(email)
                 .telefone(data.telefone())
                 .dataNascimento(data.dataNascimento())
-                .endereco(data.endereco())
+                .endereco(paraEndereco(data.endereco()))
                 .status(data.status())
                 .estadoCivil(data.estadoCivil())
                 .ministerio(data.ministerio())
@@ -119,7 +120,7 @@ public class MembroService {
         membro.setEmail(emailNovo);
         membro.setTelefone(data.telefone());
         membro.setDataNascimento(data.dataNascimento());
-        membro.setEndereco(data.endereco());
+        membro.setEndereco(paraEndereco(data.endereco()));
         membro.setStatus(data.status());
         membro.setEstadoCivil(data.estadoCivil());
         membro.setMinisterio(data.ministerio());
@@ -168,5 +169,12 @@ public class MembroService {
         return MembroResponse.from(membro);
     }
 
-
+    private Endereco paraEndereco(EnderecoDTO dto) {
+        if (dto == null) return null;
+        return Endereco.builder()
+                .cep(dto.cep()).logradouro(dto.logradouro()).numero(dto.numero())
+                .complemento(dto.complemento()).bairro(dto.bairro())
+                .cidade(dto.cidade()).uf(dto.uf())
+                .build();
+    }
 }

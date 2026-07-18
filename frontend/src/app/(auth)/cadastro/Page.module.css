@@ -303,10 +303,10 @@
     font-size: 20px;
   }
 
-  /* No mobile o card flutua sobre o gradiente (herdado do .page base). Reduz o
-     padding vertical mas mantém margem lateral pro card não colar nas bordas. */
+  /* No mobile o card flutua sobre o gradiente (herdado do .page base), com margem
+     lateral maior pra ficar estreito e centralizado como o Passo 2. */
   .page {
-    padding: 20px 14px;
+    padding: 28px 24px;
   }
 }
 

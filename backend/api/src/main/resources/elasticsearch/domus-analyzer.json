@@ -1,0 +1,26 @@
+{
+  "index": {
+    "number_of_replicas": 0
+  },
+  "analysis": {
+    "filter": {
+      "domus_edge_ngram": {
+        "type": "edge_ngram",
+        "min_gram": 2,
+        "max_gram": 20
+      }
+    },
+    "analyzer": {
+      "domus_index": {
+        "type": "custom",
+        "tokenizer": "standard",
+        "filter": ["lowercase", "asciifolding", "domus_edge_ngram"]
+      },
+      "domus_search": {
+        "type": "custom",
+        "tokenizer": "standard",
+        "filter": ["lowercase", "asciifolding"]
+      }
+    }
+  }
+}

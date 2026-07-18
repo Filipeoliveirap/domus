@@ -19,6 +19,7 @@ import { SearchX, Inbox } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { SkeletonMembros } from "./SkeletonMembros";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { DrawerDetalheMembro } from './(detalhe)/DrawerDetalheMembro'
 
 const TAMANHO_PAGINA = 10
 
@@ -32,6 +33,7 @@ function MembrosConteudo() {
 
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)
+  const [membroDetalheId, setMembroDetalheId] = useState<string | null>(null)
 
   const { data, isLoading, isError, isFetching, refetch } = useMembros({
     q: buscaDebounced,
@@ -153,7 +155,7 @@ function MembrosConteudo() {
                 return (
                   <tr key={m.id}
                     className={styles.linhaClicavel}
-                    onClick={() => router.push(`/membros/${m.id}`)}
+                    onClick={() => setMembroDetalheId(m.id)}
                   >
                     <td>
                       <div className={styles.celulaMembro}>
@@ -216,6 +218,9 @@ function MembrosConteudo() {
       )}
       {membroArquivando && (
         <ModalArquivarMembro membro={membroArquivando} onClose={() => setMembroArquivando(null)} />
+      )}
+      {membroDetalheId && (
+        <DrawerDetalheMembro membroId={membroDetalheId} onClose={() => setMembroDetalheId(null)} />
       )}
     </div>
   )

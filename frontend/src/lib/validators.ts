@@ -64,9 +64,15 @@ export const membroSchema = z.object({
     ),
   ),
 
-  endereco: opcional(
-    z.string().max(500, 'O endereço deve ter no máximo 500 caracteres'),
-  ),
+  endereco: z.object({
+    cep: opcional(z.string().regex(/^\d{5}-\d{3}$/, 'CEP inválido. Use o formato 00000-000')),
+    logradouro: opcional(z.string().max(255)),
+    numero: opcional(z.string().max(20)),
+    complemento: opcional(z.string().max(255)),
+    bairro: opcional(z.string().max(255)),
+    cidade: opcional(z.string().max(255)),
+    uf: opcional(z.string().length(2, 'UF deve ter 2 letras')),
+  }).optional(),
 
   status: z
     .enum(['ATIVO', 'INATIVO', 'VISITANTE'])

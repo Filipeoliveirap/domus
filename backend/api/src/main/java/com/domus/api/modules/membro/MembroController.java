@@ -29,6 +29,11 @@ public class MembroController {
         return ResponseEntity.ok(membroService.listarMembros(igrejaId, q, pageable));
     }
 
+    @GetMapping("/bairros")
+    public ResponseEntity<java.util.List<String>> bairros() {
+        return ResponseEntity.ok(membroService.listarBairros(usuarioAutenticado.getIgrejaId()));
+    }
+
     @PostMapping
     public ResponseEntity<MembroResponse> cadastrar(
             @Valid @RequestBody MembroRequestDTO data) {

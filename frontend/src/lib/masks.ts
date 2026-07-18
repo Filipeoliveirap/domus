@@ -13,6 +13,12 @@ export function formatarTelefone(value: string): string {
   return digitos.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
 }
 
+export function formatarCep(value: string): string {
+  const digitos = value.replace(/\D/g, '').slice(0, 8)
+  if (digitos.length <= 5) return digitos
+  return digitos.replace(/(\d{5})(\d{0,3})/, '$1-$2')
+}
+
 export function formatarCnpj(value: string): string {
   const digitos = value.replace(/\D/g, '').slice(0, 14)
 

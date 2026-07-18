@@ -13,7 +13,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "frame-src https://accounts.google.com",
   // A API é same-origin agora (via rewrite /api/*), então 'self' basta.
-  "connect-src 'self' https://accounts.google.com https://*.sentry.io",
+  "connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br",
   "img-src 'self' data: https://*.googleusercontent.com https://accounts.google.com",
   "font-src 'self'",
   "base-uri 'self'",

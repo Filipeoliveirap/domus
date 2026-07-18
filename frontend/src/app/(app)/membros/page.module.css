@@ -279,7 +279,7 @@
   cursor: pointer;
 }
 
-/* ---- Mobile ---- */
+/* ---- Mobile: a tabela vira cards ---- */
 @media (max-width: 767px) {
   .pagina {
     gap: 16px;
@@ -295,30 +295,57 @@
   .inputBusca {
     width: 100%;
   }
+
+  /* Cada linha vira um card empilhado — sem scroll horizontal nem corte. */
   .containerTabela {
-    overflow-x: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
   }
-  /* Aperta as células e esconde as colunas menos essenciais (Telefone e Cadastro).
-     Ficam: Membro (com e-mail embaixo), Status e Ações. */
-  .tabela thead th,
+  .tabela thead {
+    display: none;
+  }
+  .tabela,
+  .tabela tbody {
+    display: block;
+  }
+  .tabela tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
   .tabela tbody td {
-    padding: 12px 14px;
+    display: block;
+    border: none;
+    padding: 0;
   }
-  .tabela thead th:nth-child(2),
+  /* Membro (avatar + nome + e-mail) ocupa a linha inteira do card. */
+  .tabela tbody td:first-child {
+    flex-basis: 100%;
+  }
+  /* Esconde Telefone e Cadastro dentro do card. */
   .tabela tbody td:nth-child(2),
-  .tabela thead th:nth-child(4),
   .tabela tbody td:nth-child(4) {
     display: none;
   }
-  .avatar {
-    width: 34px;
-    height: 34px;
+  /* Ações vão pra direita do card. */
+  .colunaAcoes {
+    margin-left: auto;
+    width: auto;
   }
+
   .rodape {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
     text-align: center;
+    border-radius: var(--radius-lg);
   }
   .paginacao {
     justify-content: center;

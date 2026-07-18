@@ -83,7 +83,7 @@ public class IgrejaService {
         }
 
         Igreja igreja = Igreja.builder()
-                .nome(dados.nomeIgreja())
+                .nome(com.domus.api.shared.util.TextoUtil.capitalizar(dados.nomeIgreja()))
                 .emailContato(dados.emailContato())
                 .cnpj(dados.cnpj())
                 .telefoneContato(dados.telefoneContato())
@@ -96,7 +96,7 @@ public class IgrejaService {
 
         Membro membroAdmin = Membro.builder()
                 .igreja(igreja)
-                .nome(dados.nomeAdmin())
+                .nome(com.domus.api.shared.util.TextoUtil.capitalizar(dados.nomeAdmin()))
                 .email(dados.emailAdmin())
                 .status(StatusMembro.ATIVO)
                 .build();

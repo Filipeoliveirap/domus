@@ -45,3 +45,21 @@ jobs:
           build-args: |
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+
+  # Deploy na VPS. Só roda depois que as DUAS imagens (api+front) buildaram, e só na main.
+  # A chave SSH tem forced-command na VPS: ela SÓ consegue rodar /root/deploy/deploy.sh
+  # (docker compose pull && up -d). Por isso o comando mandado aqui ("deploy") é ignorado.
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy

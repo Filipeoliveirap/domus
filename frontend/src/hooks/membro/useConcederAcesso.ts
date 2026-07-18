@@ -26,7 +26,7 @@ export function useConcederAcesso(membro: MembroResponse, onClose: () => void) {
     try {
       await membrosService.concederAcesso({ membroId: membro.id, ...dados })
       invalidar()
-      toast.success(`Acesso concedido a ${membro.nome}.`)
+      toast.success(`Convite enviado para ${membro.nome}.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
@@ -52,7 +52,7 @@ export function useConcederAcesso(membro: MembroResponse, onClose: () => void) {
     try {
       await membrosService.reativarAcesso({ membroId: membro.id, ...dadosPendentes })
       invalidar()
-      toast.success(`Acesso de ${membro.nome} reativado.`)
+      toast.success(`Convite reenviado para ${membro.nome}.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

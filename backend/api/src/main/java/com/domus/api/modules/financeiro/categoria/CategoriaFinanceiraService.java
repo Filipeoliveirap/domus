@@ -54,7 +54,7 @@ public class CategoriaFinanceiraService {
     @Transactional
     public CategoriaResponse cadastrar(CategoriaRequestDTO dto, UUID igrejaId) {
         log.info("Cadastrando categoria. nome={}, tipo={}, igreja_id={}", dto.nome(), dto.tipo(), igrejaId);
-        String nome = dto.nome().trim();
+        String nome = com.domus.api.shared.util.TextoUtil.capitalizar(dto.nome());
         if (repository.existeComNome(igrejaId, nome, SEM_IGNORAR)) {
             log.warn("Categoria duplicada. nome={}, igreja_id={}", nome, igrejaId);
             throw new BusinessException("CATEGORIA_DUPLICADA", "Já existe uma categoria com esse nome.");
@@ -82,7 +82,7 @@ public class CategoriaFinanceiraService {
         CategoriaFinanceira categoria = buscarEntidade(id, igrejaId);
 
         String nomeAntigo = categoria.getNome();
-        String nome = dto.nome().trim();
+        String nome = com.domus.api.shared.util.TextoUtil.capitalizar(dto.nome());
 
         if (repository.existeComNome(igrejaId, nome, id)) {
             log.warn("Categoria duplicada na atualização. nome={}, igreja_id={}", nome, igrejaId);

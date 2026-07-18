@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Endereço do membro como objeto de valor. É {@code @Embeddable}: as 7 colunas vivem na
@@ -40,5 +42,6 @@ public class Endereco {
     private String cidade;
 
     @Column(name = "uf", length = 2)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String uf;
 }

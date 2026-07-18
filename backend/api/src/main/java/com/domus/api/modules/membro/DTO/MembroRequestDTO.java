@@ -19,8 +19,8 @@ public record MembroRequestDTO(
         @Past(message = "A data de nascimento deve ser uma data no passado.")
         LocalDate dataNascimento,
 
-        @Size(max = 500, message = "O endereço deve ter no máximo 500 caracteres")
-        String endereco,
+        @jakarta.validation.Valid
+        EnderecoDTO endereco,
 
         @NotNull(message = "O status do membro é obrigatório")
         StatusMembro status,

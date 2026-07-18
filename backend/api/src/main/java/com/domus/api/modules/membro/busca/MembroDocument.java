@@ -31,9 +31,6 @@ public class MembroDocument {
     private String telefone;
 
     @Field(type = FieldType.Text)
-    private String endereco;
-
-    @Field(type = FieldType.Text)
     private String ministerio;
 
     @Field(type = FieldType.Keyword)
@@ -46,7 +43,6 @@ public class MembroDocument {
         doc.setNome(membro.getNome());
         doc.setEmail(membro.getEmail());
         doc.setTelefone(membro.getTelefone());
-        doc.setEndereco(membro.getEndereco());
         doc.setMinisterio(membro.getMinisterio());
         doc.setStatus(membro.getStatus() != null ? membro.getStatus().name() : null);
         return doc;

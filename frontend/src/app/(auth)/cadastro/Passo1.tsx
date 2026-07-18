@@ -54,7 +54,7 @@ export function Passo1({
               }}
               onError={onGoogleError}
               text="signup_with"
-              width="340"
+              width="280"
             />
           </div>
           <div className={styles.divider}>

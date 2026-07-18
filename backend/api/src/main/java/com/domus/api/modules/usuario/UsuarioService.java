@@ -30,7 +30,6 @@ import com.domus.api.shared.DTO.PagedResponse;
 public class UsuarioService {
 
     private static final String ROLE_ADMIN = "ADMIN_IGREJA";
-    // Convites duram 7 dias — onboarding de igreja não tem pressa (spec 2026-07-18).
     private static final Duration TTL_CONVITE = Duration.ofDays(7);
 
     private final UsuarioRepository usuarioRepository;
@@ -61,14 +60,11 @@ public class UsuarioService {
                     "Este membro já teve acesso, que foi arquivado. Deseja reativar?");
         }
 
-        // O convite vai por e-mail. Se o membro ainda não tem, o admin fornece um (grava no membro).
         String email = garantirEmailDoMembro(membro, data.email());
 
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
 
-        // Sem senha: a pessoa define no convite (ou entra direto com Google). ativo=true porque
-        // o acesso já está liberado — só falta a pessoa fazer o primeiro login.
         Usuario usuario = Usuario.builder()
                 .igreja(membro.getIgreja())
                 .membro(membro)
@@ -108,7 +104,7 @@ public class UsuarioService {
         arquivado.setDeleteAt(null);
         arquivado.setAtivo(true);
         arquivado.setRole(role);
-        arquivado.marcarConvitePendente();   // volta a "pendente" até logar de novo (mantém a senha antiga)
+        arquivado.marcarConvitePendente();
 
         Usuario salvo = usuarioRepository.save(arquivado);
         outboxRegistrador.registrar(
@@ -123,7 +119,6 @@ public class UsuarioService {
         return UsuarioResponseDTO.from(salvo);
     }
 
-    /** Reenvia o convite para um usuário que ainda não fez login. */
     @Transactional(readOnly = true)
     public void reenviarConvite(UUID usuarioId, UUID igrejaId) {
         Usuario usuario = usuarioRepository.findByIdAndIgrejaId(usuarioId, igrejaId)
@@ -182,7 +177,7 @@ public class UsuarioService {
                 <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
                   <h2>Você foi convidado para o Domus</h2>
                   <p>Olá, %s.</p>
-                  <p>Você recebeu acesso ao sistema de gestão da igreja <strong>%s</strong> no Domus.
+                  <p>Você recebeu acesso ao sistema da <strong>%s</strong> no Domus.
                      Para ativar seu acesso, defina uma senha:</p>
                   <p style="text-align: center; margin: 32px 0;">
                     <a href="%s" style="background: #2563eb; color: #fff; padding: 12px 24px;

@@ -60,13 +60,15 @@ public class SecurityConfig {
                                 "/auth/google/registrar",
                                 "/auth/forgot-password",
                                 "/auth/reset-password",
-                                "/igrejas/registrar"))
+                                "/igrejas/registrar",
+                                "/admin/reindexacao")) // TEMPORÁRIO: reindex único; reverter depois
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
 
                         //rotas públicas
                         .requestMatchers(
+                                "/admin/reindexacao", // TEMPORÁRIO: reindex único; reverter depois
                                 "/igrejas/registrar",
                                 "/auth/login",
                                 "/auth/google/login",

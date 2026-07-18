@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { membroSchema, type MembroFormInput, type MembroFormData } from '@/lib/validators'
 import { membrosService } from '@/services/membro.service'
-import { formatarTelefone } from '@/lib/masks'
+import { formatarTelefone, formatarCep } from '@/lib/masks'
 import type { MembroRequest, MembroResponse } from '@/types/membro.type'
 import type { ApiError } from '@/types/api.types'
 
@@ -44,7 +44,7 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
         telefone: membroInicial.telefone ? formatarTelefone(membroInicial.telefone) : '',
         dataNascimento: membroInicial.dataNascimento ?? '',
         endereco: {
-          cep: membroInicial.endereco?.cep ?? '',
+          cep: membroInicial.endereco?.cep ? formatarCep(membroInicial.endereco.cep) : '',
           logradouro: membroInicial.endereco?.logradouro ?? '',
           numero: membroInicial.endereco?.numero ?? '',
           complemento: membroInicial.endereco?.complemento ?? '',
@@ -68,7 +68,11 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
       const payload: MembroRequest = {
         ...data,
         telefone: data.telefone?.replace(/\D/g, '') || undefined,
-        estadoCivil: data.estadoCivil || undefined,  
+        estadoCivil: data.estadoCivil || undefined,
+        endereco: {
+          ...data.endereco,
+          cep: data.endereco?.cep?.replace(/\D/g, '') || undefined,
+        },
     }
 
       if (ehEdicao) {

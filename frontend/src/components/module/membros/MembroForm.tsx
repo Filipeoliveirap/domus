@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { User, MapPin, FileText, Church, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { useBuscaCep } from '@/hooks/membro/useBuscaCep'
+import { useBairros } from '@/hooks/membro/useBairros'
 import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { MinisterioInput } from '@/components/module/membros/MinisterioInput'
-import { formatarTelefone } from '@/lib/masks'
+import { formatarTelefone, formatarCep } from '@/lib/masks'
 import styles from './MembroForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { MembroFormInput, MembroFormData } from '@/lib/validators'
@@ -26,6 +27,11 @@ const ESTADO_CIVIL_OPTIONS = [
   { value: 'DIVORCIADO', label: 'Divorciado(a)' },
   { value: 'VIUVO', label: 'Viúvo(a)' },
 ]
+
+const UF_OPTIONS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+].map((uf) => ({ value: uf, label: uf }))
 
 type MembroFormProps = UseFormReturn<MembroFormInput, unknown, MembroFormData> & {
   isFormIncomplete: boolean
@@ -49,6 +55,9 @@ export function MembroForm(props: MembroFormProps) {
   const { buscar, carregando: carregandoCep } = useBuscaCep()
   const [cepNaoEncontrado, setCepNaoEncontrado] = useState(false)
   const cepReg = register('endereco.cep')
+
+  // Bairros já existentes na igreja, para sugerir no <datalist> (padroniza a grafia).
+  const { data: bairros } = useBairros()
 
   async function aoSairDoCep(e: React.FocusEvent<HTMLInputElement>) {
     setCepNaoEncontrado(false)
@@ -99,9 +108,10 @@ export function MembroForm(props: MembroFormProps) {
             </div>
             <div className={styles.grid2}>
               <div className={styles.spanFull}>
-                <Input id="cep" label="CEP" placeholder="00000000" inputMode="numeric"
+                <Input id="cep" label="CEP" placeholder="00000-000" inputMode="numeric" maxLength={9}
                   error={errors.endereco?.cep?.message}
                   {...cepReg}
+                  onChange={(e) => setValue('endereco.cep', formatarCep(e.target.value), { shouldValidate: true })}
                   onBlur={(e) => { cepReg.onBlur(e); void aoSairDoCep(e) }} />
                 {carregandoCep && <span className={styles.erroCampo}>buscando CEP…</span>}
                 {cepNaoEncontrado && (
@@ -116,12 +126,15 @@ export function MembroForm(props: MembroFormProps) {
                 error={errors.endereco?.numero?.message} {...register('endereco.numero')} />
               <Input id="complemento" label="COMPLEMENTO" placeholder="Apto, bloco…"
                 error={errors.endereco?.complemento?.message} {...register('endereco.complemento')} />
-              <Input id="bairro" label="BAIRRO"
+              <Input id="bairro" label="BAIRRO" list="lista-bairros"
                 error={errors.endereco?.bairro?.message} {...register('endereco.bairro')} />
+              <datalist id="lista-bairros">
+                {bairros?.map((b) => <option key={b} value={b} />)}
+              </datalist>
               <Input id="cidade" label="CIDADE"
                 error={errors.endereco?.cidade?.message} {...register('endereco.cidade')} />
-              <Input id="uf" label="UF" placeholder="SP" maxLength={2}
-                error={errors.endereco?.uf?.message} {...register('endereco.uf')} />
+              <Select id="uf" label="UF" placeholder="UF"
+                options={UF_OPTIONS} error={errors.endereco?.uf?.message} {...register('endereco.uf')} />
             </div>
           </section>
 

@@ -81,3 +81,16 @@ body {
   --transition-fast:   150ms ease;
   --transition-normal: 200ms ease;
 }
+
+/* No mobile, escala os tokens de tipografia/espaçamento maiores. Como títulos, KPIs e
+   headings usam essas variáveis, o ajuste cascateia por todas as telas de uma vez. */
+@media (max-width: 767px) {
+  :root {
+    --font-size-md:   15px;  /* 16 → 15 */
+    --font-size-lg:   17px;  /* 20 → 17 */
+    --font-size-xl:   20px;  /* 24 → 20 */
+    --font-size-2xl:  22px;  /* 30 → 22 — títulos de página deixam de estourar */
+    --content-padding-h: 16px;
+    --content-padding-v: 20px;
+  }
+}

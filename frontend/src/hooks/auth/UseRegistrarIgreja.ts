@@ -167,7 +167,7 @@ export function useRegistrarIgreja () {
     const irParaMembros = () => router.push('/membros/cadastrar')
     const irParaPerfilIgreja = () => router.push('/configuracoes/igreja')
     const irParaMeuPerfil = () => router.push('/perfil')
-    const irParaPainelInicial = () => router.push('/inicial')
+    const irParaPainelInicial = () => router.push('/inicio')
     
     return {
         passo,

@@ -55,8 +55,14 @@
 .formPanel {
   display: flex;
   flex-direction: column;
+  align-items: center;   /* centraliza a coluna de conteúdo, como no Passo 2 */
   padding: 64px;
   min-height: 828px;  /* altura fixa do Figma */
+}
+/* Barra de passos, botão Google, inputs: coluna centralizada de 480px (igual ao formCard do Passo 2). */
+.formPanel > * {
+  width: 100%;
+  max-width: 480px;
 }
 
 

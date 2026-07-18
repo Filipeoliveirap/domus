@@ -7,6 +7,8 @@ import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
+import com.domus.api.modules.auth.PasswordResetService;
+import com.domus.api.shared.email.EmailService;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
@@ -15,10 +17,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
+import java.time.Duration;
 import java.util.UUID;
 import com.domus.api.shared.DTO.PagedResponse;
 
@@ -27,48 +29,50 @@ import com.domus.api.shared.DTO.PagedResponse;
 @RequiredArgsConstructor
 public class UsuarioService {
 
+    private static final String ROLE_ADMIN = "ADMIN_IGREJA";
+    // Convites duram 7 dias — onboarding de igreja não tem pressa (spec 2026-07-18).
+    private static final Duration TTL_CONVITE = Duration.ofDays(7);
 
     private final UsuarioRepository usuarioRepository;
     private final IgrejaRepository igrejaRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
-    private static final String ROLE_ADMIN = "ADMIN_IGREJA";
     private final MembroRepository membroRepository;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
+    private final PasswordResetService passwordResetService;
+    private final EmailService emailService;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
-        log.info("Concedendo acesso a membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
+        log.info("Concedendo acesso (convite) a membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
 
         Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
-        if (membro.getEmail() == null || membro.getEmail().isBlank()) {
-            throw new BusinessException("MEMBRO_SEM_EMAIL",
-                    "O membro precisa ter um e-mail para receber acesso ao sistema.");
-        }
-
-        Role role = roleRepository.findByNome(data.role())
-                .orElseThrow(() -> new BusinessException("Perfil inválido"));
-
         Usuario existente = usuarioRepository
                 .findByMembroIdIncluindoArquivados(membro.getId())
                 .orElse(null);
-
         if (existente != null) {
             if (existente.getDeleteAt() == null) {
                 throw new BusinessException("MEMBRO_JA_TEM_ACESSO",
-                        "Este membro já possui acesso ao sistema.");
+                        "Esta pessoa já tem acesso ao sistema.");
             }
             throw new BusinessException("MEMBRO_TEM_USUARIO_ARQUIVADO",
                     "Este membro já teve acesso, que foi arquivado. Deseja reativar?");
         }
 
+        // O convite vai por e-mail. Se o membro ainda não tem, o admin fornece um (grava no membro).
+        String email = garantirEmailDoMembro(membro, data.email());
+
+        Role role = roleRepository.findByNome(data.role())
+                .orElseThrow(() -> new BusinessException("Perfil inválido"));
+
+        // Sem senha: a pessoa define no convite (ou entra direto com Google). ativo=true porque
+        // o acesso já está liberado — só falta a pessoa fazer o primeiro login.
         Usuario usuario = Usuario.builder()
                 .igreja(membro.getIgreja())
                 .membro(membro)
-                .senhaHash(passwordEncoder.encode(data.senha()))
+                .senhaHash(null)
                 .ativo(true)
                 .role(role)
                 .build();
@@ -80,14 +84,15 @@ public class UsuarioService {
                 salvo.getId(),
                 igrejaId
         );
-        log.info("Acesso concedido (novo usuário). usuario_id={}, membro_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
+        enviarConvite(salvo, email, membro.getIgreja().getNome());
+        log.info("Acesso concedido por convite. usuario_id={}, membro_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
     }
 
     @Transactional
     public UsuarioResponseDTO reativarAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
-        log.info("Reativando acesso de membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
+        log.info("Reativando acesso (convite) de membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
         Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
@@ -95,13 +100,15 @@ public class UsuarioService {
                 .filter(u -> u.getDeleteAt() != null)
                 .orElseThrow(() -> new BusinessException("Nenhum acesso arquivado encontrado."));
 
+        String email = garantirEmailDoMembro(membro, data.email());
+
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
 
         arquivado.setDeleteAt(null);
         arquivado.setAtivo(true);
-        arquivado.setSenhaHash(passwordEncoder.encode(data.senha()));
         arquivado.setRole(role);
+        arquivado.marcarConvitePendente();   // volta a "pendente" até logar de novo (mantém a senha antiga)
 
         Usuario salvo = usuarioRepository.save(arquivado);
         outboxRegistrador.registrar(
@@ -110,9 +117,82 @@ public class UsuarioService {
                 salvo.getId(),
                 igrejaId
         );
-        log.info("Acesso reativado. usuario_id={}, membro_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
+        enviarConvite(salvo, email, membro.getIgreja().getNome());
+        log.info("Acesso reativado por convite. usuario_id={}, membro_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
+    }
+
+    /** Reenvia o convite para um usuário que ainda não fez login. */
+    @Transactional(readOnly = true)
+    public void reenviarConvite(UUID usuarioId, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(usuarioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        if (usuario.getUltimoLoginEm() != null) {
+            throw new BusinessException("CONVITE_JA_ACEITO",
+                    "Este usuário já fez login — o convite já foi aceito.");
+        }
+        String email = usuario.getEmail();
+        if (email == null || email.isBlank()) {
+            throw new BusinessException("MEMBRO_SEM_EMAIL",
+                    "Este usuário não tem e-mail para reenviar o convite.");
+        }
+        enviarConvite(usuario, email, usuario.getIgreja().getNome());
+        log.info("Convite reenviado. usuario_id={}", usuarioId);
+    }
+
+    /**
+     * Garante que o membro tenha e-mail (o convite depende dele). Se já tem, retorna.
+     * Se não tem, exige o `emailFornecido`, valida unicidade e grava no membro.
+     */
+    private String garantirEmailDoMembro(Membro membro, String emailFornecido) {
+        if (membro.getEmail() != null && !membro.getEmail().isBlank()) {
+            return membro.getEmail();
+        }
+        if (emailFornecido == null || emailFornecido.isBlank()) {
+            throw new BusinessException("MEMBRO_SEM_EMAIL",
+                    "Este membro não tem e-mail. Informe um e-mail para enviar o convite.");
+        }
+        String email = emailFornecido.trim().toLowerCase();
+        if (membroRepository.existsByEmailIncluindoArquivados(email)) {
+            throw new BusinessException("EMAIL_DUPLICADO", "Este e-mail já está em uso por outro cadastro.");
+        }
+        membro.setEmail(email);
+        membroRepository.save(membro);
+        return email;
+    }
+
+    /** Gera o token de definição de senha (7 dias) e envia o e-mail de convite. */
+    private void enviarConvite(Usuario usuario, String email, String nomeIgreja) {
+        String token = passwordResetService.gerarTokenDefinicaoSenha(usuario.getId(), TTL_CONVITE);
+        String link = passwordResetService.linkDefinicaoSenha(token, true);
+        try {
+            emailService.enviar(email, "Você foi convidado para o Domus",
+                    corpoConvite(usuario.getNome(), nomeIgreja, link));
+            log.info("Convite enviado. usuario_id={}", usuario.getId());
+        } catch (RuntimeException e) {
+            // Não vira 500: o usuário foi criado/reativado. Se o e-mail falhar, o admin usa "reenviar convite".
+            log.error("Falha ao enviar convite. usuario_id={}", usuario.getId(), e);
+        }
+    }
+
+    private String corpoConvite(String nome, String nomeIgreja, String link) {
+        return """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2>Você foi convidado para o Domus</h2>
+                  <p>Olá, %s.</p>
+                  <p>Você recebeu acesso ao sistema de gestão da igreja <strong>%s</strong> no Domus.
+                     Para ativar seu acesso, defina uma senha:</p>
+                  <p style="text-align: center; margin: 32px 0;">
+                    <a href="%s" style="background: #2563eb; color: #fff; padding: 12px 24px;
+                       text-decoration: none; border-radius: 6px;">Definir minha senha</a>
+                  </p>
+                  <p style="color: #666; font-size: 14px;">Ou, se preferir, entre direto com sua conta
+                     Google usando este mesmo e-mail.</p>
+                  <p style="color: #666; font-size: 14px;">O convite expira em 7 dias.</p>
+                </div>
+                """.formatted(nome, nomeIgreja, link);
     }
 
     @Cacheable(

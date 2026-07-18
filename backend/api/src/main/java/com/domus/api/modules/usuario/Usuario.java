@@ -76,6 +76,11 @@ public class Usuario implements UserDetails {
         this.ultimoLoginEm = LocalDateTime.now();
     }
 
+    /** Volta a conta ao estado "convite pendente" (nunca logou). Usado na reativação. */
+    public void marcarConvitePendente() {
+        this.ultimoLoginEm = null;
+    }
+
     @Override
     public String getPassword() {
         return senhaHash;

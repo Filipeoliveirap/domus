@@ -36,6 +36,13 @@ public class UsuarioController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{id}/reenviar-convite")
+    public ResponseEntity<Void> reenviarConvite(@PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        usuarioService.reenviarConvite(id, igrejaId);
+        return ResponseEntity.noContent().build();
+    }
+
 
     @GetMapping
     public PagedResponse<UsuarioResponseDTO> listar(

@@ -30,6 +30,21 @@ export function BarraProporcao({ data, isLoading, isError, aoTentarNovamente }: 
   const entradas = parseFloat(data.totalEntradas)
   const saidas = parseFloat(data.totalSaidas)
 
+  // Período sem nenhuma movimentação: evita a barra 100% verde enganosa.
+  if (entradas === 0 && saidas === 0) {
+    return (
+      <div className={styles.painel}>
+        <div className={styles.header}>
+          <div>
+            <h3 className={styles.titulo}>Proporção Entradas vs Saídas</h3>
+            <p className={styles.subtitulo}>Percentual da receita comprometido com despesas</p>
+          </div>
+        </div>
+        <div className={styles.vazio}>Nenhuma movimentação no período.</div>
+      </div>
+    )
+  }
+
   const percentualUtilizado = entradas > 0 ? Math.min((saidas / entradas) * 100, 100) : 0
   const pctTexto = percentualUtilizado.toFixed(0)
 

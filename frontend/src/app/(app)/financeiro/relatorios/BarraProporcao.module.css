@@ -82,3 +82,10 @@
 }
 .dotEntrada { background: var(--color-success-text); }
 .dotSaida { background: var(--color-danger); }
+
+.vazio {
+  padding: 32px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

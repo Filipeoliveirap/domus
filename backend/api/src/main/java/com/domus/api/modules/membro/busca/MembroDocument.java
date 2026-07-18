@@ -6,10 +6,12 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Setting;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Document(indexName = "membros")
+@Setting(settingPath = "elasticsearch/domus-analyzer.json")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,16 +23,16 @@ public class MembroDocument {
     @Field(type = FieldType.Keyword)
     private String igrejaId;
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String nome;
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String email;
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String telefone;
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String ministerio;
 
     @Field(type = FieldType.Keyword)

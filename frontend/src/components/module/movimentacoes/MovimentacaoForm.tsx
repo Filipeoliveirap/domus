@@ -32,13 +32,19 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const valor = watch('valor') as string
   const membroId = watch('membroId') as string | undefined
 
-  const { data: categorias } = useCategoriasSelect()
+  const { data: categorias, isPending: categoriasCarregando } = useCategoriasSelect()
+
+  // Nenhuma categoria cadastrada na igreja (após carregar): sem isso não dá pra lançar nada.
+  const semNenhumaCategoria = !categoriasCarregando && (categorias?.length ?? 0) === 0
 
   const categoriasCompativeis = (categorias ?? []).filter((c: CategoriaResponse) => {
     if (!tipo) return true
     if (c.tipo === 'AMBOS') return true
     return c.tipo === (tipo as unknown as TipoCategoria)
   })
+
+  // Existe categoria, mas nenhuma compatível com o tipo escolhido.
+  const semCategoriaParaTipo = !semNenhumaCategoria && !!tipo && categoriasCompativeis.length === 0
 
   const labelMembro = tipo === 'SAIDA' ? 'Beneficiário' : 'Contribuinte'
   const categoriaNome = categoriasCompativeis.find((c: CategoriaResponse) => c.id === categoriaId)?.nome
@@ -111,18 +117,39 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
               <div className={styles.linha2}>
                 <div className={styles.campo}>
                   <label className={styles.label} htmlFor="categoriaId">CATEGORIA</label>
-                  <select
-                    id="categoriaId"
-                    className={styles.select}
-                    {...register('categoriaId')}
-                    disabled={!tipo}
-                  >
-                    <option value="">{tipo ? 'Selecione' : 'Escolha o tipo primeiro'}</option>
-                    {categoriasCompativeis.map((c: CategoriaResponse) => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                  </select>
-                  {errors.categoriaId && <span className={styles.erroCampo}>{errors.categoriaId.message}</span>}
+                  {semNenhumaCategoria ? (
+                    <div className={styles.avisoCategoria}>
+                      <p className={styles.avisoCategoriaTexto}>
+                        Nenhuma categoria cadastrada. Para lançar entradas e saídas, crie uma categoria antes.
+                      </p>
+                      <Link href="/financeiro/categorias" className={styles.avisoCategoriaLink}>
+                        Criar categoria
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        id="categoriaId"
+                        className={styles.select}
+                        {...register('categoriaId')}
+                        disabled={!tipo}
+                      >
+                        <option value="">{tipo ? 'Selecione' : 'Escolha o tipo primeiro'}</option>
+                        {categoriasCompativeis.map((c: CategoriaResponse) => (
+                          <option key={c.id} value={c.id}>{c.nome}</option>
+                        ))}
+                      </select>
+                      {semCategoriaParaTipo && (
+                        <span className={styles.avisoCategoriaTipo}>
+                          Nenhuma categoria de {tipo === 'ENTRADA' ? 'entrada' : 'saída'}.{' '}
+                          <Link href="/financeiro/categorias" className={styles.avisoCategoriaLink}>
+                            Criar uma
+                          </Link>
+                        </span>
+                      )}
+                      {errors.categoriaId && <span className={styles.erroCampo}>{errors.categoriaId.message}</span>}
+                    </>
+                  )}
                 </div>
 
                 <div className={styles.campo}>
@@ -200,7 +227,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
           {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
           <div className={styles.acoes}>
-            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || isLoading}>
+            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || isLoading || semNenhumaCategoria}>
               {isLoading ? 'Salvando…' : ehEdicao ? 'Salvar alterações' : 'Salvar movimentação'}
             </button>
             <Link href="/financeiro/movimentacoes" className={styles.cancelarLink}>Cancelar</Link>

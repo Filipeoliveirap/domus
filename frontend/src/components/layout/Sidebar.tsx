@@ -6,6 +6,7 @@ import {
   Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import styles from './Sidebar.module.css'
@@ -42,6 +43,8 @@ export function Sidebar() {
   const nome = useAuthStore((state) => state.nome)
   const foto = useAuthStore((state) => state.foto)
   const logout = useAuthStore((state) => state.logout)
+  const navAberta = useUiStore((state) => state.navAberta)
+  const fecharNav = useUiStore((state) => state.fecharNav)
 
   const filtrar = <T extends { roles: Role[] }>(items: T[]) =>
     items.filter((item) => (role ? item.roles.includes(role) : false))
@@ -54,6 +57,7 @@ export function Sidebar() {
       <Link
         key={item.href}
         href={item.href}
+        onClick={fecharNav}
         className={ativo ? `${styles.link} ${styles.linkActive}` : `${styles.link} ${styles.linkInactive}`}
       >
         <Icon size={20} />
@@ -77,7 +81,13 @@ export function Sidebar() {
   const footerLinks = filtrar(footerItems)
 
   return (
-    <aside className={styles.sidebar}>
+    <>
+    <div
+      className={`${styles.overlay} ${navAberta ? styles.overlayVisivel : ''}`}
+      onClick={fecharNav}
+      aria-hidden="true"
+    />
+    <aside className={`${styles.sidebar} ${navAberta ? styles.sidebarAberta : ''}`}>
       <div className={styles.header}>
         <h1 className={styles.title}>DOMUS</h1>
         <p className={styles.subtitle}>Gestão Eclesiástica</p>
@@ -95,7 +105,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <Link href="/perfil" className={styles.profile}>
+      <Link href="/perfil" className={styles.profile} onClick={fecharNav}>
         {foto ? (
           <img src={foto} alt={nome ?? 'Perfil'} className={styles.profileAvatar} />
         ) : (
@@ -113,5 +123,6 @@ export function Sidebar() {
         </div>
       </Link>
     </aside>
+    </>
   )
 }

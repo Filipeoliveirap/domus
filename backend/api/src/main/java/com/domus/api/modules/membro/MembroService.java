@@ -73,14 +73,14 @@ public class MembroService {
 
         Membro membro = Membro.builder()
                 .igreja(igreja)
-                .nome(data.nome())
+                .nome(normalizar(data.nome()))
                 .email(email)
                 .telefone(data.telefone())
                 .dataNascimento(data.dataNascimento())
                 .endereco(paraEndereco(data.endereco()))
                 .status(data.status())
                 .estadoCivil(data.estadoCivil())
-                .ministerio(data.ministerio())
+                .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
                 .build();
 
@@ -121,14 +121,14 @@ public class MembroService {
             }
         }
 
-        membro.setNome(data.nome());
+        membro.setNome(normalizar(data.nome()));
         membro.setEmail(emailNovo);
         membro.setTelefone(data.telefone());
         membro.setDataNascimento(data.dataNascimento());
         membro.setEndereco(paraEndereco(data.endereco()));
         membro.setStatus(data.status());
         membro.setEstadoCivil(data.estadoCivil());
-        membro.setMinisterio(data.ministerio());
+        membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
 
         Membro salvo = membroRepository.save(membro);
@@ -177,7 +177,7 @@ public class MembroService {
     private Endereco paraEndereco(EnderecoDTO dto) {
         if (dto == null) return null;
         return Endereco.builder()
-                .cep(dto.cep()).logradouro(dto.logradouro()).numero(dto.numero())
+                .cep(dto.cep()).logradouro(normalizar(dto.logradouro())).numero(dto.numero())
                 .complemento(dto.complemento())
                 .bairro(normalizar(dto.bairro()))
                 .cidade(normalizar(dto.cidade()))
@@ -186,15 +186,6 @@ public class MembroService {
     }
 
     static String normalizar(String v) {
-        if (v == null) return null;
-        String limpo = v.trim().replaceAll("\\s+", " ");
-        if (limpo.isEmpty()) return null;
-        StringBuilder sb = new StringBuilder(limpo.length());
-        for (String palavra : limpo.split(" ")) {
-            sb.append(Character.toUpperCase(palavra.charAt(0)))
-              .append(palavra.substring(1).toLowerCase())
-              .append(' ');
-        }
-        return sb.toString().trim();
+        return com.domus.api.shared.util.TextoUtil.capitalizar(v);
     }
 }

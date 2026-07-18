@@ -37,6 +37,11 @@
   color: var(--color-primary);
   line-height: 1;
 }
+@media (max-width: 767px) {
+  .pctNumero {
+    font-size: 1.2rem;
+  }
+}
 .pctLabel {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);

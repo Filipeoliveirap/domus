@@ -93,15 +93,10 @@ export const concederAcessoSchema = z.object({
   role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
     message: 'Selecione um perfil para o usuário',
   }),
-  senha: z
-    .string()
-    .min(8, 'A senha deve ter no mínimo 8 caracteres'),
-  confirmarSenha: z
-    .string()
-    .min(1, 'Confirme a senha'),
-}).refine(data => data.senha === data.confirmarSenha, {
-  message: 'As senhas não coincidem',
-  path: ['confirmarSenha'],
+  // Só usado quando o membro ainda não tem e-mail (o modal pede um).
+  email: opcional(
+    z.email('E-mail inválido').transform((v) => v.trim().toLowerCase()),
+  ),
 })
 
 const eventoSchemaBase = z.object({
@@ -161,6 +156,7 @@ export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
 export type MembroFormData = z.infer<typeof membroSchema> 
 export type MembroFormInput = z.input<typeof membroSchema>  
 export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>
+export type ConcederAcessoFormInput = z.input<typeof concederAcessoSchema>
 export type EventoFormData = z.infer<typeof eventoSchema>
 export type EventoFormInput = z.input<typeof eventoSchemaBase>
 export type CategoriaFormData = z.infer<typeof categoriaSchema>

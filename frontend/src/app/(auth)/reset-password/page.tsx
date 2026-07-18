@@ -2,9 +2,11 @@
 
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { GoogleLogin } from '@react-oauth/google'
 import { Lock, LockKeyhole, KeyRound, Eye, EyeOff, ArrowLeft, CheckCircle2, TimerOff } from 'lucide-react'
 import { useRedefinirSenha } from '@/hooks/auth/useRedefinirSenha'
+import { useLogin } from '@/hooks/auth/useLogin'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { PasswordStrengthIndicator } from '../cadastro/PasswordStrengthIndicator'
@@ -12,6 +14,10 @@ import styles from './page.module.css'
 
 function RedefinirSenhaConteudo() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Modo convite (link vindo do e-mail de convite): mostra também o "Entrar com Google".
+  const convite = searchParams.get('convite') === '1'
+  const { onGoogleLogin, onGoogleError } = useLogin()
   const { register, handleSubmit, watch, errors, erroGeral, isLoading, isButtonDisabled, onSubmit, sucesso, linkInvalido } =
     useRedefinirSenha()
   const [mostrarNova, setMostrarNova] = useState(false)
@@ -83,8 +89,12 @@ function RedefinirSenhaConteudo() {
         <span className={styles.iconBadge}>
           <KeyRound size={28} />
         </span>
-        <h1 className={styles.titulo}>Redefinir sua senha</h1>
-        <p className={styles.subtitulo}>Crie uma nova senha segura para acessar sua conta.</p>
+        <h1 className={styles.titulo}>{convite ? 'Defina sua senha de acesso' : 'Redefinir sua senha'}</h1>
+        <p className={styles.subtitulo}>
+          {convite
+            ? 'Você foi convidado para o Domus. Crie uma senha para entrar — ou use sua conta Google.'
+            : 'Crie uma nova senha segura para acessar sua conta.'}
+        </p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -145,9 +155,23 @@ function RedefinirSenhaConteudo() {
           suppressHydrationWarning
           style={{ width: '100%' }}
         >
-          Redefinir senha
+          {convite ? 'Definir senha' : 'Redefinir senha'}
         </Button>
       </form>
+
+      {convite && (
+        <>
+          <div className={styles.divider}><span className={styles.dividerText}>OU</span></div>
+          <div className={styles.googleWrap}>
+            <GoogleLogin
+              onSuccess={(cred) => { if (cred.credential) onGoogleLogin(cred.credential) }}
+              onError={onGoogleError}
+              text="continue_with"
+              width="280"
+            />
+          </div>
+        </>
+      )}
 
       <div className={styles.footer}>
         <Link href="/login" className={styles.backLink}>

@@ -18,6 +18,7 @@ export const Endpoints = {
     ROLE: (id: string) => `/usuarios/${id}/role`,
     CONCEDER_ACESSO: '/usuarios/conceder-acesso',
     REATIVAR_ACESSO: '/usuarios/reativar-acesso',
+    REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
   },
   membros: {
     LISTAR: '/membros',

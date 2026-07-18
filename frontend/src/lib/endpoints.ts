@@ -1,5 +1,11 @@
 
 export const Endpoints = {
+  inicio: {
+    GET: '/inicio',
+  },
+  dashboard: {
+    GET: '/dashboard',
+  },
   auth: {
     LOGIN: '/auth/login',
     GOOGLE_LOGIN: '/auth/google/login',

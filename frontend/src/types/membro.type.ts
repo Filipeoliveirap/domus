@@ -43,5 +43,5 @@ export interface MembroResponse {
 export interface ConcederAcessoRequest {
   membroId: string
   role: Role
-  senha: string
+  email?: string
 }

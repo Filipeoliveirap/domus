@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { KeyRound, X, Mail, Eye, EyeOff, ShieldCheck, Users, User, Info, AlertTriangle, RotateCcw } from 'lucide-react'
+import { KeyRound, X, Mail, ShieldCheck, Users, User, Info, RotateCcw } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useConcederAcesso } from '@/hooks/membro/useConcederAcesso'
-import { concederAcessoSchema, type ConcederAcessoFormData } from '@/lib/validators'
+import { concederAcessoSchema, type ConcederAcessoFormData, type ConcederAcessoFormInput } from '@/lib/validators'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { MembroResponse } from '@/types/membro.type'
@@ -26,8 +25,6 @@ export function ModalConcederAcesso({
   onClose: () => void
 }) {
   const { confirmar, reativar, cancelarReativacao, precisaReativar, isLoading, erroGeral } = useConcederAcesso(membro, onClose)
-  const [mostrarSenha, setMostrarSenha] = useState(false)
-  const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
 
   const semEmail = !membro.email
 
@@ -35,38 +32,22 @@ export function ModalConcederAcesso({
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors },
-  } = useForm<ConcederAcessoFormData>({
+  } = useForm<ConcederAcessoFormInput, unknown, ConcederAcessoFormData>({
     resolver: zodResolver(concederAcessoSchema),
-    defaultValues: { role: 'MEMBRO', senha: '', confirmarSenha: '' },
+    defaultValues: { role: 'MEMBRO', email: '' },
   })
 
   const roleSelecionada = watch('role')
 
-  if (semEmail) {
-    return (
-      <div className={styles.overlay} onMouseDown={onClose}>
-        <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
-          <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
-            <X size={20} />
-          </button>
-          <div className={styles.bloqueado}>
-            <div className={styles.bloqueadoIcone}><AlertTriangle size={28} /></div>
-            <h2 className={styles.title}>E-mail necessário</h2>
-            <p className={styles.bloqueadoTexto}>
-              O membro <strong>{membro.nome}</strong> não tem um e-mail cadastrado.
-              O e-mail é necessário para conceder acesso, pois é com ele que a pessoa faz login.
-            </p>
-            <p className={styles.bloqueadoDica}>
-              Edite o cadastro do membro e adicione um e-mail antes de conceder acesso.
-            </p>
-            <Button variant="ghost" size="md" onClick={onClose} style={{ width: '100%' }}>
-              Entendi
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
+  const onSubmit = (data: ConcederAcessoFormData) => {
+    // Quando o membro não tem e-mail, o campo é obrigatório (é por ele que o convite vai).
+    if (semEmail && !data.email) {
+      setError('email', { message: 'Informe um e-mail para enviar o convite' })
+      return
+    }
+    confirmar(data)
   }
 
   if (precisaReativar) {
@@ -81,10 +62,10 @@ export function ModalConcederAcesso({
             <h2 className={styles.title}>Reativar acesso?</h2>
             <p className={styles.bloqueadoTexto}>
               <strong>{membro.nome}</strong> já teve acesso ao sistema, que foi arquivado.
-              Deseja reativar com a senha e o perfil que você acabou de definir?
+              Deseja reativar com o perfil que você acabou de escolher?
             </p>
             <p className={styles.bloqueadoDica}>
-              O acesso anterior será restaurado com as novas credenciais.
+              A pessoa receberá um novo convite para definir a senha ou entrar com Google.
             </p>
 
             {erroGeral && <div className={styles.alertError}>{erroGeral}</div>}
@@ -103,7 +84,7 @@ export function ModalConcederAcesso({
     )
   }
 
-  // ─── Estado normal: form de conceder acesso ────────────────────
+  // ─── Estado normal: form de convite ────────────────────
   return (
     <div className={styles.overlay} onMouseDown={onClose}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
@@ -117,53 +98,32 @@ export function ModalConcederAcesso({
         </div>
 
         <div className={styles.intro}>
-          <h2 className={styles.title}>Conceder acesso ao sistema</h2>
+          <h2 className={styles.title}>Convidar para o sistema</h2>
           <p className={styles.subtitle}>
-            Dê a <strong>{membro.nome}</strong> um login para acessar a plataforma.
+            <strong>{membro.nome}</strong> vai receber um e-mail para definir a senha ou entrar com Google.
           </p>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit(confirmar)}>
-          {/* E-mail — read-only, vem do membro */}
-          <div className={styles.emailReadonly}>
-            <span className={styles.emailLabel}>E-MAIL DE LOGIN</span>
-            <div className={styles.emailBox}>
-              <Mail size={16} className={styles.emailIcon} />
-              <span>{membro.email}</span>
+        <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+          {/* E-mail: read-only quando o membro já tem; editável quando não tem */}
+          {semEmail ? (
+            <Input
+              id="email"
+              type="email"
+              label="E-MAIL PARA O CONVITE"
+              placeholder="pessoa@exemplo.com"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+          ) : (
+            <div className={styles.emailReadonly}>
+              <span className={styles.emailLabel}>E-MAIL DO CONVITE</span>
+              <div className={styles.emailBox}>
+                <Mail size={16} className={styles.emailIcon} />
+                <span>{membro.email}</span>
+              </div>
             </div>
-          </div>
-
-          {/* Senha + confirmar */}
-          <div className={styles.senhaGrid}>
-            <Input
-              id="senha"
-              type={mostrarSenha ? 'text' : 'password'}
-              label="SENHA"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              error={errors.senha?.message}
-              rightElement={
-                <button type="button" className={styles.toggle} onClick={() => setMostrarSenha((v) => !v)} aria-label="Mostrar senha">
-                  {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              }
-              {...register('senha')}
-            />
-            <Input
-              id="confirmarSenha"
-              type={mostrarConfirmar ? 'text' : 'password'}
-              label="CONFIRMAR SENHA"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              error={errors.confirmarSenha?.message}
-              rightElement={
-                <button type="button" className={styles.toggle} onClick={() => setMostrarConfirmar((v) => !v)} aria-label="Mostrar senha">
-                  {mostrarConfirmar ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              }
-              {...register('confirmarSenha')}
-            />
-          </div>
+          )}
 
           {/* Nível de acesso (role) */}
           <div className={styles.roleSection}>
@@ -194,7 +154,7 @@ export function ModalConcederAcesso({
           <div className={styles.infoBox}>
             <Info size={18} className={styles.infoIcon} />
             <p className={styles.infoText}>
-              Este membro se tornará um usuário ativo. Por segurança, oriente-o a trocar a senha após o primeiro acesso.
+              A pessoa define a própria senha pelo link do e-mail (ou entra direto com Google). O convite vale por 7 dias.
             </p>
           </div>
 
@@ -204,7 +164,7 @@ export function ModalConcederAcesso({
           <div className={styles.footer}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
             <Button type="submit" variant="primary" size="md" isLoading={isLoading}>
-              Confirmar acesso
+              Enviar convite
             </Button>
           </div>
         </form>

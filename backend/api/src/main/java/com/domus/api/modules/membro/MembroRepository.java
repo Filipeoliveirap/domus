@@ -43,4 +43,18 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
     WHERE LOWER(email) = LOWER(:email)
     """, nativeQuery = true)
     boolean existsByEmailIncluindoArquivados(@Param("email") String email);
+
+    /** Aniversariantes de um mês (1-12), ordenados por dia. Para a tela de início. */
+    @Query("""
+        SELECT m FROM Membro m
+        WHERE m.igreja.id = :igrejaId
+          AND m.dataNascimento IS NOT NULL
+          AND EXTRACT(MONTH FROM m.dataNascimento) = :mes
+        ORDER BY EXTRACT(DAY FROM m.dataNascimento)
+        """)
+    java.util.List<Membro> aniversariantesDoMes(@Param("igrejaId") UUID igrejaId, @Param("mes") int mes);
+
+    long countByIgrejaId(UUID igrejaId);
+
+    long countByIgrejaIdAndCreatedAtAfter(UUID igrejaId, java.time.LocalDateTime desde);
 }

@@ -17,6 +17,8 @@ import com.domus.api.modules.usuario.busca.UsuarioDocument;
 import com.domus.api.modules.usuario.busca.UsuarioSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,21 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class ReindexacaoService {
+
+    private final ElasticsearchOperations elasticsearchOperations;
+
+    /**
+     * Recria o índice (delete + create com o mapping/settings atuais do Document).
+     * Necessário quando o analyzer muda: mapping de índice é imutável, então re-salvar
+     * num índice antigo não aplicaria o novo analyzer (asciifolding/edge_ngram).
+     */
+    private void recriarIndice(Class<?> docClass) {
+        IndexOperations ops = elasticsearchOperations.indexOps(docClass);
+        if (ops.exists()) {
+            ops.delete();
+        }
+        ops.createWithMapping();
+    }
 
     private final MembroRepository membroRepository;
     private final MembroSearchRepository membroSearchRepository;
@@ -54,6 +71,7 @@ public class ReindexacaoService {
     }
 
     private long reindexarMembros() {
+        recriarIndice(MembroDocument.class);
         var docs = membroRepository.findAll().stream()
                 .map(MembroDocument::de)
                 .toList();
@@ -63,6 +81,7 @@ public class ReindexacaoService {
     }
 
     private long reindexarEventos() {
+        recriarIndice(EventoDocument.class);
         var docs = eventoRepository.findAll().stream()
                 .map(EventoDocument::de)
                 .toList();
@@ -72,6 +91,7 @@ public class ReindexacaoService {
     }
 
     private long reindexarUsuarios() {
+        recriarIndice(UsuarioDocument.class);
         var docs = usuarioRepository.findAll().stream()
                 .map(UsuarioDocument::de)
                 .toList();
@@ -81,6 +101,7 @@ public class ReindexacaoService {
     }
 
     private long reindexarMovimentacoes() {
+        recriarIndice(MovimentacaoDocument.class);
         var docs = movimentacaoRepository.findAll().stream()
                 .map(MovimentacaoDocument::de)
                 .toList();
@@ -90,6 +111,7 @@ public class ReindexacaoService {
     }
 
     private long reindexarCategorias() {
+        recriarIndice(CategoriaDocument.class);
         var docs = categoriaRepository.findAll().stream()
                 .map(CategoriaDocument::de)
                 .toList();

@@ -103,12 +103,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/eventos/**")
                         .hasAnyRole("ADMIN_IGREJA", "LIDER")
 
-                        //Financeiro + Dashboard (somente ADMIN IGREJA)
+                        //Financeiro + Dashboard + Admin (somente ADMIN IGREJA)
                         .requestMatchers(
                                 "/movimentacoes/**",
                                 "/categorias/**",
                                 "/relatorios/**",
-                                "/dashboard"
+                                "/dashboard",
+                                "/admin/**"
                         ).hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole("ADMIN_IGREJA")

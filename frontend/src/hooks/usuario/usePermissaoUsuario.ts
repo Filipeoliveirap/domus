@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { usuarioService } from '@/services/usuarios.service'
 import { UsuarioResponse, Role } from '@/types/usuario.types'
 import { useAuthStore } from '@/store/authStore'
@@ -22,7 +23,7 @@ export function usePermissaoUsuario(usuario: UsuarioResponse, onClose: () => voi
     setErroGeral(null); setIsLoading(true)
     try {
       const atualizado = await usuarioService.atualizarRole(usuario.id, roleSelecionada)
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      invalidarCache(queryClient, 'usuario')
       if (idLogado === usuario.id) {
         atualizarUsuarioLogado({ role: atualizado.role as Role })
       }

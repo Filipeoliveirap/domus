@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { movimentacoesService } from '@/services/financeiro/movimentacao.service'
 import type { MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
@@ -18,7 +18,7 @@ export function useArquivarMovimentacao(movimentacao: MovimentacaoResponse, onCl
       await movimentacoesService.arquivar(movimentacao.id)
       queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
       queryClient.invalidateQueries({ queryKey: ['relatorios'] })  
-      toast.success('Movimentação arquivada.')
+      notificar.sucesso('Movimentação arquivada.')
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

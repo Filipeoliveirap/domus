@@ -3,7 +3,7 @@
 import { useState, Suspense} from "react";
 import Link from "next/link";
 import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-react";
-import { toast } from "sonner";
+import { notificar } from "@/components/common/Notificacao/notificar";
 import { useQueryClient } from "@tanstack/react-query";
 import { membrosService } from "@/services/membro.service";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
@@ -56,9 +56,9 @@ function UsuariosConteudo() {
     try {
       await membrosService.reenviarConvite(u.id)
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-      toast.success(`Convite reenviado para ${u.nome}.`)
+      notificar.sucesso(`Convite reenviado para ${u.nome}.`)
     } catch {
-      toast.error('Não foi possível reenviar o convite.')
+      notificar.erro('Não foi possível reenviar o convite.')
     }
   }
 

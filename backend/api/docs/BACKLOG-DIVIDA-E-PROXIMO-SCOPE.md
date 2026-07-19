@@ -221,3 +221,48 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
 - ~~**`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState`.~~ **RESOLVIDO**
   (2026-07-16): adicionado `foto: string | null` ao `authStore` (fica `null` até a feature de
   upload de foto da Fase 2 popular o campo). O `next build` de produção volta a passar.
+
+---
+
+## Igrejas vinculadas (V12/V13) — adiado de propósito
+
+Decidido durante a implementação da feature (2026-07-19). Nada aqui é esquecimento:
+
+- **Histórico de vínculo/desvínculo** (`desvinculado_em` + tabela de histórico). Hoje sair da
+  família **apaga** `vinculado_em`/`vinculado_por`. Se um dia for preciso auditar "quem entrou e
+  saiu quando", vira tabela de histórico. YAGNI agora: ninguém pediu.
+- **Status "Ativo/Pendente" na congregação.** Estava no protótipo, foi **removido**: não existe
+  estado pendente porque o design descartou solicitação+aprovação. Só volta se/quando entrar o
+  fluxo de convite por e-mail — aí o "Pendente" passa a significar algo.
+- **`fuso_horario` na igreja.** Tentador (o Brasil tem 4), mas a coluna sozinha é ilusão de
+  suporte a fuso: só serve se o sistema inteiro formatar data por igreja. **Armadilha conhecida
+  do módulo de eventos** — reavaliar se aparecer igreja fora de BRT.
+- **`Endereco` (`@Embeddable`) mora em `modules.membro`** e é reusado por `Igreja`. Funciona e é
+  DRY, mas o lugar certo seria `shared`. Mover quando alguém encostar no módulo de membro.
+- **Listas navegáveis** (a mãe folhear membros/eventos das filhas) e **irmãs verem eventos umas
+  das outras** — continuam fora, como o spec já dizia. Depende de consultar o pastor primeiro.
+- **Upload do logo da igreja.** A coluna `logo_url` existe desde a V13, mas a tela só a preserva
+  (não faz upload). Entra junto com o upload de foto de membro/evento da Fase 2.
+- ~~**Confirmações usam `window.confirm`.**~~ **RESOLVIDO** (2026-07-19): criado
+  `components/common/ModalConfirmacaoCritica`, no modelo "digite o nome para confirmar" do
+  GitHub — lista o que se perde e o que se mantém, e exige digitar o nome da igreja. Usado em
+  desvincular (sede) e sair da família (congregação). **Reutilizável**: é o componente a usar em
+  toda ação destrutiva daqui pra frente (ex.: excluir conta e exclusão definitiva da Fase 3).
+
+### Auditoria de segurança da feature (2026-07-19) — resíduos
+
+Dois agentes revisaram back e front. 9 dos 11 achados foram corrigidos na hora. Ficaram:
+
+- **Focus trap no `ModalConfirmacaoCritica`.** `Esc` e clique fora fecham, mas `Tab` escapa do
+  diálogo para o conteúdo de fundo. Acessibilidade, não segurança.
+- **Semântica ARIA das abas em `/financeiro/relatorios`.** Lá são abas de verdade e faltam
+  `aria-controls` + `role="tabpanel"` + navegação por setas. (Em `/configuracoes` já foi
+  corrigido: eram links de navegação e viraram `aria-current="page"`.)
+- **`CascadeType.ALL` + `orphanRemoval` nas 5 coleções de `Igreja`.** Não há bug hoje (o código
+  novo nunca inicializa as coleções), mas é bomba armada: um `builder()` + `save()` sobre id
+  existente apagaria membros/usuários/eventos/movimentações. Remover a cascata de escrita da
+  raiz de tenant exige teste de integração — não fazer no susto.
+- **Trigger e lock cobrem a regra dos 2 níveis, mas por caminhos diferentes.** O lock
+  (`VinculoService`) resolve a corrida; o trigger (V14) resolve caminhos futuros que não passem
+  pelo serviço. Um NÃO substitui o outro: trigger com `SELECT` simples não vê transação
+  concorrente em READ COMMITTED — por isso ele usa `FOR UPDATE`.

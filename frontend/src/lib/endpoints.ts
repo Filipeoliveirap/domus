@@ -56,5 +56,18 @@ export const Endpoints = {
     porCategoria: '/relatorios/por-categoria',
     evolucaoMensal: '/relatorios/evolucao-mensal',
     maiorLancamento: '/relatorios/maior-lancamento',
+    congregacoes: '/relatorios/congregacoes',
+  },
+
+  igreja: {
+    MINHA: '/igrejas/minha',
+  },
+
+  igrejasVinculadas: {
+    STATUS: '/igrejas-vinculadas',
+    GERAR_CODIGO: '/igrejas-vinculadas/codigo',
+    ENTRAR: '/igrejas-vinculadas/entrar',
+    DESVINCULAR: (congregacaoId: string) => `/igrejas-vinculadas/congregacoes/${congregacaoId}`,
+    SAIR: '/igrejas-vinculadas/sair',
   },
 }

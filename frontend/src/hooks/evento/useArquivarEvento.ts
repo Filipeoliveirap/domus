@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { eventosService } from '@/services/evento.service'
 import type { EventoResponse } from '@/types/evento.type'
@@ -17,7 +17,7 @@ export function useArquivarEvento(evento: EventoResponse, onClose: () => void) {
     try {
       await eventosService.arquivar(evento.id)
       queryClient.invalidateQueries({ queryKey: ['eventos'] })
-      toast.success(`"${evento.titulo}" foi arquivado.`)
+      notificar.sucesso(`"${evento.titulo}" foi arquivado.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

@@ -107,9 +107,22 @@
 
 
 .brandName {
+  display: flex;
+  flex-direction: column;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
+  letter-spacing: 0.14em;
+  line-height: 1.1;
   color: var(--color-text-dark);
+}
+
+.brandTagline {
+  margin-top: 3px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .leftHeadline {

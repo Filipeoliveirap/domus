@@ -4,7 +4,7 @@ import { usuarioService } from '@/services/usuarios.service'
 import { UsuarioResponse } from '@/types/usuario.types'
 import axios from 'axios'
 import type { ApiError } from '@/types/api.types'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 
 export function useArquivarUsuario(usuario: UsuarioResponse, onClose: () => void) {
   const queryClient = useQueryClient()
@@ -16,7 +16,7 @@ export function useArquivarUsuario(usuario: UsuarioResponse, onClose: () => void
     try {
       await usuarioService.arquivarUsuario(usuario.id)
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-      toast.success('Usuário arquivado com sucesso!')
+      notificar.sucesso('Usuário arquivado com sucesso!')
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

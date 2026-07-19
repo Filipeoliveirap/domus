@@ -12,7 +12,7 @@ export default function NotFound() {
     <div className={styles.container}>
       <div className={styles.conteudo}>
         <Image
-          src="/imagens/logo.png"
+          src="/images/logo.png"
           alt="Domus"
           width={140}
           height={48}

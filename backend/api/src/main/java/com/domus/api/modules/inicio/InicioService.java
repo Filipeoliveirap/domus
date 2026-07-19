@@ -30,7 +30,8 @@ public class InicioService {
         List<InicioResponse.Aniversariante> aniversariantes =
                 membroRepository.aniversariantesDoMes(igrejaId, mes).stream()
                         .map(m -> new InicioResponse.Aniversariante(
-                                m.getId(), m.getNome(), m.getDataNascimento().getDayOfMonth()))
+                                m.getId(), m.getNome(), m.getDataNascimento().getDayOfMonth(),
+                                m.getFoto()))
                         .toList();
 
         List<EventoResumoDTO> proximos =

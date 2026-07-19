@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { membrosService } from '@/services/membro.service'
 import type { MembroResponse } from '@/types/membro.type'
@@ -18,7 +18,7 @@ export function useArquivarMembro(membro: MembroResponse, onClose: () => void) {
       await membrosService.arquivar(membro.id)
       queryClient.invalidateQueries({ queryKey: ['membros'] })
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })  // o acesso pode ter sido arquivado junto
-      toast.success(`${membro.nome} foi arquivado.`)
+      notificar.sucesso(`${membro.nome} foi arquivado.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

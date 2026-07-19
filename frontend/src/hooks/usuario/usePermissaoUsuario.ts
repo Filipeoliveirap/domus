@@ -5,7 +5,7 @@ import { UsuarioResponse, Role } from '@/types/usuario.types'
 import { useAuthStore } from '@/store/authStore'
 import axios from 'axios'
 import type { ApiError } from '@/types/api.types'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 
 export function usePermissaoUsuario(usuario: UsuarioResponse, onClose: () => void) {
   const queryClient = useQueryClient()
@@ -26,7 +26,7 @@ export function usePermissaoUsuario(usuario: UsuarioResponse, onClose: () => voi
       if (idLogado === usuario.id) {
         atualizarUsuarioLogado({ role: atualizado.role as Role })
       }
-      toast.success('Permissões atualizadas com sucesso!')
+      notificar.sucesso('Permissões atualizadas com sucesso!')
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

@@ -1,0 +1,100 @@
+package com.domus.api.modules.igreja.familia;
+
+import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.shared.exception.AcessoNegadoException;
+import com.domus.api.shared.exception.ResourceNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Autorização da hierarquia de igrejas — o único ponto do sistema onde uma igreja
+ * pode ler dado de outra.
+ *
+ * <p>A regra que não pode ser quebrada: o id de <b>quem pergunta</b> vem do JWT; o id de
+ * <b>quem se quer ver</b> vem da requisição e <b>sempre</b> passa por
+ * {@link #validarAcesso(UUID, UUID)}. Sem isso é IDOR — a mãe da família A pediria um
+ * {@code igrejaId} da família B e leria financeiro de estranho.
+ *
+ * <p>A hierarquia enxerga só <b>para baixo</b>: a filha nunca vê a mãe nem as irmãs.
+ */
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class FamiliaIgrejaService {
+
+    private final IgrejaRepository igrejaRepository;
+
+    /** Mãe é quem tem pelo menos uma filha vinculada — não é quem tem código gerado. */
+    @Transactional(readOnly = true)
+    public boolean ehMae(UUID igrejaId) {
+        return igrejaRepository.existsByIgrejaMaeId(igrejaId);
+    }
+
+    /**
+     * Os ids que esta igreja pode enxergar: {@code {eu} ∪ {minhas filhas}}, e só se eu for mãe.
+     * Filha ou independente → apenas {@code {eu}}.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> idsDaFamilia(UUID igrejaId) {
+        List<UUID> ids = new ArrayList<>();
+        ids.add(igrejaId);
+        ids.addAll(igrejaRepository.buscarIdsDasFilhas(igrejaId));
+        return ids;
+    }
+
+    /** A igreja pedida pertence à família de quem está perguntando? */
+    @Transactional(readOnly = true)
+    public boolean pertenceAFamilia(UUID igrejaSolicitanteId, UUID igrejaAlvoId) {
+        if (igrejaSolicitanteId.equals(igrejaAlvoId)) {
+            return true;
+        }
+        return igrejaRepository.findById(igrejaAlvoId)
+                .map(Igreja::getIgrejaMae)
+                .map(mae -> igrejaSolicitanteId.equals(mae.getId()))
+                .orElse(false);
+    }
+
+    /**
+     * Resolve o escopo de um endpoint que aceita {@code igrejaId} opcional.
+     *
+     * <p>Ausente → minha igreja (comportamento de hoje, intacto).
+     * Presente → só passa se pertencer à minha família.
+     */
+    @Transactional(readOnly = true)
+    public UUID resolverEscopo(UUID igrejaSolicitanteId, UUID igrejaAlvoId) {
+        if (igrejaAlvoId == null) {
+            return igrejaSolicitanteId;
+        }
+        validarAcesso(igrejaSolicitanteId, igrejaAlvoId);
+        return igrejaAlvoId;
+    }
+
+    /** Barra o IDOR. Lança {@link AcessoNegadoException} se o alvo não for da família. */
+    @Transactional(readOnly = true)
+    public void validarAcesso(UUID igrejaSolicitanteId, UUID igrejaAlvoId) {
+        if (!pertenceAFamilia(igrejaSolicitanteId, igrejaAlvoId)) {
+            log.warn("Acesso cruzado negado. solicitante_igreja_id={}, alvo_igreja_id={}",
+                    igrejaSolicitanteId, igrejaAlvoId);
+            throw new AcessoNegadoException();
+        }
+    }
+
+    /** As congregações desta igreja, para a tela de Igrejas vinculadas. */
+    @Transactional(readOnly = true)
+    public List<Igreja> filhasDe(UUID igrejaId) {
+        return igrejaRepository.findByIgrejaMaeIdOrderByNomeAsc(igrejaId);
+    }
+
+    @Transactional(readOnly = true)
+    public Igreja buscar(UUID igrejaId) {
+        return igrejaRepository.findById(igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada"));
+    }
+}

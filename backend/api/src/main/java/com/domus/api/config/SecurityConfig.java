@@ -76,7 +76,15 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/igrejas/*").permitAll()
+                        // ATENÇÃO: esta regra tem que vir ANTES do permitAll abaixo — a ordem
+                        // manda no Spring Security, e "/igrejas/*" casaria com "/igrejas/minha",
+                        // deixando os dados da igreja abertos sem autenticação.
+                        .requestMatchers("/igrejas/minha").hasRole("ADMIN_IGREJA")
+                        // Era permitAll e vazava nome/CNPJ/e-mail/telefone de QUALQUER igreja
+                        // para quem nem está logado. Nenhuma tela consome este endpoint, e a
+                        // feature de igrejas vinculadas passou a circular UUIDs de igrejas nas
+                        // respostas — o que tornaria a enumeração muito mais útil para um curioso.
+                        .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 
                         //Usuários(somente ADMIN IGREJA)
                         .requestMatchers("/usuarios/**")
@@ -102,6 +110,10 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN_IGREJA", "LIDER")
                         .requestMatchers(HttpMethod.DELETE, "/eventos/**")
                         .hasAnyRole("ADMIN_IGREJA", "LIDER")
+
+                        //Igrejas vinculadas (mãe/congregações) — expõe financeiro entre igrejas,
+                        //então segue a mesma trava do financeiro: só ADMIN_IGREJA.
+                        .requestMatchers("/igrejas-vinculadas/**").hasRole("ADMIN_IGREJA")
 
                         //Financeiro + Dashboard + Admin (somente ADMIN IGREJA)
                         .requestMatchers(

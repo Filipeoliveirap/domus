@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { categoriasService } from '@/services/financeiro/categoria.service'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
@@ -17,7 +17,7 @@ export function useArquivarCategoria(categoria: CategoriaResponse, onClose: () =
     try {
       await categoriasService.arquivar(categoria.id)
       queryClient.invalidateQueries({ queryKey: ['categorias'] })
-      toast.success(`"${categoria.nome}" foi arquivada.`)
+      notificar.sucesso(`"${categoria.nome}" foi arquivada.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

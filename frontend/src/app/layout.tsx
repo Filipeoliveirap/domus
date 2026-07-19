@@ -22,7 +22,17 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
-          <Toaster position="top-right" richColors />
+          {/*
+            Sem `richColors`: a aparência dos toasts é nossa, definida em
+            components/common/Notificacao. O sonner fica só com a mecânica
+            (fila, timers, acessibilidade).
+          */}
+          <Toaster
+            position="top-right"
+            offset={24}
+            gap={12}
+            toastOptions={{ unstyled: true, classNames: { toast: 'w-full' } }}
+          />
         </Providers>
       </body>
     </html>

@@ -4,7 +4,7 @@ import { usuarioService } from '@/services/usuarios.service'
 import { UsuarioResponse } from '@/types/usuario.types'
 import axios from 'axios'
 import type { ApiError } from '@/types/api.types'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 
 export function useStatusUsuario(usuario: UsuarioResponse, onClose: () => void) {
   const queryClient = useQueryClient()
@@ -17,7 +17,7 @@ export function useStatusUsuario(usuario: UsuarioResponse, onClose: () => void) 
     try {
       await usuarioService.atualizarStatus(usuario.id, novoStatus)
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-      toast.success(novoStatus ? 'Usuário reativado com sucesso!' : 'Usuário desativado com sucesso!')
+      notificar.sucesso(novoStatus ? 'Usuário reativado com sucesso!' : 'Usuário desativado com sucesso!')
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

@@ -1,7 +1,10 @@
 import type { TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
 
-export function formatarMoeda(valor: string | number): string {
+export function formatarMoeda(valor: string | number | null | undefined): string {
   const num = typeof valor === 'string' ? parseFloat(valor) : valor
+  // `undefined` e string vazia viravam "R$ NaN" (null já virava R$ 0,00 por coerção).
+  // Num relatório financeiro, "—" é honesto: diz "não há valor", em vez de inventar zero.
+  if (num === null || num === undefined || !Number.isFinite(num)) return '—'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',

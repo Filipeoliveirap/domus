@@ -30,7 +30,6 @@ export function Passo2({
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
 
-  // watch acompanha o valor da senha em tempo real para o indicador de força
   const senha = watch('senhaAdmin') || ''
 
   return (

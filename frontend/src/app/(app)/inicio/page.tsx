@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -119,8 +119,22 @@ export default function InicioPage() {
   const [eventoAberto, setEventoAberto] = useState<string | null>(null)
 
   const hoje = new Date().getDate()
-  const aniversariantes = data?.aniversariantesMes ?? []
   const eventos = data?.proximosEventos ?? []
+
+  /*
+   * O backend devolve por dia do mês (1, 2, 3...). Aqui reordenamos para o que interessa
+   * a quem abre a tela: HOJE primeiro, depois quem ainda vem, e só então quem já passou.
+   *
+   * A terceira faixa importa por causa do card, que mostra apenas os 4 primeiros: sem ela,
+   * um aniversariante de hoje viria seguido dos dias 1, 2 e 3 — três datas já passadas —
+   * escondendo no modal justamente as pessoas que ainda dá tempo de parabenizar.
+   */
+  const aniversariantes = useMemo(() => {
+    const faixa = (dia: number) => (dia === hoje ? 0 : dia > hoje ? 1 : 2)
+    return [...(data?.aniversariantesMes ?? [])].sort(
+      (a, b) => faixa(a.dia) - faixa(b.dia) || a.dia - b.dia,
+    )
+  }, [data?.aniversariantesMes, hoje])
 
   return (
     <div className={styles.pagina}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../../forms/useAppForm'
@@ -45,11 +45,11 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
         await categoriasService.atualizar(categoriaId!, payload)
         queryClient.invalidateQueries({ queryKey: ['categorias'] })
         queryClient.invalidateQueries({ queryKey: ['categoria', categoriaId] })
-        toast.success('Categoria atualizada com sucesso!')
+        notificar.sucesso('Categoria atualizada com sucesso!')
       } else {
         await categoriasService.criar(payload)
         queryClient.invalidateQueries({ queryKey: ['categorias'] })
-        toast.success('Categoria cadastrada com sucesso!')
+        notificar.sucesso('Categoria cadastrada com sucesso!')
       }
       onSuccess?.()     
     } catch (error: unknown) {

@@ -1,29 +1,114 @@
 /* ═══════════════════════════════════════════════════════════
-   PAINEL ESQUERDO — fundo azul com imagem de igreja sobreposta
+   PAINEL ESQUERDO — foto do santuário com a assinatura do Domus
    ═══════════════════════════════════════════════════════════ */
 .panel {
-  background-color: #004AC6;
   position: relative;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  /* O conteúdo mora embaixo, à esquerda, sobre a foto. */
+  align-items: flex-end;
   padding: 48px;
   min-height: 828px;
   color: var(--color-bg-white);
+  /* Fica só como cor de carregamento, até a foto pintar. */
+  background-color: #004AC6;
 }
 
-/* Imagem de fundo da igreja com mix-blend-mode para integrar com o azul */
+/*
+ * Sem mix-blend-mode e sem opacidade: a foto aparece nas cores dela.
+ * A legibilidade do texto branco vem do véu abaixo, não de escurecer a imagem inteira.
+ */
 .bgImage {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: left center;
-  opacity: 0.6;
-  mix-blend-mode: luminosity;
+  object-position: center;
   pointer-events: none;
   z-index: 0;
 }
 
+/*
+ * Véu só no canto inferior esquerdo, onde o texto fica. Um escurecimento uniforme
+ * apagaria a foto — que é justamente o que se quer mostrar. O degradê diagonal
+ * garante contraste do branco sem sujar a cúpula, que é o ponto forte da imagem.
+ */
+.veu {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top,
+      rgba(10, 20, 45, 0.85) 0%,
+      rgba(10, 20, 45, 0.55) 22%,
+      rgba(10, 20, 45, 0) 55%
+    ),
+    linear-gradient(
+      to right,
+      rgba(10, 20, 45, 0.45) 0%,
+      rgba(10, 20, 45, 0) 60%
+    );
+}
+
+.conteudo {
+  position: relative;
+  z-index: 2;
+  max-width: 420px;
+  min-width: 0;
+}
+
+.frase {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.45;
+  /* Sombra sutil: segura o contraste mesmo se a foto for trocada por uma mais clara. */
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+.divisor {
+  width: 48px;
+  height: 3px;
+  margin: 24px 0 16px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-white);
+  opacity: 0.9;
+}
+
+.marca {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.14em;
+  line-height: 1.1;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+.assinatura {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- Telas menores ---- */
+
+@media (max-width: 1023px) {
+  .panel {
+    min-height: 320px;
+    padding: 32px;
+  }
+
+  .frase {
+    font-size: var(--font-size-lg);
+  }
+
+  .marca {
+    font-size: var(--font-size-xl);
+  }
+}

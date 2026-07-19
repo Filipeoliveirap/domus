@@ -1,0 +1,272 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  /* Vidro fosco: o início continua visível atrás, reforçando que não saímos da tela. */
+  background: rgba(250, 248, 255, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: surgir 0.18s ease-out;
+}
+
+.modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.14);
+  animation: subir 0.22s ease-out;
+}
+
+@keyframes surgir {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes subir {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal { animation: none; }
+}
+
+/* ---- Cabeçalho com imagem ---- */
+
+.capa {
+  position: relative;
+  flex-shrink: 0;
+  height: 200px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+}
+
+.capaFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Sem foto (o upload é da Fase 2): degradê da marca com um ícone discreto. */
+.capaVazia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.fechar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  color: var(--color-text-dark);
+  transition: background-color var(--transition-fast);
+}
+
+.fechar:hover {
+  background: #fff;
+}
+
+/* ---- Corpo ---- */
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.titulo {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  color: var(--color-text-dark);
+  overflow-wrap: anywhere;
+}
+
+.metadados {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.chipData {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.local {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.descricao {
+  font-size: var(--font-size-md);
+  line-height: 1.65;
+  color: var(--color-text-muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.semDescricao {
+  font-style: italic;
+}
+
+/* ---- Presença (pronta para a feature de inscrição) ---- */
+
+.presenca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.presencaPessoas {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Avatares sobrepostos — o -8px é o que cria o efeito de pilha. */
+.pilhaAvatares {
+  display: flex;
+}
+
+.pilhaAvatares > * + * {
+  margin-left: -8px;
+}
+
+.avatarPresenca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-bg-white);
+  overflow: hidden;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.avatarPresencaFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.presencaTexto {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+/* ---- Ação ---- */
+
+.botaoConfirmar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.botaoConfirmar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.botaoConfirmar:disabled {
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ---- Carregando / erro ---- */
+
+.estado {
+  padding: 40px 28px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 767px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  /* Vira uma folha que sobe pelo rodapé — padrão de modal em celular. */
+  .modal {
+    max-width: 100%;
+    max-height: 92vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .capa {
+    height: 160px;
+  }
+
+  .corpo {
+    padding: 20px;
+  }
+
+  .presenca {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

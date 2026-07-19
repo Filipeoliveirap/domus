@@ -7,5 +7,6 @@ public record InicioResponse(
         List<Aniversariante> aniversariantesMes,
         List<EventoResumoDTO> proximosEventos
 ) {
-    public record Aniversariante(UUID id, String nome, int dia) {}
+    /** {@code foto} é nulo enquanto o upload (Fase 2) não existir — a tela cai nas iniciais. */
+    public record Aniversariante(UUID id, String nome, int dia, String foto) {}
 }

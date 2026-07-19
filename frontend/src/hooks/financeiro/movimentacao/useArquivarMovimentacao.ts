@@ -2,6 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { movimentacoesService } from '@/services/financeiro/movimentacao.service'
 import type { MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
 import type { ApiError } from '@/types/api.types'
@@ -16,8 +17,7 @@ export function useArquivarMovimentacao(movimentacao: MovimentacaoResponse, onCl
     setIsLoading(true)
     try {
       await movimentacoesService.arquivar(movimentacao.id)
-      queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
-      queryClient.invalidateQueries({ queryKey: ['relatorios'] })  
+      invalidarCache(queryClient, 'movimentacao')
       notificar.sucesso('Movimentação arquivada.')
       onClose()
     } catch (error: unknown) {

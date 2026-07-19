@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { usuarioService } from '@/services/usuarios.service'
 import { UsuarioResponse } from '@/types/usuario.types'
 import axios from 'axios'
@@ -16,7 +17,7 @@ export function useStatusUsuario(usuario: UsuarioResponse, onClose: () => void) 
     setErroGeral(null); setIsLoading(true)
     try {
       await usuarioService.atualizarStatus(usuario.id, novoStatus)
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      invalidarCache(queryClient, 'usuario')
       notificar.sucesso(novoStatus ? 'Usuário reativado com sucesso!' : 'Usuário desativado com sucesso!')
       onClose()
     } catch (error: unknown) {

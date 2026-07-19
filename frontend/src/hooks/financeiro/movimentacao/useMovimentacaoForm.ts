@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../../forms/useAppForm'
 import { movimentacaoSchema, type MovimentacaoFormInput, type MovimentacaoFormData } from '@/lib/validators'
@@ -66,14 +67,12 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
 
       if (ehEdicao) {
         await movimentacoesService.atualizar(movimentacaoId!, payload)
-        queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
+        invalidarCache(queryClient, 'movimentacao')
         queryClient.invalidateQueries({ queryKey: ['movimentacao', movimentacaoId] })
-        queryClient.invalidateQueries({ queryKey: ['relatorios'] })   
         notificar.sucesso('Movimentação atualizada com sucesso!')
       } else {
         await movimentacoesService.criar(payload)
-        queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
-        queryClient.invalidateQueries({ queryKey: ['relatorios'] })
+        invalidarCache(queryClient, 'movimentacao')
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()

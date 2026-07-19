@@ -289,20 +289,50 @@
 }
 
 /* ─── Responsivo ─── */
+/* ---- Mobile: a linha da tabela vira CARD ----
+ *
+ * Antes daqui escondia .colCat/.colData/.colTipo com display:none. O resultado era um card
+ * com só a descrição e o valor — e como descrição é opcional (vira "—"), sobrava um traço e
+ * um número, sem dizer de quando, de que categoria nem de que tipo era o lançamento.
+ *
+ * Esconder coluna não é responsividade: é perder informação. O certo (e a convenção do
+ * projeto) é reorganizar em card, mantendo tudo. Usamos grid-template-areas porque a ordem
+ * visual do card difere da ordem do DOM, que segue a tabela do desktop.
+ */
 @media (max-width: 900px) {
   .tabelaHeader {
     display: none;
   }
 
   .linha {
-    grid-template-columns: 1fr auto;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "desc  acoes"
+      "cat   valor"
+      "data  tipo";
+    gap: 6px 12px;
+    align-items: center;
+    padding: 14px 16px;
   }
 
-  .colCat,
-  .colData,
+  .colDesc  { grid-area: desc; }
+  .colAcoes { grid-area: acoes; }
+  .colCat   { grid-area: cat; }
+  .colValor { grid-area: valor; }
+  .colData  { grid-area: data; }
+
   .colTipo {
-    display: none;
+    grid-area: tipo;
+    justify-self: end;
+  }
+
+  /* Data e categoria viram informação secundária — o valor é que precisa saltar. */
+  .colCat,
+  .colData {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .filtroCampo {

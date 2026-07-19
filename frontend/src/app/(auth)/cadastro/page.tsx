@@ -123,8 +123,12 @@ export default function CadastroPage() {
     <div className={styles.page2}>
       <div className={styles.leftSide}>
         <div className={styles.brandRow}>
-          <Image src="/images/logo2.png" alt="domus" width={40} height={60} />
-          <span className={styles.brandName}>Domus</span>
+          <Image src="/images/logo2.png" alt="Domus" width={40} height={60} />
+          {/* Mesma assinatura do painel do santuário — a marca fala igual nas duas telas. */}
+          <span className={styles.brandName}>
+            DOMUS
+            <span className={styles.brandTagline}>Gestão Eclesiástica</span>
+          </span>
         </div>
 
         <h1 className={styles.leftHeadline}>

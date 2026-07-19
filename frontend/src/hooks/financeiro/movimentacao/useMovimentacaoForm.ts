@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../../forms/useAppForm'
@@ -69,12 +69,12 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
         queryClient.invalidateQueries({ queryKey: ['movimentacao', movimentacaoId] })
         queryClient.invalidateQueries({ queryKey: ['relatorios'] })   
-        toast.success('Movimentação atualizada com sucesso!')
+        notificar.sucesso('Movimentação atualizada com sucesso!')
       } else {
         await movimentacoesService.criar(payload)
         queryClient.invalidateQueries({ queryKey: ['movimentacoes'] })
         queryClient.invalidateQueries({ queryKey: ['relatorios'] })
-        toast.success('Movimentação registrada com sucesso!')
+        notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
       router.push('/financeiro/movimentacoes')

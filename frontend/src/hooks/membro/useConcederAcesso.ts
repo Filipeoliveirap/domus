@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { membrosService } from '@/services/membro.service'
 import type { MembroResponse, ConcederAcessoRequest } from '@/types/membro.type'
@@ -26,7 +26,7 @@ export function useConcederAcesso(membro: MembroResponse, onClose: () => void) {
     try {
       await membrosService.concederAcesso({ membroId: membro.id, ...dados })
       invalidar()
-      toast.success(`Convite enviado para ${membro.nome}.`)
+      notificar.sucesso(`Convite enviado para ${membro.nome}.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
@@ -52,7 +52,7 @@ export function useConcederAcesso(membro: MembroResponse, onClose: () => void) {
     try {
       await membrosService.reativarAcesso({ membroId: membro.id, ...dadosPendentes })
       invalidar()
-      toast.success(`Convite reenviado para ${membro.nome}.`)
+      notificar.sucesso(`Convite reenviado para ${membro.nome}.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

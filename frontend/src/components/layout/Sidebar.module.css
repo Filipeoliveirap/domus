@@ -196,3 +196,59 @@
   background-color: #fef2f2;
   color: #ba1a1a;
 }
+/* ---- Configurações: menu expansível ---- */
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* O link vira botão de abrir/fechar, então precisa do mesmo alinhamento + a seta na ponta. */
+.grupoBotao {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.grupoBotaoConteudo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.seta {
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.setaAberta {
+  transform: rotate(180deg);
+}
+
+.submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  /* Alinha o texto do submenu com o texto do pai (ícone 20px + gap 0.75rem). */
+  padding-left: 2.75rem;
+}
+
+.subLink {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  transition: all 150ms ease;
+}
+
+.subLink:hover {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.subLinkAtivo {
+  color: #1d4ed8;
+  font-weight: 600;
+}

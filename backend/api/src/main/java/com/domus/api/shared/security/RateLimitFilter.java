@@ -50,7 +50,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/auth/google/registrar",
             "/auth/forgot-password",
             "/auth/reset-password",
-            "/igrejas/registrar"
+            "/igrejas/registrar",
+            // O código de vínculo é credencial sem expiração: tentativa de adivinhá-lo
+            // merece o limite estrito, não só o global.
+            "/igrejas-vinculadas/entrar"
     );
 
     private final StringRedisTemplate redisTemplate;

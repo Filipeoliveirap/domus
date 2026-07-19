@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
@@ -79,11 +79,11 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
         await membrosService.atualizar(membroId!, payload)
         queryClient.invalidateQueries({ queryKey: ['membros'] })
         queryClient.invalidateQueries({ queryKey: ['membro', membroId] })
-        toast.success('Membro atualizado com sucesso!')
+        notificar.sucesso('Membro atualizado com sucesso!')
       } else {
         await membrosService.criar(payload)
         queryClient.invalidateQueries({ queryKey: ['membros'] })
-        toast.success('Membro cadastrado com sucesso!')
+        notificar.sucesso('Membro cadastrado com sucesso!')
       }
       router.push('/membros')
     } catch (error: unknown) {

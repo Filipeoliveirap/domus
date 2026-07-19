@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
 import { Endpoints } from '@/lib/endpoints'
 
@@ -28,6 +29,9 @@ let refreshPromise: Promise<void> | null = null
 
 function encerrarSessao() {
   useAuthStore.getState().logout()
+  // Hoje o redirect abaixo dá reload (window.location) e o cache morreria junto, mas
+  // depender disso é frágil: se um dia virar navegação SPA, o cache vazaria entre sessões.
+  queryClient.clear()
   if (typeof window !== 'undefined') {
     // Preserva o destino para o usuário voltar onde estava depois de entrar de novo.
     // Rotas públicas ficam de fora: não faz sentido "voltar" para o próprio /login.

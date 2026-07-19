@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
@@ -81,11 +81,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         await eventosService.atualizar(eventoId!, payload)
         queryClient.invalidateQueries({ queryKey: ['eventos'] })
         queryClient.invalidateQueries({ queryKey: ['evento', eventoId] })
-        toast.success('Evento atualizado com sucesso!')
+        notificar.sucesso('Evento atualizado com sucesso!')
       } else {
         await eventosService.criar(payload)
         queryClient.invalidateQueries({ queryKey: ['eventos'] })
-        toast.success('Evento cadastrado com sucesso!')
+        notificar.sucesso('Evento cadastrado com sucesso!')
       }
       router.push('/eventos')
     } catch (error: unknown) {

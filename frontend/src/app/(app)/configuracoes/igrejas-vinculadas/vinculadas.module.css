@@ -1,0 +1,363 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* ---- Faixa de ações do topo ---- */
+
+.faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-width: 0;
+}
+
+.faixaTexto {
+  min-width: 0;
+  flex: 1;
+}
+
+.faixaTitulo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.faixaSubtitulo {
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.faixaAcoes {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---- Código de vínculo ---- */
+
+.blocoCodigo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  min-width: 0;
+}
+
+.codigoRotulo {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.codigoValor {
+  margin-top: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  color: var(--color-primary-dark);
+  overflow-wrap: anywhere;
+}
+
+.codigoAjuda {
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.codigoAcoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---- Tabela de congregações ---- */
+
+.cartao {
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.tabelaWrapper {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.tabela th {
+  text-align: left;
+  padding: 14px 20px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-bg-page);
+  white-space: nowrap;
+}
+
+.tabela td {
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.celulaNome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatarIgreja {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.nomeIgreja {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.vazio {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.rodapeInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ---- Estado FILHA ---- */
+
+.cartaoFilha {
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-width: 0;
+}
+
+.maeNome {
+  margin-top: 8px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  overflow-wrap: anywhere;
+}
+
+.maeDetalhe {
+  margin-top: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.aviso svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ---- Botões ---- */
+
+.botaoPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+
+.botaoPrimario:hover:not(:disabled) { background: var(--color-primary-dark); }
+.botaoPrimario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.botaoSecundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+}
+
+.botaoSecundario:hover:not(:disabled) { background: var(--color-bg-page); }
+.botaoSecundario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.botaoPerigo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.botaoPerigo:hover:not(:disabled) { background: var(--color-danger-bg); }
+.botaoPerigo:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---- Formulário de entrar com código ---- */
+
+.formCodigo {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.inputCodigo {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-dark);
+}
+
+.inputCodigo:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.skeleton {
+  height: 300px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-page);
+  animation: pulsar 1.4s ease-in-out infinite;
+}
+
+@keyframes pulsar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* ---- Mobile: tabela vira cards ---- */
+
+@media (max-width: 767px) {
+  .faixa,
+  .blocoCodigo,
+  .cartaoFilha {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .faixaAcoes,
+  .codigoAcoes {
+    flex-direction: column;
+  }
+
+  .botaoPrimario,
+  .botaoSecundario {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tabelaWrapper { overflow-x: visible; }
+
+  .tabela, .tabela tbody, .tabela tr, .tabela td { display: block; width: 100%; }
+  .tabela thead { display: none; }
+
+  .tabela tr {
+    border-top: 1px solid var(--color-border);
+    padding: 12px 16px;
+  }
+
+  .tabela td {
+    border-top: none;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Sem cabeçalho no mobile, cada célula carrega o próprio rótulo. */
+  .tabela td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    flex-shrink: 0;
+  }
+
+  .botaoPerigo { width: 100%; justify-content: center; margin-top: 4px; }
+
+  .formCodigo { flex-direction: column; }
+  .inputCodigo { width: 100%; }
+}

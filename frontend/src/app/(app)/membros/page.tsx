@@ -148,7 +148,7 @@ function MembrosConteudo() {
               membros.map((m) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => router.push(`/membros/${m.id}`) },
-                  { label: 'Conceder acesso', icone: KeyRound, onClick: () => setMembroConcedendo(m) },
+                  { label: 'Convidar ao sistema', icone: KeyRound, onClick: () => setMembroConcedendo(m) },
                   { label: 'Arquivar', icone: Archive, onClick: () => setMembroArquivando(m), perigo: true, separadorAntes: true },
                 ]
 

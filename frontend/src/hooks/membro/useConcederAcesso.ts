@@ -2,6 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { membrosService } from '@/services/membro.service'
 import type { MembroResponse, ConcederAcessoRequest } from '@/types/membro.type'
 import type { ApiError } from '@/types/api.types'
@@ -16,8 +17,7 @@ export function useConcederAcesso(membro: MembroResponse, onClose: () => void) {
   const queryClient = useQueryClient()
 
   function invalidar() {
-    queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-    queryClient.invalidateQueries({ queryKey: ['membros'] })
+    invalidarCache(queryClient, 'usuario', 'membro')
   }
 
   const confirmar = async (dados: DadosAcesso) => {

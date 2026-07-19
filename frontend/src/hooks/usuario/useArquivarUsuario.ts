@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { usuarioService } from '@/services/usuarios.service'
 import { UsuarioResponse } from '@/types/usuario.types'
 import axios from 'axios'
@@ -15,7 +16,7 @@ export function useArquivarUsuario(usuario: UsuarioResponse, onClose: () => void
     setErroGeral(null); setIsLoading(true)
     try {
       await usuarioService.arquivarUsuario(usuario.id)
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      invalidarCache(queryClient, 'usuario')
       notificar.sucesso('Usuário arquivado com sucesso!')
       onClose()
     } catch (error: unknown) {

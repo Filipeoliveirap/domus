@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { eventoSchema, type EventoFormInput, type EventoFormData } from '@/lib/validators'
@@ -79,12 +80,12 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
 
       if (ehEdicao) {
         await eventosService.atualizar(eventoId!, payload)
-        queryClient.invalidateQueries({ queryKey: ['eventos'] })
+        invalidarCache(queryClient, 'evento')
         queryClient.invalidateQueries({ queryKey: ['evento', eventoId] })
         notificar.sucesso('Evento atualizado com sucesso!')
       } else {
         await eventosService.criar(payload)
-        queryClient.invalidateQueries({ queryKey: ['eventos'] })
+        invalidarCache(queryClient, 'evento')
         notificar.sucesso('Evento cadastrado com sucesso!')
       }
       router.push('/eventos')

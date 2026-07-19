@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { membroSchema, type MembroFormInput, type MembroFormData } from '@/lib/validators'
@@ -77,12 +78,12 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
 
       if (ehEdicao) {
         await membrosService.atualizar(membroId!, payload)
-        queryClient.invalidateQueries({ queryKey: ['membros'] })
+        invalidarCache(queryClient, 'membro')
         queryClient.invalidateQueries({ queryKey: ['membro', membroId] })
         notificar.sucesso('Membro atualizado com sucesso!')
       } else {
         await membrosService.criar(payload)
-        queryClient.invalidateQueries({ queryKey: ['membros'] })
+        invalidarCache(queryClient, 'membro')
         notificar.sucesso('Membro cadastrado com sucesso!')
       }
       router.push('/membros')

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { categoriasService } from '@/services/financeiro/categoria.service'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import type { ApiError } from '@/types/api.types'
@@ -16,7 +17,7 @@ export function useArquivarCategoria(categoria: CategoriaResponse, onClose: () =
     setIsLoading(true)
     try {
       await categoriasService.arquivar(categoria.id)
-      queryClient.invalidateQueries({ queryKey: ['categorias'] })
+      invalidarCache(queryClient, 'categoria')
       notificar.sucesso(`"${categoria.nome}" foi arquivada.`)
       onClose()
     } catch (error: unknown) {

@@ -266,3 +266,87 @@ Dois agentes revisaram back e front. 9 dos 11 achados foram corrigidos na hora. 
   (`VinculoService`) resolve a corrida; o trigger (V14) resolve caminhos futuros que não passem
   pelo serviço. Um NÃO substitui o outro: trigger com `SELECT` simples não vê transação
   concorrente em READ COMMITTED — por isso ele usa `FOR UPDATE`.
+
+---
+
+## Módulo de eventos — ideias levantadas no brainstorm de inscrição (2026-07-20)
+
+Surgiram enquanto desenhávamos a inscrição em evento. **Não entram na Spec A** (inscrição), mas
+são o roteiro das specs seguintes. Registradas aqui para não se perderem.
+
+### Decomposição acordada
+
+O cadastro de evento virou quatro entregas independentes, nesta ordem:
+
+| Spec | Conteúdo | Estado |
+|------|----------|--------|
+| **A** | Inscrição + vagas + preço informativo + acompanhantes + `batizado` | em spec |
+| **B** | Cadastro enriquecido: layout 2 colunas, responsável, tipo, locais cadastrados | próxima |
+| **C** | Recorrência (culto semanal cadastrado uma vez) | depois do piloto usar |
+| **D** | Campos personalizados por evento | por último, se a igreja pedir |
+
+Motivo da ordem: A e B são independentes (dá para fazer B com a igreja já usando A). C e D só
+ficam bons com uso real informando o desenho — construir antes é construir no escuro.
+
+### Spec B — cadastro de evento enriquecido
+
+- **Layout de duas colunas** (do protótipo): coluna esquerda = *o que é o evento* (título, data,
+  local); coluna direita = *como é administrado* (responsável, banner, visibilidade). A
+  compactação percebida vem daí — o campo raro para de atrapalhar o campo comum.
+- **Locais como entidade cadastrada**, não texto livre: "Santuário Principal", "Salão Social",
+  cada um com capacidade. Cadastra uma vez, reusa sempre; a capacidade **sugere** o número de
+  vagas. Inclui localizações rápidas ad-hoc ("casa de fulano", "chácara tal").
+- **Herdar endereço da igreja**: ao escolher o local do templo, o detalhe do evento mostra o
+  endereço já cadastrado em `igreja` — sem redigitar em cada evento.
+- **Responsável/organizador**: membro escolhido por busca na lista de membros.
+- **Tipo do evento** — ⚠️ **não chamar de "categoria"**: o nome já significa outra coisa no Domus
+  (`categoria_financeira`) e a ambiguidade contaminaria toda conversa futura.
+- **Banner do evento**: depende do upload de foto da Fase 2 (mesma pendência do logo da igreja).
+
+### Spec C — recorrência
+
+Cadastrar o culto uma vez em vez de toda semana. **É um projeto próprio, não um toggle.** A
+pergunta que define o desenho: quando o pastor edita o culto de 15/08, ele mudou *aquele dia* ou
+*todos os cultos*? E cancelar um feriado exige "exceções da série". Todo calendário maduro
+(Google, Outlook) tem tela dedicada a isso. O protótipo mostrava um toggle sem nada embaixo —
+tinha pulado a parte difícil.
+
+### Spec D — campos personalizados por evento
+
+Marcar no cadastro "este evento precisa de algum dado além do cadastro da pessoa?" e abrir um
+formulário para o inscrito preencher. Na prática é **um criador de formulários** (tipo de campo,
+obrigatoriedade, validação, exibição das respostas) — sozinho é maior que a inscrição inteira.
+
+**Fica por último de propósito:** ainda não sabemos *quais* campos a igreja pede. A aposta é que
+os primeiros casos sejam "tamanho da camiseta" e "vai de van?", e que um campo de observação
+livre resolva os dois. Ver três eventos reais antes de construir o gerador.
+
+### Elegibilidade por perfil (ideia nova — provável Spec B)
+
+Restringir quem pode se inscrever, com a regra **avaliada no momento da inscrição**:
+
+- **Faixa etária** com idade mínima/máxima configurável, em recortes separados (crianças,
+  adolescentes, jovens, adolescentes+jovens, terceira idade). Separados de propósito: é o que
+  permite os filtros e selos do item abaixo.
+- **Estado civil** (só solteiros / só casados) — lido de `membro.estado_civil`, que já existe.
+- **Só batizados** — habilitado pelo campo `batizado` que entra na Spec A.
+
+⚠️ **Cuidado de dado:** idade depende de `data_nascimento`, que é nulável. Definir desde já o que
+acontece com membro sem data — bloquear ou deixar passar? Um filtro que barra em silêncio quem
+não tem o campo preenchido vira suporte.
+
+### Selos e filtros por tipo de evento (ideia nova)
+
+Selo compacto no card do evento indicando o recorte ("Kids", "Jovens", "3ª idade"), e filtro
+correspondente na listagem. Depende dos recortes acima existirem como dado estruturado — é a
+razão de guardá-los separados em vez de um campo livre.
+
+### Equipe servindo no evento (ideia nova)
+
+Registrar quem **serve**, não quem assiste: "tia Ana com as crianças", "ministério de música da
+igreja X", "pastor Y na pregação". É uma lista de pessoa/grupo + função, distinta da lista de
+inscritos — quem serve não ocupa vaga.
+
+Decidir na hora: função como texto livre (barato, sujeita a variação de escrita) ou lista
+fechada de funções (consistente, exige manutenção). Provável começar com texto livre e observar
+o que a igreja realmente digita.

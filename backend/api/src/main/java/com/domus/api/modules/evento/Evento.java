@@ -43,6 +43,22 @@ public class Evento {
 
     private String foto;
 
+    /** NULL = sem limite de vagas. */
+    @Column(name = "vagas")
+    private Integer vagas;
+
+    /** NULL = gratuito. Informativo: o Domus registra a inscrição, não o pagamento. */
+    @Column(name = "preco", precision = 10, scale = 2)
+    private java.math.BigDecimal preco;
+
+    @Column(name = "exclusivo_membros", nullable = false)
+    @Builder.Default
+    private boolean exclusivoMembros = false;
+
+    @Column(name = "exclusivo_batizados", nullable = false)
+    @Builder.Default
+    private boolean exclusivoBatizados = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

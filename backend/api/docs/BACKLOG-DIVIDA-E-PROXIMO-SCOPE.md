@@ -350,3 +350,25 @@ inscritos — quem serve não ocupa vaga.
 Decidir na hora: função como texto livre (barato, sujeita a variação de escrita) ou lista
 fechada de funções (consistente, exige manutenção). Provável começar com texto livre e observar
 o que a igreja realmente digita.
+
+---
+
+## Falta harness de teste de autorização por endpoint (descoberto 2026-07-20)
+
+Ao adicionar os matchers de `/eventos/*/inscricoes**` no `SecurityConfig`, a Task 2 original
+previa um teste MockMvc batendo na `SecurityFilterChain` de verdade (`membroPodeSeInscreverEmEvento`
+/ `membroNaoVeListaDeInscritos`). **Não existe esse harness no projeto.** `SecurityFilterTest`
+é um teste unitário do `SecurityFilter` (o JWT filter) com Mockito puro — não sobe contexto
+Spring, não passa pela `authorizeHttpRequests`, então não tem como pegar bug de **ordem** de
+`requestMatchers`.
+
+Consequência prática: erro de ordenação de matcher (curinga genérico casando antes da regra
+específica) **compila limpo e passa em todos os testes unitários**, e só aparece testando ao
+vivo (curl/Postman) contra o servidor rodando. Foi exatamente assim que a armadilha de
+`/igrejas/*` foi descoberta antes, e é como esta de `/eventos/*/inscricoes` está sendo validada
+agora — não há rede automatizada pegando isso hoje.
+
+Ideal futuro: um `@SpringBootTest` com `@AutoConfigureMockMvc` (ou `WebMvcTest` importando o
+`SecurityConfig`) que suba a `SecurityFilterChain` real e teste, por perfil, quais rotas dão
+403/200 — pegaria esta classe inteira de bug no CI, não só na mão. Ficou de fora desta task de
+propósito (harness é trabalho maior, tarefa própria) — anotado aqui para não se perder.

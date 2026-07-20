@@ -101,6 +101,19 @@ public class SecurityConfig {
                         .hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole("ADMIN_IGREJA")
 
+                        //Inscrição em evento — DEVE vir ANTES dos curingas /eventos/**,
+                        //senão o POST curinga (ADMIN+LÍDER) barra o MEMBRO, que é justamente
+                        //quem se inscreve, e o GET curinga (todos) vaza a lista de inscritos.
+                        //Mesma armadilha de ordenação já corrigida em /igrejas/*.
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")
+                        .hasAnyRole("ADMIN_IGREJA", "LIDER")
+                        .requestMatchers("/eventos/*/inscricoes/**")
+                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes")
+                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
+                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
                         .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")

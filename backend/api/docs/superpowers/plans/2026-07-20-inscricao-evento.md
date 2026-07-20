@@ -901,7 +901,14 @@ public class InscricaoService {
         return MinhaInscricaoResponse.from(salva);
     }
 
-    /** Inscreve vários membros de uma vez (modal de seleção múltipla). */
+    /**
+     * Inscreve vários membros de uma vez (modal de seleção múltipla).
+     *
+     * <p><b>Tudo ou nada, por decisão:</b> se um membro falhar (ex.: já inscrito), a transação
+     * inteira volta atrás e nenhum é inscrito. O erro nomeia a pessoa, quem escolheu desmarca
+     * e reenvia. Resultado parcial exigiria DTO e tela próprios para um caso que ainda não
+     * sabemos se acontece.
+     */
     @Transactional
     public void inscreverMembros(UUID eventoId, List<UUID> membroIds,
                                  UUID inscritoPorUsuarioId, UUID igrejaId) {
@@ -1081,7 +1088,7 @@ Adicionar ao `InscricaoService`:
     }
 
     @Transactional
-    public void removerAcompanhante(UUID acompanhanteId, UUID usuarioId, String role, UUID igrejaId) {
+    public void removerAcompanhante(UUID acompanhanteId, UUID meuMembroId, String role, UUID igrejaId) {
         AcompanhanteInscricao a = acompanhanteRepository.findById(acompanhanteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
 
@@ -1090,13 +1097,15 @@ Adicionar ao `InscricaoService`:
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
 
+        // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
+        // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
+        // (o caso mais comum), e qualquer NULL-check liberaria geral.
         boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
-        boolean souOResponsavel = usuarioId.equals(inscricao.getInscritoPorUsuarioId())
-                || inscricao.getInscritoPorUsuarioId() == null;
+        boolean souODono = inscricao.getMembro().getId().equals(meuMembroId);
 
-        if (!ehAdmin && !souOResponsavel) {
+        if (!ehAdmin && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
-                    "Você só pode remover convidados que você mesmo cadastrou.");
+                    "Você só pode remover convidados da sua própria inscrição.");
         }
         acompanhanteRepository.delete(a);
     }
@@ -1294,7 +1303,7 @@ public class InscricaoController {
     @DeleteMapping("/acompanhantes/{id}")
     public ResponseEntity<Void> removerAcompanhante(@PathVariable UUID id) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.removerAcompanhante(id, usuario.getId(),
+        inscricaoService.removerAcompanhante(id, usuario.getMembro().getId(),
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.noContent().build();
     }

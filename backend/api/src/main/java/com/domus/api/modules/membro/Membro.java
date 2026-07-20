@@ -63,6 +63,14 @@ public class Membro {
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
 
+    @Column(name = "batizado", nullable = false)
+    @Builder.Default
+    private boolean batizado = false;
+
+    /** Opcional: a secretaria nem sempre tem a data. */
+    @Column(name = "data_batismo")
+    private LocalDate dataBatismo;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

@@ -29,5 +29,10 @@ public record MembroRequestDTO(
         @Size(max = 255)
         String ministerio,
 
-        String observacoes
+        String observacoes,
+
+        Boolean batizado,
+
+        @Past(message = "A data de batismo deve ser uma data no passado.")
+        LocalDate dataBatismo
 ) {}

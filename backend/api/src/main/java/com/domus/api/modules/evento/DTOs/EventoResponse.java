@@ -12,13 +12,18 @@ public record EventoResponse(
         LocalDateTime fimEm,
         String local,
         String foto,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Integer vagas,
+        java.math.BigDecimal preco,
+        boolean exclusivoMembros,
+        boolean exclusivoBatizados
 ) {
     public static EventoResponse from(Evento e) {
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), e.getLocal(),
-                e.getFoto(), e.getCreatedAt()
+                e.getFoto(), e.getCreatedAt(),
+                e.getVagas(), e.getPreco(), e.isExclusivoMembros(), e.isExclusivoBatizados()
         );
     }
 }

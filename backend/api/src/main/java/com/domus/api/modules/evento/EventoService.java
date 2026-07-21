@@ -64,6 +64,10 @@ public class EventoService {
                 .fimEm(data.fimEm())
                 .local(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()))
                 .foto(data.foto())
+                .vagas(data.vagas())
+                .preco(data.preco())
+                .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
+                .exclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -92,6 +96,10 @@ public class EventoService {
         evento.setFimEm(data.fimEm());
         evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
         evento.setFoto(data.foto());
+        evento.setVagas(data.vagas());
+        evento.setPreco(data.preco());
+        evento.setExclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()));
+        evento.setExclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()));
 
         Evento salvo = eventoRepository.save(evento);
         outboxRegistrador.registrar(

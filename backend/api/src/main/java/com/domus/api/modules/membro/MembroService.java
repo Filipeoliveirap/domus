@@ -82,6 +82,8 @@ public class MembroService {
                 .estadoCivil(data.estadoCivil())
                 .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
+                .batizado(Boolean.TRUE.equals(data.batizado()))
+                .dataBatismo(data.dataBatismo())
                 .build();
 
         Membro salvo = membroRepository.save(membro);
@@ -130,6 +132,8 @@ public class MembroService {
         membro.setEstadoCivil(data.estadoCivil());
         membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
+        membro.setBatizado(Boolean.TRUE.equals(data.batizado()));
+        membro.setDataBatismo(data.dataBatismo());
 
         Membro salvo = membroRepository.save(membro);
 

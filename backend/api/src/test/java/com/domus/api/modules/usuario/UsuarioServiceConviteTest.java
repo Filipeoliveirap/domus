@@ -152,9 +152,39 @@ class UsuarioServiceConviteTest {
     }
 
     @Test
+    void concederAcesso_membroTemUsuarioDesativado_lancaMensagemPropria() {
+        // A5: conta existe (deleteAt nulo, não é "arquivado"), mas ativo=false. Mensagem
+        // precisa ser diferente da genérica "já tem acesso" e apontar pra reativação.
+        Membro membro = membroComEmail("joao@teste.com");
+        when(membroRepository.findByIdAndIgrejaId(membroId, igrejaId)).thenReturn(Optional.of(membro));
+        Usuario desativado = Usuario.builder().ativo(false).build();
+        when(usuarioRepository.findByMembroIdIncluindoArquivados(any())).thenReturn(Optional.of(desativado));
+
+        assertThatThrownBy(() -> service.concederAcesso(
+                new ConcederAcessoRequestDTO(membroId, "MEMBRO", null), igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("desativada");
+        verify(emailService, never()).enviar(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void reenviarConvite_usuarioDesativado_lancaERecusaReenvio() {
+        // A5: usuário desativado (ativo=false) não pode receber convite reenviado.
+        Membro membro = membroComEmail("joao@teste.com");
+        Usuario desativado = Usuario.builder().membro(membro).igreja(membro.getIgreja()).ativo(false).build();
+        UUID uid = UUID.randomUUID();
+        when(usuarioRepository.findByIdAndIgrejaId(uid, igrejaId)).thenReturn(Optional.of(desativado));
+
+        assertThatThrownBy(() -> service.reenviarConvite(uid, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("desativado");
+        verify(emailService, never()).enviar(anyString(), anyString(), anyString());
+    }
+
+    @Test
     void reenviarConvite_pendente_reenvia() {
         Membro membro = membroComEmail("joao@teste.com");
-        Usuario pendente = Usuario.builder().membro(membro).igreja(membro.getIgreja()).build();
+        Usuario pendente = Usuario.builder().membro(membro).igreja(membro.getIgreja()).ativo(true).build();
         UUID uid = UUID.randomUUID();
         when(usuarioRepository.findByIdAndIgrejaId(uid, igrejaId)).thenReturn(Optional.of(pendente));
 

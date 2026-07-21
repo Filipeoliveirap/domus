@@ -75,6 +75,34 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: var(--line-height-tight);
+  min-width: 0;
+}
+
+/* ---- A6/rodada 3: editar direto do drawer ---- */
+
+.tituloLinha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.botaoEditar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.botaoEditar:hover {
+  background: var(--color-bg-page);
+  color: var(--color-primary);
 }
 
 /* ─── Infos ─── */

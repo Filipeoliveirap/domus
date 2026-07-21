@@ -9,7 +9,8 @@ import { formatarTelefoneExibicao } from '@/lib/formats/membroFormat'
 import styles from './ModalConvidado.module.css'
 
 interface Props {
-  preco: string
+  /** Número, como a API serializa BigDecimal. `formatarMoeda` aceita os dois. */
+  preco: number
   isLoading: boolean
   onConfirmar: () => void
   onClose: () => void

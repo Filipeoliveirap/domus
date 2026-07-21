@@ -91,6 +91,11 @@ public class SecurityConfig {
                         .hasRole("ADMIN_IGREJA")
 
                         //Membros
+                        //Bairros ANTES do curinga: a lista de bairros é derivada do ENDEREÇO
+                        //dos membros, que é dado só de ADMIN. Deixá-la aberta entregaria pela
+                        //porta lateral exatamente o que o DTO reduzido esconde.
+                        .requestMatchers(HttpMethod.GET, "/membros/bairros")
+                        .hasRole("ADMIN_IGREJA")
                         .requestMatchers(HttpMethod.GET, "/membros/**")
                         .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
                         .requestMatchers(HttpMethod.POST, "/membros/**")
@@ -161,7 +166,16 @@ public class SecurityConfig {
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
                                 "default-src 'none'; frame-ancestors 'none'")))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                        // 401 = NÃO SEI QUEM VOCÊ É (sem token, token expirado/inválido).
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        // 403 = SEI QUEM VOCÊ É, MAS NÃO PODE. Precisa ser explícito, senão o
+                        // Spring cai no entry point acima e devolve 401 nos dois casos — e o
+                        // front, que trata 401 como "sessão morreu", renova o token, repete a
+                        // requisição, leva 401 de novo e DESLOGA o usuário. Sintoma real
+                        // (2026-07-21): membro e líder entravam e eram expulsos ao abrir
+                        // qualquer tela cujo dado é de admin.
+                        .accessDeniedHandler((req, res, e) ->
+                                res.setStatus(HttpStatus.FORBIDDEN.value())))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 // Rate limiting roda antes da AUTENTICAÇÃO (barra floods anônimos barato),
                 // mas depois do CsrfFilter: um flood de POST sem X-XSRF-TOKEN leva 403 e não

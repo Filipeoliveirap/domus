@@ -61,7 +61,6 @@ function MembrosConteudo() {
                 <th>Telefone</th>
                 <th>Status</th>
                 <th>Cadastro</th>
-                <th className={styles.colunaAcoes}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -114,14 +113,14 @@ function MembrosConteudo() {
               <th>Telefone</th>
               <th>Status</th>
               <th>Cadastro</th>
-              <th className={styles.colunaAcoes}>Ações</th>
+              {podeGerenciar && <th className={styles.colunaAcoes}>Ações</th>}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <SkeletonMembros linhas={TAMANHO_PAGINA} podeGerenciar={podeGerenciar} />
             ) : isError ? (
-              <tr><td colSpan={5}>
+              <tr><td colSpan={podeGerenciar ? 5 : 4}>
                 <EstadoErro
                   titulo="Não foi possível carregar os membros"
                   mensagem="Verifique sua conexão e tente novamente."
@@ -130,7 +129,7 @@ function MembrosConteudo() {
               </td></tr>
             ) : membros.length === 0 ? (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={podeGerenciar ? 5 : 4}>
                   <EstadoVazio
                     icone={buscaDebounced ? SearchX : Inbox}
                     titulo={buscaDebounced ? `Nenhum membro encontrado` : 'Nenhum membro cadastrado'}

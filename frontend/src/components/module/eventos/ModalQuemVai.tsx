@@ -7,10 +7,15 @@ import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
 import { iniciais } from '@/lib/formats/membroFormat'
+import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
+import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
+import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './ModalQuemVai.module.css'
 
 interface Props {
   eventoId: string
+  /** A2/rodada 3: fora de AGENDADO o backend recusa cancelar — o botão de cancelar some. */
+  situacao: SituacaoEvento
   aoFechar: () => void
 }
 
@@ -22,9 +27,10 @@ interface Props {
  * que inclui telefone de convidado e quem inscreveu quem. Disparar a consulta de admin
  * para um membro devolveria 401 — por isso cada uma só roda para quem tem direito.
  */
-export function ModalQuemVai({ eventoId, aoFechar }: Props) {
+export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
   const ehGestor = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const podeCancelar = podeCancelarInscricao(situacao)
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(
     eventoId, !ehGestor)
@@ -32,6 +38,8 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
     eventoId, ehGestor)
   const cancelar = useCancelarInscricao()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+  const [cancelandoComConvidados, setCancelandoComConvidados] =
+    useState<{ id: string; nome: string; quantidadeConvidados: number } | null>(null)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -109,7 +117,11 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
                     desfazível por ela — ela só descobre no dia do evento. Um clique solto
                     numa lista de nomes parecidos é fácil demais de errar.
                   */}
-                  {ehGestor && (
+                  {ehGestor && !podeCancelar && (
+                    <span className={styles.selo}>Participou</span>
+                  )}
+
+                  {ehGestor && podeCancelar && (
                     confirmandoId === l.id ? (
                       <span className={styles.confirmacao}>
                         <span className={styles.confirmacaoTexto}>Cancelar?</span>
@@ -135,7 +147,18 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
                       <button
                         type="button"
                         className={styles.cancelar}
-                        onClick={() => setConfirmandoId(l.id)}
+                        onClick={() => {
+                          // Sem convidado: confirmação leve inline. Com convidado, cancelar
+                          // arrasta os convidados junto (removidos, não voltam sozinhos numa
+                          // nova inscrição) — atrito sobe para digitar o nome.
+                          if (l.convidados.length > 0) {
+                            setCancelandoComConvidados({
+                              id: l.id, nome: l.nome, quantidadeConvidados: l.convidados.length,
+                            })
+                          } else {
+                            setConfirmandoId(l.id)
+                          }
+                        }}
                         disabled={cancelar.isPending}
                       >
                         Cancelar inscrição
@@ -157,6 +180,21 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
           )}
         </div>
       </div>
+
+      {cancelandoComConvidados && (
+        <ConfirmarCancelamentoInscricao
+          nome={cancelandoComConvidados.nome}
+          proprio={false}
+          quantidadeConvidados={cancelandoComConvidados.quantidadeConvidados}
+          isLoading={cancelar.isPending}
+          onConfirmar={() => {
+            cancelar.mutate(cancelandoComConvidados.id, {
+              onSuccess: () => setCancelandoComConvidados(null),
+            })
+          }}
+          onClose={() => setCancelandoComConvidados(null)}
+        />
+      )}
     </div>
   )
 }

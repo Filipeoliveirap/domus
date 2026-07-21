@@ -64,6 +64,10 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
 """)
     List<UUID> buscarIdsPorCategoria(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
 
+    /** A11: quantos lançamentos usam a categoria — um COUNT só, sob demanda (ver Javadoc de
+     *  {@code ContagemMovimentacoesResponse}), não durante a listagem de categorias. */
+    long countByCategoriaIdAndIgrejaId(UUID categoriaId, UUID igrejaId);
+
     @Query("""
     SELECT m.id FROM MovimentacaoFinanceira m
     WHERE m.membro.id = :membroId AND m.igreja.id = :igrejaId

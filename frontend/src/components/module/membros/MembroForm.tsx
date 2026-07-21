@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { User, MapPin, FileText, Church, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useBuscaCep } from '@/hooks/membro/useBuscaCep'
 import { useBairros } from '@/hooks/membro/useBairros'
 import { Button } from '@/components/common/button/Button'
@@ -51,6 +52,8 @@ export function MembroForm(props: MembroFormProps) {
   const statusAtual = watch('status')
   const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const batizadoAtual = watch('batizado')
+  const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
+  const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
 
   // Auto-preenchimento por CEP (ViaCEP). Nunca trava: erro/CEP inexistente só sinalizam.
   const { buscar, carregando: carregandoCep } = useBuscaCep()
@@ -94,8 +97,9 @@ export function MembroForm(props: MembroFormProps) {
               <Input id="telefone" label="TELEFONE" placeholder="(00) 00000-0000" inputMode="numeric"
                 error={errors.telefone?.message} {...register('telefone')}
                 onChange={(e) => setValue('telefone', formatarTelefone(e.target.value), { shouldValidate: true })} />
-              <Input id="dataNascimento" type="date" label="DATA DE NASCIMENTO"
-                error={errors.dataNascimento?.message} {...register('dataNascimento')} />
+              <CampoData id="dataNascimento" label="DATA DE NASCIMENTO"
+                value={dataNascimentoAtual} erro={errors.dataNascimento?.message}
+                onChange={(v) => setValue('dataNascimento', v, { shouldValidate: true })} />
               <Select id="estadoCivil" label="ESTADO CIVIL" placeholder="Selecione"
                 options={ESTADO_CIVIL_OPTIONS} error={errors.estadoCivil?.message} {...register('estadoCivil')} />
             </div>
@@ -177,8 +181,9 @@ export function MembroForm(props: MembroFormProps) {
               </label>
               {batizadoAtual && (
                 <div>
-                  <Input id="dataBatismo" type="date" label="DATA DE BATISMO"
-                    error={errors.dataBatismo?.message} {...register('dataBatismo')} />
+                  <CampoData id="dataBatismo" label="DATA DE BATISMO"
+                    value={dataBatismoAtual} erro={errors.dataBatismo?.message}
+                    onChange={(v) => setValue('dataBatismo', v, { shouldValidate: true })} />
                   <span className={styles.campoHint}>Opcional</span>
                 </div>
               )}

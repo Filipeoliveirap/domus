@@ -18,11 +18,18 @@ public final class CacheKeys {
         return igrejaId + ":" + sha256Curto(bruto);
     }
 
-    public static String membros(UUID igrejaId, String q, Pageable pageable) {
+    /**
+     * <p><b>{@code sensiveis} faz parte da chave de propósito.</b> A resposta de membros varia
+     * por perfil (ADMIN vê endereço e observações; LÍDER e MEMBRO não). Sem esta dimensão, a
+     * primeira consulta de um ADMIN encheria o cache e o LÍDER seguinte receberia a versão
+     * dele — endereço de toda a igreja entregue pelo Redis, sem passar por autorização nenhuma.
+     */
+    public static String membros(UUID igrejaId, String q, Pageable pageable, boolean sensiveis) {
         String bruto = (q == null ? "" : q) + "|"
                 + pageable.getPageNumber() + "|"
                 + pageable.getPageSize() + "|"
-                + pageable.getSort().toString();
+                + pageable.getSort().toString() + "|"
+                + (sensiveis ? "full" : "reduzido");
         return igrejaId + ":" + sha256Curto(bruto);
     }
 

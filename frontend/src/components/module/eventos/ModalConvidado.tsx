@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { useAdicionarConvidado } from '@/hooks/inscricao/useAdicionarConvidado'
+import { formatarTelefone } from '@/lib/masks'
 import { convidadoSchema, type ConvidadoFormData, type ConvidadoFormInput } from '@/lib/validators'
 import styles from './ModalConvidado.module.css'
 
@@ -24,6 +25,7 @@ export function ModalConvidado({ eventoId, inscricaoId, onClose }: Props) {
     register,
     handleSubmit,
     setFocus,
+    setValue,
     formState: { errors },
   } = useForm<ConvidadoFormInput, unknown, ConvidadoFormData>({
     resolver: zodResolver(convidadoSchema),
@@ -86,8 +88,10 @@ export function ModalConvidado({ eventoId, inscricaoId, onClose }: Props) {
             id="telefone"
             label="TELEFONE (OPCIONAL)"
             placeholder="(00) 00000-0000"
+            inputMode="numeric"
             error={errors.telefone?.message}
             {...register('telefone')}
+            onChange={(e) => setValue('telefone', formatarTelefone(e.target.value), { shouldValidate: true })}
           />
 
           <div className={styles.infoBox}>

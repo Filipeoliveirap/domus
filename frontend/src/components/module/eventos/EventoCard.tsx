@@ -9,7 +9,12 @@ import {
   statusEvento,
   rotuloStatus,
   varianteStatus,
+  rotuloSituacao,
+  varianteSituacao,
+  podeEditarEvento,
+  podeArquivarEvento,
 } from '@/lib/formats/eventoFormat'
+import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
 import styles from './EventoCard.module.css'
 
@@ -27,10 +32,21 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
   const status = statusEvento(evento)
   const { dia, mes, ano } = dataAgenda(evento.inicioEm)
 
-  const acoes: ItemAcao[] = [
-    { label: 'Editar', icone: Pencil, onClick: () => router.push(`/eventos/${evento.id}`) },
-    { label: 'Arquivar', icone: Archive, onClick: () => onArquivar(evento), perigo: true, separadorAntes: true },
-  ]
+  // Fora de AGENDADO, o selo passa a mostrar a situação real do backend ("Em andamento" /
+  // "Encerrado") em vez do rótulo cosmético de data (EM_BREVE/HOJE) — é o que decide se a
+  // edição está travada, então é o que a pessoa precisa ver primeiro.
+  const seloLabel = evento.situacao === 'AGENDADO' ? rotuloStatus(status) : rotuloSituacao(evento.situacao)
+  const seloVariante = evento.situacao === 'AGENDADO' ? varianteStatus(status) : varianteSituacao(evento.situacao)
+
+  // A situação real (backend) trava edição/arquivamento — o servidor recusa do mesmo jeito,
+  // então a ação nem aparece no menu pra não gerar um erro evitável.
+  const acoes: ItemAcao[] = []
+  if (podeEditarEvento(evento.situacao)) {
+    acoes.push({ label: 'Editar', icone: Pencil, onClick: () => router.push(`/eventos/${evento.id}`) })
+  }
+  if (podeArquivarEvento(evento.situacao)) {
+    acoes.push({ label: 'Arquivar', icone: Archive, onClick: () => onArquivar(evento), perigo: true, separadorAntes: true })
+  }
 
   return (
     <article
@@ -45,12 +61,12 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
             <CalendarDays size={32} />
           </div>
         )}
-        <span className={`${styles.selo} ${styles[varianteStatus(status)]}`}>
+        <span className={`${styles.selo} ${styles[seloVariante]}`}>
           <span className={styles.seloDot} />
-          {rotuloStatus(status)}
+          {seloLabel}
         </span>
 
-        {podeGerenciar && (
+        {podeGerenciar && acoes.length > 0 && (
           <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>
             <MenuAcoes itens={acoes} />
           </div>
@@ -75,6 +91,9 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
               <MapPin size={14} />
               <span>{evento.local}</span>
             </div>
+          )}
+          {evento.preco != null && (
+            <span className={styles.preco}>{formatarMoeda(evento.preco)}</span>
           )}
         </div>
       </div>

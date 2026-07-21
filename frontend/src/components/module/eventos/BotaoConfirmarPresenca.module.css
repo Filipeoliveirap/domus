@@ -100,66 +100,17 @@
   color: var(--color-danger, #dc2626);
 }
 
-.confirmacaoInline {
-  display: flex;
+/* ---- A2/rodada 3: presença em evento não-AGENDADO não é mais cancelável — histórico ---- */
+
+.participou {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-dark);
-}
-
-.confirmacaoAcoes {
-  display: flex;
-  gap: 8px;
-}
-
-.confirmacaoNao,
-.confirmacaoSim {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  transition: opacity var(--transition-fast);
-}
-
-.confirmacaoNao {
-  background: var(--color-bg-page);
-  color: var(--color-text-dark);
-}
-
-.confirmacaoSim {
-  background: var(--color-danger, #dc2626);
-  color: #fff;
-}
-
-.confirmacaoNao:hover:not(:disabled),
-.confirmacaoSim:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.confirmacaoNao:disabled,
-.confirmacaoSim:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* ---- Mobile ---- */
-
-@media (max-width: 767px) {
-  .confirmacaoInline {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .confirmacaoAcoes {
-    width: 100%;
-  }
-
-  .confirmacaoNao,
-  .confirmacaoSim {
-    flex: 1;
-    text-align: center;
-  }
 }

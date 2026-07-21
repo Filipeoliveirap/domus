@@ -6,6 +6,8 @@ import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { ModalConfirmarPagamento } from './ModalConfirmarPagamento'
+import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
+import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './BotaoConfirmarPresenca.module.css'
 
@@ -28,7 +30,8 @@ interface Props {
    */
   situacao: SituacaoEvento
   /** F3: quando o evento é pago, confirmar presença abre um passo intermediário antes de registrar. */
-  preco?: string | null
+  /** Número no JSON da API (BigDecimal do Jackson). `null`/ausente = evento gratuito. */
+  preco?: number | null
 }
 
 /**
@@ -66,6 +69,17 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
     // F15: sem marcação prévia, e evento em andamento/encerrado — o botão "Eu vou" some.
     if (!marcado && inscricaoBloqueadaPelaSituacao) return null
 
+    // A2/rodada 3: o backend recusa cancelar fora de AGENDADO — quem já confirmou presença
+    // num evento em andamento/encerrado vê o registro como histórico, não como algo reversível.
+    if (marcado && !podeCancelarInscricao(situacao)) {
+      return (
+        <span className={styles.participou}>
+          <CheckCircle2 size={15} aria-hidden="true" />
+          Você participou deste evento
+        </span>
+      )
+    }
+
     const pendente = inscrever.isPending || cancelar.isPending
 
     function aoClicar() {
@@ -92,44 +106,21 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
   }
 
   if (minha?.inscrito) {
+    // A2/rodada 3: fora de AGENDADO o backend recusa o cancelamento — sem exceção — então
+    // a ação nem aparece; o que resta é reconhecer que a presença já aconteceu.
+    const podeCancelar = podeCancelarInscricao(situacao)
+
     return (
       <div className={styles.inscrito}>
         <div className={styles.inscritoStatus}>
           <CheckCircle2 size={18} aria-hidden="true" />
           <div className={styles.inscritoTexto}>
             <strong>Inscrito</strong>
-            <span>Tudo certo pra você!</span>
+            <span>{podeCancelar ? 'Tudo certo pra você!' : 'Você participou deste evento'}</span>
           </div>
         </div>
 
-        {confirmandoCancelamento ? (
-          <div className={styles.confirmacaoInline}>
-            <span>Cancelar sua inscrição?</span>
-            <div className={styles.confirmacaoAcoes}>
-              <button
-                type="button"
-                className={styles.confirmacaoNao}
-                onClick={() => setConfirmandoCancelamento(false)}
-                disabled={cancelar.isPending}
-              >
-                Não
-              </button>
-              <button
-                type="button"
-                className={styles.confirmacaoSim}
-                onClick={() => {
-                  if (!minha.id) return
-                  cancelar.mutate(minha.id, {
-                    onSuccess: () => setConfirmandoCancelamento(false),
-                  })
-                }}
-                disabled={cancelar.isPending}
-              >
-                {cancelar.isPending ? 'Cancelando…' : 'Sim, cancelar'}
-              </button>
-            </div>
-          </div>
-        ) : (
+        {podeCancelar && (
           <button
             type="button"
             className={styles.cancelarLink}
@@ -138,6 +129,22 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
             <XCircle size={14} aria-hidden="true" />
             Cancelar inscrição
           </button>
+        )}
+
+        {confirmandoCancelamento && (
+          <ConfirmarCancelamentoInscricao
+            nome=""
+            proprio
+            quantidadeConvidados={minha.acompanhantes.length}
+            isLoading={cancelar.isPending}
+            onConfirmar={() => {
+              if (!minha.id) return
+              cancelar.mutate(minha.id, {
+                onSuccess: () => setConfirmandoCancelamento(false),
+              })
+            }}
+            onClose={() => setConfirmandoCancelamento(false)}
+          />
         )}
       </div>
     )

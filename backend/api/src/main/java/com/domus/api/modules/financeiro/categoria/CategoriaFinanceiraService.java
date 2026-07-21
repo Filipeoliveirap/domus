@@ -2,6 +2,7 @@ package com.domus.api.modules.financeiro.categoria;
 
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.categoria.DTOs.*;
+import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.shared.DTO.PagedResponse;
@@ -30,6 +31,7 @@ public class CategoriaFinanceiraService {
     private final CacheEvictor cacheEvictor;
     private final ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
     private final OutboxRegistrador outboxRegistrador;
+    private final MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
     private static final UUID SEM_IGNORAR = new UUID(0L, 0L);
 
     @Transactional(readOnly = true)
@@ -120,6 +122,19 @@ public class CategoriaFinanceiraService {
         );
         log.info("Categoria arquivada. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("categorias", igrejaId);
+    }
+
+    /**
+     * A11: quantos lançamentos usam esta categoria hoje. O front consulta isto só ao abrir a
+     * edição de UMA categoria (não na listagem) e decide se pede confirmação antes de salvar —
+     * a decisão de bloquear ou não a atualização é do front; o backend nunca recusa o
+     * {@code atualizar} por causa disso.
+     */
+    @Transactional(readOnly = true)
+    public ContagemMovimentacoesResponse contarMovimentacoes(UUID id, UUID igrejaId) {
+        buscarEntidade(id, igrejaId); // 404 se a categoria não existir/for de outra igreja
+        long total = movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(id, igrejaId);
+        return new ContagemMovimentacoesResponse(total);
     }
 
     @Transactional(readOnly = true)

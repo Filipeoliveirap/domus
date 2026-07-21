@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -15,6 +15,7 @@ import {
   vagasRestantesCalc,
   vagasAcabando as calcVagasAcabando,
   vagasEsgotadas as calcVagasEsgotadas,
+  podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
@@ -34,6 +35,8 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
   const role = useAuthStore((s) => s.role)
   const podeVerInscritos = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  // A6/rodada 3: mesma regra do modal do início — só quem gerencia, e só enquanto editável.
+  const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
 
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
@@ -90,7 +93,15 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 </span>
               )}
               <span className={styles.dataTopo}>{dataExtenso(evento.inicioEm)}</span>
-              <h2 className={styles.titulo}>{evento.titulo}</h2>
+              <div className={styles.tituloLinha}>
+                <h2 className={styles.titulo}>{evento.titulo}</h2>
+                {/* A6/rodada 3: mesma affordance do modal do início — só quem gerencia, e só enquanto editável. */}
+                {podeGerenciar && podeEditarEvento(evento.situacao) && (
+                  <Link href={`/eventos/${evento.id}`} className={styles.botaoEditar} aria-label="Editar evento">
+                    <Pencil size={16} />
+                  </Link>
+                )}
+              </div>
             </header>
 
             {/* Infos */}

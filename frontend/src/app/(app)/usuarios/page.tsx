@@ -2,11 +2,14 @@
 
 import { useState, Suspense} from "react";
 import Link from "next/link";
+import axios from "axios";
 import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-react";
 import { notificar } from "@/components/common/Notificacao/notificar";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidarCache } from "@/lib/cacheInvalidacao";
 import { membrosService } from "@/services/membro.service";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
+import type { ApiError } from "@/types/api.types";
 import {
   iniciais,
   rotuloRole,
@@ -55,10 +58,16 @@ function UsuariosConteudo() {
   async function reenviarConvite(u: UsuarioResponse) {
     try {
       await membrosService.reenviarConvite(u.id)
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      invalidarCache(queryClient, 'usuario')
       notificar.sucesso(`Convite reenviado para ${u.nome}.`)
-    } catch {
-      notificar.erro('Não foi possível reenviar o convite.')
+    } catch (error: unknown) {
+      // A5/rodada 3: o backend agora recusa reenviar convite a usuário desativado — a
+      // mensagem dele precisa aparecer de verdade, não um texto genérico.
+      if (axios.isAxiosError<ApiError>(error)) {
+        notificar.erro(error.response?.data?.message ?? 'Não foi possível reenviar o convite.')
+      } else {
+        notificar.erro('Não foi possível reenviar o convite.')
+      }
     }
   }
 
@@ -73,6 +82,9 @@ function UsuariosConteudo() {
     enabled: autorizado,
   })
 
+  // A ordem (ativos primeiro, depois nome) vem PRONTA do banco — ver
+  // UsuarioRepository.buscarPorIgreja. Reordenar aqui só arrumaria a página aberta e deixaria
+  // o conjunto errado entre páginas.
   const usuarios = data?.content ?? []
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
@@ -158,14 +170,16 @@ function UsuariosConteudo() {
               </tr>
             ) : (
               usuarios.map((u) => {
+                // A5/rodada 3: usuário desativado não recebe convite — some a ação em vez
+                // de deixar clicar e falhar (o backend recusaria com USUARIO_DESATIVADO).
                 const acoes: ItemAcao[] = [
-                  ...(u.convitePendente
+                  ...(u.convitePendente && u.ativo
                     ? [{ label: "Reenviar convite", icone: Send, onClick: () => reenviarConvite(u) }]
                     : []),
                   { label: "Alterar perfil", icone: Shield, onClick: () => setUsuarioPermissao(u) },
                   ...(u.ativo
                     ? [{ label: "Desativar acesso", icone: Ban, onClick: () => setUsuarioStatus(u), perigo: true }]
-                    : []),
+                    : [{ label: "Reativar", icone: UserCheck, onClick: () => setUsuarioStatus(u) }]),
                   { label: "Arquivar", icone: Archive, onClick: () => setUsuarioArquivando(u) },
                 ];
 
@@ -201,11 +215,6 @@ function UsuariosConteudo() {
                     </td>
                     <td className={styles.colunaAcoes}>
                       <div className={styles.acoesCell}>
-                        {!u.ativo && (
-                          <button className={styles.btnReativar} onClick={() => setUsuarioStatus(u)}>
-                            <UserCheck size={14} /> Reativar
-                          </button>
-                        )}
                         <MenuAcoes itens={acoes} />
                       </div>
                     </td>

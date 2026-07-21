@@ -1,5 +1,4 @@
 import {z} from 'zod'
-import { dataBRParaISO } from '@/lib/masks'
 
 export const loginSchema = z.object({
     email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório'),
@@ -117,14 +116,15 @@ const opcionalNumero = <T extends z.ZodType<number>>(schema: T) =>
 const eventoSchemaBase = z.object({
   titulo: z.string().trim().min(1, 'O título é obrigatório.'),
   descricao: opcional(z.string()),
-  // Campo digitado em dd/mm/aaaa (ver lib/masks) — convertido para ISO só na borda (submit).
+  // ISO (aaaa-mm-dd): é o que o CampoData guarda e o que o backend espera. A exibição em
+  // dd/mm/aaaa é assunto interno do componente, não do formulário.
   inicioData: z.string()
     .min(1, 'A data de início é obrigatória.')
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Data inválida. Use o formato dd/mm/aaaa.'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.'),
   inicioHora: z.string()
     .min(1, 'A hora de início é obrigatória.')
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.'),
-  fimData: opcional(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Data inválida. Use o formato dd/mm/aaaa.')),
+  fimData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
   fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
   local: opcional(z.string()),
 
@@ -151,11 +151,9 @@ const eventoSchemaBase = z.object({
 export const eventoSchema = eventoSchemaBase.refine(
   (data) => {
     if (!data.fimData || !data.fimHora) return true
-    const inicioIso = dataBRParaISO(data.inicioData)
-    const fimIso = dataBRParaISO(data.fimData)
-    if (!inicioIso || !fimIso) return true // erro de formato já é pego pelo regex de cada campo
-    const inicio = new Date(`${inicioIso}T${data.inicioHora}`)
-    const fim = new Date(`${fimIso}T${data.fimHora}`)
+    const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
+    const fim = new Date(`${data.fimData}T${data.fimHora}`)
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return true // o regex já pega formato
     return fim >= inicio
   },
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }

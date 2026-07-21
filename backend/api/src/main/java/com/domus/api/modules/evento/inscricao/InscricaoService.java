@@ -2,6 +2,7 @@ package com.domus.api.modules.evento.inscricao;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.SituacaoEvento;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -21,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +118,7 @@ public class InscricaoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
+        validarEventoAberto(evento);
 
         if (!membroIds.isEmpty()) {
             List<UUID> jaInscritos = inscricaoRepository.listarMembroIdsJaInscritos(eventoId, membroIds);
@@ -155,10 +156,55 @@ public class InscricaoService {
         }
     }
 
+    /**
+     * B3: bloqueia inscrição/convidado tanto em evento EM_ANDAMENTO quanto ENCERRADO —
+     * mensagens DIFERENTES porque são fatos diferentes ("já começou" não é o mesmo que "já
+     * aconteceu"). Antes disto, {@code inicioEm < agora} tratava os dois casos como
+     * "encerrado", o que é factualmente errado para um evento que está rolando agora.
+     */
     private void validarEventoAberto(Evento evento) {
-        if (evento.getInicioEm().isBefore(LocalDateTime.now())) {
+        SituacaoEvento situacao = evento.getSituacao();
+        if (situacao == SituacaoEvento.EM_ANDAMENTO) {
+            throw new BusinessException("EVENTO_EM_ANDAMENTO",
+                    "Este evento já começou. Não é mais possível se inscrever.");
+        }
+        if (situacao == SituacaoEvento.ENCERRADO) {
             throw new BusinessException("EVENTO_ENCERRADO",
                     "Este evento já aconteceu. Não é mais possível se inscrever.");
+        }
+    }
+
+    /**
+     * B1: bloqueia o MESMO convidado duas vezes NO MESMO EVENTO — o dano real é ocupar duas
+     * vagas. Fora do evento não faz sentido bloquear (a mesma pessoa pode ir a vários eventos),
+     * então a comparação é sempre restrita a {@code eventoId}.
+     *
+     * <p>Telefone é opcional, então a comparação principal é por telefone (normalizado para só
+     * dígitos — o front manda formatado e o que já está salvo pode estar inconsistente); sem
+     * telefone em QUALQUER um dos dois lados, cai para nome normalizado (sem acento, sem case,
+     * espaços colapsados).
+     *
+     * <p><b>Por que checagem no service, não constraint de banco:</b> a regra combina duas
+     * comparações diferentes (telefone OU nome) e a de nome depende de normalização (remover
+     * acento) que o Postgres não expressa como expressão de índice de forma simples/portável.
+     * Um índice único parcial em telefone normalizado por evento até seria possível, mas não
+     * cobriria o caminho por nome — e ter a UNIQUE cobrindo só metade da regra escondida atrás
+     * de uma exceção de banco (em vez de uma mensagem de negócio clara) seria pior que não ter.
+     */
+    private void validarConvidadoNaoDuplicado(UUID eventoId, AcompanhanteRequest data) {
+        String telefoneNovo = TextoUtil.somenteDigitos(data.telefone());
+        String nomeNovo = TextoUtil.normalizarParaComparacao(data.nome());
+
+        for (AcompanhanteInscricao existente : acompanhanteRepository.listarPorEvento(eventoId)) {
+            String telefoneExistente = TextoUtil.somenteDigitos(existente.getTelefone());
+            boolean duplicado = telefoneNovo != null && telefoneExistente != null
+                    ? telefoneNovo.equals(telefoneExistente)
+                    : nomeNovo != null && nomeNovo.equals(TextoUtil.normalizarParaComparacao(existente.getNome()));
+
+            if (duplicado) {
+                throw new BusinessException("CONVIDADO_DUPLICADO",
+                        "Este convidado já está inscrito neste evento.");
+            }
         }
     }
 
@@ -204,6 +250,7 @@ public class InscricaoService {
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
         }
         validarEventoAberto(inscricao.getEvento());
+        validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
 
         // Trava o evento antes de contar: mesma corrida da inscrição.
         eventoRepository.buscarComLock(inscricao.getEvento().getId(), igrejaId)

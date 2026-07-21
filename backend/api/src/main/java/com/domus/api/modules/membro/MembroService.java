@@ -96,7 +96,8 @@ public class MembroService {
         log.info("Membro cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("membros", igrejaId);
 
-        return MembroResponse.from(salvo);
+        String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
+        return MembroResponse.from(salvo, aviso);
     }
 
     private String normalizarEmail(String email) {
@@ -152,7 +153,32 @@ public class MembroService {
 
         cacheEvictor.evictPorIgreja("membros", igrejaId);
         log.info("Membro atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
-        return MembroResponse.from(salvo);
+
+        String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
+        return MembroResponse.from(salvo, aviso);
+    }
+
+    /**
+     * B2: procura OUTRO membro da mesma igreja com o mesmo telefone (dígitos normalizados) e
+     * devolve o NOME dele para o front avisar — nunca bloqueia. Telefone não é chave de login
+     * como o e-mail; casal, família e idoso usando o número de um parente são casos legítimos,
+     * então duplicidade aqui é só um alerta ("confira se não é a mesma pessoa duas vezes"),
+     * nunca um erro de negócio.
+     *
+     * <p>Isolado por {@code igrejaId} (nunca cruza tenant) e exclui o próprio {@code membroId}
+     * sendo salvo, senão toda atualização "acharia" a si mesma como duplicata.
+     */
+    private String avisoTelefoneDuplicado(String telefone, UUID membroId, UUID igrejaId) {
+        String digitos = com.domus.api.shared.util.TextoUtil.somenteDigitos(telefone);
+        if (digitos == null) return null;
+
+        return membroRepository.findByIgrejaIdAndTelefoneIsNotNull(igrejaId).stream()
+                .filter(outro -> !outro.getId().equals(membroId))
+                .filter(outro -> digitos.equals(
+                        com.domus.api.shared.util.TextoUtil.somenteDigitos(outro.getTelefone())))
+                .map(Membro::getNome)
+                .findFirst()
+                .orElse(null);
     }
 
     @Transactional

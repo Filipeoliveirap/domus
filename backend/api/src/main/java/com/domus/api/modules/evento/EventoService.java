@@ -38,7 +38,8 @@ public class EventoService {
     )
     @Transactional(readOnly = true)
     public PagedResponse<EventoResponse> listarEventos(UUID igrejaId, String q, Pageable pageable) {
-        Page<EventoResponse> pagina = eventoRepository.buscarPorIgreja(igrejaId, q, pageable)
+        Page<EventoResponse> pagina = eventoRepository
+                .buscarPorIgreja(igrejaId, q, java.time.LocalDateTime.now(), pageable)
                 .map(EventoResponse::from);
         return PagedResponse.from(pagina);
     }

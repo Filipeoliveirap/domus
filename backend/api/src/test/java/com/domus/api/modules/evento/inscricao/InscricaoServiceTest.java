@@ -184,12 +184,133 @@ class InscricaoServiceTest {
     @Test
     void recusaEventoJaEncerrado() {
         Evento e = evento(10);
-        e.setInicioEm(LocalDateTime.now().minusDays(1));
+        // ENCERRADO: começou e terminou há dias (não basta inicioEm no passado — precisa
+        // também passar do fim/fim-do-dia, senão vira EM_ANDAMENTO em vez de ENCERRADO).
+        e.setInicioEm(LocalDateTime.now().minusDays(2));
+        e.setFimEm(LocalDateTime.now().minusDays(1));
         dado(e, membro(true, StatusMembro.ATIVO), 0);
 
         assertThatThrownBy(() -> service.inscrever(eventoId, membroId, null, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já aconteceu");
+    }
+
+    @Test
+    void recusaInscricaoEmEventoEmAndamentoComMensagemPropria() {
+        // B3: EM_ANDAMENTO precisa de mensagem DIFERENTE de ENCERRADO — "já começou" é
+        // factualmente diferente de "já aconteceu" para quem está vendo o evento rolar agora.
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusHours(1));
+        e.setFimEm(LocalDateTime.now().plusHours(1));
+        dado(e, membro(true, StatusMembro.ATIVO), 0);
+
+        assertThatThrownBy(() -> service.inscrever(eventoId, membroId, null, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já começou")
+                .hasMessageNotContaining("já aconteceu");
+    }
+
+    @Test
+    void inscreverMembrosRecusaQuandoEventoEmAndamento() {
+        // B3: a validação de "evento aberto" tem que valer também para inscreverMembros, não
+        // só para a auto-inscrição — checada ANTES do laço, então nem chega a olhar membroIds.
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusHours(1));
+        e.setFimEm(LocalDateTime.now().plusHours(1));
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+
+        assertThatThrownBy(() -> service.inscreverMembros(
+                eventoId, java.util.List.of(membroId), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já começou");
+    }
+
+    @Test
+    void adicionarAcompanhanteRecusaQuandoEventoEncerrado() {
+        // B3: mesma validação também protege a porta dos convidados.
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusDays(2));
+        e.setFimEm(LocalDateTime.now().minusDays(1));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já aconteceu");
+    }
+
+    @Test
+    void convidadoDuplicadoPorTelefoneNoMesmoEventoEhRecusado() {
+        // B1: mesmo telefone formatado de jeito diferente ("(11) 99999-8888" vs "11999998888")
+        // conta como o mesmo convidado — comparação é por dígitos, não pelo texto exato.
+        Evento e = evento(10);
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+        AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(minha)
+                .nome("Carlos").telefone("(11) 99999-8888").build();
+        when(acompanhanteRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(existente));
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("Carlos Outro Nome", "11999998888"),
+                usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já está inscrito neste evento");
+    }
+
+    @Test
+    void convidadoDuplicadoPorNomeQuandoNaoHaTelefoneEmNenhumLado() {
+        // B1: telefone é opcional; sem ele, cai para nome normalizado (sem acento, sem case).
+        Evento e = evento(10);
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+        AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(minha)
+                .nome("José da Silva").telefone(null).build();
+        when(acompanhanteRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(existente));
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("  jose   DA silva ", null),
+                usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já está inscrito neste evento");
+    }
+
+    @Test
+    void convidadoComMesmoNomeMasTelefoneDiferenteNaoEhBloqueado() {
+        // Confirma que não virou bloqueio global por nome: telefones diferentes e
+        // informados nos dois lados vencem a comparação — nomes iguais não bastam sozinhos.
+        Evento e = evento(10);
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+        AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(minha)
+                .nome("João").telefone("11911112222").build();
+        when(acompanhanteRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(existente));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+
+        service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("João", "11933334444"), usuarioId, igrejaId);
+
+        verify(acompanhanteRepository).save(any(AcompanhanteInscricao.class));
     }
 
     @Test

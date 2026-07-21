@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useResumo } from '@/hooks/financeiro/relatorio/useResumo'
 import { usePorCategoria } from '@/hooks/financeiro/relatorio/usePorCategoria'
 import { useEvolucaoMensal } from '@/hooks/financeiro/relatorio/useEvolucaoMensal'
@@ -159,20 +160,18 @@ export default function RelatoriosPage() {
           <div className={styles.customDatas}>
             <div className={styles.customCampo}>
               <label className={styles.customLabel}>DE</label>
-              <input
-                type="date"
-                className={styles.customInput}
+              <CampoData
+                semLabel
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                onChange={setDataInicio}
               />
             </div>
             <div className={styles.customCampo}>
               <label className={styles.customLabel}>ATÉ</label>
-              <input
-                type="date"
-                className={styles.customInput}
+              <CampoData
+                semLabel
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onChange={setDataFim}
               />
             </div>
           </div>

@@ -113,6 +113,20 @@ public class EventoService {
         evento.setFimEm(data.fimEm());
         evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
         evento.setFoto(data.foto());
+
+        // A9: vagas contam PESSOAS (inscritos confirmados + acompanhantes) — reduzir abaixo
+        // de quem já está confirmado deixaria o evento com mais gente que vaga declarada, e
+        // "vagas restantes" (evento.getVagas() - total) ficaria negativo. null (sem limite)
+        // sempre é permitido, não há o que estourar.
+        if (data.vagas() != null) {
+            long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
+            if (data.vagas() < pessoasConfirmadas) {
+                throw new BusinessException("VAGAS_MENOR_QUE_INSCRITOS",
+                        "Não é possível reduzir as vagas para " + data.vagas() + ": "
+                        + pessoasConfirmadas + " pessoas já estão confirmadas neste evento. "
+                        + "Cancele inscrições antes de reduzir o limite.");
+            }
+        }
         evento.setVagas(data.vagas());
         evento.setPreco(data.preco());
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());

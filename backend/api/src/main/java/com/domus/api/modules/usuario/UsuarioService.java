@@ -53,6 +53,16 @@ public class UsuarioService {
                 .orElse(null);
         if (existente != null) {
             if (existente.getDeleteAt() == null) {
+                // A5: distingue conta ATIVA de conta DESATIVADA (usuario.ativo) — as duas têm
+                // deleteAt nulo (não foram arquivadas), mas só a desativada precisa de uma
+                // mensagem que aponte o caminho certo (reativar), em vez do genérico "já tem
+                // acesso" (que soa como se bastasse esperar, quando na verdade a conta nem
+                // consegue logar hoje).
+                if (!existente.isAtivo()) {
+                    throw new BusinessException("USUARIO_DESATIVADO",
+                            "Este membro já tem uma conta, mas ela está desativada. "
+                            + "Reative o acesso em vez de convidar novamente.");
+                }
                 throw new BusinessException("MEMBRO_JA_TEM_ACESSO",
                         "Esta pessoa já tem acesso ao sistema.");
             }
@@ -127,6 +137,13 @@ public class UsuarioService {
         if (usuario.getUltimoLoginEm() != null) {
             throw new BusinessException("CONVITE_JA_ACEITO",
                     "Este usuário já fez login — o convite já foi aceito.");
+        }
+        // A5: usuário desativado (usuario.ativo=false) não deve receber convite — reenviar um
+        // link de "definir senha" para uma conta que o admin decidiu desligar reabriria o
+        // acesso por trás da própria decisão de desativar.
+        if (!usuario.isAtivo()) {
+            throw new BusinessException("USUARIO_DESATIVADO",
+                    "Este usuário está desativado. Reative o acesso antes de reenviar o convite.");
         }
         String email = usuario.getEmail();
         if (email == null || email.isBlank()) {

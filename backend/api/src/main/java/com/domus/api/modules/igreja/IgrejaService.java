@@ -3,7 +3,6 @@ package com.domus.api.modules.igreja;
 import com.domus.api.config.TokenService;
 import com.domus.api.shared.security.RefreshTokenService;
 import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
-import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
@@ -123,18 +122,17 @@ public class IgrejaService {
         return admin;
     }
 
-    @Cacheable(value = "igreja", key = "#id")
-    public IgrejaDTO buscarPorId(UUID id) {
-        log.info("Buscando igreja no banco. id={}", id);
-        Igreja igreja = igrejaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
-        return IgrejaDTO.from(igreja);
-    }
-
     /**
-     * A igreja inteira para a tela de Configurações. Não é cacheado: é a tela de edição,
-     * onde ver dado velho logo depois de salvar seria pior do que a ida ao banco.
+     * A igreja inteira para a tela de Configurações (e para qualquer outra leitura da própria
+     * igreja). Cacheado por {@code igrejaId} — que vem do JWT, nunca do corpo da requisição,
+     * então não existe chave para "roubar" a igreja de outra pessoa (A10: o antigo
+     * {@code GET /igrejas/{id}} foi removido por isso, e o cache não ressuscita esse risco
+     * porque não aceita um id arbitrário como parâmetro).
+     *
+     * <p>Invalidado em {@link #atualizar}, senão a tela mostraria dado velho logo depois de
+     * editar as Configurações.
      */
+    @Cacheable(value = "igreja", key = "#igrejaId")
     @Transactional(readOnly = true)
     public IgrejaDetalheDTO buscarDetalhe(UUID igrejaId) {
         Igreja igreja = igrejaRepository.findById(igrejaId)

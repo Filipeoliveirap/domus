@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/authStore'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 15
@@ -165,21 +166,19 @@ function MovimentacoesConteudo() {
 
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>DE</label>
-          <input
-            type="date"
-            className={styles.filtroInput}
+          <CampoData
+            semLabel
             value={filtros.dataInicio}
-            onChange={(e) => { setFiltro('dataInicio', e.target.value); resetarPagina() }}
+            onChange={(v) => { setFiltro('dataInicio', v); resetarPagina() }}
           />
         </div>
 
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>ATÉ</label>
-          <input
-            type="date"
-            className={styles.filtroInput}
+          <CampoData
+            semLabel
             value={filtros.dataFim}
-            onChange={(e) => { setFiltro('dataFim', e.target.value); resetarPagina() }}
+            onChange={(v) => { setFiltro('dataFim', v); resetarPagina() }}
           />
         </div>
 

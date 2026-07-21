@@ -26,7 +26,8 @@ public class MembroController {
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(membroService.listarMembros(igrejaId, q, pageable));
+        return ResponseEntity.ok(
+                membroService.listarMembros(igrejaId, q, pageable, podeVerDadosSensiveis()));
     }
 
     @GetMapping("/bairros")
@@ -53,7 +54,18 @@ public class MembroController {
     @GetMapping("/{id}")
     public ResponseEntity<MembroResponse> buscarPorId(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(membroService.buscarPorId(id, igrejaId));
+        return ResponseEntity.ok(membroService.buscarPorId(id, igrejaId, podeVerDadosSensiveis()));
+    }
+
+    /**
+     * Endereço e observações (notas pastorais) só saem da API para ADMIN_IGREJA.
+     *
+     * <p>LÍDER e MEMBRO enxergam o membro para o que precisam — contato, ministério, status —
+     * mas não onde a pessoa mora nem o que foi anotado sobre ela. Barrar isso na tela não
+     * adiantaria: o JSON está a um DevTools de distância.
+     */
+    private boolean podeVerDadosSensiveis() {
+        return "ADMIN_IGREJA".equals(usuarioAutenticado.getRole());
     }
 
     @DeleteMapping("/{id}")

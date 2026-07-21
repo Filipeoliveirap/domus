@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoMembro } from './SelecaoMembro'
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { formatarMoeda, formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { UseFormReturn } from 'react-hook-form'
 import type { MovimentacaoFormInput, MovimentacaoFormData } from '@/lib/validators'
@@ -31,6 +32,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const categoriaId = watch('categoriaId') as string
   const valor = watch('valor') as string
   const membroId = watch('membroId') as string | undefined
+  const dataMovimentacao = (watch('dataMovimentacao') as string) ?? ''
 
   const { data: categorias, isPending: categoriasCarregando } = useCategoriasSelect()
 
@@ -154,11 +156,11 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
 
                 <div className={styles.campo}>
                   <label className={styles.label} htmlFor="dataMovimentacao">DATA</label>
-                  <input
+                  <CampoData
                     id="dataMovimentacao"
-                    type="date"
-                    className={styles.input}
-                    {...register('dataMovimentacao')}
+                    semLabel
+                    value={dataMovimentacao}
+                    onChange={(v) => setValue('dataMovimentacao', v, { shouldValidate: true, shouldDirty: true })}
                   />
                   {errors.dataMovimentacao && <span className={styles.erroCampo}>{errors.dataMovimentacao.message}</span>}
                 </div>

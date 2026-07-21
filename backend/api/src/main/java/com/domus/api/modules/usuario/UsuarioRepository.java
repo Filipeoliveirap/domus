@@ -49,8 +49,15 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
       AND ( :q IS NULL
             OR LOWER(u.membro.nome)  LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
             OR LOWER(u.membro.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) )
-    ORDER BY u.membro.nome ASC
+    ORDER BY u.ativo DESC, u.membro.nome ASC
     """)
+    /**
+     * Ativos primeiro, depois por nome — e a ordenação é do BANCO, antes de paginar.
+     *
+     * <p>Ordenar isto no front resolveria só a página aberta: com três páginas, um desativado
+     * da página 1 continuaria acima de um ativo da página 2, e a lista pareceria certa em cada
+     * tela e errada no conjunto.
+     */
     Page<Usuario> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
                                   @Param("q") String q,
                                   Pageable pageable);

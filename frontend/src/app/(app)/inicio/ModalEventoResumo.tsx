@@ -306,8 +306,8 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         />
       )}
 
-      {modalAberto === 'lista' && (
-        <ModalQuemVai eventoId={eventoId} aoFechar={() => setModalAberto(null)} />
+      {modalAberto === 'lista' && evento && (
+        <ModalQuemVai eventoId={eventoId} situacao={evento.situacao} aoFechar={() => setModalAberto(null)} />
       )}
     </div>
   )

@@ -3,7 +3,7 @@ package com.domus.api.config.redis;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.financeiro.categoria.DTOs.CategoriaResponse;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
-import com.domus.api.modules.igreja.DTO.IgrejaDTO;
+import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.fasterxml.jackson.databind.JavaType;
@@ -53,7 +53,7 @@ public class RedisConfig implements CachingConfigurer {
         RedisCacheConfiguration igrejaConfig = base
                 .entryTtl(Duration.ofHours(1))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
-                        new Jackson2JsonRedisSerializer<>(mapper, IgrejaDTO.class)));
+                        new Jackson2JsonRedisSerializer<>(mapper, IgrejaDetalheDTO.class)));
 
         RedisCacheConfiguration usuariosConfig = base
                 .entryTtl(Duration.ofMinutes(5))

@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight } from 'lucide-react'
+import { X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, AlertTriangle } from 'lucide-react'
 import { useCategoriaForm } from '@/hooks/financeiro/categoria/useCategoriaForm'
+import { ModalArquivar } from '@/components/common/modalArquivar/ModalArquivar'
 import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/categoria.type'
 import styles from './ModalCategoriaForm.module.css'
 
@@ -22,6 +23,7 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
     register, handleSubmit, setValue, watch,
     formState: { errors },
     onSubmit, erroGeral, isLoading, isFormIncomplete, ehEdicao,
+    confirmacaoPendente, confirmarAtualizacao, cancelarConfirmacao,
   } = useCategoriaForm({
     categoriaId: categoria?.id,
     categoriaInicial: categoria,
@@ -98,6 +100,34 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
           </div>
         </form>
       </div>
+
+      {/*
+        A11/rodada 3: confirmação leve (não a crítica com nome digitado) — a categoria já
+        tem lançamentos associados e a mudança vale para todos eles.
+      */}
+      {confirmacaoPendente && (
+        <ModalArquivar
+          titulo="Categoria em uso"
+          mensagem={
+            <>
+              Esta categoria está associada a{' '}
+              <strong>
+                {confirmacaoPendente.totalMovimentacoes}{' '}
+                {confirmacaoPendente.totalMovimentacoes === 1 ? 'lançamento' : 'lançamentos'}
+              </strong>
+              . A mudança vale para todos eles. Deseja continuar?
+            </>
+          }
+          icone={AlertTriangle}
+          reversivel={false}
+          textoConfirmar="Salvar mesmo assim"
+          textoCarregando="Salvando…"
+          isLoading={isLoading}
+          erro={erroGeral}
+          onConfirmar={confirmarAtualizacao}
+          onClose={cancelarConfirmacao}
+        />
+      )}
     </div>
   )
 }

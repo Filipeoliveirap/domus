@@ -230,6 +230,58 @@ class EventoServiceCamposInscricaoTest {
     }
 
     @Test
+    void atualizarRecusaReduzirVagasAbaixoDosInscritos() {
+        // A9: 20 vagas, 10 pessoas confirmadas -> não pode editar para 9.
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(igreja()).titulo("Retiro")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .vagas(20)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
+
+        assertThatThrownBy(() -> service.atualizarEvento(
+                eventoId, request(9, null, null, null), igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasMessageContaining("10");
+        assertThat(existente.getVagas()).isEqualTo(20); // não mudou nada
+    }
+
+    @Test
+    void atualizarPermiteReduzirVagasParaExatamenteOTotalDeInscritos() {
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(igreja()).titulo("Retiro")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .vagas(20)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
+
+        service.atualizarEvento(eventoId, request(10, null, null, null), igrejaId);
+
+        assertThat(existente.getVagas()).isEqualTo(10);
+    }
+
+    @Test
+    void atualizarPermiteLimparVagasParaNuloMesmoComInscritos() {
+        // null = sem limite: nunca há o que estourar.
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(igreja()).titulo("Retiro")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .vagas(20)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        service.atualizarEvento(eventoId, request(null, null, null, null), igrejaId);
+
+        assertThat(existente.getVagas()).isNull();
+        verify(inscricaoService, never()).contarPessoasConfirmadas(any());
+    }
+
+    @Test
     void arquivarRecusaEventoEmAndamento() {
         Evento existente = Evento.builder()
                 .id(eventoId).igreja(igreja()).titulo("Retiro")

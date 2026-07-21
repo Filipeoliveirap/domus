@@ -714,6 +714,86 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void cancelarRecusaQuandoEventoEncerrado() {
+        // A2: cancelar reescreveria histórico de presença de um evento que já aconteceu.
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusDays(2));
+        e.setFimEm(LocalDateTime.now().minusDays(1));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+
+        assertThatThrownBy(() -> service.cancelar(minha.getId(), usuarioId, membroId, "MEMBRO", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já aconteceu");
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    @Test
+    void cancelarRecusaMesmoParaAdminQuandoEventoEmAndamento() {
+        // A2: a trava vale para TODO MUNDO, admin incluso — ver Javadoc de cancelar().
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusHours(1));
+        e.setFimEm(LocalDateTime.now().plusHours(1));
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+                .thenReturn(Optional.of(outra));
+
+        assertThatThrownBy(() -> service.cancelar(
+                outra.getId(), usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já começou");
+        assertThat(outra.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    @Test
+    void removerAcompanhanteRecusaQuandoEventoEncerrado() {
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusDays(2));
+        e.setFimEm(LocalDateTime.now().minusDays(1));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(minha).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        assertThatThrownBy(() -> service.removerAcompanhante(acompanhante.getId(), membroId, "MEMBRO", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já aconteceu");
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void removerAcompanhanteRecusaMesmoParaAdminQuandoEventoEmAndamento() {
+        Evento e = evento(10);
+        e.setInicioEm(LocalDateTime.now().minusHours(1));
+        e.setFimEm(LocalDateTime.now().plusHours(1));
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(outra).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), UUID.randomUUID(), "ADMIN_IGREJA", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("já começou");
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
     void listarParticipantesDeEventoDeOutraIgrejaEh404() {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.empty());
 

@@ -22,6 +22,13 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
   const queryClient = useQueryClient()
   const ehEdicao = !!categoriaId
 
+  // A11/rodada 3: se a categoria já está em uso, o salvamento pausa aqui pedindo confirmação
+  // (atrito proporcional à consequência — sem lançamento associado, salva direto).
+  const [confirmacaoPendente, setConfirmacaoPendente] = useState<{
+    payload: CategoriaRequest
+    totalMovimentacoes: number
+  } | null>(null)
+
   const form = useAppForm<CategoriaFormInput, CategoriaFormData>({
     resolver: zodResolver(categoriaSchema),
     defaultValues: { nome: '', tipo: undefined },
@@ -36,6 +43,13 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
     }
   }, [categoriaInicial, reset])
 
+  async function salvarEdicao(payload: CategoriaRequest) {
+    await categoriasService.atualizar(categoriaId!, payload)
+    invalidarCache(queryClient, 'categoria')
+    queryClient.invalidateQueries({ queryKey: ['categoria', categoriaId] })
+    notificar.sucesso('Categoria atualizada com sucesso!')
+  }
+
   const onSubmit = async (data: CategoriaFormData) => {
     setErroGeral(null)
     setIsLoading(true)
@@ -43,16 +57,20 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
       const payload: CategoriaRequest = { nome: data.nome, tipo: data.tipo }
 
       if (ehEdicao) {
-        await categoriasService.atualizar(categoriaId!, payload)
-        invalidarCache(queryClient, 'categoria')
-        queryClient.invalidateQueries({ queryKey: ['categoria', categoriaId] })
-        notificar.sucesso('Categoria atualizada com sucesso!')
+        // A11/rodada 3: só pede confirmação quando a categoria já está em uso — mudar uma
+        // categoria sem lançamento associado é inofensivo e não deveria ter atrito.
+        const total = await categoriasService.contarMovimentacoes(categoriaId!)
+        if (total > 0) {
+          setConfirmacaoPendente({ payload, totalMovimentacoes: total })
+          return
+        }
+        await salvarEdicao(payload)
       } else {
         await categoriasService.criar(payload)
         invalidarCache(queryClient, 'categoria')
         notificar.sucesso('Categoria cadastrada com sucesso!')
       }
-      onSuccess?.()     
+      onSuccess?.()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar categoria. Tente novamente.')
@@ -64,5 +82,37 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
     }
   }
 
-  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+  async function confirmarAtualizacao() {
+    if (!confirmacaoPendente) return
+    setErroGeral(null)
+    setIsLoading(true)
+    try {
+      await salvarEdicao(confirmacaoPendente.payload)
+      setConfirmacaoPendente(null)
+      onSuccess?.()
+    } catch (error: unknown) {
+      if (axios.isAxiosError<ApiError>(error)) {
+        setErroGeral(error.response?.data?.message ?? 'Erro ao salvar categoria. Tente novamente.')
+      } else {
+        setErroGeral('Erro ao salvar categoria. Tente novamente.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  function cancelarConfirmacao() {
+    setConfirmacaoPendente(null)
+  }
+
+  return {
+    ...form,
+    onSubmit,
+    erroGeral,
+    isLoading,
+    ehEdicao,
+    confirmacaoPendente,
+    confirmarAtualizacao,
+    cancelarConfirmacao,
+  }
 }

@@ -92,6 +92,15 @@ export function podeArquivarEvento(situacao: SituacaoEvento): boolean {
 }
 
 /**
+ * A3/rodada 3: o backend recusa cancelar inscrição (própria ou de outra pessoa) fora de
+ * AGENDADO, sem exceção para ADMIN/LÍDER — presença já registrada é histórico, não algo
+ * que se desfaz depois que o evento começou ou terminou.
+ */
+export function podeCancelarInscricao(situacao: SituacaoEvento): boolean {
+  return situacao === 'AGENDADO'
+}
+
+/**
  * Vagas restantes calculadas a partir da lista de participantes (cada um ocupa 1 vaga +
  * 1 por convidado). `null` = evento sem limite de vagas.
  */

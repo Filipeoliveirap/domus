@@ -33,7 +33,12 @@ function motivoBloqueio(
 ): string | null {
   if (jaInscritos.has(m.id)) return 'Já inscrito neste evento'
   if (exclusivoMembros && m.status === 'VISITANTE') return 'Visitante — evento exclusivo para membros'
-  if (exclusivoMembros && m.status === 'INATIVO') return 'Inativo — evento exclusivo para membros'
+  // A8/rodada 3: evento só de batizados também exige ATIVO ou VISITANTE (nunca INATIVO) —
+  // a regra de batismo e a de status precisam combinar, não só valer quando o evento é
+  // "exclusivo para membros".
+  if (m.status === 'INATIVO' && (exclusivoMembros || exclusivoBatizados)) {
+    return 'Inativo — evento exige membro ativo'
+  }
   if (exclusivoBatizados && !m.batizado) return 'Não batizado — evento exclusivo para batizados'
   return null
 }

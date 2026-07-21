@@ -56,6 +56,7 @@ export const Endpoints = {
     base: '/categorias',
     todas: '/categorias/todas',
     porId: (id: string) => `/categorias/${id}`,
+    contagemMovimentacoes: (id: string) => `/categorias/${id}/contagem-movimentacoes`,
   },
 
   movimentacoes: {

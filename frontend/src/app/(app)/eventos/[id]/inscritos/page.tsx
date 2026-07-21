@@ -11,9 +11,10 @@ import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
-import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { iniciais } from '@/lib/formats/membroFormat'
 import { formatarData } from '@/lib/formats/membroFormat'
 import type { InscritoResponse } from '@/types/inscricao.type'
@@ -37,6 +38,10 @@ export default function InscritosPage() {
 
   const cancelarInscricao = useCancelarInscricao()
   const removerConvidado = useRemoverConvidado()
+
+  // A2/rodada 3: o backend recusa cancelar fora de AGENDADO, mesmo para ADMIN/LÍDER —
+  // presença em evento em andamento/encerrado é histórico, não algo que se desfaz aqui.
+  const podeCancelar = evento ? podeCancelarInscricao(evento.situacao) : true
 
   if (!hidratado) {
     return <div className={styles.pagina} />
@@ -195,13 +200,17 @@ export default function InscritosPage() {
                           {inscrito.acompanhantes.length > 0 ? inscrito.acompanhantes.length : '—'}
                         </div>
                         <div className={styles.colAcoes}>
-                          <button
-                            type="button"
-                            className={styles.btnCancelar}
-                            onClick={() => setInscritoCancelando(inscrito)}
-                          >
-                            Cancelar
-                          </button>
+                          {podeCancelar ? (
+                            <button
+                              type="button"
+                              className={styles.btnCancelar}
+                              onClick={() => setInscritoCancelando(inscrito)}
+                            >
+                              Cancelar
+                            </button>
+                          ) : (
+                            <span className={styles.textoMuted}>Participou</span>
+                          )}
                         </div>
                       </div>
 
@@ -217,13 +226,17 @@ export default function InscritosPage() {
                           <div className={styles.colInscritoPor} />
                           <div className={styles.colConvidados} />
                           <div className={styles.colAcoes}>
-                            <button
-                              type="button"
-                              className={styles.btnCancelar}
-                              onClick={() => setConvidadoCancelando({ id: convidado.id, nome: convidado.nome })}
-                            >
-                              Remover
-                            </button>
+                            {podeCancelar ? (
+                              <button
+                                type="button"
+                                className={styles.btnCancelar}
+                                onClick={() => setConvidadoCancelando({ id: convidado.id, nome: convidado.nome })}
+                              >
+                                Remover
+                              </button>
+                            ) : (
+                              <span className={styles.textoMuted}>Participou</span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -247,19 +260,10 @@ export default function InscritosPage() {
       )}
 
       {inscritoCancelando && (
-        <ModalConfirmacaoCritica
-          titulo="Cancelar inscrição"
-          mensagem={
-            <>
-              Você está prestes a cancelar a inscrição de <strong>{inscritoCancelando.nome}</strong>.
-              Esta ação não pode ser desfeita pela pessoa.
-            </>
-          }
-          consequencias={[
-            { tipo: 'perde', texto: 'A vaga desta pessoa (e de seus convidados) será liberada.' },
-          ]}
-          palavraConfirmacao={inscritoCancelando.nome}
-          textoConfirmar="Cancelar inscrição"
+        <ConfirmarCancelamentoInscricao
+          nome={inscritoCancelando.nome}
+          proprio={false}
+          quantidadeConvidados={inscritoCancelando.acompanhantes.length}
           isLoading={cancelarInscricao.isPending}
           onConfirmar={aoConfirmarCancelamento}
           onClose={() => setInscritoCancelando(null)}

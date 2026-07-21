@@ -11,7 +11,12 @@ export interface EventoResponse {
   foto: string | null
   createdAt: string
   vagas: number | null
-  preco: string | null
+  /**
+   * Chega como NÚMERO no JSON (`"preco":50.00`) — o Jackson serializa `BigDecimal` assim.
+   * Tipar como string era mentira e quebrava a edição: o Zod do formulário exige string e
+   * recusava o valor vindo da API com "expected string, received number".
+   */
+  preco: number | null
   exclusivoMembros: boolean
   exclusivoBatizados: boolean
   requerInscricao: boolean

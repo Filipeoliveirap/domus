@@ -223,6 +223,16 @@ public class InscricaoService {
         }
     }
 
+    /**
+     * Quantas pessoas (inscritos confirmados + acompanhantes) ocupam vaga hoje neste evento.
+     * Exposto para o {@link com.domus.api.modules.evento.EventoService} usar na A9 (recusar
+     * reduzir {@code vagas} abaixo de quem já está confirmado) sem duplicar a query.
+     */
+    @Transactional(readOnly = true)
+    public long contarPessoasConfirmadas(UUID eventoId) {
+        return inscricaoRepository.contarPessoasConfirmadas(eventoId);
+    }
+
     /** {@code vagas == null} significa sem limite. */
     void validarVaga(Evento evento, int pessoasAAdicionar) {
         if (evento.getVagas() == null) return;
@@ -279,6 +289,11 @@ public class InscricaoService {
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
 
+        // A2: mesma trava de cancelar() — remover convidado de evento EM_ANDAMENTO/ENCERRADO
+        // reescreveria quem esteve presente. Vale para TODO MUNDO, admin incluso (ver Javadoc
+        // de cancelar()).
+        validarEventoAberto(inscricao.getEvento());
+
         // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
@@ -300,11 +315,22 @@ public class InscricaoService {
      * <p>Regra: você controla VOCÊ MESMO e o que você trouxe. Quem inscreveu alguém
      * NÃO pode desinscrever — inscrever ocupa uma vaga, mas desinscrever tira a pessoa de
      * um evento que ela achava que ia, e ela só descobre no dia.
+     *
+     * <p><b>A2 — vale para ADMIN/LÍDER também, sem exceção.</b> Cogitou-se liberar o admin
+     * para "corrigir um erro de digitação logo depois do evento", mas {@code validarEventoAberto}
+     * só enxerga a situação do evento (AGENDADO/EM_ANDAMENTO/ENCERRADO) — não tem noção de
+     * "isso acabou de terminar" vs. "isso terminou há três meses". Uma exceção para admin seria
+     * tudo ou nada: o mesmo caminho que corrige um engano no dia também apagaria, em silêncio,
+     * quem esteve num evento de meses atrás. Presença é histórico, e a igreja pode precisar
+     * dele depois (frequência, relatório, até prova de participação). Se um dia for preciso um
+     * ajuste pós-evento de verdade, isso é uma feature própria e auditada (motivo obrigatório,
+     * log de quem e por quê) — não uma brecha silenciosa no cancelamento normal.
      */
     @Transactional
     public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
                          String role, UUID igrejaId) {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+        validarEventoAberto(inscricao.getEvento());
 
         boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
         boolean souEu = inscricao.getMembro().getId().equals(meuMembroId);

@@ -36,11 +36,31 @@ public record MembroResponse(
      * não recalcula o aviso a cada GET.
      */
     public static MembroResponse from(Membro m, String avisoTelefoneDuplicado) {
+        return from(m, avisoTelefoneDuplicado, true);
+    }
+
+    /**
+     * Resposta com ou sem os <b>dados sensíveis</b> do membro — hoje <b>endereço</b> e
+     * <b>observações</b> (notas pastorais).
+     *
+     * <p><b>Por que aqui e não na tela:</b> esconder no front não esconde nada. Se o JSON traz
+     * o campo, qualquer LÍDER abre o DevTools e lê o endereço da casa de todo mundo. A omissão
+     * precisa acontecer antes de sair da API.
+     *
+     * <p><b>Ao adicionar campo novo em membro, decida a qual grupo ele pertence.</b> O padrão
+     * seguro é sensível: o que é público já está visível em outras telas (nome, foto,
+     * aniversário); o que não está, provavelmente não deveria vazar.
+     */
+    public static MembroResponse from(Membro m, String avisoTelefoneDuplicado,
+                                      boolean incluirDadosSensiveis) {
         return new MembroResponse(
                 m.getId(), m.getNome(), m.getEmail(), m.getTelefone(),
-                m.getDataNascimento(), enderecoDe(m.getEndereco()), m.getStatus(),
+                m.getDataNascimento(),
+                incluirDadosSensiveis ? enderecoDe(m.getEndereco()) : null,
+                m.getStatus(),
                 m.getEstadoCivil(), m.getMinisterio(), m.getFoto(),
-                m.getObservacoes(), m.getCreatedAt(),
+                incluirDadosSensiveis ? m.getObservacoes() : null,
+                m.getCreatedAt(),
                 m.isBatizado(), m.getDataBatismo(), avisoTelefoneDuplicado
         );
     }

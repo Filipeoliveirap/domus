@@ -42,12 +42,13 @@ public class MembroService {
 
     @Cacheable(
             value = "membros",
-            key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable)"
+            key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable, #podeVerDadosSensiveis)"
     )
     @Transactional(readOnly = true)
-    public PagedResponse<MembroResponse> listarMembros(UUID igrejaId, String q, Pageable pageable) {
+    public PagedResponse<MembroResponse> listarMembros(UUID igrejaId, String q, Pageable pageable,
+                                                       boolean podeVerDadosSensiveis) {
         Page<MembroResponse> pagina = membroRepository.buscarPorIgreja(igrejaId, q, pageable)
-                .map(MembroResponse::from);
+                .map(m -> MembroResponse.from(m, null, podeVerDadosSensiveis));
         return PagedResponse.from(pagina);
     }
 
@@ -198,10 +199,10 @@ public class MembroService {
     }
 
     @Transactional(readOnly = true)
-    public MembroResponse buscarPorId(UUID id, UUID igrejaId) {
+    public MembroResponse buscarPorId(UUID id, UUID igrejaId, boolean podeVerDadosSensiveis) {
         Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
-        return MembroResponse.from(membro);
+        return MembroResponse.from(membro, null, podeVerDadosSensiveis);
     }
 
     private Endereco paraEndereco(EnderecoDTO dto) {

@@ -305,6 +305,25 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void cancelarLevaOsConvidadosJunto() {
+        // Decisão de produto: o convidado NÃO volta numa reinscrição. Quem cancelou porque
+        // o convidado desistiu não pode vê-lo reaparecer sozinho, ocupando vaga de novo.
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        minha.getAcompanhantes().add(
+                AcompanhanteInscricao.builder().id(UUID.randomUUID())
+                        .inscricao(minha).nome("Convidado").build());
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+
+        service.cancelar(minha.getId(), usuarioId, membroId, "MEMBRO", igrejaId);
+
+        assertThat(minha.getAcompanhantes()).isEmpty();
+    }
+
+    @Test
     void adminPodeCancelarInscricaoDeQualquerUm() {
         InscricaoEvento outra = InscricaoEvento.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))

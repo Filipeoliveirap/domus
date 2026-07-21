@@ -122,8 +122,10 @@ ficaria impedido de voltar ao próprio evento:
    tenta inserir uma nova, que violaria o `UNIQUE`).
 2. **Só `CONFIRMADA` ocupa vaga.** A contagem sob lock ignora canceladas.
 
-Os acompanhantes de uma inscrição cancelada saem da contagem junto, pelo mesmo motivo — eles só
-existem enquanto o responsável vai.
+Os acompanhantes de uma inscrição cancelada são **apagados**, não apenas descontados. Decidido em
+2026-07-21, depois de o teste ao vivo mostrar o contrário: eles voltavam sozinhos na reinscrição.
+Quem cancelou porque o convidado desistiu o veria reaparecer em silêncio, ocupando vaga. Levar a
+pessoa de novo passa a exigir cadastrá-la de novo — o passo consciente que o silêncio não tinha.
 
 `igreja_id` em `inscricao_evento` é redundante com `evento.igreja_id`, mas segue o padrão de toda
 entidade de domínio do projeto e evita JOIN em toda checagem de isolamento.

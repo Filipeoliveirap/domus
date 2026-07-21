@@ -7,6 +7,7 @@ import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.StatusMembro;
@@ -47,6 +48,7 @@ public class InscricaoService {
         Membro membro = membroRepository.findByIdAndIgrejaId(membroId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
+        validarInscricaoHabilitada(evento);
         validarEventoAberto(evento);
         validarElegibilidade(evento, membro);
 
@@ -105,6 +107,19 @@ public class InscricaoService {
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
     }
 
+    /**
+     * Checada ANTES de "aberto" e elegibilidade: é um interruptor de feature, não uma regra
+     * de negócio sobre QUEM pode se inscrever. Se o evento nem organiza inscrição, não faz
+     * sentido gastar as próximas validações (data, exclusividade) para chegar num "não" que já
+     * era certo desde o cadastro do evento.
+     */
+    private void validarInscricaoHabilitada(Evento evento) {
+        if (!evento.isRequerInscricao()) {
+            throw new BusinessException("INSCRICAO_NAO_HABILITADA",
+                    "Este evento não abre inscrição. Fale com a administração da igreja.");
+        }
+    }
+
     private void validarEventoAberto(Evento evento) {
         if (evento.getInicioEm().isBefore(LocalDateTime.now())) {
             throw new BusinessException("EVENTO_ENCERRADO",
@@ -139,6 +154,11 @@ public class InscricaoService {
     public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
                                                       UUID usuarioId, UUID igrejaId) {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+
+        // Alcançável: a inscrição pode existir de quando o evento AINDA aceitava inscrição,
+        // e o admin desligar o toggle depois. Sem esta checagem, o evento fecharia as
+        // inscrições e continuaria aceitando convidados — que ocupam vaga igual.
+        validarInscricaoHabilitada(inscricao.getEvento());
 
         if (inscricao.getEvento().isExclusivoMembros()) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
@@ -237,6 +257,20 @@ public class InscricaoService {
                 : Math.max(0, evento.getVagas() - (int) total);
 
         return new ListaInscritosResponse(total, evento.getVagas(), restantes, inscritos);
+    }
+
+    /**
+     * Lista de participantes visível a QUALQUER MEMBRO — versão reduzida de
+     * {@link #listarInscritos}, sem telefone de convidado, sem "quem inscreveu quem" e sem
+     * data da inscrição (ver Javadoc de {@link ParticipanteResponse}).
+     */
+    @Transactional(readOnly = true)
+    public List<ParticipanteResponse> listarParticipantes(UUID eventoId, UUID igrejaId) {
+        eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        return inscricaoRepository.listarPorEvento(eventoId)
+                .stream().map(ParticipanteResponse::from).toList();
     }
 
     private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {

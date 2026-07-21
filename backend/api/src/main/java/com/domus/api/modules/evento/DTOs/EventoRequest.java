@@ -19,5 +19,6 @@ public record EventoRequest(
         @Positive(message = "O valor deve ser maior que zero.")
         java.math.BigDecimal preco,
         Boolean exclusivoMembros,
-        Boolean exclusivoBatizados
+        Boolean exclusivoBatizados,
+        Boolean requerInscricao
 ) {}

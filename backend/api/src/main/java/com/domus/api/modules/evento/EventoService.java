@@ -68,6 +68,7 @@ public class EventoService {
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
                 .exclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()))
+                .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -100,6 +101,7 @@ public class EventoService {
         evento.setPreco(data.preco());
         evento.setExclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()));
         evento.setExclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()));
+        evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
 
         Evento salvo = eventoRepository.save(evento);
         outboxRegistrador.registrar(

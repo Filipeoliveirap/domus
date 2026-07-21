@@ -2,6 +2,8 @@ package com.domus.api.modules.evento.inscricao;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
+import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
@@ -127,5 +129,88 @@ public class InscricaoService {
             throw new BusinessException("VAGAS_ESGOTADAS",
                     "As vagas deste evento estão esgotadas.");
         }
+    }
+
+    /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
+    @Transactional
+    public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
+                                                      UUID usuarioId, UUID igrejaId) {
+        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+
+        if (inscricao.getEvento().isExclusivoMembros()) {
+            throw new BusinessException("EXCLUSIVO_MEMBROS",
+                    "Este evento é exclusivo para membros — não é possível levar convidados.");
+        }
+        validarEventoAberto(inscricao.getEvento());
+
+        // Trava o evento antes de contar: mesma corrida da inscrição.
+        eventoRepository.buscarComLock(inscricao.getEvento().getId(), igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        validarVaga(inscricao.getEvento(), 1);
+
+        AcompanhanteInscricao a = AcompanhanteInscricao.builder()
+                .inscricao(inscricao)
+                .nome(com.domus.api.shared.util.TextoUtil.capitalizar(data.nome()))
+                .telefone(data.telefone())
+                .build();
+
+        AcompanhanteInscricao salvo = acompanhanteRepository.save(a);
+        log.info("Acompanhante adicionado. inscricao_id={}, igreja_id={}", inscricaoId, igrejaId);
+        return AcompanhanteResponse.from(salvo);
+    }
+
+    @Transactional
+    public void removerAcompanhante(UUID acompanhanteId, UUID meuMembroId, String role, UUID igrejaId) {
+        AcompanhanteInscricao a = acompanhanteRepository.findById(acompanhanteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
+
+        InscricaoEvento inscricao = a.getInscricao();
+        if (!inscricao.getIgreja().getId().equals(igrejaId)) {
+            throw new ResourceNotFoundException("Convidado não encontrado.");
+        }
+
+        // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
+        // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
+        // (o caso mais comum), e qualquer NULL-check liberaria geral.
+        boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
+        boolean souODono = inscricao.getMembro().getId().equals(meuMembroId);
+
+        if (!ehAdmin && !souODono) {
+            throw new BusinessException("SEM_PERMISSAO",
+                    "Você só pode remover convidados da sua própria inscrição.");
+        }
+        acompanhanteRepository.delete(a);
+    }
+
+    /**
+     * Cancela uma inscrição.
+     *
+     * <p>Regra: você controla VOCÊ MESMO e o que você trouxe. Quem inscreveu alguém
+     * NÃO pode desinscrever — inscrever ocupa uma vaga, mas desinscrever tira a pessoa de
+     * um evento que ela achava que ia, e ela só descobre no dia.
+     */
+    @Transactional
+    public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
+                         String role, UUID igrejaId) {
+        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+
+        boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
+        boolean souEu = inscricao.getMembro().getId().equals(meuMembroId);
+
+        if (!ehAdmin && !souEu) {
+            throw new BusinessException("SEM_PERMISSAO",
+                    "Você não pode cancelar a inscrição de outra pessoa. "
+                    + "Peça a ela ou a um líder da igreja.");
+        }
+
+        inscricao.setStatus(StatusInscricao.CANCELADA);
+        inscricaoRepository.save(inscricao);
+        log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
+                inscricaoId, usuarioId, igrejaId);
+    }
+
+    private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {
+        return inscricaoRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
     }
 }

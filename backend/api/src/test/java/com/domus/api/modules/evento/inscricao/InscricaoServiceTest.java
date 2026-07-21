@@ -2,6 +2,7 @@ package com.domus.api.modules.evento.inscricao;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
@@ -30,6 +31,7 @@ class InscricaoServiceTest {
     UUID igrejaId = UUID.randomUUID();
     UUID eventoId = UUID.randomUUID();
     UUID membroId = UUID.randomUUID();
+    UUID usuarioId = UUID.randomUUID();
 
     @BeforeEach
     void setup() {
@@ -155,5 +157,67 @@ class InscricaoServiceTest {
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(cancelada);
+    }
+
+    @Test
+    void acompanhanteOcupaVaga() {
+        Evento e = evento(2);
+        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e).membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(2L);
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("esgotadas");
+    }
+
+    @Test
+    void quemInscreveuNaoPodeDesinscrever() {
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(usuarioId)      // fui EU quem inscrevi
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+                .thenReturn(Optional.of(outra));
+
+        // sou MEMBRO, o membro da inscrição não sou eu
+        assertThatThrownBy(() -> service.cancelar(
+                outra.getId(), usuarioId, UUID.randomUUID(), "MEMBRO", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não pode cancelar");
+    }
+
+    @Test
+    void oProprioInscritoPodeCancelar() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+
+        service.cancelar(minha.getId(), usuarioId, membroId, "MEMBRO", igrejaId);
+
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void adminPodeCancelarInscricaoDeQualquerUm() {
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+                .thenReturn(Optional.of(outra));
+
+        service.cancelar(outra.getId(), usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        assertThat(outra.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
     }
 }

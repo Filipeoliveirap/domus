@@ -183,6 +183,34 @@
   color: var(--color-text-secondary);
 }
 
+/* ─── Batismo ─────────────────────────────────────────────── */
+.batismoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+.campoHint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
 /* ─── Info box (aviso azul) ──────────────────────────────── */
 .infoBox {
   display: flex;

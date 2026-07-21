@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, ImageIcon, Info } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, ImageIcon, Info, Ticket, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './EventoForm.module.css'
@@ -18,10 +18,14 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
 
 export function EventoForm(props: EventoFormProps) {
   const {
-    register, handleSubmit,
+    register, handleSubmit, watch, setValue,
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao,
   } = props
+
+  const requerInscricao = watch('requerInscricao')
+  const tipoInscricao = watch('tipoInscricao')
+  const exclusivoBatizados = watch('exclusivoBatizados')
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -141,6 +145,117 @@ export function EventoForm(props: EventoFormProps) {
                 O evento aparecerá na agenda da igreja assim que for salvo.
               </p>
             </div>
+          </section>
+
+          {/* ─── Inscrições ─── */}
+          <section className={styles.secao}>
+            <div className={styles.secaoHeader}>
+              <span className={styles.secaoIcone}><Ticket size={20} /></span>
+              <h2 className={styles.secaoTitulo}>Inscrições</h2>
+            </div>
+
+            <label className={styles.toggleRow}>
+              <span className={styles.toggleTexto}>
+                <span className={styles.toggleTitulo}>Requer inscrição prévia</span>
+                <span className={styles.toggleDescricao}>
+                  Ative para controlar vagas, preço e restrições de quem pode participar.
+                </span>
+              </span>
+              <span className={styles.switch}>
+                <input type="checkbox" className={styles.switchInput} {...register('requerInscricao')} />
+                <span className={styles.switchTrilho} />
+              </span>
+            </label>
+
+            {requerInscricao && (
+              <div className={styles.campos}>
+                <div>
+                  <Input
+                    id="vagas"
+                    type="number"
+                    label="VAGAS"
+                    placeholder="Ex: 50"
+                    min={1}
+                    error={errors.vagas?.message}
+                    {...register('vagas')}
+                  />
+                  <span className={styles.campoHint}>Deixe vazio para não limitar.</span>
+                </div>
+
+                <div className={styles.grupoData}>
+                  <span className={styles.labelData}>TIPO DE INSCRIÇÃO</span>
+                  <div className={styles.segmentado}>
+                    <button
+                      type="button"
+                      className={`${styles.segmentoBtn} ${tipoInscricao === 'GRATUITO' ? styles.segmentoAtivo : ''}`}
+                      onClick={() => {
+                        setValue('tipoInscricao', 'GRATUITO', { shouldValidate: true })
+                        setValue('preco', undefined, { shouldValidate: true })
+                      }}
+                    >
+                      Gratuito
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.segmentoBtn} ${tipoInscricao === 'PAGO' ? styles.segmentoAtivo : ''}`}
+                      onClick={() => setValue('tipoInscricao', 'PAGO', { shouldValidate: true })}
+                    >
+                      Pago
+                    </button>
+                  </div>
+                </div>
+
+                {tipoInscricao === 'PAGO' && (
+                  <div>
+                    <Input
+                      id="preco"
+                      type="number"
+                      label="PREÇO"
+                      placeholder="0,00"
+                      min={0.01}
+                      step={0.01}
+                      leftIcon={<span>R$</span>}
+                      error={errors.preco?.message}
+                      {...register('preco')}
+                    />
+                    <span className={styles.campoHint}>
+                      Informativo. O pagamento é combinado com a igreja — informe o PIX ou um
+                      contato na descrição do evento.
+                    </span>
+                  </div>
+                )}
+
+                <label className={styles.toggleRow}>
+                  <span className={styles.toggleTexto}>
+                    <span className={styles.toggleTitulo}>Somente membros da igreja</span>
+                  </span>
+                  <span className={styles.switch}>
+                    <input type="checkbox" className={styles.switchInput} {...register('exclusivoMembros')} />
+                    <span className={styles.switchTrilho} />
+                  </span>
+                </label>
+
+                <label className={styles.toggleRow}>
+                  <span className={styles.toggleTexto}>
+                    <span className={styles.toggleTitulo}>Somente membros batizados</span>
+                  </span>
+                  <span className={styles.switch}>
+                    <input type="checkbox" className={styles.switchInput} {...register('exclusivoBatizados')} />
+                    <span className={styles.switchTrilho} />
+                  </span>
+                </label>
+
+                {exclusivoBatizados && (
+                  <div className={styles.infoBox}>
+                    <AlertTriangle size={18} className={styles.infoIcon} />
+                    <p className={styles.infoText}>
+                      Membros que não estiverem marcados como batizados não poderão se
+                      inscrever nem ser inscritos.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}

@@ -31,6 +31,7 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
       status: 'ATIVO', estadoCivil: '',
       ministerio: '', observacoes: '',
+      batizado: false, dataBatismo: '',
     },
     requiredFields: ['nome'],
   })
@@ -57,6 +58,8 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
         estadoCivil: membroInicial.estadoCivil ?? '',
         ministerio: membroInicial.ministerio ?? '',
         observacoes: membroInicial.observacoes ?? '',
+        batizado: membroInicial.batizado,
+        dataBatismo: membroInicial.dataBatismo ?? '',
       })
     }
     
@@ -74,6 +77,10 @@ export function useMembroForm({ membroId, membroInicial }: UseMembroFormParams =
           ...data.endereco,
           cep: data.endereco?.cep?.replace(/\D/g, '') || undefined,
         },
+        // batizado é sempre enviado (default false) — o PUT do backend lê booleano ausente
+        // como false, então nunca pode faltar aqui. dataBatismo só faz sentido se batizado.
+        batizado: data.batizado,
+        dataBatismo: data.batizado ? (data.dataBatismo || undefined) : undefined,
     }
 
       if (ehEdicao) {

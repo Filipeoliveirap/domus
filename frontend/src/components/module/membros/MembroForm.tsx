@@ -50,6 +50,7 @@ export function MembroForm(props: MembroFormProps) {
 
   const statusAtual = watch('status')
   const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
+  const batizadoAtual = watch('batizado')
 
   // Auto-preenchimento por CEP (ViaCEP). Nunca trava: erro/CEP inexistente só sinalizam.
   const { buscar, carregando: carregandoCep } = useBuscaCep()
@@ -167,6 +168,20 @@ export function MembroForm(props: MembroFormProps) {
               <MinisterioInput id="ministerio" value={ministerioAtual}
                 error={errors.ministerio?.message} registerProps={register('ministerio')}
                 onSelecionarSugestao={(valor) => setValue('ministerio', valor, { shouldValidate: true })} />
+            </div>
+
+            <div className={styles.batismoWrap}>
+              <label className={styles.checkboxLabel}>
+                <input type="checkbox" className={styles.checkbox} {...register('batizado')} />
+                Batizado
+              </label>
+              {batizadoAtual && (
+                <div>
+                  <Input id="dataBatismo" type="date" label="DATA DE BATISMO"
+                    error={errors.dataBatismo?.message} {...register('dataBatismo')} />
+                  <span className={styles.campoHint}>Opcional</span>
+                </div>
+              )}
             </div>
 
             <div className={styles.infoBox}>

@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, Clock, MapPin, CalendarDays } from 'lucide-react'
+import Link from 'next/link'
+import { X, Clock, MapPin, CalendarDays, Users } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
+import { useAuthStore } from '@/store/authStore'
 import {
   statusEvento,
   rotuloStatus,
@@ -21,6 +23,8 @@ interface DrawerDetalheEventoProps {
 
 export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoProps) {
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
+  const role = useAuthStore((s) => s.role)
+  const podeVerInscritos = role === 'ADMIN_IGREJA' || role === 'LIDER'
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -107,6 +111,13 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 </div>
               )}
             </div>
+
+            {podeVerInscritos && evento.requerInscricao && (
+              <Link href={`/eventos/${evento.id}/inscritos`} className={styles.acaoInscritos}>
+                <Users size={18} />
+                Ver inscritos
+              </Link>
+            )}
           </div>
         )}
       </aside>

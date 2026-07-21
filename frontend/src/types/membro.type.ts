@@ -23,6 +23,8 @@ export interface MembroRequest {
   estadoCivil?: EstadoCivil
   ministerio?: string
   observacoes?: string
+  batizado?: boolean
+  dataBatismo?: string
 }
 
 export interface MembroResponse {
@@ -38,6 +40,8 @@ export interface MembroResponse {
   foto: string | null
   observacoes: string | null
   createdAt: string
+  batizado: boolean
+  dataBatismo: string | null
 }
 
 export interface ConcederAcessoRequest {

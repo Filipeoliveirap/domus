@@ -477,7 +477,7 @@ Substituições, **nesta ordem** (a mais específica primeiro, senão uma engole
 
 Depois **leia o diff**. `StatusMembro.ATIVO` → `Vinculo.MEMBRO`? Não necessariamente:
 
-- `IgrejaService:107` — o primeiro membro criado no cadastro da igreja é o admin. Ele é `MEMBRO`? O admin da igreja normalmente é batizado, mas o sistema não pode afirmar. **Use `Vinculo.CONGREGANTE` como padrão** e deixe a pessoa ajustar — inventar "membro" para todo admin recriaria a mentira que esta mudança elimina. Comente a escolha.
+- `IgrejaService:107` — a pessoa criada junto com a igreja é quem cadastrou. **Use `Vinculo.MEMBRO`.** Não existe opção neutra: `CONGREGANTE` não seria "não afirmar", seria afirmar o contrário — e na direção menos provável, já que quem cadastra a própria igreja quase sempre é membro batizado. O padrão certo é o que minimiza correção; a exceção se ajusta em dois cliques. Comente a escolha.
 - `InscricaoService:215,392` — a regra `VISITANTE || INATIVO` vira `vinculo != Vinculo.MEMBRO`. Simplifica de dois ramos para um.
 
 ⚠️ **Não troque a palavra "membro" em texto de domínio.** Comentários e mensagens sobre *membro da igreja* (o vínculo) continuam corretos — só o **tipo** muda. Ex.: `"Este evento é exclusivo para membros da igreja."` fica como está.

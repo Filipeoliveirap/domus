@@ -66,7 +66,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         requerInscricao: eventoInicial.requerInscricao,
         vagas: eventoInicial.vagas ?? undefined,
         tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
-        preco: eventoInicial.preco != null ? Number(eventoInicial.preco) : undefined,
+        preco: eventoInicial.preco ?? undefined,
         exclusivoMembros: eventoInicial.exclusivoMembros,
         exclusivoBatizados: eventoInicial.exclusivoBatizados,
       })
@@ -99,7 +99,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         exclusivoBatizados: data.exclusivoBatizados,
         vagas: data.requerInscricao ? data.vagas : undefined,
         preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
-          ? data.preco.toFixed(2)
+          ? data.preco
           : undefined,
       }
 

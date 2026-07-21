@@ -1,4 +1,5 @@
-import type { EventoResponse } from '@/types/evento.type'
+import type { EventoResponse, SituacaoEvento } from '@/types/evento.type'
+import type { ParticipanteResponse } from '@/types/inscricao.type'
 
 const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
                'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
@@ -59,4 +60,52 @@ export function varianteStatus(status: StatusEvento): string {
     ENCERRADO: 'statusEncerrado',
   }
   return mapa[status]
+}
+
+/** Rótulo da situação real do evento (backend), usada para o selo e para travar edição/arquivamento. */
+export function rotuloSituacao(situacao: SituacaoEvento): string {
+  const mapa: Record<SituacaoEvento, string> = {
+    AGENDADO: 'Agendado',
+    EM_ANDAMENTO: 'Em andamento',
+    ENCERRADO: 'Encerrado',
+  }
+  return mapa[situacao]
+}
+
+export function varianteSituacao(situacao: SituacaoEvento): string {
+  const mapa: Record<SituacaoEvento, string> = {
+    AGENDADO: 'statusEmBreve',
+    EM_ANDAMENTO: 'statusHoje',
+    ENCERRADO: 'statusEncerrado',
+  }
+  return mapa[situacao]
+}
+
+/** Evento não pode ser editado (nem no front, nem no back) fora de AGENDADO. */
+export function podeEditarEvento(situacao: SituacaoEvento): boolean {
+  return situacao === 'AGENDADO'
+}
+
+/** Espelha a regra do backend: arquivar é proibido só em EM_ANDAMENTO (ENCERRADO pode). */
+export function podeArquivarEvento(situacao: SituacaoEvento): boolean {
+  return situacao !== 'EM_ANDAMENTO'
+}
+
+/**
+ * Vagas restantes calculadas a partir da lista de participantes (cada um ocupa 1 vaga +
+ * 1 por convidado). `null` = evento sem limite de vagas.
+ */
+export function vagasRestantesCalc(
+  vagas: number | null,
+  participantes: ParticipanteResponse[],
+): number | null {
+  if (vagas == null) return null
+  const ocupadas = participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0)
+  return Math.max(0, vagas - ocupadas)
+}
+
+/** F4: aviso de vagas acabando — limiar de 20% ou menos, ou 5 ou menos restantes. */
+export function vagasAcabando(vagas: number | null, vagasRestantes: number | null): boolean {
+  if (vagas == null || vagasRestantes == null) return false
+  return vagasRestantes <= 5 || vagasRestantes / vagas <= 0.2
 }

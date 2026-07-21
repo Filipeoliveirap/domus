@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, ThumbsUp } from 'lucide-react'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
@@ -13,6 +13,12 @@ interface Props {
   inicioEm: string
   /** `null` = evento sem limite de vagas. */
   vagasRestantes: number | null
+  /**
+   * `false` = evento casual (culto etc.): a presença é só um sinal social leve ("curtida"),
+   * sem inscrever outras pessoas nem convidados — o botão fica discreto e alterna direto,
+   * sem confirmação de cancelamento. `true` = fluxo formal de inscrição (retiro etc.).
+   */
+  requerInscricao: boolean
 }
 
 /**
@@ -21,7 +27,7 @@ interface Props {
  * depois "você já está inscrito" (o estado mais comum de quem volta à tela), só então os
  * bloqueios (encerrado / esgotado), e por último a ação principal.
  */
-export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes }: Props) {
+export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, requerInscricao }: Props) {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
@@ -35,6 +41,34 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes }: P
     return (
       <button type="button" className={styles.botao} disabled>
         Carregando…
+      </button>
+    )
+  }
+
+  // F1 — modo "Eu vou": curtida, não CTA formal. Alterna direto, sem passo de confirmação.
+  if (!requerInscricao) {
+    const marcado = !!minha?.inscrito
+    const pendente = inscrever.isPending || cancelar.isPending
+
+    function aoClicar() {
+      if (marcado) {
+        if (!minha?.id) return
+        cancelar.mutate(minha.id)
+      } else {
+        inscrever.mutate()
+      }
+    }
+
+    return (
+      <button
+        type="button"
+        className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
+        onClick={aoClicar}
+        disabled={pendente}
+        aria-pressed={marcado}
+      >
+        <ThumbsUp size={15} aria-hidden="true" />
+        {marcado ? 'Você vai' : 'Eu vou'}
       </button>
     )
   }

@@ -140,3 +140,10 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+.preco {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}

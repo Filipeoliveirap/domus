@@ -54,6 +54,14 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
         """)
     java.util.List<Membro> aniversariantesDoMes(@Param("igrejaId") UUID igrejaId, @Param("mes") int mes);
 
+    /**
+     * Todos os membros da igreja com telefone preenchido — usado por
+     * {@code MembroService.avisoTelefoneDuplicado} (B2) para comparar por dígitos normalizados
+     * em Java (o telefone chega formatado de jeitos diferentes; normalizar isso em SQL de forma
+     * portável não vale a pena para o tamanho de igreja que este produto atende).
+     */
+    java.util.List<Membro> findByIgrejaIdAndTelefoneIsNotNull(UUID igrejaId);
+
     long countByIgrejaId(UUID igrejaId);
 
     long countByIgrejaIdAndCreatedAtAfter(UUID igrejaId, java.time.LocalDateTime desde);

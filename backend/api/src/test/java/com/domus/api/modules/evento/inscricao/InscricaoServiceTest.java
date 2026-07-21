@@ -177,7 +177,103 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void quemInscreveuNaoPodeDesinscrever() {
+    void donoDaInscricaoPodeRemoverSeuAcompanhante() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(minha).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        service.removerAcompanhante(acompanhante.getId(), membroId, "MEMBRO", igrejaId);
+
+        verify(acompanhanteRepository).delete(acompanhante);
+    }
+
+    @Test
+    void terceiroNaoPodeRemoverAcompanhanteDeInscricaoAlheia() {
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(usuarioId)
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(outra).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        UUID membroDoTerceiro = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), membroDoTerceiro, "MEMBRO", igrejaId))
+                .isInstanceOf(BusinessException.class);
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void regressaoFuroDeAutoInscricaoNaoLiberaTerceiroARemoverAcompanhante() {
+        // Bug real de um rascunho anterior: comparar com inscritoPorUsuarioId e tratar
+        // NULL como "sou eu" liberava geral, pois toda auto-inscrição tem esse campo NULL.
+        // Este teste trava especificamente esse caso.
+        InscricaoEvento autoInscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(null) // auto-inscrição: campo NULL, como na maioria dos casos
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(autoInscricao).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        UUID membroDeOutraPessoa = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), membroDeOutraPessoa, "MEMBRO", igrejaId))
+                .isInstanceOf(BusinessException.class);
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void adminPodeRemoverAcompanhanteDeInscricaoDeQualquerUm() {
+        InscricaoEvento outra = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(outra).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        service.removerAcompanhante(acompanhante.getId(), UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        verify(acompanhanteRepository).delete(acompanhante);
+    }
+
+    @Test
+    void acompanhanteDeInscricaoDeOutraIgrejaEhTratadoComoNaoEncontrado() {
+        Igreja outraIgreja = new Igreja();
+        outraIgreja.setId(UUID.randomUUID());
+        InscricaoEvento inscricaoDeOutraIgreja = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(outraIgreja).evento(evento(10))
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(inscricaoDeOutraIgreja).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), membroId, "ADMIN_IGREJA", igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void cancelar_quemInscreveuOutraPessoaNaoPodeCancelarPorEla() {
+        // Este teste é sobre CANCELAR (não sobre removerAcompanhante): ter sido quem
+        // inscreveu (inscritoPorUsuarioId) não dá direito de cancelar a inscrição de outra pessoa.
         InscricaoEvento outra = InscricaoEvento.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
                 .membro(membro(true, StatusMembro.ATIVO))

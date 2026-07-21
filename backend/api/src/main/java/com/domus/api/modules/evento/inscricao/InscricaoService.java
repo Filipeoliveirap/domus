@@ -10,6 +10,7 @@ import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.StatusMembro;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
+import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -150,12 +151,13 @@ public class InscricaoService {
 
         AcompanhanteInscricao a = AcompanhanteInscricao.builder()
                 .inscricao(inscricao)
-                .nome(com.domus.api.shared.util.TextoUtil.capitalizar(data.nome()))
+                .nome(TextoUtil.capitalizar(data.nome()))
                 .telefone(data.telefone())
                 .build();
 
         AcompanhanteInscricao salvo = acompanhanteRepository.save(a);
-        log.info("Acompanhante adicionado. inscricao_id={}, igreja_id={}", inscricaoId, igrejaId);
+        log.info("Acompanhante adicionado. inscricao_id={}, por_usuario={}, igreja_id={}",
+                inscricaoId, usuarioId, igrejaId);
         return AcompanhanteResponse.from(salvo);
     }
 
@@ -180,6 +182,8 @@ public class InscricaoService {
                     "Você só pode remover convidados da sua própria inscrição.");
         }
         acompanhanteRepository.delete(a);
+        log.info("Acompanhante removido. acompanhante_id={}, por_membro={}, igreja_id={}",
+                acompanhanteId, meuMembroId, igrejaId);
     }
 
     /**

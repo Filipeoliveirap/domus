@@ -8,6 +8,8 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
+import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ class InscricaoServiceTest {
     InscricaoRepository inscricaoRepository;
     AcompanhanteRepository acompanhanteRepository;
     MembroRepository membroRepository;
+    UsuarioRepository usuarioRepository;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -40,8 +43,9 @@ class InscricaoServiceTest {
         inscricaoRepository = mock(InscricaoRepository.class);
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(MembroRepository.class);
+        usuarioRepository = mock(UsuarioRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository);
+                acompanhanteRepository, membroRepository, usuarioRepository);
     }
 
     private Igreja igreja() {
@@ -391,6 +395,73 @@ class InscricaoServiceTest {
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(50L);
 
         assertThat(service.listarInscritos(eventoId, igrejaId).vagasRestantes()).isNull();
+    }
+
+    @Test
+    void listaTrazNomeDeQuemInscreveuQuandoNaoFoiAutoInscricao() {
+        Evento e = evento(10);
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(usuarioId)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
+        when(usuarioRepository.buscarRegistrantes(java.util.List.of(usuarioId)))
+                .thenReturn(java.util.List.of(new RegistranteResumo(usuarioId, "João Líder", "joao.jpg")));
+
+        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+
+        assertThat(inscritos).hasSize(1);
+        assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);
+        assertThat(inscritos.get(0).inscritoPorNome()).isEqualTo("João Líder");
+        assertThat(inscritos.get(0).inscritoPorFoto()).isEqualTo("joao.jpg");
+    }
+
+    @Test
+    void listaNaoTrazNomeDeQuemInscreveuQuandoFoiAutoInscricao() {
+        Evento e = evento(10);
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(null) // auto-inscrição
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
+
+        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+
+        assertThat(inscritos.get(0).inscritoPorUsuarioId()).isNull();
+        assertThat(inscritos.get(0).inscritoPorNome()).isNull();
+        // auto-inscrição nem tem id pra resolver: a query em lote não deve nem ser chamada.
+        verify(usuarioRepository, never()).buscarRegistrantes(any());
+    }
+
+    @Test
+    void listaTrataRegistranteArquivadoSemQuebrarALinha() {
+        // A conta (ou o membro por trás dela) de quem inscreveu foi arquivada depois: o
+        // @SQLRestriction do Usuario/Membro faz a busca em lote não trazer esse id de volta.
+        // A inscrição continua aparecendo, só sem o nome de quem a fez.
+        Evento e = evento(10);
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(usuarioId)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
+        when(usuarioRepository.buscarRegistrantes(java.util.List.of(usuarioId)))
+                .thenReturn(java.util.List.of()); // arquivado: não volta na busca
+
+        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+
+        assertThat(inscritos).hasSize(1);
+        assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);
+        assertThat(inscritos.get(0).inscritoPorNome()).isNull();
+        assertThat(inscritos.get(0).inscritoPorFoto()).isNull();
     }
 
     @Test

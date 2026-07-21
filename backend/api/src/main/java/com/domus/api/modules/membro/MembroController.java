@@ -3,6 +3,7 @@ package com.domus.api.modules.membro;
 import com.domus.api.modules.membro.DTO.MembroRequestDTO;
 import com.domus.api.modules.membro.DTO.MembroResponse;
 import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +66,7 @@ public class MembroController {
      * adiantaria: o JSON está a um DevTools de distância.
      */
     private boolean podeVerDadosSensiveis() {
-        return "ADMIN_IGREJA".equals(usuarioAutenticado.getRole());
+        return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole());
     }
 
     @DeleteMapping("/{id}")

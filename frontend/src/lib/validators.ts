@@ -138,6 +138,16 @@ export const movimentacaoSchema = z.object({
 
 
 
+export const convidadoSchema = z.object({
+  nome: z.string().trim().min(2, 'O nome do convidado deve ter pelo menos 2 caracteres').max(255, 'Máximo 255 caracteres.'),
+  telefone: opcional(
+    z.string().regex(
+      /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+      'Telefone inválido. Use o formato (00) 00000-0000',
+    ),
+  ),
+})
+
 export const esqueciSenhaSchema = z.object({
   email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
 })
@@ -163,5 +173,7 @@ export type CategoriaFormData = z.infer<typeof categoriaSchema>
 export type CategoriaFormInput = z.input<typeof categoriaSchema>
 export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
 export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>
+export type ConvidadoFormData = z.infer<typeof convidadoSchema>
+export type ConvidadoFormInput = z.input<typeof convidadoSchema>
 export type EsqueciSenhaFormData = z.infer<typeof esqueciSenhaSchema>
 export type RedefinirSenhaFormData = z.infer<typeof redefinirSenhaSchema>

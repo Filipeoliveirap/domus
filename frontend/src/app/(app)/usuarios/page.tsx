@@ -29,6 +29,7 @@ import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonUsuarios } from "./SkeletonUsuarios";
 import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
+import { podeGerenciarUsuarios } from "@/lib/permissoes";
 
 const TAMANHO_PAGINA = 10;
 
@@ -73,7 +74,7 @@ function UsuariosConteudo() {
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeGerenciarUsuarios(role)
 
   const { data, isLoading, isError, isFetching, refetch } = useUsuarios({
     q: buscaDebounced,

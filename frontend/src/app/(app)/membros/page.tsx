@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/authStore'
 import { SkeletonMembros } from "./SkeletonMembros";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { DrawerDetalheMembro } from './(detalhe)/DrawerDetalheMembro'
+import { podeGerenciarPessoas } from '@/lib/permissoes'
 
 const TAMANHO_PAGINA = 10
 
@@ -29,7 +30,7 @@ function MembrosConteudo() {
   const [pagina, setPagina] = useState(0)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const podeGerenciar = role === 'ADMIN_IGREJA'
+  const podeGerenciar = podeGerenciarPessoas(role)
 
   const [membroConcedendo, setMembroConcedendo] = useState<MembroResponse | null>(null)
   const [membroArquivando, setMembroArquivando] = useState<MembroResponse | null>(null)

@@ -1,6 +1,7 @@
 package com.domus.api.modules.usuario;
 
 import com.domus.api.modules.auth.DTO.SessaoDTO;
+import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,4 +68,21 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     WHERE u.membro_id = :membroId
     """, nativeQuery = true)
     Optional<Usuario> findByMembroIdIncluindoArquivados(@Param("membroId") UUID membroId);
+
+    /**
+     * Nome + foto de quem inscreveu, em lote — resolve {@code inscritoPorUsuarioId} da lista
+     * de inscritos numa única query (evita N+1 de buscar usuário por linha).
+     *
+     * <p>Usuários (ou o membro por trás deles) arquivados desde a inscrição simplesmente NÃO
+     * aparecem no resultado — {@code @SQLRestriction} de {@link Usuario} e de
+     * {@code Membro} filtra soft-deletados. O chamador trata ids ausentes no mapa como
+     * "quem inscreveu não está mais disponível", sem quebrar a listagem.
+     */
+    @Query("""
+        SELECT new com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo(
+            u.id, u.membro.nome, u.membro.foto)
+        FROM Usuario u
+        WHERE u.id IN :ids
+    """)
+    List<RegistranteResumo> buscarRegistrantes(@Param("ids") Collection<UUID> ids);
 }

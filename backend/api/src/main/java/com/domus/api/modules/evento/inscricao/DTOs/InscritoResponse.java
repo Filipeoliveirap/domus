@@ -13,16 +13,30 @@ public record InscritoResponse(
         String foto,
         /** NULL = a pessoa se inscreveu sozinha. */
         UUID inscritoPorUsuarioId,
+        /**
+         * Nome de quem inscreveu. NULL quando {@code inscritoPorUsuarioId} também é NULL
+         * (auto-inscrição) OU quando a conta de quem inscreveu foi arquivada depois — nos
+         * dois casos o front não deve inventar um nome, só decidir a mensagem certa.
+         */
+        String inscritoPorNome,
+        String inscritoPorFoto,
         LocalDateTime inscritoEm,
         List<AcompanhanteResponse> acompanhantes
 ) {
-    public static InscritoResponse from(InscricaoEvento i) {
+    /**
+     * @param registrante resumo (nome/foto) de quem inscreveu, já resolvido em lote pelo
+     *                     chamador; NULL se {@code inscritoPorUsuarioId} for NULL (auto-inscrição)
+     *                     ou se a conta/membro de quem inscreveu estiver arquivada.
+     */
+    public static InscritoResponse from(InscricaoEvento i, RegistranteResumo registrante) {
         return new InscritoResponse(
                 i.getId(),
                 i.getMembro().getId(),
                 i.getMembro().getNome(),
                 i.getMembro().getFoto(),
                 i.getInscritoPorUsuarioId(),
+                registrante == null ? null : registrante.nome(),
+                registrante == null ? null : registrante.foto(),
                 i.getCreatedAt(),
                 i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList()
         );

@@ -53,6 +53,36 @@ via *transactional outbox*).
 **Stack — Front:** Next.js, TypeScript, CSS Modules, TanStack Query, React Hook Form + Zod.
 
 **Convenções e padrões vigentes:**
+- **Não commitar antes de o autor testar.** Entregue a correção, avise, e **espere**. Só
+  commitar depois do teste — e num commit só, coerente, em vez de vários commits parciais
+  da mesma coisa. Exceção: algo que valha por si (ex.: uma correção isolada que não depende
+  do resto). Isso vale para **toda a aplicação**, não só para a feature da vez.
+- **Esconder no front não é esconder.** Dado que um perfil não pode ver não pode sair da API:
+  se o JSON traz o campo, basta abrir o DevTools. Restrição por perfil se faz no **backend**
+  (DTO reduzido ou endpoint próprio); a tela só reflete o que já foi omitido.
+
+**Design: programar para interface (SOLID na prática, não como ritual)**
+
+O objetivo é um só: **mudança localizada**. Se alterar uma decisão exige editar N arquivos, o
+desenho está errado — não porque violou uma sigla, mas porque N vai crescer.
+
+- **Pergunte pela CAPACIDADE, não pela IDENTIDADE.** `podeGerenciarInscricoes(role)` em vez de
+  `role === 'ADMIN_IGREJA' || role === 'LIDER'`. A segunda forma espalha a regra por toda parte
+  e transforma renomear um perfil numa caçada. Toda checagem de permissão passa por uma função
+  nomeada pela ação; o nome do perfil aparece **em um arquivo só**, de cada lado.
+- **Nada de literal de domínio solto.** Perfis, status, vínculos e códigos de erro vivem em
+  `enum` (back) e união de tipos (front). String crua no meio do código é erro de digitação
+  esperando acontecer, e o compilador não ajuda.
+- **Dependa de abstração onde há troca prevista.** `EmailService` com implementação `Log` e
+  `Resend` é o exemplo bom que já existe: trocar de provedor não toca em quem envia e-mail.
+  Onde a troca **não** é prevista, interface é cerimônia — não crie por reflexo.
+- **Uma razão para mudar.** Quando um arquivo passa a mudar por motivos diferentes (regra de
+  negócio *e* formatação *e* permissão), separe. Vale para service, componente e CSS.
+- **Estenda sem editar.** Adicionar um perfil, um status ou um provedor não deveria exigir
+  `if/else` novo em vários lugares — deveria ser mais uma entrada num mapa ou enum.
+
+Regra prática antes de escrever: **"se isto mudar de nome ou de valor amanhã, quantos arquivos
+eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pronto.
 - Isolamento lógico por `igreja_id` em toda entidade do domínio, **sempre extraído do
   JWT, nunca do corpo da requisição** (defesa contra acesso cruzado entre igrejas).
 - Camadas `controller → service → repository`; services retornam **DTOs**, nunca

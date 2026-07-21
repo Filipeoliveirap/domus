@@ -19,14 +19,17 @@ public record MembroResponse(
         String ministerio,
         String foto,
         String observacoes,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean batizado,
+        LocalDate dataBatismo
 ) {
     public static MembroResponse from(Membro m) {
         return new MembroResponse(
                 m.getId(), m.getNome(), m.getEmail(), m.getTelefone(),
                 m.getDataNascimento(), enderecoDe(m.getEndereco()), m.getStatus(),
                 m.getEstadoCivil(), m.getMinisterio(), m.getFoto(),
-                m.getObservacoes(), m.getCreatedAt()
+                m.getObservacoes(), m.getCreatedAt(),
+                m.isBatizado(), m.getDataBatismo()
         );
     }
 

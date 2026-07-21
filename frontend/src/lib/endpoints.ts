@@ -40,6 +40,18 @@ export const Endpoints = {
     BY_ID: (id: string) => `/eventos/${id}`,
   },
 
+  inscricoes: {
+    INSCREVER: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
+    MINHA: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha`,
+    INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/membros`,
+    ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
+      `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
+    PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,
+    LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
+    CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
+    REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
+  },
+
   categorias: {
     base: '/categorias',
     todas: '/categorias/todas',

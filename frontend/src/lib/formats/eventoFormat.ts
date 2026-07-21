@@ -104,8 +104,16 @@ export function vagasRestantesCalc(
   return Math.max(0, vagas - ocupadas)
 }
 
-/** F4: aviso de vagas acabando — limiar de 20% ou menos, ou 5 ou menos restantes. */
+/**
+ * F4/rodada 2 (F7): aviso de vagas acabando — limiar de 20% ou menos, ou 5 ou menos
+ * restantes. Esgotado (0) tem aviso próprio (`vagasEsgotadas`) — não é "últimas vagas".
+ */
 export function vagasAcabando(vagas: number | null, vagasRestantes: number | null): boolean {
   if (vagas == null || vagasRestantes == null) return false
-  return vagasRestantes <= 5 || vagasRestantes / vagas <= 0.2
+  return vagasRestantes > 0 && (vagasRestantes <= 5 || vagasRestantes / vagas <= 0.2)
+}
+
+/** F7: esgotado — "últimas 0 vagas" era absurdo; isto é o estado real de vaga zerada. */
+export function vagasEsgotadas(vagas: number | null, vagasRestantes: number | null): boolean {
+  return vagas != null && vagasRestantes === 0
 }

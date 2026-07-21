@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
+import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import {
   statusEvento,
   rotuloStatus,
@@ -12,6 +13,8 @@ import {
   dataExtenso,
   hora,
   vagasRestantesCalc,
+  vagasAcabando as calcVagasAcabando,
+  vagasEsgotadas as calcVagasEsgotadas,
 } from '@/lib/formats/eventoFormat'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
@@ -35,7 +38,17 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
-  const vagasRestantes = vagasRestantesCalc(evento?.vagas ?? null, participantes)
+
+  const totalPessoas = useMemo(
+    () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
+    [participantes],
+  )
+  const vagas = evento?.vagas ?? null
+  const vagasRestantes = vagasRestantesCalc(vagas, participantes)
+  const mostrarVagasAcabando = calcVagasAcabando(vagas, vagasRestantes)
+  const esgotado = calcVagasEsgotadas(vagas, vagasRestantes)
+  // F15: fora de AGENDADO o backend recusa qualquer nova inscrição/convidado — os botões somem.
+  const inscricaoBloqueadaPelaSituacao = evento ? evento.situacao !== 'AGENDADO' : false
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -102,7 +115,38 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                   </div>
                 </div>
               )}
+
+              {/* F1: preço só aparecia no modal do início — agora aparece aqui também. */}
+              {evento.preco && (
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><Ticket size={20} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>Preço</p>
+                    <p className={styles.infoValor}>{formatarMoeda(evento.preco)} por pessoa</p>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* F6/F8: aviso de vagas acabando/esgotado e contador — antes só no modal do início. */}
+            {vagas != null && (
+              <div className={styles.vagasBloco}>
+                <p className={styles.vagasContador}>
+                  {esgotado ? 'Esgotado' : `${totalPessoas} de ${vagas} vagas preenchidas`}
+                </p>
+                {esgotado ? (
+                  <p className={styles.vagasAcabando}>
+                    <Flame size={14} aria-hidden="true" />
+                    Esgotado
+                  </p>
+                ) : mostrarVagasAcabando && (
+                  <p className={styles.vagasAcabando}>
+                    <Flame size={14} aria-hidden="true" />
+                    {vagasRestantes === 1 ? 'Última vaga!' : `Últimas ${vagasRestantes} vagas`}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Descrição */}
             {evento.descricao && (
@@ -133,17 +177,21 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 inicioEm={evento.inicioEm}
                 vagasRestantes={vagasRestantes}
                 requerInscricao={evento.requerInscricao}
+                situacao={evento.situacao}
+                preco={evento.preco}
               />
 
-              {evento.requerInscricao && (
+              {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
+              {evento.requerInscricao && !inscricaoBloqueadaPelaSituacao && (
                 <>
                   <button
                     type="button"
                     className={styles.acaoSecundaria}
                     onClick={() => setModalAberto('membros')}
+                    disabled={esgotado}
                   >
                     <Users size={16} aria-hidden="true" />
-                    Inscrever membros
+                    {esgotado ? 'Vagas esgotadas' : 'Inscrever membros'}
                   </button>
 
                   {!evento.exclusivoMembros && minha?.inscrito && (
@@ -151,9 +199,10 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                       type="button"
                       className={styles.acaoSecundaria}
                       onClick={() => setModalAberto('convidado')}
+                      disabled={esgotado}
                     >
                       <UserPlus size={16} aria-hidden="true" />
-                      Vou levar alguém de fora
+                      {esgotado ? 'Vagas esgotadas' : 'Vou levar alguém de fora'}
                     </button>
                   )}
                 </>
@@ -172,6 +221,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 eventoId={evento.id}
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
+                exclusivoBatizados={evento.exclusivoBatizados}
                 onClose={() => setModalAberto(null)}
               />
             )}

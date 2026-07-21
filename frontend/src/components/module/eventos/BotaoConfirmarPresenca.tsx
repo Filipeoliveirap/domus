@@ -5,6 +5,8 @@ import { CheckCircle2, XCircle, ThumbsUp } from 'lucide-react'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
+import { ModalConfirmarPagamento } from './ModalConfirmarPagamento'
+import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './BotaoConfirmarPresenca.module.css'
 
 interface Props {
@@ -19,6 +21,14 @@ interface Props {
    * sem confirmação de cancelamento. `true` = fluxo formal de inscrição (retiro etc.).
    */
   requerInscricao: boolean
+  /**
+   * F15: situação real do evento (backend). Fora de AGENDADO o backend recusa qualquer
+   * nova inscrição — mostrar um botão de ação aqui só ofereceria algo que só pode falhar,
+   * então a CTA nem aparece (quem já está inscrito continua vendo o próprio status).
+   */
+  situacao: SituacaoEvento
+  /** F3: quando o evento é pago, confirmar presença abre um passo intermediário antes de registrar. */
+  preco?: string | null
 }
 
 /**
@@ -27,8 +37,9 @@ interface Props {
  * depois "você já está inscrito" (o estado mais comum de quem volta à tela), só então os
  * bloqueios (encerrado / esgotado), e por último a ação principal.
  */
-export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, requerInscricao }: Props) {
+export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco }: Props) {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
+  const [mostrarModalPagamento, setMostrarModalPagamento] = useState(false)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId)
@@ -36,6 +47,9 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
 
   const eventoEncerrado = new Date(inicioEm) < new Date()
   const semVagas = vagasRestantes !== null && vagasRestantes <= 0
+  // F15: fora de AGENDADO o backend recusa inscrição — a CTA de registrar não aparece.
+  // Quem já está inscrito continua vendo o próprio status (isso não é "se inscrever").
+  const inscricaoBloqueadaPelaSituacao = situacao !== 'AGENDADO'
 
   if (isLoading) {
     return (
@@ -48,6 +62,10 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
   // F1 — modo "Eu vou": curtida, não CTA formal. Alterna direto, sem passo de confirmação.
   if (!requerInscricao) {
     const marcado = !!minha?.inscrito
+
+    // F15: sem marcação prévia, e evento em andamento/encerrado — o botão "Eu vou" some.
+    if (!marcado && inscricaoBloqueadaPelaSituacao) return null
+
     const pendente = inscrever.isPending || cancelar.isPending
 
     function aoClicar() {
@@ -125,12 +143,9 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
     )
   }
 
-  if (eventoEncerrado) {
-    return (
-      <button type="button" className={styles.botao} disabled>
-        Evento encerrado
-      </button>
-    )
+  // F15: fora de AGENDADO, nem mostra a CTA — o backend recusaria do mesmo jeito.
+  if (inscricaoBloqueadaPelaSituacao || eventoEncerrado) {
+    return null
   }
 
   if (semVagas) {
@@ -142,14 +157,25 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
   }
 
   return (
-    <button
-      type="button"
-      className={styles.botao}
-      disabled={inscrever.isPending}
-      onClick={() => inscrever.mutate()}
-    >
-      <CheckCircle2 size={18} aria-hidden="true" />
-      {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
-    </button>
+    <>
+      <button
+        type="button"
+        className={styles.botao}
+        disabled={inscrever.isPending}
+        onClick={() => (preco ? setMostrarModalPagamento(true) : inscrever.mutate())}
+      >
+        <CheckCircle2 size={18} aria-hidden="true" />
+        {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
+      </button>
+
+      {mostrarModalPagamento && preco && (
+        <ModalConfirmarPagamento
+          preco={preco}
+          isLoading={inscrever.isPending}
+          onConfirmar={() => inscrever.mutate(undefined, { onSuccess: () => setMostrarModalPagamento(false) })}
+          onClose={() => setMostrarModalPagamento(false)}
+        />
+      )}
+    </>
   )
 }

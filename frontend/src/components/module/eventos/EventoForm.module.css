@@ -111,13 +111,15 @@
   gap: 10px;
 }
 .campoDataWrap {
-  flex: 2;   
+  flex: 2;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .campoHoraWrap {
-  flex: 1;   
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -128,6 +130,11 @@
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--color-text-secondary);
+}
+.subLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
 }
 .opcional {
   font-weight: var(--font-weight-normal);

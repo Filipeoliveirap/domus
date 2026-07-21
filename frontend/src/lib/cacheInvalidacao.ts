@@ -14,7 +14,7 @@ import type { QueryClient } from '@tanstack/react-query'
  * <p><b>Ao criar uma tela nova que agrega dados de outras, adicione a chave dela aqui</b> —
  * é o único lugar que precisa saber.
  */
-type Entidade = 'evento' | 'membro' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja'
+type Entidade = 'evento' | 'membro' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao'
 
 /** Prefixos de queryKey. O TanStack invalida por prefixo, então `['relatorios']` pega todas. */
 const AFETADAS: Record<Entidade, string[][]> = {
@@ -53,6 +53,12 @@ const AFETADAS: Record<Entidade, string[][]> = {
     ['igreja'],
     ['igrejas-vinculadas'],
     ['relatorios'], // o consolidado mostra nome e composição da família
+  ],
+  inscricao: [
+    ['inscricoes'], // minha inscrição, participantes e lista de inscritos
+    ['eventos'], // cards de evento mostram vagas restantes
+    ['evento'], // tela de detalhe do evento
+    ['inicio'], // próximos eventos também mostram vagas
   ],
 }
 

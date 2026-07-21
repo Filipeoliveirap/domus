@@ -3,6 +3,7 @@ package com.domus.api.modules.evento.inscricao;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
+import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
@@ -315,5 +316,29 @@ class InscricaoServiceTest {
         service.cancelar(outra.getId(), usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
 
         assertThat(outra.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void listaTrazTotalDePessoasEVagasRestantes() {
+        Evento e = evento(10);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(4L);
+
+        ListaInscritosResponse r = service.listarInscritos(eventoId, igrejaId);
+
+        assertThat(r.totalPessoas()).isEqualTo(4);
+        assertThat(r.vagas()).isEqualTo(10);
+        assertThat(r.vagasRestantes()).isEqualTo(6);
+    }
+
+    @Test
+    void vagasRestantesEhNuloQuandoNaoHaLimite() {
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(evento(null)));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(50L);
+
+        assertThat(service.listarInscritos(eventoId, igrejaId).vagasRestantes()).isNull();
     }
 }

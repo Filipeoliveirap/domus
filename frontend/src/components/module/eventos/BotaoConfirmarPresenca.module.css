@@ -1,0 +1,133 @@
+.botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.botao:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.botao:disabled {
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ---- Estado inscrito ---- */
+
+.inscrito {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg, #ecfdf5);
+}
+
+.inscritoStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-success, #059669);
+}
+
+.inscritoTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.inscritoTexto span {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.cancelarLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  transition: color var(--transition-fast);
+}
+
+.cancelarLink:hover {
+  color: var(--color-danger, #dc2626);
+}
+
+.confirmacaoInline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.confirmacaoAcoes {
+  display: flex;
+  gap: 8px;
+}
+
+.confirmacaoNao,
+.confirmacaoSim {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: opacity var(--transition-fast);
+}
+
+.confirmacaoNao {
+  background: var(--color-bg-page);
+  color: var(--color-text-dark);
+}
+
+.confirmacaoSim {
+  background: var(--color-danger, #dc2626);
+  color: #fff;
+}
+
+.confirmacaoNao:hover:not(:disabled),
+.confirmacaoSim:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.confirmacaoNao:disabled,
+.confirmacaoSim:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 767px) {
+  .confirmacaoInline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .confirmacaoAcoes {
+    width: 100%;
+  }
+
+  .confirmacaoNao,
+  .confirmacaoSim {
+    flex: 1;
+    text-align: center;
+  }
+}

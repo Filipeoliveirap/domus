@@ -1,26 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
-import { X, CalendarDays, MapPin, CheckCircle2, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { X, CalendarDays, MapPin, Users, UserPlus } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
+import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
+import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { iniciais } from '@/lib/formats/membroFormat'
+import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
+import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
+import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import styles from './ModalEventoResumo.module.css'
-
-/**
- * Forma que a lista de confirmados terá quando a inscrição em evento (Fase 2) existir.
- * Está declarada agora de propósito: quando o endpoint chegar, é só passar os dados —
- * a marcação e o estilo já estão prontos.
- */
-export interface ParticipanteResumo {
-  id: string
-  nome: string
-  foto: string | null
-}
 
 interface Props {
   eventoId: string
-  /** Vazio hoje; preenchido quando a inscrição em evento existir. */
-  participantes?: ParticipanteResumo[]
   aoFechar: () => void
 }
 
@@ -33,8 +25,12 @@ function formatarQuando(inicioEm: string): string {
   return `${data}, ${hora}`
 }
 
-export function ModalEventoResumo({ eventoId, participantes = [], aoFechar }: Props) {
+export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const { data: evento, isLoading, isError } = useEvento(eventoId)
+  const { data: participantes = [] } = useParticipantes(eventoId)
+  const { data: minha } = useMinhaInscricao(eventoId)
+
+  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -137,18 +133,53 @@ export function ModalEventoResumo({ eventoId, participantes = [], aoFechar }: Pr
               </div>
             </section>
 
-            {/*
-              Desabilitado porque a inscrição em evento não existe (Fase 2 do roadmap).
-              Um botão ativo que não inscreve ninguém seria pior: o membro clicaria,
-              acharia que está inscrito e não apareceria na lista de ninguém.
-            */}
-            <button type="button" className={styles.botaoConfirmar} disabled>
-              <CheckCircle2 size={18} aria-hidden="true" />
-              Confirmar presença (em breve)
-            </button>
+            <div className={styles.acoesInscricao}>
+              <BotaoConfirmarPresenca
+                eventoId={eventoId}
+                inicioEm={evento.inicioEm}
+                vagasRestantes={evento.vagas}
+              />
+
+              <button
+                type="button"
+                className={styles.acaoSecundaria}
+                onClick={() => setModalAberto('membros')}
+              >
+                <Users size={16} aria-hidden="true" />
+                Inscrever membros
+              </button>
+
+              {!evento.exclusivoMembros && minha?.inscrito && (
+                <button
+                  type="button"
+                  className={styles.acaoSecundaria}
+                  onClick={() => setModalAberto('convidado')}
+                >
+                  <UserPlus size={16} aria-hidden="true" />
+                  Vou levar alguém de fora
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      {modalAberto === 'membros' && (
+        <ModalInscreverMembros
+          eventoId={eventoId}
+          tituloEvento={evento?.titulo ?? ''}
+          exclusivoMembros={evento?.exclusivoMembros ?? false}
+          onClose={() => setModalAberto(null)}
+        />
+      )}
+
+      {modalAberto === 'convidado' && minha?.id && (
+        <ModalConvidado
+          eventoId={eventoId}
+          inscricaoId={minha.id}
+          onClose={() => setModalAberto(null)}
+        />
+      )}
     </div>
   )
 }

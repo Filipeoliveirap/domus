@@ -372,3 +372,21 @@ Ideal futuro: um `@SpringBootTest` com `@AutoConfigureMockMvc` (ou `WebMvcTest` 
 `SecurityConfig`) que suba a `SecurityFilterChain` real e teste, por perfil, quais rotas dão
 403/200 — pegaria esta classe inteira de bug no CI, não só na mão. Ficou de fora desta task de
 propósito (harness é trabalho maior, tarefa própria) — anotado aqui para não se perder.
+
+### Spec E — programação do evento + equipe servindo (2026-07-21)
+
+Veio do protótipo "Evening Flow": uma linha do tempo do evento (19:00 café, 19:30 louvor,
+20:15 pregação). Fundir com a **equipe servindo** já anotada acima — é a mesma estrutura vista de
+dois ângulos: a linha diz *o quê*, *quando* e *quem*. "20:15 — Pregação — Pr. João".
+
+Entidade nova (`programacao_evento`: evento_id, horario, titulo, responsável opcional). Fica
+**depois da Spec B** — não atrasa a inscrição, e o desenho melhora com uso real.
+
+Outros resíduos dos protótipos, para quando as telas correspondentes forem feitas:
+
+- **Exportar lista de inscritos** (CSV/PDF). O protótipo tinha o botão; foi **removido** da
+  entrega por não ter endpoint — botão que não faz nada é pior que botão ausente.
+- **"What to Prepare"** (o que levar) do protótipo é caso da **Spec D** (campos personalizados),
+  não campo próprio.
+- **`adicionarAcompanhante` não tem `usuarioId` real no log** — usa `meuMembroId` como proxy.
+  Estender a assinatura quando alguém encostar no método.

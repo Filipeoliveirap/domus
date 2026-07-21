@@ -209,10 +209,17 @@ public class InscricaoService {
                     + "Peça a ela ou a um líder da igreja.");
         }
 
+        // Os convidados vão embora com a inscrição, e NÃO voltam numa reinscrição.
+        // Sem isto, quem cancelou porque o convidado desistiu o veria reaparecer em
+        // silêncio ao se reinscrever — ocupando vaga de novo. Quem quiser levá-lo de
+        // novo cadastra de novo; é o passo consciente que o silêncio não teria.
+        int convidados = inscricao.getAcompanhantes().size();
+        inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
+
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
-        log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
-                inscricaoId, usuarioId, igrejaId);
+        log.info("Inscrição cancelada. id={}, convidados_removidos={}, por_usuario={}, igreja_id={}",
+                inscricaoId, convidados, usuarioId, igrejaId);
     }
 
     /** Lista de inscritos confirmados + contagem de vagas restantes. */

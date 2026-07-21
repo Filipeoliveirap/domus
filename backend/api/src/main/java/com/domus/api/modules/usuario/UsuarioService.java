@@ -23,13 +23,14 @@ import org.springframework.cache.annotation.Cacheable;
 import java.time.Duration;
 import java.util.UUID;
 import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.shared.security.Perfil;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class UsuarioService {
 
-    private static final String ROLE_ADMIN = "ADMIN_IGREJA";
+    private static final String ROLE_ADMIN = Perfil.ADMIN_IGREJA.name();
     private static final Duration TTL_CONVITE = Duration.ofDays(7);
 
     private final UsuarioRepository usuarioRepository;

@@ -22,11 +22,11 @@ public final class Permissoes {
 
     private Permissoes() {}
 
-    private static final Set<Role> GESTORES = EnumSet.of(Role.ADMIN_IGREJA, Role.LIDER);
-    private static final Set<Role> SO_ADMIN = EnumSet.of(Role.ADMIN_IGREJA);
+    private static final Set<Perfil> GESTORES = EnumSet.of(Perfil.ADMIN_IGREJA, Perfil.LIDER);
+    private static final Set<Perfil> SO_ADMIN = EnumSet.of(Perfil.ADMIN_IGREJA);
 
-    private static boolean tem(String nomeRole, Set<Role> permitidos) {
-        Role role = Role.deNomeOuNull(nomeRole);
+    private static boolean tem(String nomeRole, Set<Perfil> permitidos) {
+        Perfil role = Perfil.deNomeOuNull(nomeRole);
         return role != null && permitidos.contains(role);
     }
 
@@ -47,4 +47,11 @@ public final class Permissoes {
 
     /** Movimentações, categorias, relatórios e dashboard. */
     public static boolean podeVerFinanceiro(String role) { return tem(role, SO_ADMIN); }
+
+    /**
+     * Busca global: além de membros e eventos (visíveis a todos), inclui usuários e dados
+     * financeiros (movimentações e categorias) nos resultados. Gate único porque a regra
+     * cobre os dois — nomear só por um dos dois enganaria quem lê.
+     */
+    public static boolean podeVerUsuariosEFinanceiroNaBuscaGlobal(String role) { return tem(role, SO_ADMIN); }
 }

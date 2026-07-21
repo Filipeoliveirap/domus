@@ -25,31 +25,31 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     """)
     long contarPessoasConfirmadas(@Param("eventoId") UUID eventoId);
 
-    Optional<InscricaoEvento> findByEventoIdAndMembroId(UUID eventoId, UUID membroId);
+    Optional<InscricaoEvento> findByEventoIdAndPessoaId(UUID eventoId, UUID pessoaId);
 
     Optional<InscricaoEvento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
         LEFT JOIN FETCH i.acompanhantes
-        JOIN FETCH i.membro
+        JOIN FETCH i.pessoa
         WHERE i.evento.id = :eventoId AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
         ORDER BY i.createdAt ASC
     """)
     List<InscricaoEvento> listarPorEvento(@Param("eventoId") UUID eventoId);
 
-    List<InscricaoEvento> findByMembroIdAndStatus(UUID membroId, StatusInscricao status);
+    List<InscricaoEvento> findByPessoaIdAndStatus(UUID pessoaId, StatusInscricao status);
 
     /**
-     * Ids, dentre {@code membroIds}, que já têm inscrição CONFIRMADA no evento — usada para
+     * Ids, dentre {@code pessoaIds}, que já têm inscrição CONFIRMADA no evento — usada para
      * validar a inscrição em lote ANTES de inserir qualquer linha (tudo-ou-nada), permitindo
      * uma mensagem que nomeia quantos já estavam inscritos.
      */
     @Query("""
-        SELECT i.membro.id FROM InscricaoEvento i
-        WHERE i.evento.id = :eventoId AND i.membro.id IN :membroIds
+        SELECT i.pessoa.id FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId AND i.pessoa.id IN :pessoaIds
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
     """)
-    List<UUID> listarMembroIdsJaInscritos(@Param("eventoId") UUID eventoId,
-                                          @Param("membroIds") List<UUID> membroIds);
+    List<UUID> listarPessoaIdsJaInscritos(@Param("eventoId") UUID eventoId,
+                                          @Param("pessoaIds") List<UUID> pessoaIds);
 }

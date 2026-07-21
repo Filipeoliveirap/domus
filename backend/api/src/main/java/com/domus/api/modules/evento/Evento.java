@@ -55,10 +55,6 @@ public class Evento {
     @Builder.Default
     private boolean exclusivoMembros = false;
 
-    @Column(name = "exclusivo_batizados", nullable = false)
-    @Builder.Default
-    private boolean exclusivoBatizados = false;
-
     /** Só evento marcado mostra o botão "Confirmar presença" e a lista de inscritos. */
     @Column(name = "requer_inscricao", nullable = false)
     @Builder.Default

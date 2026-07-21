@@ -25,10 +25,10 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
         SELECT m FROM MovimentacaoFinanceira m
         JOIN FETCH m.categoria
         JOIN FETCH m.criadoPor cp
-        JOIN FETCH cp.membro
-        LEFT JOIN FETCH m.membro
+        JOIN FETCH cp.pessoa
+        LEFT JOIN FETCH m.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap
-        LEFT JOIN FETCH ap.membro
+        LEFT JOIN FETCH ap.pessoa
         WHERE m.id = :id AND m.igreja.id = :igrejaId
     """)
     Optional<MovimentacaoFinanceira> buscarPorIdComRelacoes(@Param("id") UUID id,
@@ -38,10 +38,10 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
         SELECT m FROM MovimentacaoFinanceira m
         JOIN FETCH m.categoria c
         JOIN FETCH m.criadoPor cp
-        JOIN FETCH cp.membro
-        LEFT JOIN FETCH m.membro
+        JOIN FETCH cp.pessoa
+        LEFT JOIN FETCH m.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap
-        LEFT JOIN FETCH ap.membro
+        LEFT JOIN FETCH ap.pessoa
         WHERE m.igreja.id = :igrejaId
           AND (:tipo IS NULL OR m.tipo = :tipo)
           AND (:categoriaId IS NULL OR c.id = :categoriaId)
@@ -70,7 +70,7 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
 
     @Query("""
     SELECT m.id FROM MovimentacaoFinanceira m
-    WHERE m.membro.id = :membroId AND m.igreja.id = :igrejaId
+    WHERE m.pessoa.id = :pessoaId AND m.igreja.id = :igrejaId
 """)
-    List<UUID> buscarIdsPorMembro(@Param("membroId") UUID membroId, @Param("igrejaId") UUID igrejaId);
+    List<UUID> buscarIdsPorMembro(@Param("pessoaId") UUID pessoaId, @Param("igrejaId") UUID igrejaId);
 }

@@ -1,7 +1,7 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
-import com.domus.api.modules.membro.DTO.MembroRequestDTO;
-import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
@@ -17,13 +17,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/membros")
 @RequiredArgsConstructor
-public class MembroController {
+public class PessoaController {
 
-    private final MembroService membroService;
+    private final PessoaService membroService;
     private final UsuarioAutenticado usuarioAutenticado;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<MembroResponse>> listar(
+    public ResponseEntity<PagedResponse<PessoaResponse>> listar(
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
@@ -37,23 +37,23 @@ public class MembroController {
     }
 
     @PostMapping
-    public ResponseEntity<MembroResponse> cadastrar(
-            @Valid @RequestBody MembroRequestDTO data) {
+    public ResponseEntity<PessoaResponse> cadastrar(
+            @Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        MembroResponse response = membroService.cadastrarMembro(data, igrejaId);
+        PessoaResponse response = membroService.cadastrarMembro(data, igrejaId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MembroResponse> atualizar(
+    public ResponseEntity<PessoaResponse> atualizar(
             @PathVariable UUID id,
-            @Valid @RequestBody MembroRequestDTO data) {
+            @Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(membroService.atualizarMembro(id, data, igrejaId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MembroResponse> buscarPorId(@PathVariable UUID id) {
+    public ResponseEntity<PessoaResponse> buscarPorId(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(membroService.buscarPorId(id, igrejaId, podeVerDadosSensiveis()));
     }

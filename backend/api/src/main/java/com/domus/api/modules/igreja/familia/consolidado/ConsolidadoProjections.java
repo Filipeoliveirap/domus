@@ -14,7 +14,7 @@ public interface ConsolidadoProjections {
 
     interface MembrosPorIgreja {
         UUID getIgrejaId();
-        String getStatus();
+        String getVinculo();
         Long getTotal();
     }
 

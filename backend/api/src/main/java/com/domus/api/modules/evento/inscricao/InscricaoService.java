@@ -10,9 +10,9 @@ import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -36,7 +36,7 @@ public class InscricaoService {
     private final EventoRepository eventoRepository;
     private final InscricaoRepository inscricaoRepository;
     private final AcompanhanteRepository acompanhanteRepository;
-    private final MembroRepository membroRepository;
+    private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
 
     /**
@@ -53,19 +53,19 @@ public class InscricaoService {
      * então a auto-inscrição neles nunca esbarra em limite de vaga.
      */
     @Transactional
-    public MinhaInscricaoResponse inscrever(UUID eventoId, UUID membroId,
+    public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId,
                                             UUID inscritoPorOuNull, UUID igrejaId) {
         Evento evento = eventoRepository.buscarComLock(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        Membro membro = membroRepository.findByIdAndIgrejaId(membroId, igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
         validarElegibilidade(evento, membro);
 
         InscricaoEvento inscricao = inscricaoRepository
-                .findByEventoIdAndMembroId(eventoId, membroId)
+                .findByEventoIdAndPessoaId(eventoId, pessoaId)
                 .orElse(null);
 
         if (inscricao != null && inscricao.estaConfirmada()) {
@@ -81,7 +81,7 @@ public class InscricaoService {
         validarVaga(evento, 1);
 
         if (inscricao != null) {
-            // Reaproveita a linha cancelada: o UNIQUE (evento_id, membro_id) impediria inserir
+            // Reaproveita a linha cancelada: o UNIQUE (evento_id, pessoa_id) impediria inserir
             // outra, e sem isto quem cancelasse ficaria impedido de voltar ao próprio evento.
             inscricao.setStatus(StatusInscricao.CONFIRMADA);
             inscricao.setInscritoPorUsuarioId(inscritoPorOuNull);
@@ -89,15 +89,15 @@ public class InscricaoService {
             inscricao = InscricaoEvento.builder()
                     .igreja(evento.getIgreja())
                     .evento(evento)
-                    .membro(membro)
+                    .pessoa(membro)
                     .inscritoPorUsuarioId(inscritoPorOuNull)
                     .status(StatusInscricao.CONFIRMADA)
                     .build();
         }
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
-        log.info("Inscrição confirmada. evento_id={}, membro_id={}, inscrito_por={}, igreja_id={}",
-                eventoId, membroId, inscritoPorOuNull, igrejaId);
+        log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
+                eventoId, pessoaId, inscritoPorOuNull, igrejaId);
         return MinhaInscricaoResponse.from(salva);
     }
 
@@ -122,7 +122,7 @@ public class InscricaoService {
         validarEventoAberto(evento);
 
         if (!membroIds.isEmpty()) {
-            List<UUID> jaInscritos = inscricaoRepository.listarMembroIdsJaInscritos(eventoId, membroIds);
+            List<UUID> jaInscritos = inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, membroIds);
             if (!jaInscritos.isEmpty()) {
                 String mensagem = jaInscritos.size() == 1
                         ? "Este membro já está inscrito no evento."
@@ -131,14 +131,14 @@ public class InscricaoService {
             }
         }
 
-        for (UUID membroId : membroIds) {
-            inscrever(eventoId, membroId, inscritoPorUsuarioId, igrejaId);
+        for (UUID pessoaId : membroIds) {
+            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, igrejaId);
         }
     }
 
     @Transactional(readOnly = true)
-    public MinhaInscricaoResponse minhaInscricao(UUID eventoId, UUID membroId) {
-        return inscricaoRepository.findByEventoIdAndMembroId(eventoId, membroId)
+    public MinhaInscricaoResponse minhaInscricao(UUID eventoId, UUID pessoaId) {
+        return inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)
                 .filter(InscricaoEvento::estaConfirmada)
                 .map(MinhaInscricaoResponse::from)
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
@@ -209,19 +209,15 @@ public class InscricaoService {
         }
     }
 
-    private void validarElegibilidade(Evento evento, Membro membro) {
-        // Exclusivo para membros barra quem não é membro ATIVO da igreja: VISITANTE nunca foi
-        // membro, e INATIVO deixou de ser — os dois ficam de fora, não só o primeiro.
-        if (evento.isExclusivoMembros()
-                && (membro.getStatus() == StatusMembro.VISITANTE
-                    || membro.getStatus() == StatusMembro.INATIVO)) {
+    private void validarElegibilidade(Evento evento, Pessoa membro) {
+        // Exclusivo para membros barra quem não tem vínculo MEMBRO com a igreja (batizado).
+        // CONGREGANTE absorveu o antigo VISITANTE e o antigo INATIVO (que hoje é arquivamento).
+        if (evento.isExclusivoMembros() && membro.getVinculo() != Vinculo.MEMBRO) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros da igreja.");
         }
-        if (evento.isExclusivoBatizados() && !membro.isBatizado()) {
-            throw new BusinessException("EXCLUSIVO_BATIZADOS",
-                    "Este evento é exclusivo para membros batizados.");
-        }
+        // exclusivoBatizados: campo/coluna removidos do banco na Task 3; a checagem
+        // correspondente sai daqui até a Task 6 tirar isExclusivoBatizados do contrato da API.
     }
 
     /**
@@ -299,7 +295,7 @@ public class InscricaoService {
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
-        boolean souODono = inscricao.getMembro().getId().equals(meuMembroId);
+        boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
 
         if (!ehGestor && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
@@ -334,7 +330,7 @@ public class InscricaoService {
         validarEventoAberto(inscricao.getEvento());
 
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
-        boolean souEu = inscricao.getMembro().getId().equals(meuMembroId);
+        boolean souEu = inscricao.getPessoa().getId().equals(meuMembroId);
 
         if (!ehGestor && !souEu) {
             throw new BusinessException("SEM_PERMISSAO",
@@ -378,21 +374,20 @@ public class InscricaoService {
      *
      * @return quantas inscrições foram canceladas, para o chamador logar/devolver ao front.
      */
+    // exclusivoBatizados: parâmetro mantido só para não mexer na assinatura chamada pelo
+    // EventoService fora desta tarefa; a checagem em si saiu (coluna removida na Task 3).
     @Transactional
     public int removerInscritosNaoElegiveis(UUID eventoId, boolean exclusivoMembros,
                                             boolean exclusivoBatizados) {
-        if (!exclusivoMembros && !exclusivoBatizados) {
+        if (!exclusivoMembros) {
             return 0;
         }
 
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int removidos = 0;
         for (InscricaoEvento inscricao : inscricoes) {
-            Membro membro = inscricao.getMembro();
-            boolean desqualificado =
-                    (exclusivoMembros && (membro.getStatus() == StatusMembro.VISITANTE
-                            || membro.getStatus() == StatusMembro.INATIVO))
-                    || (exclusivoBatizados && !membro.isBatizado());
+            Pessoa membro = inscricao.getPessoa();
+            boolean desqualificado = membro.getVinculo() != Vinculo.MEMBRO;
 
             if (desqualificado) {
                 cancelarInterno(inscricao);

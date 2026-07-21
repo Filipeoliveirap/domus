@@ -13,7 +13,7 @@ public record ConsolidadoResponse(
         Totais familia,
         List<LinhaIgreja> porIgreja) {
 
-    public record Membros(long total, long ativos, long inativos, long visitantes) {}
+    public record Membros(long total, long membros, long congregantes) {}
 
     public record Eventos(long total, long realizados, long proximos) {}
 

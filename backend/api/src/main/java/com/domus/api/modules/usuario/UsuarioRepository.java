@@ -18,7 +18,7 @@ import java.util.UUID;
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
-    @Query("SELECT u FROM Usuario u WHERE u.membro.email = :email")
+    @Query("SELECT u FROM Usuario u WHERE u.pessoa.email = :email")
     Optional<Usuario> findByEmail(@Param("email") String email);
 
     Optional<Usuario> findByGoogleSub(String googleSub);
@@ -36,7 +36,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
-        u.id, u.membro.nome, u.role.nome, u.igreja.id, u.igreja.nome)
+        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome)
     FROM Usuario u
     WHERE u.id = :id
     """)
@@ -47,9 +47,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     SELECT u FROM Usuario u
     WHERE u.igreja.id = :igrejaId
       AND ( :q IS NULL
-            OR LOWER(u.membro.nome)  LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
-            OR LOWER(u.membro.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) )
-    ORDER BY u.ativo DESC, u.membro.nome ASC
+            OR LOWER(u.pessoa.nome)  LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+            OR LOWER(u.pessoa.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) )
+    ORDER BY u.ativo DESC, u.pessoa.nome ASC
     """)
     /**
      * Ativos primeiro, depois por nome — e a ordenação é do BANCO, antes de paginar.
@@ -64,17 +64,17 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     @Query(value = """
         SELECT u.* FROM usuario u
-        JOIN membro m ON m.id = u.membro_id
+        JOIN pessoa m ON m.id = u.pessoa_id
         WHERE m.email = :email
         """, nativeQuery = true)
     Optional<Usuario> findByEmailIncluindoArquivados(@Param("email") String email);
-    Optional<Usuario> findByMembroId(UUID membroId);
+    Optional<Usuario> findByPessoaId(UUID pessoaId);
 
     @Query(value = """
     SELECT u.* FROM usuario u
-    WHERE u.membro_id = :membroId
+    WHERE u.pessoa_id = :pessoaId
     """, nativeQuery = true)
-    Optional<Usuario> findByMembroIdIncluindoArquivados(@Param("membroId") UUID membroId);
+    Optional<Usuario> findByPessoaIdIncluindoArquivados(@Param("pessoaId") UUID pessoaId);
 
     /**
      * Nome + foto de quem inscreveu, em lote — resolve {@code inscritoPorUsuarioId} da lista
@@ -82,12 +82,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      *
      * <p>Usuários (ou o membro por trás deles) arquivados desde a inscrição simplesmente NÃO
      * aparecem no resultado — {@code @SQLRestriction} de {@link Usuario} e de
-     * {@code Membro} filtra soft-deletados. O chamador trata ids ausentes no mapa como
+     * {@code Pessoa} filtra soft-deletados. O chamador trata ids ausentes no mapa como
      * "quem inscreveu não está mais disponível", sem quebrar a listagem.
      */
     @Query("""
         SELECT new com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo(
-            u.id, u.membro.nome, u.membro.foto)
+            u.id, u.pessoa.nome, u.pessoa.foto)
         FROM Usuario u
         WHERE u.id IN :ids
     """)

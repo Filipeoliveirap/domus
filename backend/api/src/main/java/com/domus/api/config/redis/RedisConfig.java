@@ -4,7 +4,7 @@ import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.financeiro.categoria.DTOs.CategoriaResponse;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
-import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,7 +60,7 @@ public class RedisConfig implements CachingConfigurer {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serUsuarios));
 
         JavaType tipoMembros = mapper.getTypeFactory()
-                .constructParametricType(PagedResponse.class, MembroResponse.class);
+                .constructParametricType(PagedResponse.class, PessoaResponse.class);
         Jackson2JsonRedisSerializer<Object> serMembros =
                 new Jackson2JsonRedisSerializer<>(mapper, tipoMembros);
 

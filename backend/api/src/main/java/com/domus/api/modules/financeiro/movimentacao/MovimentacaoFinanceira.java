@@ -2,7 +2,7 @@ package com.domus.api.modules.financeiro.movimentacao;
 
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceira;
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,8 +44,8 @@ public class MovimentacaoFinanceira {
     private Usuario criadoPor;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "membro_id")
-    private Membro membro;
+    @JoinColumn(name = "pessoa_id")
+    private Pessoa pessoa;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

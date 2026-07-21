@@ -39,4 +39,17 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     List<InscricaoEvento> listarPorEvento(@Param("eventoId") UUID eventoId);
 
     List<InscricaoEvento> findByMembroIdAndStatus(UUID membroId, StatusInscricao status);
+
+    /**
+     * Ids, dentre {@code membroIds}, que já têm inscrição CONFIRMADA no evento — usada para
+     * validar a inscrição em lote ANTES de inserir qualquer linha (tudo-ou-nada), permitindo
+     * uma mensagem que nomeia quantos já estavam inscritos.
+     */
+    @Query("""
+        SELECT i.membro.id FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId AND i.membro.id IN :membroIds
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+    """)
+    List<UUID> listarMembroIdsJaInscritos(@Param("eventoId") UUID eventoId,
+                                          @Param("membroIds") List<UUID> membroIds);
 }

@@ -74,4 +74,29 @@ public class Evento {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * Situação do evento AGORA, derivada de {@code inicioEm}/{@code fimEm} — nunca armazenada
+     * (ver {@link SituacaoEvento}). Mora na entidade porque é uma regra sobre os próprios
+     * campos do evento, sem depender de nada externo (inscrições, igreja etc.).
+     *
+     * <p>Sem {@code fimEm} declarado, o evento é considerado em andamento até o fim do PRÓPRIO
+     * dia de início, e encerrado a partir do dia seguinte — não dá pra saber quando um evento
+     * sem horário de término "acaba", mas também não faz sentido continuar "em andamento" para
+     * sempre.
+     */
+    public SituacaoEvento getSituacao() {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime fimEfetivo = fimEm != null
+                ? fimEm
+                : inicioEm.toLocalDate().atTime(23, 59, 59);
+
+        if (agora.isBefore(inicioEm)) {
+            return SituacaoEvento.AGENDADO;
+        }
+        if (agora.isAfter(fimEfetivo)) {
+            return SituacaoEvento.ENCERRADO;
+        }
+        return SituacaoEvento.EM_ANDAMENTO;
+    }
 }

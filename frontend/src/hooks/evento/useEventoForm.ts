@@ -30,6 +30,12 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
       local: '',
+      requerInscricao: false,
+      vagas: undefined,
+      tipoInscricao: 'GRATUITO',
+      preco: undefined,
+      exclusivoMembros: false,
+      exclusivoBatizados: false,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -57,6 +63,12 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         fimData,
         fimHora,
         local: eventoInicial.local ?? '',
+        requerInscricao: eventoInicial.requerInscricao,
+        vagas: eventoInicial.vagas ?? undefined,
+        tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
+        preco: eventoInicial.preco != null ? Number(eventoInicial.preco) : undefined,
+        exclusivoMembros: eventoInicial.exclusivoMembros,
+        exclusivoBatizados: eventoInicial.exclusivoBatizados,
       })
     }
   }, [eventoInicial, reset])
@@ -70,12 +82,25 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         ? `${data.fimData}T${data.fimHora}:00`
         : undefined
 
+      // O backend faz PUT (substitui a entidade inteira) e lê booleano JSON ausente como
+      // false. Por isso requerInscricao/exclusivoMembros/exclusivoBatizados são SEMPRE
+      // enviados com o valor atual do form — mesmo quando a seção "Inscrições" está
+      // recolhida na tela — nunca omitidos condicionalmente. O RHF não desmonta esses
+      // campos do estado do form ao escondê-los (shouldUnregister não está ativo em
+      // useAppForm), então o valor sobrevive intacto até aqui mesmo com o input invisível.
       const payload: EventoRequest = {
         titulo: data.titulo,
         descricao: data.descricao || undefined,
         inicioEm,
         fimEm,
         local: data.local || undefined,
+        requerInscricao: data.requerInscricao,
+        exclusivoMembros: data.exclusivoMembros,
+        exclusivoBatizados: data.exclusivoBatizados,
+        vagas: data.requerInscricao ? data.vagas : undefined,
+        preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
+          ? data.preco.toFixed(2)
+          : undefined,
       }
 
       if (ehEdicao) {

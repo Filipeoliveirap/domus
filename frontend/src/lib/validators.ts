@@ -87,6 +87,14 @@ export const membroSchema = z.object({
   ),
 
   observacoes: opcional(z.string()),
+
+  batizado: z.boolean().default(false),
+  dataBatismo: opcional(
+    z.string().refine(
+      (val) => new Date(val) <= new Date(),
+      'A data de batismo não pode estar no futuro',
+    ),
+  ),
 })
 
 export const concederAcessoSchema = z.object({
@@ -99,6 +107,12 @@ export const concederAcessoSchema = z.object({
   ),
 })
 
+const opcionalNumero = <T extends z.ZodType<number>>(schema: T) =>
+  z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    schema.optional(),
+  )
+
 const eventoSchemaBase = z.object({
   titulo: z.string().trim().min(1, 'O título é obrigatório.'),
   descricao: opcional(z.string()),
@@ -107,6 +121,22 @@ const eventoSchemaBase = z.object({
   fimData: opcional(z.string()),
   fimHora: opcional(z.string()),
   local: opcional(z.string()),
+
+  // ─── Inscrições (Fase 2) ───
+  // requerInscricao é o "interruptor mestre": quando false, os demais campos desta seção
+  // ficam ocultos na UI, mas continuam registrados no RHF (não são desmontados/unregister —
+  // o form não usa shouldUnregister), então o valor atual sempre viaja no payload do PUT.
+  requerInscricao: z.boolean().default(false),
+  vagas: opcionalNumero(
+    z.coerce.number().int().positive('Vagas deve ser um número inteiro positivo.'),
+  ),
+  // Campo só de UI (não existe no backend): decide se `preco` é enviado ou limpo.
+  tipoInscricao: z.enum(['GRATUITO', 'PAGO']).default('GRATUITO'),
+  preco: opcionalNumero(
+    z.coerce.number().positive('Preço deve ser maior que zero.'),
+  ),
+  exclusivoMembros: z.boolean().default(false),
+  exclusivoBatizados: z.boolean().default(false),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(

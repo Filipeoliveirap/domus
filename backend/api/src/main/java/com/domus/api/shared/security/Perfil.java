@@ -6,16 +6,16 @@ package com.domus.api.shared.security;
  * <p>O nome fala de NÍVEL DE ACESSO, não de vínculo com a igreja — um congregante com
  * login tem acesso comum, e chamar isso de "MEMBRO" era a confusão que esta mudança elimina.
  */
-public enum Role {
+public enum Perfil {
     ADMIN_IGREJA,
     LIDER,
     MEMBRO;
 
     /** Devolve null em vez de estourar: role desconhecida vira "não pode nada" (fail-closed). */
-    public static Role deNomeOuNull(String nome) {
+    public static Perfil deNomeOuNull(String nome) {
         if (nome == null || nome.isBlank()) return null;
         try {
-            return Role.valueOf(nome);
+            return Perfil.valueOf(nome);
         } catch (IllegalArgumentException e) {
             return null;
         }

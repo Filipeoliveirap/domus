@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import com.domus.api.shared.security.Perfil;
 
 @Slf4j
 @Service
@@ -97,7 +98,7 @@ public class IgrejaService {
         igrejaRepository.save(igreja);
         log.info("Igreja criada. id={}, nome={}", igreja.getId(), igreja.getNome());
 
-        Role roleAdmin = roleRepository.findByNome("ADMIN_IGREJA")
+        Role roleAdmin = roleRepository.findByNome(Perfil.ADMIN_IGREJA.name())
                 .orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
 
         Membro membroAdmin = Membro.builder()

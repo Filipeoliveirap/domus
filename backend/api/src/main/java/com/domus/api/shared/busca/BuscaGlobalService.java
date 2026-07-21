@@ -6,6 +6,7 @@ import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoServ
 import com.domus.api.modules.membro.busca.BuscaMembroService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
+import com.domus.api.shared.security.Permissoes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,6 @@ public class BuscaGlobalService {
     private final BuscaCategoriaService buscaCategoriaService;
 
     private static final int LIMITE_POR_TIPO = 5;
-    private static final String ROLE_ADMIN = "ADMIN_IGREJA";
 
     public List<ResultadoBusca> buscar(String termo, UUID igrejaId, String role) {
         List<ResultadoBusca> resultados = new ArrayList<>();
@@ -34,7 +34,7 @@ public class BuscaGlobalService {
         resultados.addAll(buscaMembroService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
         resultados.addAll(buscaEventoService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
 
-        if (ROLE_ADMIN.equals(role)) {
+        if (Permissoes.podeVerUsuariosEFinanceiroNaBuscaGlobal(role)) {
             resultados.addAll(buscaUsuarioService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
             resultados.addAll(buscaMovimentacaoService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
             resultados.addAll(buscaCategoriaService.buscar(termo, igrejaId, LIMITE_POR_TIPO));

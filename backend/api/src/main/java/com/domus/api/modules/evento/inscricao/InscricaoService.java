@@ -8,9 +8,11 @@ import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
 import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.util.TextoUtil;
@@ -20,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -32,6 +36,7 @@ public class InscricaoService {
     private final InscricaoRepository inscricaoRepository;
     private final AcompanhanteRepository acompanhanteRepository;
     private final MembroRepository membroRepository;
+    private final UsuarioRepository usuarioRepository;
 
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
@@ -248,8 +253,17 @@ public class InscricaoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        List<InscritoResponse> inscritos = inscricaoRepository.listarPorEvento(eventoId)
-                .stream().map(InscritoResponse::from).toList();
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+
+        // Resolve "quem inscreveu" em UMA query para a lista inteira (evita N+1): coleta os
+        // ids distintos e não-nulos e busca nome+foto em lote. Ids ausentes no mapa de volta
+        // (conta ou membro arquivados depois da inscrição) viram null no DTO — tratados
+        // explicitamente, não escondidos atrás de um texto genérico incorreto.
+        Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
+
+        List<InscritoResponse> inscritos = inscricoes.stream()
+                .map(i -> InscritoResponse.from(i, registrantes.get(i.getInscritoPorUsuarioId())))
+                .toList();
 
         long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
         Integer restantes = evento.getVagas() == null
@@ -271,6 +285,32 @@ public class InscricaoService {
 
         return inscricaoRepository.listarPorEvento(eventoId)
                 .stream().map(ParticipanteResponse::from).toList();
+    }
+
+    /**
+     * Busca nome+foto de quem inscreveu para toda a lista, numa única query (ou nenhuma,
+     * se ninguém foi inscrito por terceiro). {@code Map.of()} do {@code Collectors.toMap}
+     * já garante ids únicos porque a origem é uma coluna de PK.
+     */
+    private Map<UUID, RegistranteResumo> buscarRegistrantesEmLote(List<InscricaoEvento> inscricoes) {
+        List<UUID> ids = inscricoes.stream()
+                .map(InscricaoEvento::getInscritoPorUsuarioId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+
+        // HashMap (não Map.of()): .get(null) é uma consulta legítima e frequente aqui —
+        // toda auto-inscrição tem inscritoPorUsuarioId nulo, e Map.of() lança NPE em
+        // chave nula.
+        Map<UUID, RegistranteResumo> mapa = new HashMap<>();
+        if (ids.isEmpty()) {
+            return mapa;
+        }
+
+        for (RegistranteResumo r : usuarioRepository.buscarRegistrantes(ids)) {
+            mapa.put(r.usuarioId(), r);
+        }
+        return mapa;
     }
 
     private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {

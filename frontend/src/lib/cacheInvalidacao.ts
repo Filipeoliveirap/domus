@@ -20,6 +20,10 @@ type Entidade = 'evento' | 'membro' | 'movimentacao' | 'categoria' | 'usuario' |
 const AFETADAS: Record<Entidade, string[][]> = {
   evento: [
     ['eventos'],
+    // ATENÇÃO: `['eventos']` (lista) NÃO cobre `['evento', id]` (detalhe) — a invalidação é
+    // por prefixo, e "evento" não é prefixo de "eventos". Faltando esta linha, o detalhe
+    // seguia mostrando o evento velho depois de editado. Chave nova de evento entra aqui.
+    ['evento'],
     ['inicio'], // próximos eventos
     ['dashboard'],
     ['busca-global'],

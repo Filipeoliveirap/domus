@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Users } from 'lucide-react'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
@@ -31,6 +31,7 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(
     eventoId, ehGestor)
   const cancelar = useCancelarInscricao()
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -103,15 +104,43 @@ export function ModalQuemVai({ eventoId, aoFechar }: Props) {
                   </span>
                   <span className={styles.nome}>{l.nome}</span>
 
+                  {/*
+                    Confirmação obrigatória: cancelar a inscrição de OUTRA pessoa não é
+                    desfazível por ela — ela só descobre no dia do evento. Um clique solto
+                    numa lista de nomes parecidos é fácil demais de errar.
+                  */}
                   {ehGestor && (
-                    <button
-                      type="button"
-                      className={styles.cancelar}
-                      onClick={() => cancelar.mutate(l.id)}
-                      disabled={cancelar.isPending}
-                    >
-                      Cancelar inscrição
-                    </button>
+                    confirmandoId === l.id ? (
+                      <span className={styles.confirmacao}>
+                        <span className={styles.confirmacaoTexto}>Cancelar?</span>
+                        <button
+                          type="button"
+                          className={styles.confirmarSim}
+                          onClick={() => {
+                            cancelar.mutate(l.id, { onSuccess: () => setConfirmandoId(null) })
+                          }}
+                          disabled={cancelar.isPending}
+                        >
+                          Sim
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.confirmarNao}
+                          onClick={() => setConfirmandoId(null)}
+                        >
+                          Não
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.cancelar}
+                        onClick={() => setConfirmandoId(l.id)}
+                        disabled={cancelar.isPending}
+                      >
+                        Cancelar inscrição
+                      </button>
+                    )
                   )}
                 </div>
 

@@ -51,10 +51,12 @@ class InscricaoServiceTest {
     }
 
     private Evento evento(Integer vagas) {
+        // requerInscricao=true por padrão: o foco da maioria destes testes é vaga,
+        // elegibilidade e cancelamento, não o toggle em si (que tem teste próprio abaixo).
         return Evento.builder()
                 .id(eventoId).igreja(igreja())
                 .titulo("Retiro").inicioEm(LocalDateTime.now().plusDays(10))
-                .vagas(vagas)
+                .vagas(vagas).requerInscricao(true)
                 .build();
     }
 
@@ -123,6 +125,17 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void recusaInscricaoQuandoEventoNaoRequerInscricao() {
+        Evento e = evento(10);
+        e.setRequerInscricao(false);
+        dado(e, membro(true, StatusMembro.ATIVO), 0);
+
+        assertThatThrownBy(() -> service.inscrever(eventoId, membroId, null, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não abre inscrição");
+    }
+
+    @Test
     void recusaEventoJaEncerrado() {
         Evento e = evento(10);
         e.setInicioEm(LocalDateTime.now().minusDays(1));
@@ -158,6 +171,25 @@ class InscricaoServiceTest {
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(cancelada);
+    }
+
+    @Test
+    void convidadoRecusadoSeEventoDeixouDeAceitarInscricao() {
+        // Cenário real: a inscrição nasceu quando o evento aceitava, e o admin desligou o
+        // toggle depois. Convidado ocupa vaga igual, então não pode entrar pela porta dos fundos.
+        Evento e = evento(10);
+        e.setRequerInscricao(false);
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+                .thenReturn(Optional.of(minha));
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não abre inscrição");
     }
 
     @Test
@@ -359,5 +391,49 @@ class InscricaoServiceTest {
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(50L);
 
         assertThat(service.listarInscritos(eventoId, igrejaId).vagasRestantes()).isNull();
+    }
+
+    @Test
+    void listarParticipantesTrazFormaReduzidaSemDadosAdministrativos() {
+        Evento e = evento(10);
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .inscritoPorUsuarioId(usuarioId)
+                .status(StatusInscricao.CONFIRMADA).build();
+        inscricao.getAcompanhantes().add(
+                com.domus.api.modules.evento.inscricao.AcompanhanteInscricao.builder()
+                        .id(UUID.randomUUID()).inscricao(inscricao)
+                        .nome("Convidado").telefone("11999998888").build());
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+
+        var participantes = service.listarParticipantes(eventoId, igrejaId);
+
+        assertThat(participantes).hasSize(1);
+        var p = participantes.get(0);
+        assertThat(p.nome()).isEqualTo("Maria");
+        assertThat(p.convidados()).containsExactly("Convidado");
+        // reduzido de propósito: sem telefone, sem "quem inscreveu", sem data — o record
+        // ParticipanteResponse nem tem esses campos, então não há como vazá-los por acidente.
+    }
+
+    @Test
+    void listarParticipantesSoTrazConfirmadas() {
+        // listarPorEvento já filtra CONFIRMADA na query; este teste garante que o service
+        // não reintroduz canceladas ao montar a resposta.
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(evento(10)));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+
+        assertThat(service.listarParticipantes(eventoId, igrejaId)).isEmpty();
+    }
+
+    @Test
+    void listarParticipantesDeEventoDeOutraIgrejaEh404() {
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.listarParticipantes(eventoId, igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
     }
 }

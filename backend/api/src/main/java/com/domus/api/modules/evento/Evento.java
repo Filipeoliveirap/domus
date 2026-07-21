@@ -59,6 +59,11 @@ public class Evento {
     @Builder.Default
     private boolean exclusivoBatizados = false;
 
+    /** Só evento marcado mostra o botão "Confirmar presença" e a lista de inscritos. */
+    @Column(name = "requer_inscricao", nullable = false)
+    @Builder.Default
+    private boolean requerInscricao = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

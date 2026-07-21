@@ -56,7 +56,7 @@ class EventoServiceCamposInscricaoTest {
     private EventoRequest request(Integer vagas, BigDecimal preco,
                                   Boolean exclusivoMembros, Boolean exclusivoBatizados) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
-                "Templo", null, vagas, preco, exclusivoMembros, exclusivoBatizados);
+                "Templo", null, vagas, preco, exclusivoMembros, exclusivoBatizados, true);
     }
 
     @Test

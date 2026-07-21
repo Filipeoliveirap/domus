@@ -4,6 +4,8 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.membro.Membro;
 import com.domus.api.modules.membro.MembroRepository;
@@ -211,6 +213,23 @@ public class InscricaoService {
         inscricaoRepository.save(inscricao);
         log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
                 inscricaoId, usuarioId, igrejaId);
+    }
+
+    /** Lista de inscritos confirmados + contagem de vagas restantes. */
+    @Transactional(readOnly = true)
+    public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId) {
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        List<InscritoResponse> inscritos = inscricaoRepository.listarPorEvento(eventoId)
+                .stream().map(InscritoResponse::from).toList();
+
+        long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
+        Integer restantes = evento.getVagas() == null
+                ? null
+                : Math.max(0, evento.getVagas() - (int) total);
+
+        return new ListaInscritosResponse(total, evento.getVagas(), restantes, inscritos);
     }
 
     private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {

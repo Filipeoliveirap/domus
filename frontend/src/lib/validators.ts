@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import { dataBRParaISO } from '@/lib/masks'
 
 export const loginSchema = z.object({
     email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório'),
@@ -116,10 +117,15 @@ const opcionalNumero = <T extends z.ZodType<number>>(schema: T) =>
 const eventoSchemaBase = z.object({
   titulo: z.string().trim().min(1, 'O título é obrigatório.'),
   descricao: opcional(z.string()),
-  inicioData: z.string().min(1, 'A data de início é obrigatória.'),
-  inicioHora: z.string().min(1, 'A hora de início é obrigatória.'),
-  fimData: opcional(z.string()),
-  fimHora: opcional(z.string()),
+  // Campo digitado em dd/mm/aaaa (ver lib/masks) — convertido para ISO só na borda (submit).
+  inicioData: z.string()
+    .min(1, 'A data de início é obrigatória.')
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Data inválida. Use o formato dd/mm/aaaa.'),
+  inicioHora: z.string()
+    .min(1, 'A hora de início é obrigatória.')
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.'),
+  fimData: opcional(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Data inválida. Use o formato dd/mm/aaaa.')),
+  fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
   local: opcional(z.string()),
 
   // ─── Inscrições (Fase 2) ───
@@ -145,8 +151,11 @@ const eventoSchemaBase = z.object({
 export const eventoSchema = eventoSchemaBase.refine(
   (data) => {
     if (!data.fimData || !data.fimHora) return true
-    const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
-    const fim = new Date(`${data.fimData}T${data.fimHora}`)
+    const inicioIso = dataBRParaISO(data.inicioData)
+    const fimIso = dataBRParaISO(data.fimData)
+    if (!inicioIso || !fimIso) return true // erro de formato já é pego pelo regex de cada campo
+    const inicio = new Date(`${inicioIso}T${data.inicioHora}`)
+    const fim = new Date(`${fimIso}T${data.fimHora}`)
     return fim >= inicio
   },
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }

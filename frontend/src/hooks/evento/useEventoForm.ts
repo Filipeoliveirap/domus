@@ -7,6 +7,7 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { eventoSchema, type EventoFormInput, type EventoFormData } from '@/lib/validators'
+import { dataBRParaISO, isoParaDataBR } from '@/lib/masks'
 import { eventosService } from '@/services/evento.service'
 import type { EventoRequest, EventoResponse } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
@@ -44,14 +45,15 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
 
   useEffect(() => {
     if (eventoInicial) {
-      const [inicioData, inicioHoraFull] = eventoInicial.inicioEm.split('T')
-      const inicioHora = inicioHoraFull ? inicioHoraFull.slice(0, 5) : ''  
+      const [inicioDataIso, inicioHoraFull] = eventoInicial.inicioEm.split('T')
+      const inicioData = isoParaDataBR(inicioDataIso)
+      const inicioHora = inicioHoraFull ? inicioHoraFull.slice(0, 5) : ''
 
       let fimData = ''
       let fimHora = ''
       if (eventoInicial.fimEm) {
-        const [fData, fHoraFull] = eventoInicial.fimEm.split('T')
-        fimData = fData
+        const [fDataIso, fHoraFull] = eventoInicial.fimEm.split('T')
+        fimData = isoParaDataBR(fDataIso)
         fimHora = fHoraFull ? fHoraFull.slice(0, 5) : ''
       }
 
@@ -77,9 +79,12 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     setErroGeral(null)
     setIsLoading(true)
     try {
-      const inicioEm = `${data.inicioData}T${data.inicioHora}:00`
-      const fimEm = (data.fimData && data.fimHora)
-        ? `${data.fimData}T${data.fimHora}:00`
+      // Os campos viajam no form em dd/mm/aaaa (ver lib/masks); o backend espera ISO.
+      const inicioDataIso = dataBRParaISO(data.inicioData)
+      const fimDataIso = data.fimData ? dataBRParaISO(data.fimData) : undefined
+      const inicioEm = `${inicioDataIso}T${data.inicioHora}:00`
+      const fimEm = (fimDataIso && data.fimHora)
+        ? `${fimDataIso}T${data.fimHora}:00`
         : undefined
 
       // O backend faz PUT (substitui a entidade inteira) e lê booleano JSON ausente como

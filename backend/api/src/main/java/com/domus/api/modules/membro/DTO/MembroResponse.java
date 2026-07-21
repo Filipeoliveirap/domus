@@ -21,15 +21,27 @@ public record MembroResponse(
         String observacoes,
         LocalDateTime createdAt,
         boolean batizado,
-        LocalDate dataBatismo
+        LocalDate dataBatismo,
+        String avisoTelefoneDuplicado
 ) {
     public static MembroResponse from(Membro m) {
+        return from(m, null);
+    }
+
+    /**
+     * B2: {@code avisoTelefoneDuplicado} carrega o NOME de outro membro da mesma igreja com o
+     * mesmo telefone — é AVISO, não bloqueio (telefone é legitimamente compartilhado: casal,
+     * família, idoso que usa o número de um filho). Só é preenchido logo após
+     * cadastrar/atualizar (ver {@code MembroService}); a leitura normal ({@code from(Membro)})
+     * não recalcula o aviso a cada GET.
+     */
+    public static MembroResponse from(Membro m, String avisoTelefoneDuplicado) {
         return new MembroResponse(
                 m.getId(), m.getNome(), m.getEmail(), m.getTelefone(),
                 m.getDataNascimento(), enderecoDe(m.getEndereco()), m.getStatus(),
                 m.getEstadoCivil(), m.getMinisterio(), m.getFoto(),
                 m.getObservacoes(), m.getCreatedAt(),
-                m.isBatizado(), m.getDataBatismo()
+                m.isBatizado(), m.getDataBatismo(), avisoTelefoneDuplicado
         );
     }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock } from 'lucide-react'
+import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet } from 'lucide-react'
 import { useMembro } from '@/hooks/membro/useMembro'
 import {
   iniciais, rotuloStatus, varianteStatus, formatarData,
@@ -103,6 +103,19 @@ export function DrawerDetalheMembro({ membroId, onClose }: DrawerDetalheMembroPr
                     </div>
                   </div>
                 )}
+
+                {/* F11: batizado importa porque decide elegibilidade em eventos exclusivos para batizados. */}
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><Droplet size={18} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>Batismo</p>
+                    <p className={styles.infoValor}>
+                      {membro.batizado
+                        ? (membro.dataBatismo ? `Batizado em ${formatarDataNascimento(membro.dataBatismo)}` : 'Batizado')
+                        : 'Não batizado'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {endereco && (

@@ -241,6 +241,7 @@ export default function InscritosPage() {
           eventoId={eventoId}
           tituloEvento={evento.titulo}
           exclusivoMembros={evento.exclusivoMembros}
+          exclusivoBatizados={evento.exclusivoBatizados}
           onClose={() => setModalInscreverAberto(false)}
         />
       )}

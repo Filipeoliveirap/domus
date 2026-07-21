@@ -1,26 +1,50 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, X, Check } from 'lucide-react'
 import { useMembros } from '@/hooks/membro/useMembros'
+import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverMembros } from '@/hooks/inscricao/useInscreverMembros'
 import { useDebounce } from '@/hooks/useDebounce'
 import { iniciais, rotuloStatus } from '@/lib/formats/membroFormat'
+import type { MembroResponse } from '@/types/membro.type'
 import styles from './ModalInscreverMembros.module.css'
 
 interface Props {
   eventoId: string
   tituloEvento: string
-  /** Evento exclusivo para membros: visitantes não podem ser inscritos. */
+  /** Evento exclusivo para membros: visitantes e inativos não podem ser inscritos. */
   exclusivoMembros: boolean
+  /** Evento exclusivo para batizados: quem não estiver marcado como batizado não pode ser inscrito. */
+  exclusivoBatizados: boolean
   onClose: () => void
+}
+
+/**
+ * F9/F10 — motivo (se houver) para um membro aparecer desabilitado na lista. Checado nesta
+ * ordem: já inscrito é o motivo mais concreto (o clique falharia com "já inscrito"); só
+ * depois vêm as regras de elegibilidade do evento (membros/batizados).
+ */
+function motivoBloqueio(
+  m: MembroResponse,
+  jaInscritos: Set<string>,
+  exclusivoMembros: boolean,
+  exclusivoBatizados: boolean,
+): string | null {
+  if (jaInscritos.has(m.id)) return 'Já inscrito neste evento'
+  if (exclusivoMembros && m.status === 'VISITANTE') return 'Visitante — evento exclusivo para membros'
+  if (exclusivoMembros && m.status === 'INATIVO') return 'Inativo — evento exclusivo para membros'
+  if (exclusivoBatizados && !m.batizado) return 'Não batizado — evento exclusivo para batizados'
+  return null
 }
 
 /**
  * Busca + seleção múltipla de membros para inscrever no evento. Deliberadamente NÃO tem
  * "selecionar todos" — a seleção um a um é o que evita uma inscrição em massa por engano.
  */
-export function ModalInscreverMembros({ eventoId, tituloEvento, exclusivoMembros, onClose }: Props) {
+export function ModalInscreverMembros({
+  eventoId, tituloEvento, exclusivoMembros, exclusivoBatizados, onClose,
+}: Props) {
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
@@ -28,6 +52,15 @@ export function ModalInscreverMembros({ eventoId, tituloEvento, exclusivoMembros
   const buscaDebounced = useDebounce(busca, 300)
   const { data, isLoading } = useMembros({ q: buscaDebounced, page: 0, size: 30 })
   const membros = data?.content ?? []
+
+  // F9: quem já está inscrito precisa aparecer desabilitado. `useParticipantes` é a lista
+  // reduzida que QUALQUER membro autenticado pode chamar — a completa (`useListaInscritos`)
+  // é restrita a ADMIN/LÍDER e devolveria 401 para um membro comum abrindo este modal.
+  const { data: participantes = [] } = useParticipantes(eventoId)
+  const jaInscritos = useMemo(
+    () => new Set(participantes.map((p) => p.membroId)),
+    [participantes],
+  )
 
   const inscreverMembros = useInscreverMembros(eventoId)
 
@@ -102,7 +135,8 @@ export function ModalInscreverMembros({ eventoId, tituloEvento, exclusivoMembros
             <p className={styles.estado}>Nenhum membro encontrado.</p>
           ) : (
             membros.map((m) => {
-              const bloqueado = exclusivoMembros && m.status === 'VISITANTE'
+              const motivo = motivoBloqueio(m, jaInscritos, exclusivoMembros, exclusivoBatizados)
+              const bloqueado = !!motivo
               const marcado = selecionados.has(m.id)
               return (
                 <label
@@ -131,9 +165,7 @@ export function ModalInscreverMembros({ eventoId, tituloEvento, exclusivoMembros
                   <span className={styles.info}>
                     <span className={styles.nome}>{m.nome}</span>
                     <span className={styles.detalhe}>
-                      {bloqueado
-                        ? 'Visitante — evento exclusivo para membros'
-                        : `${rotuloStatus(m.status)} · ${m.ministerio || 'sem ministério'}`}
+                      {motivo ?? `${rotuloStatus(m.status)} · ${m.ministerio || 'sem ministério'}`}
                     </span>
                   </span>
                   {marcado && <Check size={16} className={styles.checkIcone} aria-hidden="true" />}

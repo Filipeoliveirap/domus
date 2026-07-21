@@ -23,6 +23,10 @@ const AFETADAS: Record<Entidade, string[][]> = {
     ['inicio'], // próximos eventos
     ['dashboard'],
     ['busca-global'],
+    // Rodada 2 (F12): restringir um evento (exclusivoMembros/exclusivoBatizados) cancela
+    // inscrições no backend, mas a tela de detalhe continuava mostrando a lista velha —
+    // atualizar um evento também precisa invalidar quem está inscrito nele.
+    ['inscricoes'],
   ],
   membro: [
     ['membros'],

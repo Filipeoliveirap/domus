@@ -254,9 +254,14 @@
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.acaoSecundaria:hover {
+.acaoSecundaria:hover:not(:disabled) {
   background: var(--color-bg-page);
   border-color: var(--color-primary);
+}
+
+.acaoSecundaria:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ---- Carregando / erro ---- */
@@ -353,4 +358,107 @@ button.presencaPessoas:hover .presencaTexto {
   .preco {
     padding: 8px 10px;
   }
+}
+
+/* ---- F13: editar direto do detalhe ---- */
+
+.tituloLinha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.botaoEditar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.botaoEditar:hover {
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+}
+
+/* ---- F8: contador de vagas ---- */
+
+.vagasContador {
+  width: 100%;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- F5: convidados do próprio usuário (remover) ---- */
+
+.convidados {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.convidadosTitulo {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-muted);
+}
+
+.convidadoLinha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.convidadoNome {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.convidadoRemover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.convidadoRemover:hover {
+  color: var(--color-danger, #dc2626);
+}
+
+.convidadoConfirmacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.convidadoConfirmacao button {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.convidadoConfirmar {
+  background: var(--color-danger, #dc2626) !important;
+  color: #fff;
 }

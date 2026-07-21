@@ -41,7 +41,7 @@ public class MovimentacaoDocument {
         doc.setIgrejaId(mov.getIgreja().getId().toString());
         doc.setDescricao(mov.getDescricao());
         doc.setCategoriaNome(mov.getCategoria() != null ? mov.getCategoria().getNome() : null);
-        doc.setMembroNome(mov.getMembro() != null ? mov.getMembro().getNome() : null);
+        doc.setMembroNome(mov.getPessoa() != null ? mov.getPessoa().getNome() : null);
         doc.setTipo(mov.getTipo() != null ? mov.getTipo().name() : null);
         return doc;
     }

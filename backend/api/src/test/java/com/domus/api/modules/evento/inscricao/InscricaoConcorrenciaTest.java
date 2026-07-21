@@ -52,7 +52,7 @@ class InscricaoConcorrenciaTest {
                     .setParameter("ev", eventoId).executeUpdate();
             em.createNativeQuery("DELETE FROM evento WHERE id = :ev")
                     .setParameter("ev", eventoId).executeUpdate();
-            em.createNativeQuery("DELETE FROM membro WHERE igreja_id = :ig")
+            em.createNativeQuery("DELETE FROM pessoa WHERE igreja_id = :ig")
                     .setParameter("ig", igrejaId).executeUpdate();
             em.createNativeQuery("DELETE FROM igreja WHERE id = :ig")
                     .setParameter("ig", igrejaId).executeUpdate();
@@ -87,11 +87,11 @@ class InscricaoConcorrenciaTest {
     }
 
     /** Tenta inscrever um membro depois de esperar a largada; classifica o resultado. */
-    private Void tentarInscrever(UUID membroId, CountDownLatch largada,
+    private Void tentarInscrever(UUID pessoaId, CountDownLatch largada,
                                  AtomicInteger sucessos, AtomicInteger recusasPorVaga) throws Exception {
         largada.await();
         try {
-            inscricaoService.inscrever(eventoId, membroId, null, igrejaId);
+            inscricaoService.inscrever(eventoId, pessoaId, null, igrejaId);
             sucessos.incrementAndGet();
         } catch (BusinessException e) {
             // Só conta como "recusa esperada" o motivo de vaga esgotada. Qualquer outra
@@ -120,8 +120,8 @@ class InscricaoConcorrenciaTest {
                     """).setParameter("ig", igrejaId).getSingleResult();
 
             resultado[0] = (UUID) em.createNativeQuery("""
-                    INSERT INTO membro (igreja_id, nome, email, status)
-                    VALUES (:ig, 'Ana Concorrencia', 'ana.concorrencia@c.test', 'ATIVO')
+                    INSERT INTO pessoa (igreja_id, nome, email, vinculo)
+                    VALUES (:ig, 'Ana Concorrencia', 'ana.concorrencia@c.test', 'MEMBRO')
                     RETURNING id
                     """).setParameter("ig", igrejaId).getSingleResult();
         });
@@ -131,8 +131,8 @@ class InscricaoConcorrenciaTest {
     private UUID criarMembro(String nome) {
         UUID[] resultado = new UUID[1];
         executarCommitado(em -> resultado[0] = (UUID) em.createNativeQuery("""
-                INSERT INTO membro (igreja_id, nome, email, status)
-                VALUES (:ig, :nome, :email, 'ATIVO')
+                INSERT INTO pessoa (igreja_id, nome, email, vinculo)
+                VALUES (:ig, :nome, :email, 'MEMBRO')
                 RETURNING id
                 """)
                 .setParameter("ig", igrejaId)

@@ -2,9 +2,9 @@ package com.domus.api.modules.usuario;
 
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.domus.api.modules.auth.PasswordResetService;
@@ -36,7 +36,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final IgrejaRepository igrejaRepository;
     private final RoleRepository roleRepository;
-    private final MembroRepository membroRepository;
+    private final PessoaRepository membroRepository;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final PasswordResetService passwordResetService;
@@ -44,13 +44,13 @@ public class UsuarioService {
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
-        log.info("Concedendo acesso (convite) a membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
+        log.info("Concedendo acesso (convite) a membro. pessoaId={}, igreja_id={}", data.pessoaId(), igrejaId);
 
-        Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(data.pessoaId(), igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         Usuario existente = usuarioRepository
-                .findByMembroIdIncluindoArquivados(membro.getId())
+                .findByPessoaIdIncluindoArquivados(membro.getId())
                 .orElse(null);
         if (existente != null) {
             if (existente.getDeleteAt() == null) {
@@ -78,7 +78,7 @@ public class UsuarioService {
 
         Usuario usuario = Usuario.builder()
                 .igreja(membro.getIgreja())
-                .membro(membro)
+                .pessoa(membro)
                 .senhaHash(null)
                 .ativo(true)
                 .role(role)
@@ -92,18 +92,18 @@ public class UsuarioService {
                 igrejaId
         );
         enviarConvite(salvo, email, membro.getIgreja().getNome());
-        log.info("Acesso concedido por convite. usuario_id={}, membro_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
+        log.info("Acesso concedido por convite. usuario_id={}, pessoa_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
     }
 
     @Transactional
     public UsuarioResponseDTO reativarAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
-        log.info("Reativando acesso (convite) de membro. membroId={}, igreja_id={}", data.membroId(), igrejaId);
-        Membro membro = membroRepository.findByIdAndIgrejaId(data.membroId(), igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        log.info("Reativando acesso (convite) de membro. pessoaId={}, igreja_id={}", data.pessoaId(), igrejaId);
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(data.pessoaId(), igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
-        Usuario arquivado = usuarioRepository.findByMembroIdIncluindoArquivados(membro.getId())
+        Usuario arquivado = usuarioRepository.findByPessoaIdIncluindoArquivados(membro.getId())
                 .filter(u -> u.getDeleteAt() != null)
                 .orElseThrow(() -> new BusinessException("Nenhum acesso arquivado encontrado."));
 
@@ -125,7 +125,7 @@ public class UsuarioService {
                 igrejaId
         );
         enviarConvite(salvo, email, membro.getIgreja().getNome());
-        log.info("Acesso reativado por convite. usuario_id={}, membro_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
+        log.info("Acesso reativado por convite. usuario_id={}, pessoa_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         return UsuarioResponseDTO.from(salvo);
     }
@@ -159,7 +159,7 @@ public class UsuarioService {
      * Garante que o membro tenha e-mail (o convite depende dele). Se já tem, retorna.
      * Se não tem, exige o `emailFornecido`, valida unicidade e grava no membro.
      */
-    private String garantirEmailDoMembro(Membro membro, String emailFornecido) {
+    private String garantirEmailDoMembro(Pessoa membro, String emailFornecido) {
         if (membro.getEmail() != null && !membro.getEmail().isBlank()) {
             return membro.getEmail();
         }
@@ -310,9 +310,9 @@ public class UsuarioService {
     }
 
     @Transactional
-    public void arquivarPorMembro(UUID membroId, UUID igrejaId) {
-        usuarioRepository.findByMembroId(membroId).ifPresent(usuario -> {
-            log.info("Arquivando usuário em cascata (membro arquivado). usuario_id={}, membro_id={}, igrejaId={}", usuario.getId(), membroId, igrejaId);
+    public void arquivarPorMembro(UUID pessoaId, UUID igrejaId) {
+        usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario -> {
+            log.info("Arquivando usuário em cascata (membro arquivado). usuario_id={}, pessoa_id={}, igrejaId={}", usuario.getId(), pessoaId, igrejaId);
             usuarioRepository.delete(usuario);
             outboxRegistrador.registrar(
                     TipoEntidadeOutbox.USUARIO,
@@ -325,9 +325,9 @@ public class UsuarioService {
     }
 
     @Transactional
-    public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
-        usuarioRepository.findByMembroId(membroId).ifPresent(usuario -> {
-            log.debug("Reindexando usuário por alteração no membro. usuario_id={}, membro_id={}", usuario.getId(), membroId);
+    public void reindexarPorMembro(UUID pessoaId, UUID igrejaId) {
+        usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario -> {
+            log.debug("Reindexando usuário por alteração no membro. usuario_id={}, pessoa_id={}", usuario.getId(), pessoaId);
             outboxRegistrador.registrar(
                     TipoEntidadeOutbox.USUARIO,
                     TipoEventoOutbox.ATUALIZADO,

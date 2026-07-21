@@ -1,6 +1,6 @@
-package com.domus.api.modules.membro.busca;
+package com.domus.api.modules.pessoa.busca;
 
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -15,7 +15,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @Getter
 @Setter
 @NoArgsConstructor
-public class MembroDocument {
+public class PessoaDocument {
 
     @Id
     private String id;
@@ -38,15 +38,15 @@ public class MembroDocument {
     @Field(type = FieldType.Keyword)
     private String status;
 
-    public static MembroDocument de(Membro membro) {
-        MembroDocument doc = new MembroDocument();
+    public static PessoaDocument de(Pessoa membro) {
+        PessoaDocument doc = new PessoaDocument();
         doc.setId(membro.getId().toString());
         doc.setIgrejaId(membro.getIgreja().getId().toString());
         doc.setNome(membro.getNome());
         doc.setEmail(membro.getEmail());
         doc.setTelefone(membro.getTelefone());
         doc.setMinisterio(membro.getMinisterio());
-        doc.setStatus(membro.getStatus() != null ? membro.getStatus().name() : null);
+        doc.setStatus(membro.getVinculo() != null ? membro.getVinculo().name() : null);
         return doc;
     }
 }

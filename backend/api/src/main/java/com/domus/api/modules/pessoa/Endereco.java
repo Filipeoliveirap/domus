@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

@@ -7,7 +7,7 @@ import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepos
 import com.domus.api.modules.financeiro.relatorio.RelatorioProjections;
 import com.domus.api.modules.financeiro.relatorio.RelatorioRepository;
 import com.domus.api.modules.inicio.dto.EventoResumoDTO;
-import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ public class DashboardService {
 
     private static final int LIMITE = 5;
 
-    private final MembroRepository membroRepository;
+    private final PessoaRepository membroRepository;
     private final EventoRepository eventoRepository;
     private final RelatorioRepository relatorioRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;

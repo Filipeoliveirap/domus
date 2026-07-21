@@ -6,11 +6,11 @@ import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
-import com.domus.api.modules.membro.DTO.EnderecoDTO;
-import com.domus.api.modules.membro.Endereco;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
+import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -40,7 +40,7 @@ public class IgrejaService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final RefreshTokenService refreshTokenService;
-    private final MembroRepository  membroRepository;
+    private final PessoaRepository  membroRepository;
     private final CacheManager cacheManager;
 
     @Transactional
@@ -101,17 +101,20 @@ public class IgrejaService {
         Role roleAdmin = roleRepository.findByNome(Perfil.ADMIN_IGREJA.name())
                 .orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
 
-        Membro membroAdmin = Membro.builder()
+        // Quem cadastra a própria igreja quase sempre é membro batizado — não há opção
+        // neutra aqui (CONGREGANTE afirmaria o contrário, na direção menos provável).
+        // Se a exceção aparecer, corrige-se depois em dois cliques no cadastro de pessoa.
+        Pessoa membroAdmin = Pessoa.builder()
                 .igreja(igreja)
                 .nome(com.domus.api.shared.util.TextoUtil.capitalizar(dados.nomeAdmin()))
                 .email(dados.emailAdmin())
-                .status(StatusMembro.ATIVO)
+                .vinculo(Vinculo.MEMBRO)
                 .build();
         membroRepository.save(membroAdmin);
 
         Usuario admin = Usuario.builder()
                 .igreja(igreja)
-                .membro(membroAdmin)
+                .pessoa(membroAdmin)
                 .senhaHash(dados.senhaHashOuNull())
                 .googleSub(dados.googleSubOuNull())
                 .ativo(true)
@@ -184,8 +187,8 @@ public class IgrejaService {
     }
 
     private String nomeDoAutor(Usuario usuario) {
-        if (usuario == null || usuario.getMembro() == null) return null;
-        return usuario.getMembro().getNome();
+        if (usuario == null || usuario.getPessoa() == null) return null;
+        return usuario.getPessoa().getNome();
     }
 
     private Endereco paraEndereco(EnderecoDTO dto) {

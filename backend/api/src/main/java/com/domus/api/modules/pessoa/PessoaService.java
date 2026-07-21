@@ -1,12 +1,12 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.membro.DTO.EnderecoDTO;
-import com.domus.api.modules.membro.DTO.MembroRequestDTO;
-import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
@@ -26,9 +26,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class MembroService {
+public class PessoaService {
 
-    private final MembroRepository membroRepository;
+    private final PessoaRepository membroRepository;
     private final IgrejaRepository igrejaRepository;
     private final UsuarioService  usuarioService;
     private final CacheEvictor cacheEvictor;
@@ -45,16 +45,16 @@ public class MembroService {
             key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable, #podeVerDadosSensiveis)"
     )
     @Transactional(readOnly = true)
-    public PagedResponse<MembroResponse> listarMembros(UUID igrejaId, String q, Pageable pageable,
+    public PagedResponse<PessoaResponse> listarMembros(UUID igrejaId, String q, Pageable pageable,
                                                        boolean podeVerDadosSensiveis) {
-        Page<MembroResponse> pagina = membroRepository.buscarPorIgreja(igrejaId, q, pageable)
-                .map(m -> MembroResponse.from(m, null, podeVerDadosSensiveis));
+        Page<PessoaResponse> pagina = membroRepository.buscarPorIgreja(igrejaId, q, pageable)
+                .map(m -> PessoaResponse.from(m, null, podeVerDadosSensiveis));
         return PagedResponse.from(pagina);
     }
 
 
     @Transactional
-    public MembroResponse cadastrarMembro(MembroRequestDTO data, UUID igrejaId) {
+    public PessoaResponse cadastrarMembro(PessoaRequestDTO data, UUID igrejaId) {
         log.info("Iniciando cadastro de membro. nome={}, igreja_id={}", data.nome(), igrejaId);
 
         String email = normalizarEmail(data.email());
@@ -72,33 +72,32 @@ public class MembroService {
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
-        Membro membro = Membro.builder()
+        Pessoa membro = Pessoa.builder()
                 .igreja(igreja)
                 .nome(normalizar(data.nome()))
                 .email(email)
                 .telefone(data.telefone())
                 .dataNascimento(data.dataNascimento())
                 .endereco(paraEndereco(data.endereco()))
-                .status(data.status())
+                .vinculo(data.vinculo())
                 .estadoCivil(data.estadoCivil())
                 .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
-                .batizado(Boolean.TRUE.equals(data.batizado()))
                 .dataBatismo(data.dataBatismo())
                 .build();
 
-        Membro salvo = membroRepository.save(membro);
+        Pessoa salvo = membroRepository.save(membro);
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MEMBRO,
                 TipoEventoOutbox.CRIADO,
                 salvo.getId(),
                 igrejaId
         );
-        log.info("Membro cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
+        log.info("Pessoa cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("membros", igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
-        return MembroResponse.from(salvo, aviso);
+        return PessoaResponse.from(salvo, aviso);
     }
 
     private String normalizarEmail(String email) {
@@ -106,10 +105,10 @@ public class MembroService {
     }
 
     @Transactional
-    public MembroResponse atualizarMembro(UUID id, MembroRequestDTO data, UUID igrejaId) {
+    public PessoaResponse atualizarMembro(UUID id, PessoaRequestDTO data, UUID igrejaId) {
         log.info("Atualizando membro. id={}, igreja_id={}", id, igrejaId);
-        Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         String nomeAntigo = membro.getNome();
 
@@ -130,14 +129,13 @@ public class MembroService {
         membro.setTelefone(data.telefone());
         membro.setDataNascimento(data.dataNascimento());
         membro.setEndereco(paraEndereco(data.endereco()));
-        membro.setStatus(data.status());
+        membro.setVinculo(data.vinculo());
         membro.setEstadoCivil(data.estadoCivil());
         membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
-        membro.setBatizado(Boolean.TRUE.equals(data.batizado()));
         membro.setDataBatismo(data.dataBatismo());
 
-        Membro salvo = membroRepository.save(membro);
+        Pessoa salvo = membroRepository.save(membro);
 
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MEMBRO,
@@ -153,10 +151,10 @@ public class MembroService {
         }
 
         cacheEvictor.evictPorIgreja("membros", igrejaId);
-        log.info("Membro atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
+        log.info("Pessoa atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
-        return MembroResponse.from(salvo, aviso);
+        return PessoaResponse.from(salvo, aviso);
     }
 
     /**
@@ -166,26 +164,26 @@ public class MembroService {
      * então duplicidade aqui é só um alerta ("confira se não é a mesma pessoa duas vezes"),
      * nunca um erro de negócio.
      *
-     * <p>Isolado por {@code igrejaId} (nunca cruza tenant) e exclui o próprio {@code membroId}
+     * <p>Isolado por {@code igrejaId} (nunca cruza tenant) e exclui o próprio {@code pessoaId}
      * sendo salvo, senão toda atualização "acharia" a si mesma como duplicata.
      */
-    private String avisoTelefoneDuplicado(String telefone, UUID membroId, UUID igrejaId) {
+    private String avisoTelefoneDuplicado(String telefone, UUID pessoaId, UUID igrejaId) {
         String digitos = com.domus.api.shared.util.TextoUtil.somenteDigitos(telefone);
         if (digitos == null) return null;
 
         return membroRepository.findByIgrejaIdAndTelefoneIsNotNull(igrejaId).stream()
-                .filter(outro -> !outro.getId().equals(membroId))
+                .filter(outro -> !outro.getId().equals(pessoaId))
                 .filter(outro -> digitos.equals(
                         com.domus.api.shared.util.TextoUtil.somenteDigitos(outro.getTelefone())))
-                .map(Membro::getNome)
+                .map(Pessoa::getNome)
                 .findFirst()
                 .orElse(null);
     }
 
     @Transactional
     public void arquivarMembro(UUID id, UUID igrejaId) {
-        Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
@@ -199,10 +197,10 @@ public class MembroService {
     }
 
     @Transactional(readOnly = true)
-    public MembroResponse buscarPorId(UUID id, UUID igrejaId, boolean podeVerDadosSensiveis) {
-        Membro membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
-        return MembroResponse.from(membro, null, podeVerDadosSensiveis);
+    public PessoaResponse buscarPorId(UUID id, UUID igrejaId, boolean podeVerDadosSensiveis) {
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+        return PessoaResponse.from(membro, null, podeVerDadosSensiveis);
     }
 
     private Endereco paraEndereco(EnderecoDTO dto) {

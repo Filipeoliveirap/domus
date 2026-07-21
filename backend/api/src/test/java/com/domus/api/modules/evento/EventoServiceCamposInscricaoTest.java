@@ -77,7 +77,8 @@ class EventoServiceCamposInscricaoTest {
         assertThat(r.vagas()).isEqualTo(50);
         assertThat(r.preco()).isEqualByComparingTo("120.00");
         assertThat(r.exclusivoMembros()).isTrue();
-        assertThat(r.exclusivoBatizados()).isTrue();
+        // exclusivoBatizados saiu do modelo (coluna removida na Task 3); o campo no DTO
+        // de resposta é lixo temporário até a Task 6 tirá-lo do contrato da API.
     }
 
     @Test
@@ -95,7 +96,6 @@ class EventoServiceCamposInscricaoTest {
         assertThat(existente.getVagas()).isEqualTo(30);
         assertThat(existente.getPreco()).isEqualByComparingTo("80.50");
         assertThat(existente.isExclusivoMembros()).isTrue();
-        assertThat(existente.isExclusivoBatizados()).isTrue();
     }
 
     @Test
@@ -106,7 +106,7 @@ class EventoServiceCamposInscricaoTest {
                 .id(eventoId).igreja(igreja()).titulo("Retiro")
                 .inicioEm(LocalDateTime.now().plusDays(5))
                 .vagas(10).preco(new BigDecimal("50.00"))
-                .exclusivoMembros(true).exclusivoBatizados(true)
+                .exclusivoMembros(true)
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
@@ -118,7 +118,6 @@ class EventoServiceCamposInscricaoTest {
         // Boolean ausente no JSON vira false: a atualização é substituição total (PUT),
         // não remendo parcial (PATCH). O front precisa enviar sempre o valor corrente.
         assertThat(existente.isExclusivoMembros()).isFalse();
-        assertThat(existente.isExclusivoBatizados()).isFalse();
     }
 
     @Test

@@ -232,6 +232,33 @@
   cursor: not-allowed;
 }
 
+.acoesInscricao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acaoSecundaria {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.acaoSecundaria:hover {
+  background: var(--color-bg-page);
+  border-color: var(--color-primary);
+}
+
 /* ---- Carregando / erro ---- */
 
 .estado {

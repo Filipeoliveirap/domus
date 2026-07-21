@@ -17,7 +17,6 @@ export function useRegistrarIgreja () {
     const [passo, setPasso] = useState<1 | 2 | 3>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
     const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
-    // Modo Google: quando preenchido, o Passo2 (senha) é dispensado — nome/e-mail vêm do Google.
     const [googleData, setGoogleData] = useState<{ idToken: string; nome: string; email: string } | null>(null)
     
 
@@ -85,7 +84,6 @@ export function useRegistrarIgreja () {
                 ...dadosIgreja,
                 ...dadosAdmin,    
             })
-            // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.
             login(response)
             setDadosSucesso({
                 nome: response.nome,
@@ -117,8 +115,6 @@ export function useRegistrarIgreja () {
         }
     }
 
-    // Google identificou a pessoa: decodifica o token só para EXIBIR nome/e-mail
-    // (a verificação real é no backend) e entra no modo Google.
     const onGoogleAuth = (idToken: string) => {
         try {
             const payload = jwtDecode<{ email: string; name: string }>(idToken)
@@ -164,7 +160,7 @@ export function useRegistrarIgreja () {
         }
     }
 
-    const irParaMembros = () => router.push('/membros/cadastrar')
+    const irParaMembros = () => router.push('/membros')
     const irParaPerfilIgreja = () => router.push('/configuracoes/igreja')
     const irParaMeuPerfil = () => router.push('/perfil')
     const irParaPainelInicial = () => router.push('/inicio')

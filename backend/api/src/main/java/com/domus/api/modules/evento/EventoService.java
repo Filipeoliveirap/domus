@@ -3,6 +3,7 @@ package com.domus.api.modules.evento;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -29,6 +30,7 @@ public class EventoService {
     private final IgrejaRepository igrejaRepository;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
+    private final InscricaoService inscricaoService;
 
     @Cacheable(
             value = "eventos",
@@ -91,6 +93,19 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
+        // Editar um evento que já começou reescreveria o passado (data, local, vagas) debaixo
+        // de gente que já confirmou presença ou já foi. AGENDADO é a única situação em que
+        // editar ainda faz sentido.
+        SituacaoEvento situacaoAtual = evento.getSituacao();
+        if (situacaoAtual == SituacaoEvento.EM_ANDAMENTO) {
+            throw new BusinessException("EVENTO_EM_ANDAMENTO",
+                    "Não é possível editar um evento em andamento.");
+        }
+        if (situacaoAtual == SituacaoEvento.ENCERRADO) {
+            throw new BusinessException("EVENTO_ENCERRADO",
+                    "Não é possível editar um evento encerrado.");
+        }
+
         evento.setTitulo(com.domus.api.shared.util.TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
         evento.setInicioEm(data.inicioEm());
@@ -99,11 +114,19 @@ public class EventoService {
         evento.setFoto(data.foto());
         evento.setVagas(data.vagas());
         evento.setPreco(data.preco());
-        evento.setExclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()));
-        evento.setExclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()));
+        boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
+        boolean exclusivoBatizados = Boolean.TRUE.equals(data.exclusivoBatizados());
+        evento.setExclusivoMembros(exclusivoMembros);
+        evento.setExclusivoBatizados(exclusivoBatizados);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
 
         Evento salvo = eventoRepository.save(evento);
+
+        // B4: restringir o evento pode deixar gente já confirmada inelegível — cancela quem
+        // não se qualifica mais (mesmo cancelamento manual, convidados incluídos).
+        int inscricoesRemovidas = inscricaoService.removerInscritosNaoElegiveis(
+                salvo.getId(), exclusivoMembros, exclusivoBatizados);
+
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.ATUALIZADO,
@@ -112,7 +135,7 @@ public class EventoService {
         );
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo);
+        return EventoResponse.from(salvo, inscricoesRemovidas);
     }
 
     @Transactional
@@ -120,6 +143,16 @@ public class EventoService {
         log.info("Arquivando evento. id={}, igreja_id={}", id, igrejaId);
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        // Só bloqueia em andamento: arquivar um evento ENCERRADO é faxina normal (o piloto vai
+        // acumular evento passado toda semana), e travar isso empurraria o usuário pra pedir
+        // exceção sem necessidade. Em andamento é diferente — arquivar um evento que está
+        // rolando AGORA tira ele da lista de quem ainda vai chegar.
+        if (evento.getSituacao() == SituacaoEvento.EM_ANDAMENTO) {
+            throw new BusinessException("EVENTO_EM_ANDAMENTO",
+                    "Não é possível arquivar um evento em andamento.");
+        }
+
         eventoRepository.delete(evento);
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,

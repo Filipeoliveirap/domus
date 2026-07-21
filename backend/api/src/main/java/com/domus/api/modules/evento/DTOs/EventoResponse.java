@@ -1,6 +1,7 @@
 package com.domus.api.modules.evento.DTOs;
 
 import com.domus.api.modules.evento.Evento;
+import com.domus.api.modules.evento.SituacaoEvento;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,15 +18,26 @@ public record EventoResponse(
         java.math.BigDecimal preco,
         boolean exclusivoMembros,
         boolean exclusivoBatizados,
-        boolean requerInscricao
+        boolean requerInscricao,
+        SituacaoEvento situacao,
+        /**
+         * Só populado pela edição que ligou {@code exclusivoMembros}/{@code exclusivoBatizados}
+         * e removeu automaticamente quem não se qualifica mais (ver B4). {@code null} em toda
+         * outra resposta — campo aditivo, não quebra quem já consome {@code EventoResponse}.
+         */
+        Integer inscricoesRemovidas
 ) {
     public static EventoResponse from(Evento e) {
+        return from(e, null);
+    }
+
+    public static EventoResponse from(Evento e, Integer inscricoesRemovidas) {
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), e.getLocal(),
                 e.getFoto(), e.getCreatedAt(),
                 e.getVagas(), e.getPreco(), e.isExclusivoMembros(), e.isExclusivoBatizados(),
-                e.isRequerInscricao()
+                e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas
         );
     }
 }

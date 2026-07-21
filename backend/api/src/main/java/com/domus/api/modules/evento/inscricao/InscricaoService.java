@@ -41,8 +41,15 @@ public class InscricaoService {
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
      *
+     * <p><b>Auto-inscrição funciona em QUALQUER evento</b> — é leve, tipo uma curtida ("eu
+     * vou"). {@code requerInscricao} não bloqueia mais este método; ele passou a significar
+     * só "este evento organiza vagas, convidados e inscrição de terceiros" (ver
+     * {@link #inscreverMembros} e {@link #adicionarAcompanhante}, que continuam checando).
+     *
      * <p>O evento é buscado COM LOCK: a contagem de vagas e o insert precisam ser atômicos,
-     * senão duas inscrições simultâneas na última vaga passam as duas.
+     * senão duas inscrições simultâneas na última vaga passam as duas. {@code validarVaga}
+     * já não faz nada quando {@code vagas} é NULL, que é o caso comum de evento casual —
+     * então a auto-inscrição neles nunca esbarra em limite de vaga.
      */
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID membroId,
@@ -53,7 +60,6 @@ public class InscricaoService {
         Membro membro = membroRepository.findByIdAndIgrejaId(membroId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
 
-        validarInscricaoHabilitada(evento);
         validarEventoAberto(evento);
         validarElegibilidade(evento, membro);
 
@@ -62,7 +68,13 @@ public class InscricaoService {
                 .orElse(null);
 
         if (inscricao != null && inscricao.estaConfirmada()) {
-            throw new BusinessException("JA_INSCRITO", "Esta pessoa já está inscrita neste evento.");
+            // Mesmo código (JA_INSCRITO) nos dois casos: quem chama já sabe o contexto (botão
+            // "eu vou" vs. modal de inscrever outra pessoa), então a mensagem só precisa ter
+            // as palavras certas — não é o front que precisa distinguir por código.
+            String mensagem = inscritoPorOuNull == null
+                    ? "Você já está inscrito neste evento."
+                    : "Este membro já está inscrito no evento.";
+            throw new BusinessException("JA_INSCRITO", mensagem);
         }
 
         validarVaga(evento, 1);
@@ -89,16 +101,34 @@ public class InscricaoService {
     }
 
     /**
-     * Inscreve vários membros de uma vez (modal de seleção múltipla).
+     * Inscreve vários membros de uma vez (modal de seleção múltipla) — inscrição de
+     * TERCEIROS, então continua exigindo {@code requerInscricao}.
      *
      * <p><b>Tudo ou nada, por decisão:</b> se um membro falhar (ex.: já inscrito), a transação
-     * inteira volta atrás e nenhum é inscrito. O erro nomeia a pessoa, quem escolheu desmarca
-     * e reenvia. Resultado parcial exigiria DTO e tela próprios para um caso que ainda não
-     * sabemos se acontece.
+     * inteira volta atrás e nenhum é inscrito. Resultado parcial exigiria DTO e tela próprios
+     * para um caso que ainda não sabemos se acontece.
+     *
+     * <p>Os "já inscritos" são checados ANTES do laço (uma query só, com os ids todos) para
+     * poder nomear a QUANTIDADE na mensagem — se deixássemos o laço descobrir um de cada vez
+     * via {@link #inscrever}, o erro só falaria do primeiro que bateu, nunca do total.
      */
     @Transactional
     public void inscreverMembros(UUID eventoId, List<UUID> membroIds,
                                  UUID inscritoPorUsuarioId, UUID igrejaId) {
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
+
+        if (!membroIds.isEmpty()) {
+            List<UUID> jaInscritos = inscricaoRepository.listarMembroIdsJaInscritos(eventoId, membroIds);
+            if (!jaInscritos.isEmpty()) {
+                String mensagem = jaInscritos.size() == 1
+                        ? "Este membro já está inscrito no evento."
+                        : jaInscritos.size() + " membros já estão inscritos no evento.";
+                throw new BusinessException("JA_INSCRITO", mensagem);
+            }
+        }
+
         for (UUID membroId : membroIds) {
             inscrever(eventoId, membroId, inscritoPorUsuarioId, igrejaId);
         }
@@ -113,15 +143,15 @@ public class InscricaoService {
     }
 
     /**
-     * Checada ANTES de "aberto" e elegibilidade: é um interruptor de feature, não uma regra
-     * de negócio sobre QUEM pode se inscrever. Se o evento nem organiza inscrição, não faz
-     * sentido gastar as próximas validações (data, exclusividade) para chegar num "não" que já
-     * era certo desde o cadastro do evento.
+     * Checa se o evento organiza inscrição de TERCEIROS (vagas, convidados, inscrever outra
+     * pessoa) — {@code requerInscricao}. NÃO se aplica à auto-inscrição (ver {@link #inscrever}),
+     * que funciona em qualquer evento. Mensagem varia por chamador para dizer exatamente o que
+     * está indisponível, em vez do genérico "não abre inscrição" (que ficou errado desde que a
+     * auto-inscrição passou a valer sempre).
      */
-    private void validarInscricaoHabilitada(Evento evento) {
+    private void validarOrganizaInscricao(Evento evento, String mensagem) {
         if (!evento.isRequerInscricao()) {
-            throw new BusinessException("INSCRICAO_NAO_HABILITADA",
-                    "Este evento não abre inscrição. Fale com a administração da igreja.");
+            throw new BusinessException("INSCRICAO_NAO_HABILITADA", mensagem);
         }
     }
 
@@ -133,7 +163,11 @@ public class InscricaoService {
     }
 
     private void validarElegibilidade(Evento evento, Membro membro) {
-        if (evento.isExclusivoMembros() && membro.getStatus() == StatusMembro.VISITANTE) {
+        // Exclusivo para membros barra quem não é membro ATIVO da igreja: VISITANTE nunca foi
+        // membro, e INATIVO deixou de ser — os dois ficam de fora, não só o primeiro.
+        if (evento.isExclusivoMembros()
+                && (membro.getStatus() == StatusMembro.VISITANTE
+                    || membro.getStatus() == StatusMembro.INATIVO)) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros da igreja.");
         }
@@ -163,7 +197,7 @@ public class InscricaoService {
         // Alcançável: a inscrição pode existir de quando o evento AINDA aceitava inscrição,
         // e o admin desligar o toggle depois. Sem esta checagem, o evento fecharia as
         // inscrições e continuaria aceitando convidados — que ocupam vaga igual.
-        validarInscricaoHabilitada(inscricao.getEvento());
+        validarOrganizaInscricao(inscricao.getEvento(), "Este evento não permite convidados.");
 
         if (inscricao.getEvento().isExclusivoMembros()) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
@@ -234,17 +268,69 @@ public class InscricaoService {
                     + "Peça a ela ou a um líder da igreja.");
         }
 
-        // Os convidados vão embora com a inscrição, e NÃO voltam numa reinscrição.
-        // Sem isto, quem cancelou porque o convidado desistiu o veria reaparecer em
-        // silêncio ao se reinscrever — ocupando vaga de novo. Quem quiser levá-lo de
-        // novo cadastra de novo; é o passo consciente que o silêncio não teria.
         int convidados = inscricao.getAcompanhantes().size();
-        inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
-
-        inscricao.setStatus(StatusInscricao.CANCELADA);
-        inscricaoRepository.save(inscricao);
+        cancelarInterno(inscricao);
         log.info("Inscrição cancelada. id={}, convidados_removidos={}, por_usuario={}, igreja_id={}",
                 inscricaoId, convidados, usuarioId, igrejaId);
+    }
+
+    /**
+     * O cancelamento em si, sem checagem de permissão — reusado tanto pelo cancelamento manual
+     * ({@link #cancelar}) quanto pela remoção automática ao restringir o evento
+     * ({@link #removerInscritosNaoElegiveis}), para as duas vias levarem os convidados junto
+     * do mesmo jeito.
+     *
+     * <p>Os convidados vão embora com a inscrição, e NÃO voltam numa reinscrição. Sem isto,
+     * quem cancelou porque o convidado desistiu o veria reaparecer em silêncio ao se
+     * reinscrever — ocupando vaga de novo. Quem quiser levá-lo de novo cadastra de novo; é o
+     * passo consciente que o silêncio não teria.
+     */
+    private void cancelarInterno(InscricaoEvento inscricao) {
+        inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
+        inscricao.setStatus(StatusInscricao.CANCELADA);
+        inscricaoRepository.save(inscricao);
+    }
+
+    /**
+     * Ao restringir um evento (ligar {@code exclusivoMembros} e/ou {@code exclusivoBatizados}),
+     * cancela automaticamente quem já estava confirmado mas não se qualifica mais — mesma regra
+     * de {@link #validarElegibilidade}, e mesmo cancelamento de {@link #cancelarInterno} (leva
+     * os convidados junto).
+     *
+     * <p>Roda mesmo quando a restrição já estava ligada antes (não só na transição de
+     * false→true): é idempotente e barato — se ninguém desqualificado sobrou de uma vez
+     * anterior, não cancela ninguém agora — e evita o {@link EventoService} ter que guardar e
+     * comparar o estado anterior só para decidir se chama isto.
+     *
+     * @return quantas inscrições foram canceladas, para o chamador logar/devolver ao front.
+     */
+    @Transactional
+    public int removerInscritosNaoElegiveis(UUID eventoId, boolean exclusivoMembros,
+                                            boolean exclusivoBatizados) {
+        if (!exclusivoMembros && !exclusivoBatizados) {
+            return 0;
+        }
+
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        int removidos = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            Membro membro = inscricao.getMembro();
+            boolean desqualificado =
+                    (exclusivoMembros && (membro.getStatus() == StatusMembro.VISITANTE
+                            || membro.getStatus() == StatusMembro.INATIVO))
+                    || (exclusivoBatizados && !membro.isBatizado());
+
+            if (desqualificado) {
+                cancelarInterno(inscricao);
+                removidos++;
+            }
+        }
+
+        if (removidos > 0) {
+            log.info("Inscrições removidas por restrição de evento. evento_id={}, removidos={}",
+                    eventoId, removidos);
+        }
+        return removidos;
     }
 
     /** Lista de inscritos confirmados + contagem de vagas restantes. */

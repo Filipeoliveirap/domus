@@ -129,14 +129,56 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void recusaInscricaoQuandoEventoNaoRequerInscricao() {
+    void autoInscricaoFuncionaMesmoQuandoEventoNaoRequerInscricao() {
+        // B1: requerInscricao passou a significar só "organiza vagas/convidados/terceiros" —
+        // a auto-inscrição ("eu vou") funciona em QUALQUER evento, inclusive casual.
         Evento e = evento(10);
         e.setRequerInscricao(false);
         dado(e, membro(true, StatusMembro.ATIVO), 0);
 
+        service.inscrever(eventoId, membroId, null, igrejaId);
+
+        verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void eventoExclusivoDeMembrosRecusaInativo() {
+        // B2: membro INATIVO também não é membro ativo da igreja — mesma regra do VISITANTE.
+        Evento e = evento(10);
+        e.setExclusivoMembros(true);
+        dado(e, membro(true, StatusMembro.INATIVO), 0);
+
         assertThatThrownBy(() -> service.inscrever(eventoId, membroId, null, igrejaId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("não abre inscrição");
+                .hasMessageContaining("exclusivo para membros");
+    }
+
+    @Test
+    void inscreverMembrosRecusaQuandoEventoNaoOrganizaInscricaoDeTerceiros() {
+        // Diferente da auto-inscrição: inscrever OUTRA pessoa continua exigindo requerInscricao.
+        Evento e = evento(10);
+        e.setRequerInscricao(false);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+
+        assertThatThrownBy(() -> service.inscreverMembros(
+                eventoId, java.util.List.of(membroId), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não organiza inscrição de outras pessoas");
+    }
+
+    @Test
+    void inscreverMembrosNomeiaQuantosJaEstavamInscritos() {
+        Evento e = evento(10);
+        UUID outroMembroId = UUID.randomUUID();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(inscricaoRepository.listarMembroIdsJaInscritos(eventoId,
+                java.util.List.of(membroId, outroMembroId)))
+                .thenReturn(java.util.List.of(membroId, outroMembroId));
+
+        assertThatThrownBy(() -> service.inscreverMembros(
+                eventoId, java.util.List.of(membroId, outroMembroId), usuarioId, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("2 membros já estão inscritos");
     }
 
     @Test
@@ -193,7 +235,7 @@ class InscricaoServiceTest {
         assertThatThrownBy(() -> service.adicionarAcompanhante(
                 minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("não abre inscrição");
+                .hasMessageContaining("não permite convidados");
     }
 
     @Test
@@ -498,6 +540,56 @@ class InscricaoServiceTest {
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
 
         assertThat(service.listarParticipantes(eventoId, igrejaId)).isEmpty();
+    }
+
+    @Test
+    void removerInscritosNaoElegiveisCancelaNaoBatizadosEMantemBatizados() {
+        Evento e = evento(10);
+        InscricaoEvento naoBatizado = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(false, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento batizado = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.listarPorEvento(eventoId))
+                .thenReturn(java.util.List.of(naoBatizado, batizado));
+
+        int removidos = service.removerInscritosNaoElegiveis(eventoId, false, true);
+
+        assertThat(removidos).isEqualTo(1);
+        assertThat(naoBatizado.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        assertThat(batizado.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    @Test
+    void removerInscritosNaoElegiveisNaoCancelaNinguemQuandoNadaFoiLigado() {
+        int removidos = service.removerInscritosNaoElegiveis(eventoId, false, false);
+
+        assertThat(removidos).isEqualTo(0);
+        verify(inscricaoRepository, never()).listarPorEvento(any());
+    }
+
+    @Test
+    void removerInscritosNaoElegiveisCancelaVisitanteEInativoQuandoExclusivoMembros() {
+        Evento e = evento(10);
+        InscricaoEvento visitante = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.VISITANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento ativo = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .membro(membro(true, StatusMembro.ATIVO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.listarPorEvento(eventoId))
+                .thenReturn(java.util.List.of(visitante, ativo));
+
+        int removidos = service.removerInscritosNaoElegiveis(eventoId, true, false);
+
+        assertThat(removidos).isEqualTo(1);
+        assertThat(visitante.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        assertThat(ativo.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
     }
 
     @Test

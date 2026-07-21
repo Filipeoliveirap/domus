@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { CalendarClock, FileText, MapPin, ImageIcon, Info, Ticket, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
+import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -26,6 +27,7 @@ export function EventoForm(props: EventoFormProps) {
   const requerInscricao = watch('requerInscricao')
   const tipoInscricao = watch('tipoInscricao')
   const exclusivoBatizados = watch('exclusivoBatizados')
+  const preco = (watch('preco') as string) ?? ''
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -209,14 +211,20 @@ export function EventoForm(props: EventoFormProps) {
                   <div>
                     <Input
                       id="preco"
-                      type="number"
                       label="PREÇO"
-                      placeholder="0,00"
-                      min={0.01}
-                      step={0.01}
-                      leftIcon={<span>R$</span>}
+                      placeholder="R$ 0,00"
+                      inputMode="numeric"
                       error={errors.preco?.message}
-                      {...register('preco')}
+                      value={formatarValorDigitado(preco)}
+                      onChange={(e) => {
+                        const digitos = e.target.value.replace(/\D/g, '')
+                        const centavos = parseInt(digitos || '0', 10)
+                        const emReais = (centavos / 100).toFixed(2)
+                        setValue('preco', digitos === '' ? undefined : emReais, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        })
+                      }}
                     />
                     <span className={styles.campoHint}>
                       Informativo. O pagamento é combinado com a igreja — informe o PIX ou um

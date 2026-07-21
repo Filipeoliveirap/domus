@@ -1,3 +1,6 @@
+/** Situação derivada de inicioEm/fimEm no backend (com.domus.api.modules.evento.SituacaoEvento). */
+export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
+
 export interface EventoResponse {
   id: string
   titulo: string
@@ -12,6 +15,9 @@ export interface EventoResponse {
   exclusivoMembros: boolean
   exclusivoBatizados: boolean
   requerInscricao: boolean
+  situacao: SituacaoEvento
+  /** Só populado na resposta de `atualizarEvento`; null nas demais. */
+  inscricoesRemovidas: number | null
 }
 
 export interface EventoRequest {

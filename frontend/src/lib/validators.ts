@@ -132,8 +132,11 @@ const eventoSchemaBase = z.object({
   ),
   // Campo só de UI (não existe no backend): decide se `preco` é enviado ou limpo.
   tipoInscricao: z.enum(['GRATUITO', 'PAGO']).default('GRATUITO'),
-  preco: opcionalNumero(
-    z.coerce.number().positive('Preço deve ser maior que zero.'),
+  // Canônico como string "12.34" (igual ao `valor` de movimentação financeira) — o mesmo
+  // formato que `EventoResponse.preco` já usa na API (BigDecimal serializado como string).
+  // O input usa a mesma máscara de dinheiro (da direita para a esquerda) do financeiro.
+  preco: opcional(
+    z.string().refine((v) => parseFloat(v) > 0, 'Preço deve ser maior que zero.'),
   ),
   exclusivoMembros: z.boolean().default(false),
   exclusivoBatizados: z.boolean().default(false),
@@ -170,11 +173,15 @@ export const movimentacaoSchema = z.object({
 
 export const convidadoSchema = z.object({
   nome: z.string().trim().min(2, 'O nome do convidado deve ter pelo menos 2 caracteres').max(255, 'Máximo 255 caracteres.'),
+  // Aceita qualquer forma de digitação (com/sem espaço, com/sem máscara) — a UI já formata
+  // visualmente com `formatarTelefone` (lib/masks) a cada tecla; aqui só validamos a
+  // quantidade de dígitos e enviamos ao backend só os dígitos (sem máscara).
   telefone: opcional(
-    z.string().regex(
-      /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
-      'Telefone inválido. Use o formato (00) 00000-0000',
-    ),
+    z.string()
+      .transform((v) => v.replace(/\D/g, ''))
+      .refine((v) => v.length === 10 || v.length === 11, {
+        message: 'Telefone inválido. Digite um número válido com DDD.',
+      }),
   ),
 })
 

@@ -16,6 +16,7 @@ import com.domus.api.modules.membro.StatusMembro;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
+import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -297,10 +298,10 @@ public class InscricaoService {
         // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
-        boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
+        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean souODono = inscricao.getMembro().getId().equals(meuMembroId);
 
-        if (!ehAdmin && !souODono) {
+        if (!ehGestor && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você só pode remover convidados da sua própria inscrição.");
         }
@@ -332,10 +333,10 @@ public class InscricaoService {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
         validarEventoAberto(inscricao.getEvento());
 
-        boolean ehAdmin = "ADMIN_IGREJA".equals(role) || "LIDER".equals(role);
+        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean souEu = inscricao.getMembro().getId().equals(meuMembroId);
 
-        if (!ehAdmin && !souEu) {
+        if (!ehGestor && !souEu) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você não pode cancelar a inscrição de outra pessoa. "
                     + "Peça a ela ou a um líder da igreja.");

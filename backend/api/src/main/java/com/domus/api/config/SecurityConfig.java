@@ -22,6 +22,7 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.domus.api.shared.security.Role;
 import java.util.List;
 
 @Configuration
@@ -31,6 +32,10 @@ public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
     private final com.domus.api.shared.security.RateLimitFilter rateLimitFilter;
+
+    private static final String ADMIN = Role.ADMIN_IGREJA.name();
+    private static final String LIDER = Role.LIDER.name();
+    private static final String COMUM = Role.MEMBRO.name();
 
     /**
      * Mesma property que rege os cookies de sessão (ver AuthCookieFactory): o XSRF-TOKEN
@@ -79,7 +84,7 @@ public class SecurityConfig {
                         // ATENÇÃO: esta regra tem que vir ANTES do permitAll abaixo — a ordem
                         // manda no Spring Security, e "/igrejas/*" casaria com "/igrejas/minha",
                         // deixando os dados da igreja abertos sem autenticação.
-                        .requestMatchers("/igrejas/minha").hasRole("ADMIN_IGREJA")
+                        .requestMatchers("/igrejas/minha").hasRole(ADMIN)
                         // Era permitAll e vazava nome/CNPJ/e-mail/telefone de QUALQUER igreja
                         // para quem nem está logado. Nenhuma tela consome este endpoint, e a
                         // feature de igrejas vinculadas passou a circular UUIDs de igrejas nas
@@ -88,50 +93,50 @@ public class SecurityConfig {
 
                         //Usuários(somente ADMIN IGREJA)
                         .requestMatchers("/usuarios/**")
-                        .hasRole("ADMIN_IGREJA")
+                        .hasRole(ADMIN)
 
                         //Membros
                         //Bairros ANTES do curinga: a lista de bairros é derivada do ENDEREÇO
                         //dos membros, que é dado só de ADMIN. Deixá-la aberta entregaria pela
                         //porta lateral exatamente o que o DTO reduzido esconde.
                         .requestMatchers(HttpMethod.GET, "/membros/bairros")
-                        .hasRole("ADMIN_IGREJA")
+                        .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/membros/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/membros/**")
-                        .hasRole("ADMIN_IGREJA")
+                        .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.PUT, "/membros/**")
-                        .hasRole("ADMIN_IGREJA")
+                        .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.DELETE, "/membros/**")
-                        .hasRole("ADMIN_IGREJA")
-                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole("ADMIN_IGREJA")
+                        .hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
 
                         //Inscrição em evento — DEVE vir ANTES dos curingas /eventos/**,
                         //senão o POST curinga (ADMIN+LÍDER) barra o MEMBRO, que é justamente
                         //quem se inscreve, e o GET curinga (todos) vaza a lista de inscritos.
                         //Mesma armadilha de ordenação já corrigida em /igrejas/*.
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER")
+                        .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/eventos/*/inscricoes/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
 
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER", "MEMBRO")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/eventos/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER")
+                        .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.PUT, "/eventos/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER")
+                        .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.DELETE, "/eventos/**")
-                        .hasAnyRole("ADMIN_IGREJA", "LIDER")
+                        .hasAnyRole(ADMIN, LIDER)
 
                         //Igrejas vinculadas (mãe/congregações) — expõe financeiro entre igrejas,
                         //então segue a mesma trava do financeiro: só ADMIN_IGREJA.
-                        .requestMatchers("/igrejas-vinculadas/**").hasRole("ADMIN_IGREJA")
+                        .requestMatchers("/igrejas-vinculadas/**").hasRole(ADMIN)
 
                         //Financeiro + Dashboard + Admin (somente ADMIN IGREJA)
                         .requestMatchers(
@@ -140,9 +145,9 @@ public class SecurityConfig {
                                 "/relatorios/**",
                                 "/dashboard",
                                 "/admin/**"
-                        ).hasRole("ADMIN_IGREJA")
-                        .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole("ADMIN_IGREJA")
-                        .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole("ADMIN_IGREJA")
+                        ).hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole(ADMIN)
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers

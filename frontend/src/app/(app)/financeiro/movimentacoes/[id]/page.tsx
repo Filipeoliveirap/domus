@@ -9,6 +9,7 @@ import { MovimentacaoForm } from '@/components/module/movimentacoes/Movimentacao
 import styles from '../cadastrar/cadastrar.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { SkeletonMovimentacaoForm } from './SkeletonMovimentacaoForm'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
@@ -18,7 +19,7 @@ export default function EditarMovimentacaoPage() {
   const id = params.id as string
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const { data: movimentacao, isPending, isError, refetch } = useMovimentacao(id)
   const form = useMovimentacaoForm({

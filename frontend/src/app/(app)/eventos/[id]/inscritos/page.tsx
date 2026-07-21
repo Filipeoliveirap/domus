@@ -15,6 +15,7 @@ import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/Conf
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
+import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import { iniciais } from '@/lib/formats/membroFormat'
 import { formatarData } from '@/lib/formats/membroFormat'
 import type { InscritoResponse } from '@/types/inscricao.type'
@@ -27,7 +28,7 @@ export default function InscritosPage() {
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const autorizado = podeVerListaCompletaDeInscritos(role)
 
   const { data: evento } = useEvento(eventoId)
   const { data: lista, isPending, isError, refetch } = useListaInscritos(eventoId, autorizado)

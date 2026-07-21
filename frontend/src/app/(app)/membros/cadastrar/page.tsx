@@ -7,11 +7,12 @@ import { MembroForm } from '@/components/module/membros/MembroForm'
 import styles from './page.module.css'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
+import { podeGerenciarPessoas } from '@/lib/permissoes'
 
 export default function CadastrarMembroPage() {
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeGerenciarPessoas(role)
 
   const form = useMembroForm()
 

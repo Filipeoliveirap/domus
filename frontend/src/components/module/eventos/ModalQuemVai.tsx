@@ -8,6 +8,7 @@ import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
 import { iniciais } from '@/lib/formats/membroFormat'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
+import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './ModalQuemVai.module.css'
@@ -29,7 +30,7 @@ interface Props {
  */
 export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
-  const ehGestor = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const ehGestor = podeGerenciarInscricoes(role)
   const podeCancelar = podeCancelarInscricao(situacao)
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(

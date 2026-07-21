@@ -14,6 +14,7 @@ import {
   podeEditarEvento,
   podeArquivarEvento,
 } from '@/lib/formats/eventoFormat'
+import { podeGerenciarEventos } from '@/lib/permissoes'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
 import styles from './EventoCard.module.css'
@@ -28,7 +29,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
   const router = useRouter()
   const role = useAuthStore((s) => s.role)
 
-  const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const podeGerenciar = podeGerenciarEventos(role)
   const status = statusEvento(evento)
   const { dia, mes, ano } = dataAgenda(evento.inicioEm)
 

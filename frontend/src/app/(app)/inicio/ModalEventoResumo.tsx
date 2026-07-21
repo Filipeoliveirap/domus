@@ -20,6 +20,7 @@ import {
   vagasEsgotadas as calcVagasEsgotadas,
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
+import { podeGerenciarEventos } from '@/lib/permissoes'
 import styles from './ModalEventoResumo.module.css'
 
 interface Props {
@@ -41,7 +42,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
   const role = useAuthStore((s) => s.role)
-  const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const podeGerenciar = podeGerenciarEventos(role)
 
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [removendoId, setRemovendoId] = useState<string | null>(null)

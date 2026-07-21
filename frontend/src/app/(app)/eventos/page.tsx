@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { useEventos } from '@/hooks/evento/useEventos'
 import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarEventos } from '@/lib/permissoes'
 import { EventoCard } from '@/components/module/eventos/EventoCard'
 import { DrawerDetalheEvento } from '@/app/(app)/eventos/(detalhe)/DrawerDetalheEvento'
 import { ModalArquivarEvento } from './ModalArquivarEvento'
@@ -25,7 +26,7 @@ function EventosConteudo() {
   const detalheId = searchParams.get('detalhe')
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const podeGerenciar = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const podeGerenciar = podeGerenciarEventos(role)
 
   const [pagina, setPagina] = useState(0)
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })

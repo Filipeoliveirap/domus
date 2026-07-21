@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -11,10 +11,16 @@ import {
   varianteStatus,
   dataExtenso,
   hora,
+  vagasRestantesCalc,
 } from '@/lib/formats/eventoFormat'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
+import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
+import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
+import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
+import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 
 interface DrawerDetalheEventoProps {
   eventoId: string
@@ -25,6 +31,11 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
   const role = useAuthStore((s) => s.role)
   const podeVerInscritos = role === 'ADMIN_IGREJA' || role === 'LIDER'
+
+  const { data: participantes = [] } = useParticipantes(eventoId)
+  const { data: minha } = useMinhaInscricao(eventoId)
+  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
+  const vagasRestantes = vagasRestantesCalc(evento?.vagas ?? null, participantes)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -112,11 +123,65 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               )}
             </div>
 
+            {/*
+              As mesmas ações do modal do início: quem abre o evento por aqui não deveria
+              precisar sair da tela para confirmar presença.
+            */}
+            <div className={styles.acoesInscricao}>
+              <BotaoConfirmarPresenca
+                eventoId={evento.id}
+                inicioEm={evento.inicioEm}
+                vagasRestantes={vagasRestantes}
+                requerInscricao={evento.requerInscricao}
+              />
+
+              {evento.requerInscricao && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setModalAberto('membros')}
+                  >
+                    <Users size={16} aria-hidden="true" />
+                    Inscrever membros
+                  </button>
+
+                  {!evento.exclusivoMembros && minha?.inscrito && (
+                    <button
+                      type="button"
+                      className={styles.acaoSecundaria}
+                      onClick={() => setModalAberto('convidado')}
+                    >
+                      <UserPlus size={16} aria-hidden="true" />
+                      Vou levar alguém de fora
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
             {podeVerInscritos && evento.requerInscricao && (
               <Link href={`/eventos/${evento.id}/inscritos`} className={styles.acaoInscritos}>
                 <Users size={18} />
                 Ver inscritos
               </Link>
+            )}
+
+            {modalAberto === 'membros' && (
+              <ModalInscreverMembros
+                eventoId={evento.id}
+                tituloEvento={evento.titulo}
+                exclusivoMembros={evento.exclusivoMembros}
+                onClose={() => setModalAberto(null)}
+              />
+            )}
+
+            {modalAberto === 'convidado' && minha?.id && (
+              <ModalConvidado
+                eventoId={evento.id}
+                inscricaoId={minha.id}
+                onClose={() => setModalAberto(null)}
+              />
             )}
           </div>
         )}

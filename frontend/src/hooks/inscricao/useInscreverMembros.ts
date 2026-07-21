@@ -12,15 +12,19 @@ export function useInscreverMembros(eventoId: string) {
   return useMutation({
     mutationFn: (membroIds: string[]) =>
       inscricoesService.inscreverMembros(eventoId, { membroIds }),
-    onSuccess: () => {
+    onSuccess: (_dados, membroIds) => {
       invalidarCache(queryClient, 'inscricao')
-      notificar.sucesso('Membros inscritos com sucesso!')
+      const um = membroIds.length === 1
+      notificar.sucesso(um ? 'Membro inscrito!' : `${membroIds.length} membros inscritos!`)
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, membroIds) => {
       const mensagem = axios.isAxiosError<ApiError>(error)
         ? error.response?.data?.message
         : undefined
-      notificar.erro('Não foi possível inscrever os membros', mensagem ?? 'Tente novamente.')
+      const titulo = membroIds.length === 1
+        ? 'Não foi possível inscrever o membro'
+        : 'Não foi possível inscrever os membros'
+      notificar.erro(titulo, mensagem ?? 'Tente novamente.')
     },
   })
 }

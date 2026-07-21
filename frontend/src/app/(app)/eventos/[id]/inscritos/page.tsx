@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { ChevronRight, Users, Ticket, Armchair, UserPlus } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useEvento } from '@/hooks/evento/useEvento'
@@ -22,6 +22,7 @@ import styles from './inscritos.module.css'
 export default function InscritosPage() {
   const params = useParams()
   const eventoId = params.id as string
+  const router = useRouter()
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
@@ -71,6 +72,18 @@ export default function InscritosPage() {
 
       <header className={styles.cabecalho}>
         <div className={styles.cabecalhoTextos}>
+          {/*
+            Botão de voltar além do breadcrumb: esta tela costuma ser aberta a partir de um
+            card de evento, e a rota de volta ("eventos") nem sempre é de onde a pessoa veio.
+          */}
+          <button
+            type="button"
+            className={styles.voltar}
+            onClick={() => router.back()}
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            Voltar
+          </button>
           {evento && <span className={styles.eventoTitulo}>{evento.titulo}</span>}
           <h1 className={styles.titulo}>Lista de Inscritos</h1>
         </div>

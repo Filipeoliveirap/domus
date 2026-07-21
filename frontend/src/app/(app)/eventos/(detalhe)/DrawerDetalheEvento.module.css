@@ -172,3 +172,32 @@
 @media (max-width: 480px) {
   .conteudo { padding: 40px 20px 20px; }
 }
+
+.acoesInscricao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.acaoSecundaria {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.acaoSecundaria:hover {
+  background: var(--color-bg-page);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}

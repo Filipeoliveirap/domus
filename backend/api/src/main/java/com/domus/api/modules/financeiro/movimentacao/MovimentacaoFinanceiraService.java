@@ -6,8 +6,8 @@ import com.domus.api.modules.financeiro.categoria.TipoCategoria;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraService;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.*;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -35,7 +35,7 @@ public class MovimentacaoFinanceiraService {
     private final MovimentacaoFinanceiraRepository repository;
     private final CategoriaFinanceiraService categoriaService;
     private final IgrejaRepository igrejaRepository;
-    private final MembroRepository membroRepository;
+    private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
@@ -85,8 +85,8 @@ public class MovimentacaoFinanceiraService {
 
     @Transactional
     public MovimentacaoResponse cadastrar(MovimentacaoRequestDTO dto, UUID igrejaId, UUID usuarioId) {
-        log.info("Cadastrando movimentação. tipo={}, valor={}, categoria_id={}, membro_id={}, criado_por={}, igreja_id={}",
-                dto.tipo(), dto.valor(), dto.categoriaId(), dto.membroId(), usuarioId, igrejaId);
+        log.info("Cadastrando movimentação. tipo={}, valor={}, categoria_id={}, pessoa_id={}, criado_por={}, igreja_id={}",
+                dto.tipo(), dto.valor(), dto.categoriaId(), dto.pessoaId(), usuarioId, igrejaId);
 
         CategoriaFinanceira categoria = categoriaService.buscarEntidade(dto.categoriaId(), igrejaId);
         validarCompatibilidade(dto.tipo(), categoria);
@@ -95,7 +95,7 @@ public class MovimentacaoFinanceiraService {
                 .igreja(igrejaRepository.getReferenceById(igrejaId))
                 .categoria(categoria)
                 .criadoPor(usuarioRepository.getReferenceById(usuarioId))
-                .membro(resolverMembro(dto.membroId(), igrejaId))
+                .pessoa(resolverMembro(dto.pessoaId(), igrejaId))
                 .tipo(dto.tipo())
                 .valor(dto.valor())
                 .dataMovimentacao(dto.dataMovimentacao())
@@ -128,7 +128,7 @@ public class MovimentacaoFinanceiraService {
         validarCompatibilidade(dto.tipo(), categoria);
 
         mov.setCategoria(categoria);
-        mov.setMembro(resolverMembro(dto.membroId(), igrejaId));
+        mov.setPessoa(resolverMembro(dto.pessoaId(), igrejaId));
         mov.setTipo(dto.tipo());
         mov.setValor(dto.valor());
         mov.setDataMovimentacao(dto.dataMovimentacao());
@@ -185,12 +185,12 @@ public class MovimentacaoFinanceiraService {
         }
     }
 
-    private Membro resolverMembro(UUID membroId, UUID igrejaId) {
-        if (membroId == null) return null;
-        return membroRepository.findByIdAndIgrejaId(membroId, igrejaId)
+    private Pessoa resolverMembro(UUID pessoaId, UUID igrejaId) {
+        if (pessoaId == null) return null;
+        return membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> {
-                    log.warn("Membro informado na movimentação não encontrado na igreja. membro_id={}, igreja_id={}", membroId, igrejaId);
-                    return new ResourceNotFoundException("Membro não encontrado.");
+                    log.warn("Pessoa informado na movimentação não encontrado na igreja. pessoa_id={}, igreja_id={}", pessoaId, igrejaId);
+                    return new ResourceNotFoundException("Pessoa não encontrado.");
                 });
     }
 
@@ -209,11 +209,11 @@ public class MovimentacaoFinanceiraService {
     }
 
     @Transactional
-    public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
-        List<UUID> ids = repository.buscarIdsPorMembro(membroId, igrejaId);
+    public void reindexarPorMembro(UUID pessoaId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorMembro(pessoaId, igrejaId);
         if (ids.isEmpty()) return;
-        log.info("Reindexando {} movimentações por alteração no membro. membro_id={}, igreja_id={}",
-                ids.size(), membroId, igrejaId);
+        log.info("Reindexando {} movimentações por alteração no membro. pessoa_id={}, igreja_id={}",
+                ids.size(), pessoaId, igrejaId);
         ids.forEach(id -> outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO,
                 TipoEventoOutbox.ATUALIZADO,

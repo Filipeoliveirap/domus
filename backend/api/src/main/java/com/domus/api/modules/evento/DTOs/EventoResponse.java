@@ -36,7 +36,9 @@ public record EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), e.getLocal(),
                 e.getFoto(), e.getCreatedAt(),
-                e.getVagas(), e.getPreco(), e.isExclusivoMembros(), e.isExclusivoBatizados(),
+                // exclusivoBatizados: coluna removida do banco (Task 3); campo aqui é lixo até a Task 6
+                // tirar do contrato da API. Mantido em false para não quebrar o front por ora.
+                e.getVagas(), e.getPreco(), e.isExclusivoMembros(), false,
                 e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas
         );
     }

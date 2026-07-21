@@ -18,7 +18,7 @@ public record MovimentacaoResponse(
         String descricao,
         UUID categoriaId,
         String categoriaNome,
-        UUID membroId,
+        UUID pessoaId,
         String membroNome,
         String criadoPorNome,
         String atualizadoPorNome
@@ -32,8 +32,8 @@ public record MovimentacaoResponse(
                 m.getDescricao(),
                 m.getCategoria().getId(),
                 m.getCategoria().getNome(),
-                m.getMembro() != null ? m.getMembro().getId() : null,
-                m.getMembro() != null ? m.getMembro().getNome() : null,
+                m.getPessoa() != null ? m.getPessoa().getId() : null,
+                m.getPessoa() != null ? m.getPessoa().getNome() : null,
                 m.getCriadoPor().getNome(),
                 m.getAtualizadoPor() != null ? m.getAtualizadoPor().getNome() : null
         );

@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro.DTO;
+package com.domus.api.modules.pessoa.DTO;
 
 import jakarta.validation.constraints.Size;
 

@@ -9,9 +9,9 @@ import com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepositor
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoDocument;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.busca.MembroDocument;
-import com.domus.api.modules.membro.busca.MembroSearchRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.busca.PessoaDocument;
+import com.domus.api.modules.pessoa.busca.PessoaSearchRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.usuario.busca.UsuarioDocument;
 import com.domus.api.modules.usuario.busca.UsuarioSearchRepository;
@@ -45,8 +45,8 @@ public class ReindexacaoService {
         ops.createWithMapping();
     }
 
-    private final MembroRepository membroRepository;
-    private final MembroSearchRepository membroSearchRepository;
+    private final PessoaRepository membroRepository;
+    private final PessoaSearchRepository membroSearchRepository;
     private final EventoRepository eventoRepository;
     private final EventoSearchRepository eventoSearchRepository;
     private final UsuarioRepository usuarioRepository;
@@ -71,9 +71,9 @@ public class ReindexacaoService {
     }
 
     private long reindexarMembros() {
-        recriarIndice(MembroDocument.class);
+        recriarIndice(PessoaDocument.class);
         var docs = membroRepository.findAll().stream()
-                .map(MembroDocument::de)
+                .map(PessoaDocument::de)
                 .toList();
         membroSearchRepository.saveAll(docs);
         log.info("Reindexados {} membros.", docs.size());

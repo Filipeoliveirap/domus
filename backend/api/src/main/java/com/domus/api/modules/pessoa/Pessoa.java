@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
 import com.domus.api.modules.igreja.Igreja;
 import jakarta.persistence.*;
@@ -12,15 +12,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "membro")
-@SQLDelete(sql = "UPDATE membro SET deleted_at = NOW() WHERE id = ?")
+@Table(name = "pessoa")
+@SQLDelete(sql = "UPDATE pessoa SET deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Builder
-public class Membro {
+public class Pessoa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,8 +47,8 @@ public class Membro {
     private Endereco endereco;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private StatusMembro status;
+    @Column(name = "vinculo", nullable = false)
+    private Vinculo vinculo;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_civil")
@@ -62,10 +62,6 @@ public class Membro {
 
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
-
-    @Column(name = "batizado", nullable = false)
-    @Builder.Default
-    private boolean batizado = false;
 
     /** Opcional: a secretaria nem sempre tem a data. */
     @Column(name = "data_batismo")

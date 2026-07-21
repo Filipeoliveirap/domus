@@ -1,11 +1,11 @@
-package com.domus.api.modules.membro.DTO;
+package com.domus.api.modules.pessoa.DTO;
 
-import com.domus.api.modules.membro.EstadoCivil;
-import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.pessoa.EstadoCivil;
+import com.domus.api.modules.pessoa.Vinculo;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
-public record MembroRequestDTO(
+public record PessoaRequestDTO(
         @NotBlank(message = "Nome é obrigatório")
         @Size(max = 255, message = "O nome deve ter no máximo 255 caracteres")
         String nome,
@@ -22,16 +22,14 @@ public record MembroRequestDTO(
         @jakarta.validation.Valid
         EnderecoDTO endereco,
 
-        @NotNull(message = "O status do membro é obrigatório")
-        StatusMembro status,
+        @NotNull(message = "O vínculo da pessoa com a igreja é obrigatório")
+        Vinculo vinculo,
 
         EstadoCivil estadoCivil,
         @Size(max = 255)
         String ministerio,
 
         String observacoes,
-
-        Boolean batizado,
 
         @Past(message = "A data de batismo deve ser uma data no passado.")
         LocalDate dataBatismo

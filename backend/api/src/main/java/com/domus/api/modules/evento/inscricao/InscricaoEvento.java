@@ -2,7 +2,7 @@ package com.domus.api.modules.evento.inscricao;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -33,8 +33,8 @@ public class InscricaoEvento {
     private Evento evento;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "membro_id", nullable = false)
-    private Membro membro;
+    @JoinColumn(name = "pessoa_id", nullable = false)
+    private Pessoa pessoa;
 
     /** NULL = auto-inscrição. Preenchido = alguém inscreveu esta pessoa. */
     @Column(name = "inscrito_por_usuario_id")

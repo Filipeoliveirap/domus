@@ -8,7 +8,7 @@ import java.util.UUID;
 /** Uma linha da lista de inscritos (ADMIN/LÍDER). */
 public record InscritoResponse(
         UUID id,
-        UUID membroId,
+        UUID pessoaId,
         String nome,
         String foto,
         /** NULL = a pessoa se inscreveu sozinha. */
@@ -31,9 +31,9 @@ public record InscritoResponse(
     public static InscritoResponse from(InscricaoEvento i, RegistranteResumo registrante) {
         return new InscritoResponse(
                 i.getId(),
-                i.getMembro().getId(),
-                i.getMembro().getNome(),
-                i.getMembro().getFoto(),
+                i.getPessoa().getId(),
+                i.getPessoa().getNome(),
+                i.getPessoa().getFoto(),
                 i.getInscritoPorUsuarioId(),
                 registrante == null ? null : registrante.nome(),
                 registrante == null ? null : registrante.foto(),

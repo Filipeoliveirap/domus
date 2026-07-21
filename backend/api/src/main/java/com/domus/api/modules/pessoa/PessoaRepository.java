@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
 import com.domus.api.modules.usuario.Usuario;
 import org.springframework.data.domain.Page;
@@ -11,10 +11,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface MembroRepository extends JpaRepository<Membro, UUID> {
+public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
 
     @Query("""
-        SELECT m FROM Membro m
+        SELECT m FROM Pessoa m
         WHERE m.igreja.id = :igrejaId
           AND (
             :q IS NULL
@@ -23,44 +23,44 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
             OR m.telefone LIKE CONCAT('%', CAST(:q AS string), '%')
           )
         """)
-    Page<Membro> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
+    Page<Pessoa> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
                                  @Param("q") String q,
                                  Pageable pageable);
 
-    Optional<Membro> findByIdAndIgrejaId(UUID id, UUID igrejaId);
+    Optional<Pessoa> findByIdAndIgrejaId(UUID id, UUID igrejaId);
     boolean existsByEmail(String email);
 
     /** Bairros distintos já cadastrados na igreja — alimenta a sugestão (datalist) do form. */
     @Query("""
-        SELECT DISTINCT m.endereco.bairro FROM Membro m
+        SELECT DISTINCT m.endereco.bairro FROM Pessoa m
         WHERE m.igreja.id = :igrejaId AND m.endereco.bairro IS NOT NULL
         ORDER BY m.endereco.bairro
         """)
     java.util.List<String> bairrosDistintos(@Param("igrejaId") UUID igrejaId);
 
     @Query(value = """
-    SELECT COUNT(*) > 0 FROM membro
+    SELECT COUNT(*) > 0 FROM pessoa
     WHERE LOWER(email) = LOWER(:email)
     """, nativeQuery = true)
     boolean existsByEmailIncluindoArquivados(@Param("email") String email);
 
     /** Aniversariantes de um mês (1-12), ordenados por dia. Para a tela de início. */
     @Query("""
-        SELECT m FROM Membro m
+        SELECT m FROM Pessoa m
         WHERE m.igreja.id = :igrejaId
           AND m.dataNascimento IS NOT NULL
           AND EXTRACT(MONTH FROM m.dataNascimento) = :mes
         ORDER BY EXTRACT(DAY FROM m.dataNascimento)
         """)
-    java.util.List<Membro> aniversariantesDoMes(@Param("igrejaId") UUID igrejaId, @Param("mes") int mes);
+    java.util.List<Pessoa> aniversariantesDoMes(@Param("igrejaId") UUID igrejaId, @Param("mes") int mes);
 
     /**
      * Todos os membros da igreja com telefone preenchido — usado por
-     * {@code MembroService.avisoTelefoneDuplicado} (B2) para comparar por dígitos normalizados
+     * {@code PessoaService.avisoTelefoneDuplicado} (B2) para comparar por dígitos normalizados
      * em Java (o telefone chega formatado de jeitos diferentes; normalizar isso em SQL de forma
      * portável não vale a pena para o tamanho de igreja que este produto atende).
      */
-    java.util.List<Membro> findByIgrejaIdAndTelefoneIsNotNull(UUID igrejaId);
+    java.util.List<Pessoa> findByIgrejaIdAndTelefoneIsNotNull(UUID igrejaId);
 
     long countByIgrejaId(UUID igrejaId);
 

@@ -70,7 +70,8 @@ public class EventoService {
                 .vagas(data.vagas())
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
-                .exclusivoBatizados(Boolean.TRUE.equals(data.exclusivoBatizados()))
+                // exclusivoBatizados: coluna removida do banco na Task 3; a Task 6 tira o campo
+                // do contrato da API. Por ora, o dado que chega do front é apenas ignorado aqui.
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .build();
 
@@ -130,9 +131,9 @@ public class EventoService {
         evento.setVagas(data.vagas());
         evento.setPreco(data.preco());
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
+        // exclusivoBatizados: idem — ignorado aqui, coluna não existe mais no banco.
         boolean exclusivoBatizados = Boolean.TRUE.equals(data.exclusivoBatizados());
         evento.setExclusivoMembros(exclusivoMembros);
-        evento.setExclusivoBatizados(exclusivoBatizados);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
 
         Evento salvo = eventoRepository.save(evento);

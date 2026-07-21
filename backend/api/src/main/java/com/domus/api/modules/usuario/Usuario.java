@@ -1,7 +1,7 @@
 package com.domus.api.modules.usuario;
 
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -37,8 +37,8 @@ public class Usuario implements UserDetails {
     private Igreja igreja;
 
     @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "membro_id", nullable = false)
-    private Membro membro;
+    @JoinColumn(name = "pessoa_id", nullable = false)
+    private Pessoa pessoa;
 
     @Column(name = "senha_hash", length = 255)
     private String senhaHash;
@@ -88,7 +88,7 @@ public class Usuario implements UserDetails {
 
     @Override
     public String getUsername() {
-        return membro.getEmail();
+        return pessoa.getEmail();
     }
 
     @Override
@@ -113,10 +113,10 @@ public class Usuario implements UserDetails {
 
 
     public String getNome() {
-        return membro.getNome();
+        return pessoa.getNome();
     }
 
     public String getEmail() {
-        return membro.getEmail();
+        return pessoa.getEmail();
     }
 }

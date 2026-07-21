@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro.DTO;
+package com.domus.api.modules.pessoa.DTO;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public record ConcederAcessoRequestDTO(
         @NotNull(message = "O membro é obrigatório")
-        UUID membroId,
+        UUID pessoaId,
 
         @NotBlank(message = "O perfil é obrigatório")
         String role,

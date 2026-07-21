@@ -31,11 +31,11 @@ public class ReindexacaoMovimentacaoService {
     }
 
     @Transactional
-    public void reindexarPorMembro(UUID membroId, UUID igrejaId) {
-        List<UUID> ids = repository.buscarIdsPorMembro(membroId, igrejaId);
+    public void reindexarPorMembro(UUID pessoaId, UUID igrejaId) {
+        List<UUID> ids = repository.buscarIdsPorMembro(pessoaId, igrejaId);
         if (ids.isEmpty()) return;
-        log.info("Reindexando {} movimentações por alteração no membro. membro_id={}, igreja_id={}",
-                ids.size(), membroId, igrejaId);
+        log.info("Reindexando {} movimentações por alteração no membro. pessoa_id={}, igreja_id={}",
+                ids.size(), pessoaId, igrejaId);
         ids.forEach(id -> outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO, TipoEventoOutbox.ATUALIZADO, id, igrejaId));
     }

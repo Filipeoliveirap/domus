@@ -26,7 +26,7 @@ public class InscricaoController {
     public ResponseEntity<MinhaInscricaoResponse> inscrever(@PathVariable UUID eventoId) {
         var usuario = usuarioAutenticado.get();
         var response = inscricaoService.inscrever(
-                eventoId, usuario.getMembro().getId(), null, usuario.getIgreja().getId());
+                eventoId, usuario.getPessoa().getId(), null, usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -34,7 +34,7 @@ public class InscricaoController {
     public ResponseEntity<MinhaInscricaoResponse> minhaInscricao(@PathVariable UUID eventoId) {
         var usuario = usuarioAutenticado.get();
         return ResponseEntity.ok(
-                inscricaoService.minhaInscricao(eventoId, usuario.getMembro().getId()));
+                inscricaoService.minhaInscricao(eventoId, usuario.getPessoa().getId()));
     }
 
     /** Inscrever outras pessoas: aqui os ids VÊM do cliente, então são validados um a um. */
@@ -79,7 +79,7 @@ public class InscricaoController {
     @DeleteMapping("/inscricoes/{id}")
     public ResponseEntity<Void> cancelar(@PathVariable UUID id) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.cancelar(id, usuario.getId(), usuario.getMembro().getId(),
+        inscricaoService.cancelar(id, usuario.getId(), usuario.getPessoa().getId(),
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.noContent().build();
     }
@@ -87,7 +87,7 @@ public class InscricaoController {
     @DeleteMapping("/acompanhantes/{id}")
     public ResponseEntity<Void> removerAcompanhante(@PathVariable UUID id) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.removerAcompanhante(id, usuario.getMembro().getId(),
+        inscricaoService.removerAcompanhante(id, usuario.getPessoa().getId(),
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.noContent().build();
     }

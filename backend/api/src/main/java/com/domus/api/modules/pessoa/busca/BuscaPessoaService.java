@@ -1,4 +1,4 @@
-package com.domus.api.modules.membro.busca;
+package com.domus.api.modules.pessoa.busca;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BuscaMembroService {
+public class BuscaPessoaService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -67,11 +67,11 @@ public class BuscaMembroService {
                 .withMaxResults(limite)
                 .build();
 
-        SearchHits<MembroDocument> hits = elasticsearchOperations.search(nativeQuery, MembroDocument.class);
+        SearchHits<PessoaDocument> hits = elasticsearchOperations.search(nativeQuery, PessoaDocument.class);
 
         return hits.stream()
                 .map(hit -> {
-                    MembroDocument doc = hit.getContent();
+                    PessoaDocument doc = hit.getContent();
                     return new ResultadoBusca(
                             doc.getId(),
                             TipoEntidadeOutbox.MEMBRO,

@@ -1,6 +1,6 @@
-package com.domus.api.modules.membro;
+package com.domus.api.modules.pessoa;
 
-import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,9 +13,9 @@ class EnderecoMapeamentoTest {
                 .cep("01001000").logradouro("Praça da Sé").numero("100")
                 .complemento("lado ímpar").bairro("Sé").cidade("São Paulo").uf("SP")
                 .build();
-        Membro membro = Membro.builder().nome("Ana").endereco(endereco).build();
+        Pessoa membro = Pessoa.builder().nome("Ana").endereco(endereco).build();
 
-        MembroResponse resp = MembroResponse.from(membro);
+        PessoaResponse resp = PessoaResponse.from(membro);
 
         assertNotNull(resp.endereco());
         assertEquals("01001000", resp.endereco().cep());
@@ -28,9 +28,9 @@ class EnderecoMapeamentoTest {
 
     @Test
     void membroResponseFrom_toleraEnderecoNulo() {
-        Membro membro = Membro.builder().nome("Bia").endereco(null).build();
+        Pessoa membro = Pessoa.builder().nome("Bia").endereco(null).build();
 
-        MembroResponse resp = MembroResponse.from(membro);
+        PessoaResponse resp = PessoaResponse.from(membro);
 
         assertNull(resp.endereco());
     }

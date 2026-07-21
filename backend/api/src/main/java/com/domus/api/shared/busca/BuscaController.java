@@ -3,7 +3,7 @@ package com.domus.api.shared.busca;
 import com.domus.api.modules.evento.busca.BuscaEventoService;
 import com.domus.api.modules.financeiro.categoria.busca.BuscaCategoriaService;
 import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoService;
-import com.domus.api.modules.membro.busca.BuscaMembroService;
+import com.domus.api.modules.pessoa.busca.BuscaPessoaService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
 import com.domus.api.shared.security.UsuarioAutenticado;
@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BuscaController {
 
-    private final BuscaMembroService buscaMembroService;
+    private final BuscaPessoaService buscaPessoaService;
     private final UsuarioAutenticado usuarioAutenticado;
     private final BuscaEventoService buscaEventoService;
     private final BuscaUsuarioService buscaUsuarioService;
@@ -30,7 +30,7 @@ public class BuscaController {
         if (q == null || q.isBlank()) {
             return List.of();
         }
-        return buscaMembroService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(), 10);
+        return buscaPessoaService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(), 10);
     }
 
     @GetMapping("/eventos")

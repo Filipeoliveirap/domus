@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
+import { podeVerConfiguracoes } from '@/lib/permissoes'
 import styles from './Sidebar.module.css'
 
 const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
@@ -92,7 +93,7 @@ export function Sidebar() {
     router.replace('/login')
   }
 
-  const podeVerConfiguracoes = role === 'ADMIN_IGREJA'
+  const exibirConfiguracoes = podeVerConfiguracoes(role)
   // Começa aberto quando já estamos numa das abas — senão o item ativo ficaria escondido.
   const [configAberto, setConfigAberto] = useState(() => pathname.startsWith('/configuracoes'))
 
@@ -114,7 +115,7 @@ export function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        {podeVerConfiguracoes && (
+        {exibirConfiguracoes && (
           <div className={styles.grupo}>
             <button
               type="button"

@@ -7,11 +7,12 @@ import { MovimentacaoForm } from '@/components/module/movimentacoes/Movimentacao
 import styles from './cadastrar.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 
 export default function CadastrarMovimentacaoPage() {
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const form = useMovimentacaoForm({
     onSuccess: () => {},

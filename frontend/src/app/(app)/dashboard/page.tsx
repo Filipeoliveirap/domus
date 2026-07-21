@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { formatarMoeda, formatarData } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
 import type { EventoResumo } from '@/types/inicio.type'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import styles from './dashboard.module.css'
 
 function dataEvento(iso: string) {
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
   const { data, isLoading, isError, refetch } = useDashboard(autorizado)
 
   if (!hidratado) return <div className={styles.pagina} />

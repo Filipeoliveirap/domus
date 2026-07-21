@@ -16,6 +16,7 @@ import { useMaiorLancamento } from '@/hooks/financeiro/relatorio/useMaiorLancame
 import styles from './relatorios.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { useConsolidado, useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { VisaoGeralCongregacoes } from './VisaoGeralCongregacoes'
 import {
@@ -54,7 +55,7 @@ export default function RelatoriosPage() {
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const periodo: PeriodoRelatorio =
     custom && dataInicio && dataFim

@@ -17,6 +17,7 @@ import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
@@ -53,7 +54,7 @@ function MovimentacoesConteudo() {
   const detalheId = searchParams.get('detalhe')
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
     tipo: '',

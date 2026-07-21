@@ -11,13 +11,14 @@ import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { SkeletonMembroForm } from './SkeletonMembroForm'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { podeGerenciarPessoas } from '@/lib/permissoes'
 
 export default function EditarMembroPage() {
   const params = useParams()
   const id = params.id as string
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeGerenciarPessoas(role)
 
   const { data: membro, isLoading: carregando, isError, refetch } = useMembro(id)
   const form = useMembroForm({ membroId: id, membroInicial: membro })

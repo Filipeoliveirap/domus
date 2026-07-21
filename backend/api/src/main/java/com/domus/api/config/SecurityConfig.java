@@ -22,7 +22,7 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.domus.api.shared.security.Role;
+import com.domus.api.shared.security.Perfil;
 import java.util.List;
 
 @Configuration
@@ -33,9 +33,9 @@ public class SecurityConfig {
     private final SecurityFilter securityFilter;
     private final com.domus.api.shared.security.RateLimitFilter rateLimitFilter;
 
-    private static final String ADMIN = Role.ADMIN_IGREJA.name();
-    private static final String LIDER = Role.LIDER.name();
-    private static final String COMUM = Role.MEMBRO.name();
+    private static final String ADMIN = Perfil.ADMIN_IGREJA.name();
+    private static final String LIDER = Perfil.LIDER.name();
+    private static final String COMUM = Perfil.MEMBRO.name();
 
     /**
      * Mesma property que rege os cookies de sessão (ver AuthCookieFactory): o XSRF-TOKEN

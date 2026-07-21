@@ -24,6 +24,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const hidratado = useAuthStore((s) => s.hidratado)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const logoutIntencional = useAuthStore((s) => s.logoutIntencional)
   const login = useAuthStore((s) => s.login)
   const setHidratado = useAuthStore((s) => s.setHidratado)
   const [falhaInfra, setFalhaInfra] = useState(false)
@@ -60,6 +61,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (hidratado && !isAuthenticated) {
+      // Depois de "sair" não há destino a preservar: guardar a rota faria o PRÓXIMO usuário
+      // aterrissar na tela do anterior — e, se fosse restrita a ele, direto no "acesso
+      // restrito", sem entender o motivo.
+      if (logoutIntencional) {
+        router.replace('/login')
+        return
+      }
+
       // Preserva o destino: quem abre um link direto e está deslogado volta pra ele depois
       // de entrar, em vez de cair sempre no /inicio. A query vem do window (e não de
       // useSearchParams) porque este componente vive num layout: o hook forçaria toda a
@@ -67,7 +76,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       const destino = pathname + window.location.search
       router.replace(`/login?next=${encodeURIComponent(destino)}`)
     }
-  }, [hidratado, isAuthenticated, router, pathname])
+  }, [hidratado, isAuthenticated, logoutIntencional, router, pathname])
 
   if (falhaInfra) {
     return (

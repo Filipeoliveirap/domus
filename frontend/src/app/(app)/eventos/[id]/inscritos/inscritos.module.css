@@ -372,3 +372,24 @@
     justify-content: center;
   }
 }
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: 4px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.voltar:hover {
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+}

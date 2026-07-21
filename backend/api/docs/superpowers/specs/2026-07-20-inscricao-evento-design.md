@@ -79,6 +79,36 @@ Como todos nascem `false`, o toggle "só batizados" exibe **sempre** um aviso fi
 É declaração da regra, não detecção de estado vazio: sem consulta extra, funciona igual para
 igreja com 0 ou 300 batizados, e não vira alarme que o usuário aprende a ignorar.
 
+### Revisões de 2026-07-21 (depois dos protótipos)
+
+Três decisões mudaram o desenho original. Ficam aqui porque contradizem o que está escrito acima.
+
+**1. `requer_inscricao` no evento (migration V16).** Sem ela, todo evento aceita inscrição — e
+"Confirmar presença" apareceria no culto de domingo, onde confirmar não quer dizer nada. O toggle
+separa *evento que se organiza* de *evento que só acontece*. Só evento marcado mostra o botão e a
+lista.
+
+**2. Membro PODE ver quem vai; só não gerencia.** Revoga a regra "lista só para ADMIN e LÍDER".
+O motivo é de produto: ver que o seu grupo vai é o que faz a pessoa querer ir. Clicar nas fotos
+abre a lista.
+
+Isso obriga **duas respostas diferentes**, e não é detalhe:
+
+| | Membro | ADMIN / LÍDER |
+|---|---|---|
+| Nome e foto dos inscritos | ✓ | ✓ |
+| Nome dos convidados | ✓ | ✓ |
+| **Telefone do convidado** | ✗ | ✓ |
+| Quem inscreveu quem | ✗ | ✓ |
+| Data da inscrição | ✗ | ✓ |
+| Cancelar inscrição de outro | ✗ | ✓ |
+
+O telefone é o ponto: era seguro enquanto só a administração lia. Abrir a lista para a igreja
+inteira sem separar as respostas exporia o contato de um visitante para centenas de pessoas.
+
+**3. Avatar é foto real, com iniciais como fallback** — regra geral do sistema, não desta tela.
+O helper `iniciais()` já existe e é reusado.
+
 ## Modelo de dados
 
 ```

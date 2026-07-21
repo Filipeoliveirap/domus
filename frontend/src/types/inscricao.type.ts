@@ -33,6 +33,13 @@ export interface InscritoResponse {
   foto: string | null
   /** null = a pessoa se inscreveu sozinha. */
   inscritoPorUsuarioId: string | null
+  /**
+   * Nome de quem inscreveu. null quando `inscritoPorUsuarioId` também é null
+   * (auto-inscrição) OU quando a conta de quem inscreveu foi arquivada depois — nesse
+   * segundo caso o id continua presente, mas sem nome pra exibir.
+   */
+  inscritoPorNome: string | null
+  inscritoPorFoto: string | null
   inscritoEm: string
   acompanhantes: AcompanhanteResponse[]
 }

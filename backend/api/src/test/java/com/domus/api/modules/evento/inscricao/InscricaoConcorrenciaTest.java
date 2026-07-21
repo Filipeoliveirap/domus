@@ -114,8 +114,8 @@ class InscricaoConcorrenciaTest {
                     """).getSingleResult();
 
             eventoId = (UUID) em.createNativeQuery("""
-                    INSERT INTO evento (igreja_id, titulo, inicio_em, vagas)
-                    VALUES (:ig, 'Retiro Concorrencia', NOW() + INTERVAL '10 days', 1)
+                    INSERT INTO evento (igreja_id, titulo, inicio_em, vagas, requer_inscricao)
+                    VALUES (:ig, 'Retiro Concorrencia', NOW() + INTERVAL '10 days', 1, TRUE)
                     RETURNING id
                     """).setParameter("ig", igrejaId).getSingleResult();
 

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -61,6 +62,17 @@ public class InscricaoController {
     @GetMapping("/eventos/{eventoId}/inscricoes")
     public ResponseEntity<ListaInscritosResponse> listar(@PathVariable UUID eventoId) {
         return ResponseEntity.ok(inscricaoService.listarInscritos(
+                eventoId, usuarioAutenticado.getIgrejaId()));
+    }
+
+    /**
+     * Lista de participantes reduzida — QUALQUER MEMBRO autenticado (travado no
+     * SecurityConfig por "/eventos/*&#47;inscricoes/**", que casa este path e NÃO o exato
+     * "/eventos/*&#47;inscricoes" acima, restrito a ADMIN/LÍDER).
+     */
+    @GetMapping("/eventos/{eventoId}/inscricoes/participantes")
+    public ResponseEntity<List<ParticipanteResponse>> listarParticipantes(@PathVariable UUID eventoId) {
+        return ResponseEntity.ok(inscricaoService.listarParticipantes(
                 eventoId, usuarioAutenticado.getIgrejaId()));
     }
 

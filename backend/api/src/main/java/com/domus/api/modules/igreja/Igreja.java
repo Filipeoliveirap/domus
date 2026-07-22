@@ -50,8 +50,9 @@ public class Igreja {
     @Column(name = "denominacao", length = 255)
     private String denominacao;
 
-    @Column(name = "logo_url", length = 500)
-    private String logoUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "logo_foto_id")
+    private com.domus.api.modules.foto.Foto logoFoto;
 
     /**
      * Mesmo objeto de valor do membro — as 7 colunas vivem na própria tabela igreja.

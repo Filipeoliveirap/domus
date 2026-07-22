@@ -24,7 +24,6 @@ public record AtualizarIgrejaRequest(
         @Size(max = 255) String emailContato,
 
         @Size(max = 50) String telefoneContato,
-        @Size(max = 500) String logoUrl,
 
         @Valid EnderecoDTO endereco
 ) {}

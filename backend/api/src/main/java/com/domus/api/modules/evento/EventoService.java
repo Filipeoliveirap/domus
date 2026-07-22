@@ -66,7 +66,6 @@ public class EventoService {
                 .inicioEm(data.inicioEm())
                 .fimEm(data.fimEm())
                 .local(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()))
-                .foto(data.foto())
                 .vagas(data.vagas())
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
@@ -111,7 +110,6 @@ public class EventoService {
         evento.setInicioEm(data.inicioEm());
         evento.setFimEm(data.fimEm());
         evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
-        evento.setFoto(data.foto());
 
         // A9: vagas contam PESSOAS (inscritos confirmados + acompanhantes) — reduzir abaixo
         // de quem já está confirmado deixaria o evento com mais gente que vaga declarada, e

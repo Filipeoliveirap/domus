@@ -44,7 +44,15 @@ public class Evento {
     @Column(name = "fim_em")
     private LocalDateTime fimEm;
 
-    /** Local cadastrado. Mutuamente exclusivo com {@link #localTexto} (CHECK no banco). */
+    /**
+     * Local cadastrado. Mutuamente exclusivo com {@link #localTexto} (CHECK no banco).
+     *
+     * <p>N+1 na listagem: {@code EventoRepository.buscarPorIgreja} é nativa (o ORDER BY por
+     * situação usa CASE WHEN + date_trunc que JPQL não tem), então não dá pra usar JOIN FETCH /
+     * @EntityGraph nela. Resolvido com {@code @BatchSize} na CLASSE {@link LocalEvento} (batch
+     * fetch é por tipo de entidade carregada, não pode ir no campo @ManyToOne) — uma página de
+     * 20 eventos com local vira 1 {@code SELECT ... WHERE id IN (...)} em vez de 20 SELECTs.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "local_id")
     private LocalEvento local;
@@ -57,14 +65,17 @@ public class Evento {
     @Column(name = "tipo", length = 80)
     private String tipo;
 
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Pessoa}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsavel_pessoa_id")
     private Pessoa responsavel;
 
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "criado_por_usuario_id")
     private Usuario criadoPor;
 
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;

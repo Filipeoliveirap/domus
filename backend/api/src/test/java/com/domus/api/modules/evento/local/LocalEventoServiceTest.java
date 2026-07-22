@@ -145,7 +145,8 @@ class LocalEventoServiceTest {
         EventoResponse resposta = pagina.getContent().stream()
                 .filter(r -> r.id().equals(eventoId)).findFirst().orElseThrow();
 
-        assertThat(resposta.local()).isEqualTo("Salão Social");
+        assertThat(resposta.local().nome()).isEqualTo("Salão Social");
+        assertThat(resposta.local().id()).isNull(); // virou texto ad-hoc — não é mais o cadastrado
 
         Evento recarregado = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId).orElseThrow();
         assertThat(recarregado.getLocal()).isNull();

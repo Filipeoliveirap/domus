@@ -137,4 +137,17 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
                                  @Param("q") String q,
                                  @Param("agora") LocalDateTime agora,
                                  Pageable pageable);
+
+    /**
+     * Tipos já usados pela igreja, do mais frequente para o menos frequente (empate por ordem
+     * alfabética). Alimenta {@code GET /eventos/tipos}: é isso que faz o campo "aprender" —
+     * o que a igreja mais digita sobe e passa na frente das sementes que ninguém usou.
+     */
+    @Query("""
+        SELECT e.tipo FROM Evento e
+         WHERE e.igreja.id = :igrejaId AND e.tipo IS NOT NULL
+         GROUP BY e.tipo
+         ORDER BY COUNT(e) DESC, e.tipo ASC
+        """)
+    List<String> tiposUsadosPorFrequencia(@Param("igrejaId") UUID igrejaId);
 }

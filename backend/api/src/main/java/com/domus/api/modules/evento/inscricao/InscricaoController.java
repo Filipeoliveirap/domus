@@ -30,7 +30,8 @@ public class InscricaoController {
     public ResponseEntity<MinhaInscricaoResponse> inscrever(@PathVariable UUID eventoId) {
         var usuario = usuarioAutenticado.get();
         var response = inscricaoService.inscrever(
-                eventoId, usuario.getPessoa().getId(), null, null, false, usuario.getIgreja().getId());
+                eventoId, usuario.getPessoa().getId(), null, usuario.getPessoa().getId(),
+                null, false, usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -56,7 +57,8 @@ public class InscricaoController {
             @Valid @RequestBody InscreverPessoasRequest data) {
         var usuario = usuarioAutenticado.get();
         inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(), usuario.getId(),
-                usuario.getRole().getNome(), confirmado, usuario.getIgreja().getId());
+                usuario.getPessoa().getId(), usuario.getRole().getNome(), confirmado,
+                usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

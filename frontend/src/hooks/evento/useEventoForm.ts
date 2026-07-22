@@ -35,6 +35,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       tipoInscricao: 'GRATUITO',
       preco: undefined,
       exclusivoMembros: false,
+      fotoId: null,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -72,6 +73,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         // evento pago falhava na validação até a pessoa apagar e redigitar o valor.
         preco: eventoInicial.preco != null ? String(eventoInicial.preco) : undefined,
         exclusivoMembros: eventoInicial.exclusivoMembros,
+        fotoId: eventoInicial.fotoId ?? null,
       })
     }
   }, [eventoInicial, reset])
@@ -104,6 +106,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
           ? data.preco
           : undefined,
+        fotoId: data.fotoId ?? null,
       }
 
       if (ehEdicao) {

@@ -4,6 +4,8 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -31,6 +33,7 @@ public class EventoService {
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final InscricaoService inscricaoService;
+    private final FotoService fotoService;
 
     @Cacheable(
             value = "eventos",
@@ -59,6 +62,8 @@ public class EventoService {
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
+        Foto foto = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+
         Evento evento = Evento.builder()
                 .igreja(igreja)
                 .titulo(com.domus.api.shared.util.TextoUtil.capitalizar(data.titulo()))
@@ -66,7 +71,7 @@ public class EventoService {
                 .inicioEm(data.inicioEm())
                 .fimEm(data.fimEm())
                 .local(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()))
-                .foto(data.foto())
+                .foto(foto)
                 .vagas(data.vagas())
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
@@ -111,7 +116,6 @@ public class EventoService {
         evento.setInicioEm(data.inicioEm());
         evento.setFimEm(data.fimEm());
         evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
-        evento.setFoto(data.foto());
 
         // A9: vagas contam PESSOAS (inscritos confirmados + acompanhantes) — reduzir abaixo
         // de quem já está confirmado deixaria o evento com mais gente que vaga declarada, e
@@ -132,7 +136,23 @@ public class EventoService {
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
 
+        // Foto: resolve a NOVA antes de tocar no evento (valida que é da mesma igreja) e só
+        // grava a ANTIGA como candidata a remoção — nunca apaga antes de o evento apontar
+        // para a nova (mesma ordem usada em PessoaService).
+        Foto fotoAntiga = evento.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+        evento.setFoto(fotoNova);
+
         Evento salvo = eventoRepository.save(evento);
+
+        // Remove a foto antiga só DEPOIS que o evento já aponta para a nova — antes, o
+        // ON DELETE RESTRICT recusaria (a FK ainda apontaria para ela).
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
 
         // B4: restringir o evento pode deixar gente já confirmada inelegível — cancela quem
         // não se qualifica mais (mesmo cancelamento manual, convidados incluídos).

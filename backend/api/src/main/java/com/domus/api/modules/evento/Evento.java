@@ -41,7 +41,9 @@ public class Evento {
 
     private String local;
 
-    private String foto;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "foto_id")
+    private com.domus.api.modules.foto.Foto foto;
 
     /** NULL = sem limite de vagas. */
     @Column(name = "vagas")

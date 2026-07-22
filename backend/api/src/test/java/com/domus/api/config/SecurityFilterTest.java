@@ -80,7 +80,7 @@ class SecurityFilterTest {
                 .id(usuarioId)
                 .ativo(false)
                 .pessoa(Pessoa.builder().nome("Bia").build())
-                .role(Role.builder().nome("MEMBRO").build())
+                .role(Role.builder().nome("ACESSO_COMUM").build())
                 .igreja(Igreja.builder().id(UUID.randomUUID()).nome("Igreja Central").build())
                 .build();
 

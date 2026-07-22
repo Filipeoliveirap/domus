@@ -9,7 +9,7 @@ package com.domus.api.shared.security;
 public enum Perfil {
     ADMIN_IGREJA,
     LIDER,
-    MEMBRO;
+    ACESSO_COMUM;
 
     /** Devolve null em vez de estourar: role desconhecida vira "não pode nada" (fail-closed). */
     public static Perfil deNomeOuNull(String nome) {

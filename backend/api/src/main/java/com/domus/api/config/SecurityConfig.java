@@ -35,7 +35,7 @@ public class SecurityConfig {
 
     private static final String ADMIN = Perfil.ADMIN_IGREJA.name();
     private static final String LIDER = Perfil.LIDER.name();
-    private static final String COMUM = Perfil.MEMBRO.name();
+    private static final String COMUM = Perfil.ACESSO_COMUM.name();
 
     /**
      * Mesma property que rege os cookies de sessão (ver AuthCookieFactory): o XSRF-TOKEN
@@ -112,7 +112,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
 
                         //Inscrição em evento — DEVE vir ANTES dos curingas /eventos/**,
-                        //senão o POST curinga (ADMIN+LÍDER) barra o MEMBRO, que é justamente
+                        //senão o POST curinga (ADMIN+LÍDER) barra o ACESSO_COMUM, que é justamente
                         //quem se inscreve, e o GET curinga (todos) vaza a lista de inscritos.
                         //Mesma armadilha de ordenação já corrigida em /igrejas/*.
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")

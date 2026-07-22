@@ -56,8 +56,8 @@ class UsuarioServiceConviteTest {
                 membroRepository, cacheEvictor, outboxRegistrador, passwordResetService, emailService);
 
         Role role = new Role();
-        role.setNome("MEMBRO");
-        when(roleRepository.findByNome("MEMBRO")).thenReturn(Optional.of(role));
+        role.setNome("ACESSO_COMUM");
+        when(roleRepository.findByNome("ACESSO_COMUM")).thenReturn(Optional.of(role));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
         when(passwordResetService.gerarTokenDefinicaoSenha(any(), any(Duration.class))).thenReturn("tok123");
         when(passwordResetService.linkDefinicaoSenha(eq("tok123"), eq(true))).thenReturn("https://app/reset-password?token=tok123&convite=1");
@@ -75,7 +75,7 @@ class UsuarioServiceConviteTest {
         when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
 
         UsuarioResponseDTO resp = service.concederAcesso(
-                new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", null), igrejaId);
+                new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId);
 
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
@@ -92,7 +92,7 @@ class UsuarioServiceConviteTest {
         when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.concederAcesso(
-                new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", null), igrejaId))
+                new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Informe um e-mail");
         verify(emailService, never()).enviar(anyString(), anyString(), anyString());
@@ -105,7 +105,7 @@ class UsuarioServiceConviteTest {
         when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
         when(membroRepository.existsByEmailIncluindoArquivados("novo@teste.com")).thenReturn(false);
 
-        service.concederAcesso(new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", "Novo@Teste.com"), igrejaId);
+        service.concederAcesso(new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", "Novo@Teste.com"), igrejaId);
 
         assertThat(membro.getEmail()).isEqualTo("novo@teste.com");      // normalizado e gravado
         verify(membroRepository).save(membro);
@@ -120,7 +120,7 @@ class UsuarioServiceConviteTest {
         when(membroRepository.existsByEmailIncluindoArquivados("dup@teste.com")).thenReturn(true);
 
         assertThatThrownBy(() -> service.concederAcesso(
-                new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", "dup@teste.com"), igrejaId))
+                new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", "dup@teste.com"), igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está em uso");
     }
@@ -133,7 +133,7 @@ class UsuarioServiceConviteTest {
         when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.of(ativo));
 
         assertThatThrownBy(() -> service.concederAcesso(
-                new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", null), igrejaId))
+                new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já tem acesso");
     }
@@ -161,7 +161,7 @@ class UsuarioServiceConviteTest {
         when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.of(desativado));
 
         assertThatThrownBy(() -> service.concederAcesso(
-                new ConcederAcessoRequestDTO(pessoaId, "MEMBRO", null), igrejaId))
+                new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("desativada");
         verify(emailService, never()).enviar(anyString(), anyString(), anyString());

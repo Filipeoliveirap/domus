@@ -19,6 +19,7 @@ import {
 } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -43,6 +44,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
+  const [ampliada, setAmpliada] = useState(false)
 
   const totalPessoas = useMemo(
     () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
@@ -66,6 +68,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const status = evento ? statusEvento(evento) : null
 
   return (
+    <>
     <div className={styles.overlay} onMouseDown={onClose}>
       <aside
         className={styles.drawer}
@@ -171,8 +174,19 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
 
             {/* Imagem */}
             <div className={styles.imagemBloco}>
-              {urlFoto(evento.fotoId, 'DISPLAY') ? (
-                <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagem} />
+              {evento.fotoId ? (
+                /*
+                  O banner aqui é `object-fit: cover` numa faixa de 200px — ele JÁ aparece
+                  cortado. Ampliar não é só ver maior: é ver a imagem inteira.
+                */
+                <button
+                  type="button"
+                  className={styles.imagemBotao}
+                  onClick={() => setAmpliada(true)}
+                  aria-label={`Ampliar imagem do evento ${evento.titulo}`}
+                >
+                  <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagem} />
+                </button>
               ) : (
                 <div className={styles.imagemPlaceholder}>
                   <CalendarDays size={40} />
@@ -249,5 +263,15 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
         )}
       </aside>
     </div>
+
+    {/* Irmão do overlay: dentro dele, o clique para fechar a foto fecharia o drawer junto. */}
+    {ampliada && evento?.fotoId && (
+      <VisualizadorFoto
+        fotoId={evento.fotoId}
+        descricao={`Imagem do evento ${evento.titulo}`}
+        onClose={() => setAmpliada(false)}
+      />
+    )}
+    </>
   )
 }

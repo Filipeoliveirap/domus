@@ -158,6 +158,24 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
+/*
+  Zera os estilos que o navegador dá a todo <button> (borda, fundo, padding). Sem isto o
+  banner ganharia moldura e recuo — o elemento virou botão pela SEMÂNTICA (foco e teclado),
+  não para parecer um.
+*/
+.imagemBotao {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.imagemBotao:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .imagem {
   width: 100%;
   height: 200px;

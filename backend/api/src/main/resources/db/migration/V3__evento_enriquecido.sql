@@ -5,9 +5,15 @@ CREATE EXTENSION IF NOT EXISTS unaccent;
 -- unaccent() nativo não é marcado IMMUTABLE (o dicionário pode mudar por sessão), então o
 -- Postgres recusa usá-lo direto em índice. O wrapper fixa o dicionário e assume a garantia
 -- de imutabilidade — seguro aqui porque o dicionário 'unaccent' é estável entre chamadas.
+-- search_path fixo (pg_catalog, public) é obrigatório: sendo LANGUAGE sql, o corpo da função
+-- é resolvido contra o search_path da SESSÃO que a chama, não contra o de quando foi criada.
+-- O pg_dump do nosso backup emite `SET search_path = ''` no início do arquivo restaurado;
+-- sem o SET aqui, o pg_restore falha em CREATE INDEX ux_local_evento_igreja_nome com
+-- "function unaccent(unknown, text) does not exist" — e o job noturno de restore-test
+-- (que valida o backup) reprova todas as noites.
 CREATE OR REPLACE FUNCTION imutavel_unaccent(text) RETURNS text AS $$
     SELECT unaccent('unaccent', $1)
-$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT;
+$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT SET search_path = pg_catalog, public;
 
 CREATE TABLE local_evento (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

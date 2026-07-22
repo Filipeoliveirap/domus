@@ -1,6 +1,7 @@
 package com.domus.api.modules.pessoa.DTO;
 
 import com.domus.api.modules.pessoa.EstadoCivil;
+import com.domus.api.modules.pessoa.Sexo;
 import com.domus.api.modules.pessoa.Vinculo;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
@@ -27,6 +28,12 @@ public record PessoaRequestDTO(
         Vinculo vinculo,
 
         EstadoCivil estadoCivil,
+
+        /** Nulável de propósito: pessoas já cadastradas não têm valor e não dá pra
+         * inventar um dado sobre gente real. Serve só pra restringir inscrição em
+         * evento (ex.: "encontro de mulheres"), não pra descrever identidade. */
+        Sexo sexo,
+
         @Size(max = 255)
         String ministerio,
 

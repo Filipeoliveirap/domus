@@ -13,19 +13,19 @@ public record ConsolidadoResponse(
         Totais familia,
         List<LinhaIgreja> porIgreja) {
 
-    public record Membros(long total, long membros, long congregantes) {}
+    public record Pessoas(long total, long membros, long congregantes) {}
 
     public record Eventos(long total, long realizados, long proximos) {}
 
     public record Financeiro(BigDecimal entradas, BigDecimal saidas, BigDecimal saldo) {}
 
-    public record Totais(Membros membros, Eventos eventos, Financeiro financeiro) {}
+    public record Totais(Pessoas pessoas, Eventos eventos, Financeiro financeiro) {}
 
     public record LinhaIgreja(
             UUID igrejaId,
             String nome,
             boolean ehMae,
-            Membros membros,
+            Pessoas pessoas,
             Eventos eventos,
             Financeiro financeiro) {}
 }

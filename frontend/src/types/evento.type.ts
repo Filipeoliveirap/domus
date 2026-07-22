@@ -18,7 +18,6 @@ export interface EventoResponse {
    */
   preco: number | null
   exclusivoMembros: boolean
-  exclusivoBatizados: boolean
   requerInscricao: boolean
   situacao: SituacaoEvento
   /** Só populado na resposta de `atualizarEvento`; null nas demais. */
@@ -35,6 +34,5 @@ export interface EventoRequest {
   vagas?: number
   preco?: string
   exclusivoMembros?: boolean
-  exclusivoBatizados?: boolean
   requerInscricao?: boolean
 }

@@ -176,7 +176,7 @@
   background-color: var(--color-warning-bg);
   color: var(--color-warning-text);
 }
-.membro {
+.comum {
   background-color: var(--color-bg-sidebar);
   color: var(--color-text-secondary);
 }

@@ -5,7 +5,7 @@ import { X, Ticket, Phone, Mail } from 'lucide-react'
 import { useMinhaIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { Button } from '@/components/common/button/Button'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
-import { formatarTelefoneExibicao } from '@/lib/formats/membroFormat'
+import { formatarTelefoneExibicao } from '@/lib/formats/pessoaFormat'
 import styles from './ModalConvidado.module.css'
 
 interface Props {

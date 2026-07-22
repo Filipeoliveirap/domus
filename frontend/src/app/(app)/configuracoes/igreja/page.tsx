@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Landmark, Info, ShieldCheck, Save, RotateCcw } from 'lucide-react'
 import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgreja'
-import { useBuscaCep } from '@/hooks/membro/useBuscaCep'
+import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import styles from '../configuracoes.module.css'
 
 const schema = z.object({

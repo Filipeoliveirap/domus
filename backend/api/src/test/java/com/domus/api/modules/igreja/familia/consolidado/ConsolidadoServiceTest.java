@@ -69,14 +69,14 @@ class ConsolidadoServiceTest {
         ConsolidadoResponse resposta = service.gerar(igrejaId, LocalDate.now(), LocalDate.now());
 
         assertThat(resposta.porIgreja()).hasSize(1);
-        ConsolidadoResponse.Membros membros = resposta.porIgreja().get(0).membros();
-        assertThat(membros.membros()).isEqualTo(3);
-        assertThat(membros.congregantes()).isEqualTo(2);
-        assertThat(membros.total()).isEqualTo(5);
+        ConsolidadoResponse.Pessoas pessoas = resposta.porIgreja().get(0).pessoas();
+        assertThat(pessoas.membros()).isEqualTo(3);
+        assertThat(pessoas.congregantes()).isEqualTo(2);
+        assertThat(pessoas.total()).isEqualTo(5);
 
         // Totais da família batem com a única igreja da lista.
-        assertThat(resposta.familia().membros().membros()).isEqualTo(3);
-        assertThat(resposta.familia().membros().congregantes()).isEqualTo(2);
-        assertThat(resposta.familia().membros().total()).isEqualTo(5);
+        assertThat(resposta.familia().pessoas().membros()).isEqualTo(3);
+        assertThat(resposta.familia().pessoas().congregantes()).isEqualTo(2);
+        assertThat(resposta.familia().pessoas().total()).isEqualTo(5);
     }
 }

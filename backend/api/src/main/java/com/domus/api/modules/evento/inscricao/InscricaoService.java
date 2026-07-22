@@ -45,7 +45,7 @@ public class InscricaoService {
      * <p><b>Auto-inscrição funciona em QUALQUER evento</b> — é leve, tipo uma curtida ("eu
      * vou"). {@code requerInscricao} não bloqueia mais este método; ele passou a significar
      * só "este evento organiza vagas, convidados e inscrição de terceiros" (ver
-     * {@link #inscreverMembros} e {@link #adicionarAcompanhante}, que continuam checando).
+     * {@link #inscreverPessoas} e {@link #adicionarAcompanhante}, que continuam checando).
      *
      * <p>O evento é buscado COM LOCK: a contagem de vagas e o insert precisam ser atômicos,
      * senão duas inscrições simultâneas na última vaga passam as duas. {@code validarVaga}
@@ -114,15 +114,15 @@ public class InscricaoService {
      * via {@link #inscrever}, o erro só falaria do primeiro que bateu, nunca do total.
      */
     @Transactional
-    public void inscreverMembros(UUID eventoId, List<UUID> membroIds,
+    public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
                                  UUID inscritoPorUsuarioId, UUID igrejaId) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
         validarEventoAberto(evento);
 
-        if (!membroIds.isEmpty()) {
-            List<UUID> jaInscritos = inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, membroIds);
+        if (!pessoaIds.isEmpty()) {
+            List<UUID> jaInscritos = inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, pessoaIds);
             if (!jaInscritos.isEmpty()) {
                 String mensagem = jaInscritos.size() == 1
                         ? "Este membro já está inscrito no evento."
@@ -131,7 +131,7 @@ public class InscricaoService {
             }
         }
 
-        for (UUID pessoaId : membroIds) {
+        for (UUID pessoaId : pessoaIds) {
             inscrever(eventoId, pessoaId, inscritoPorUsuarioId, igrejaId);
         }
     }

@@ -16,10 +16,10 @@ export interface MinhaInscricaoResponse {
   acompanhantes: AcompanhanteResponse[]
 }
 
-/** Linha da lista de participantes visível a qualquer membro — sem telefone nem metadados administrativos. */
+/** Linha da lista de participantes visível a qualquer pessoa inscrita — sem telefone nem metadados administrativos. */
 export interface ParticipanteResponse {
   id: string
-  membroId: string
+  pessoaId: string
   nome: string
   foto: string | null
   convidados: string[]
@@ -28,7 +28,7 @@ export interface ParticipanteResponse {
 /** Linha da lista de inscritos, restrita a ADMIN/LÍDER. */
 export interface InscritoResponse {
   id: string
-  membroId: string
+  pessoaId: string
   nome: string
   foto: string | null
   /** null = a pessoa se inscreveu sozinha. */
@@ -51,8 +51,8 @@ export interface ListaInscritosResponse {
   inscritos: InscritoResponse[]
 }
 
-export interface InscreverMembrosRequest {
-  membroIds: string[]
+export interface InscreverPessoasRequest {
+  pessoaIds: string[]
 }
 
 export interface AcompanhanteRequest {

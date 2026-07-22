@@ -6,7 +6,7 @@ import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
-import { iniciais } from '@/lib/formats/membroFormat'
+import { iniciais } from '@/lib/formats/pessoaFormat'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
@@ -24,9 +24,10 @@ interface Props {
  * Quem vai ao evento, aberto ao clicar na pilha de avatares.
  *
  * <p>Duas fontes por papel, e a diferença é de privacidade, não de conveniência:
- * o membro recebe a lista <b>reduzida</b> (nome e foto); ADMIN/LÍDER recebem a completa,
- * que inclui telefone de convidado e quem inscreveu quem. Disparar a consulta de admin
- * para um membro devolveria 401 — por isso cada uma só roda para quem tem direito.
+ * a pessoa comum recebe a lista <b>reduzida</b> (nome e foto); ADMIN/LÍDER recebem a
+ * completa, que inclui telefone de convidado e quem inscreveu quem. Disparar a consulta
+ * de admin para uma pessoa comum devolveria 401 — por isso cada uma só roda para quem
+ * tem direito.
  */
 export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)

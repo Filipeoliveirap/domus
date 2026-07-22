@@ -26,12 +26,12 @@ export const Endpoints = {
     REATIVAR_ACESSO: '/usuarios/reativar-acesso',
     REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
   },
-  membros: {
-    LISTAR: '/membros',
-    CRIAR: '/membros',
-    BY_ID: (id: string) => `/membros/${id}`,
-    ARQUIVAR: (id: string) => `/membros/${id}`,
-    BAIRROS: '/membros/bairros',
+  pessoas: {
+    LISTAR: '/pessoas',
+    CRIAR: '/pessoas',
+    BY_ID: (id: string) => `/pessoas/${id}`,
+    ARQUIVAR: (id: string) => `/pessoas/${id}`,
+    BAIRROS: '/pessoas/bairros',
   },
 
   eventos: {
@@ -43,7 +43,7 @@ export const Endpoints = {
   inscricoes: {
     INSCREVER: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     MINHA: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha`,
-    INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/membros`,
+    INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/pessoas`,
     ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
       `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
     PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,

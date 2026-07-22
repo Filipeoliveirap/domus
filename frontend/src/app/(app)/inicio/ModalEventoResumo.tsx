@@ -8,10 +8,10 @@ import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
-import { iniciais } from '@/lib/formats/membroFormat'
+import { iniciais } from '@/lib/formats/pessoaFormat'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
-import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
+import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
 import {
@@ -290,11 +290,10 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
       </div>
 
       {modalAberto === 'membros' && (
-        <ModalInscreverMembros
+        <ModalInscreverPessoas
           eventoId={eventoId}
           tituloEvento={evento?.titulo ?? ''}
           exclusivoMembros={evento?.exclusivoMembros ?? false}
-          exclusivoBatizados={evento?.exclusivoBatizados ?? false}
           onClose={() => setModalAberto(null)}
         />
       )}

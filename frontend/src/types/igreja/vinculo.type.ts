@@ -25,11 +25,10 @@ export interface VinculoStatus {
   congregacoes: IgrejaResumo[]
 }
 
-export interface MembrosConsolidado {
+export interface PessoasConsolidado {
   total: number
-  ativos: number
-  inativos: number
-  visitantes: number
+  membros: number
+  congregantes: number
 }
 
 export interface EventosConsolidado {
@@ -45,7 +44,7 @@ export interface FinanceiroConsolidado {
 }
 
 export interface TotaisConsolidado {
-  membros: MembrosConsolidado
+  pessoas: PessoasConsolidado
   eventos: EventosConsolidado
   financeiro: FinanceiroConsolidado
 }

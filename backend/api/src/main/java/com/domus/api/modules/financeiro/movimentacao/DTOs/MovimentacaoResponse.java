@@ -19,7 +19,7 @@ public record MovimentacaoResponse(
         UUID categoriaId,
         String categoriaNome,
         UUID pessoaId,
-        String membroNome,
+        String pessoaNome,
         String criadoPorNome,
         String atualizadoPorNome
 ) {

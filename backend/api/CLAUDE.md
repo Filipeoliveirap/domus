@@ -43,7 +43,7 @@ apenas como executor:
 
 Domus é um SaaS **multi-inquilino (multi-tenant)** de gestão administrativa de igrejas
 de pequeno e médio porte. Módulos atuais (herdados do TCC): autenticação + recuperação
-de senha, usuários, membros, eventos, financeiro (com categorias e relatórios) e busca
+de senha, usuários, pessoas, eventos, financeiro (com categorias e relatórios) e busca
 global unificada.
 
 **Stack — Back:** Java 21, Spring Boot, Spring Security, PostgreSQL (fonte da verdade),
@@ -322,6 +322,7 @@ erDiagram
   botões no front de login e cadastro). Ver spec/plano em `docs/superpowers/`.
 - Entra de novo: login E cadastro com Google. No cadastro, o Google cria igreja +
   primeiro membro + primeiro usuário (ADMIN_IGREJA) já com e-mail e nome verificados.
+  *(Texto histórico da Fase 1: à época a tabela chamava-se `membro`; hoje é `pessoa`.)*
 - Provisionamento (admin dá acesso) ≠ login. Depois de provisionado, o membro entra por:
   (a) Google — vínculo pelo e-mail (membro.email é único), primeiro login verifica posse;
   (b) Nativo — precisa definir uma senha antes, reusando o MESMO fluxo do reset.
@@ -445,7 +446,7 @@ erDiagram
 
 - **Convite de acesso por e-mail (novo fluxo de provisionamento)**
     - *Motivação:* hoje o "conceder acesso" (`UsuarioService.concederAcesso`) exige que o
-      **admin defina a senha** do membro e escolha a role de uma vez. Novo fluxo desejado:
+      **admin defina a senha** da pessoa e escolha a role de uma vez. Novo fluxo desejado:
       o admin **só escolhe a role e convida por e-mail**; o **próprio usuário define a sua
       senha** depois (reusando o fluxo de reset/definir senha da Fase 1).
     - *Back:* ao convidar, criar o `usuario` com role e **sem senha** (`senha_hash = null` —
@@ -492,8 +493,8 @@ erDiagram
 - Como o **cadastro do dono via Google já foi construído na Fase 1**, aqui sobra:
     - **Expor o cadastro publicamente** (hoje é uso interno/piloto).
     - **Polir o onboarding pós-cadastro:** boas-vindas e próximos passos (continuar
-      cadastro, cadastrar membro, ir pro painel…).
-    - **Aviso de acesso a novos usuários:** quando o admin concede acesso a um membro,
+      cadastro, cadastrar pessoa, ir pro painel…).
+    - **Aviso de acesso a novos usuários:** quando o admin concede acesso a uma pessoa,
       notificar por e-mail ("você tem acesso, entre com Google") — depende do e-mail
       transacional da Fase 1.
     - Qualquer trava comercial (ex.: escolha de plano) — depende do estudo da Fase 6.
@@ -518,7 +519,7 @@ Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
 - Múltiplos atribuintes numa mesma movimentação financeira.
 - Verificação de **posse** de telefone via SMS (pago, com atrito — só se houver
   necessidade real de antifraude).
-- Expansão de campos de membro dirigida por uso real (YAGNI).
+- Expansão de campos de pessoa dirigida por uso real (YAGNI).
 - Novos itens que surgirem — anotar aqui, em vez de embutir no meio do caminho.
 
 ---
@@ -533,14 +534,14 @@ Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
   (login + cadastro) entra novo. Como o nativo continua, reset de senha, rate limiting e
   proteção a força bruta continuam valendo — não somem.
 - **Provisionamento ≠ autenticação.** O admin concede acesso (provisionamento, sem
-  OAuth); a pessoa loga com Google (autenticação). O **e-mail** (`membro.email`, único) é
+  OAuth); a pessoa loga com Google (autenticação). O **e-mail** (`pessoa.email`, único) é
   a chave que liga a identidade do Google ao usuário. O **primeiro login com Google** já
   serve de verificação de posse do e-mail.
-- **Auth é fundação:** construída (Fase 1) antes de provisionamento de membros e
+- **Auth é fundação:** construída (Fase 1) antes de provisionamento de pessoas e
   configurações.
 - Nos dois caminhos (Google ou nativo), **o app emite os próprios JWT + refresh** após
   identificar a pessoa; refresh/revogação e rate limiting valem para ambos.
-- Endereço = **colunas estruturadas na tabela `membro`**, não tabela separada (habilita
+- Endereço = **colunas estruturadas na tabela `pessoa`**, não tabela separada (habilita
   filtro por bairro sem over-engineering). Regra geral: tabela nova é para N-para-N ou
   dado repetido/compartilhado — não para 1-para-1.
 - Telefone e e-mail = **validação de formato** apenas; SMS de posse fica fora por ora.

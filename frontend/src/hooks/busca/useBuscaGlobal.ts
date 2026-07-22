@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 
 export interface ResultadoBusca {
   id: string
-  tipo: 'MEMBRO' | 'EVENTO' | 'USUARIO' | 'MOVIMENTACAO' | 'CATEGORIA'
+  tipo: 'PESSOA' | 'EVENTO' | 'USUARIO' | 'MOVIMENTACAO' | 'CATEGORIA'
   titulo: string
   subtitulo: string
 }

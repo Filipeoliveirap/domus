@@ -390,3 +390,27 @@ Outros resíduos dos protótipos, para quando as telas correspondentes forem fei
   não campo próprio.
 - **`adicionarAcompanhante` não tem `usuarioId` real no log** — usa `meuMembroId` como proxy.
   Estender a assinatura quando alguém encostar no método.
+
+### Contribuintes: filtro, relatório e múltiplos por lançamento (2026-07-22)
+
+Pedido do autor. **As duas partes são a mesma feature** e devem ser feitas juntas — fazer o
+relatório primeiro e depois mudar a cardinalidade obrigaria a reescrever o relatório.
+
+**1. Relatório e filtro por contribuinte.** Quem contribuiu, quanto, em que período. Combina
+com o filtro por **vínculo** já existente (contribuições de membros × de congregantes), que é
+justamente o recorte que a liderança pede.
+
+**2. Múltiplos contribuintes por movimentação.** Hoje `movimentacao_financeira.pessoa_id` é
+uma FK única — uma movimentação, um contribuinte. Precisa virar N-para-N (tabela de junção),
+porque uma oferta pode vir de um casal ou de uma família.
+
+⚠️ **A parte cara não é a tabela, é o que depende dela.** Ao passar de 1 para N:
+- o **valor** precisa decidir se é rateado entre os contribuintes ou repetido para cada um —
+  e a resposta muda toda soma de relatório. Decidir isso ANTES de escrever qualquer código.
+- relatórios que hoje agrupam por `pessoa_id` passam a contar em dobro se ingênuos;
+- a busca (`MovimentacaoDocument.pessoaNome`) indexa um nome só;
+- o filtro por vínculo precisa definir o que fazer quando os contribuintes têm vínculos
+  diferentes (um membro e um congregante na mesma oferta).
+
+Estava no CLAUDE.md como "múltiplos atribuintes" fora de escopo desde o começo; o autor
+confirmou em 2026-07-22 que quer.

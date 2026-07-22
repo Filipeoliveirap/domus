@@ -27,4 +27,20 @@ public interface FotoRepository extends JpaRepository<Foto, UUID> {
           AND NOT EXISTS (SELECT 1 FROM Igreja i WHERE i.logoFoto = f)
     """)
     List<Foto> buscarOrfas(@Param("corte") LocalDateTime corte);
+
+    /**
+     * Fotos de pessoas arquivadas (soft delete) há mais tempo que o corte.
+     *
+     * <p>{@code Pessoa} tem {@code @SQLRestriction("deleted_at IS NULL")}, então qualquer
+     * consulta JPQL sobre {@code Pessoa} simplesmente não enxerga quem está arquivado — a
+     * rotina de limpeza nunca encontraria essas fotos por ali. Por isso esta consulta é
+     * NATIVA: vai direto na tabela {@code pessoa}, ignorando a restrição do Hibernate, do
+     * mesmo jeito que {@code PessoaRepository.existsByEmailIncluindoArquivados} já faz.
+     */
+    @Query(value = """
+        SELECT f.* FROM foto f
+        JOIN pessoa p ON p.foto_id = f.id
+        WHERE p.deleted_at IS NOT NULL AND p.deleted_at < :corte
+    """, nativeQuery = true)
+    List<Foto> buscarDeArquivadas(@Param("corte") LocalDateTime corte);
 }

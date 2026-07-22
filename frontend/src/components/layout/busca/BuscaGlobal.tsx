@@ -11,14 +11,14 @@ const TIPO_CONFIG: Record<ResultadoBusca['tipo'], {
   icon: typeof Users
   rota: (r: ResultadoBusca) => string
 }> = {
-  MEMBRO:       { label: 'Membros',       icon: Users,    rota: (r) => `/membros?q=${encodeURIComponent(r.titulo)}` },
+  PESSOA:       { label: 'Pessoa',        icon: Users,    rota: (r) => `/pessoas?q=${encodeURIComponent(r.titulo)}` },
   EVENTO:       { label: 'Eventos',       icon: Calendar, rota: (r) => `/eventos?q=${encodeURIComponent(r.titulo)}` },
   USUARIO:      { label: 'Usuários',      icon: UserCog,  rota: (r) => `/usuarios?q=${encodeURIComponent(r.titulo)}` },
   MOVIMENTACAO: { label: 'Movimentações', icon: Wallet,   rota: (r) => `/financeiro/movimentacoes?q=${encodeURIComponent(r.titulo)}` },
   CATEGORIA:    { label: 'Categorias',    icon: Tag,      rota: (r) => `/financeiro/categorias?q=${encodeURIComponent(r.titulo)}` },
 }
 
-const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['MEMBRO', 'EVENTO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
+const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['PESSOA', 'EVENTO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
 
 export function BuscaGlobal() {
   const [termo, setTermo] = useState('')

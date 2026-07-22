@@ -74,7 +74,7 @@ public class BuscaPessoaService {
                     PessoaDocument doc = hit.getContent();
                     return new ResultadoBusca(
                             doc.getId(),
-                            TipoEntidadeOutbox.MEMBRO,
+                            TipoEntidadeOutbox.PESSOA,
                             doc.getNome(),
                             doc.getEmail() != null ? doc.getEmail() : doc.getMinisterio()
                     );

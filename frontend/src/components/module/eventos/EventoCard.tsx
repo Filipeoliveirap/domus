@@ -56,8 +56,13 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
       onClick={() => onAbrirDetalhe(evento)}
     >
       <div className={styles.imagem}>
-        {urlFoto(evento.fotoId, 'THUMB') ? (
-          <img src={urlFoto(evento.fotoId, 'THUMB')!} alt={evento.titulo} className={styles.imagemFoto} />
+        {/*
+          DISPLAY, não THUMB: o `thumb` tem 200px e foi dimensionado para AVATAR (40px na
+          tela, folga de sobra). Este banner ocupa a largura inteira do card — uns 350px —
+          e pedir a versão de 200px aqui obriga o navegador a ampliar, o que borra.
+        */}
+        {urlFoto(evento.fotoId, 'DISPLAY') ? (
+          <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagemFoto} />
         ) : (
           <div className={styles.imagemPlaceholder}>
             <CalendarDays size={32} />

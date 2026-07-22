@@ -157,7 +157,7 @@ BEGIN
 
             pid := gen_random_uuid();
             INSERT INTO pessoa (id, igreja_id, nome, email, telefone, data_nascimento,
-                                 estado_civil, ministerio, data_batismo, vinculo,
+                                 estado_civil, sexo, ministerio, data_batismo, vinculo,
                                  cep, logradouro, numero, bairro, cidade, uf)
             VALUES (
                 pid, ig,
@@ -167,6 +167,11 @@ BEGIN
                 '(11) 9' || lpad(floor(random() * 100000000)::text, 8, '0'),
                 nasc,
                 estados_civis[1 + floor(random() * array_length(estados_civis, 1))::int],
+                -- distribuído ~50/50, e uma fração fica sem valor (igual pessoa real
+                -- cadastrada antes deste campo existir) — pra restrição por sexo ter
+                -- casos de SEM_SEXO pra demonstrar também.
+                CASE WHEN random() < 0.15 THEN NULL
+                     WHEN random() < 0.5 THEN 'HOMEM' ELSE 'MULHER' END,
                 ministerios[1 + floor(random() * array_length(ministerios, 1))::int],
                 batismo, vinc,
                 CASE WHEN random() < 0.7 THEN lpad(floor(random() * 99999999)::text, 8, '0') ELSE NULL END,
@@ -186,37 +191,38 @@ END $$;
 -- demonstrar cada perfil de acesso. Todas com a mesma senha (12345678).
 -- ---------------------------------------------------------------------
 INSERT INTO pessoa (id, igreja_id, nome, email, telefone, data_nascimento, estado_civil,
-                     ministerio, data_batismo, vinculo)
+                     sexo, ministerio, data_batismo, vinculo)
 VALUES
     -- ADMIN_IGREJA da sede — a conta pessoal do autor
     ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
      'José Filipe Oliveira Pereira', 'josefilipe.dev@gmail.com', '(11) 98888-0001',
-     '1998-03-15', 'SOLTEIRO', 'Diaconato', '2015-06-01', 'MEMBRO'),
+     '1998-03-15', 'SOLTEIRO', 'HOMEM', 'Diaconato', '2015-06-01', 'MEMBRO'),
     -- LIDER da sede
     ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
      'Ricardo Almeida Souza', 'lider1@gmail.com', '(11) 98888-0002',
-     '1985-07-22', 'CASADO', 'Louvor', '2005-04-10', 'MEMBRO'),
+     '1985-07-22', 'CASADO', 'HOMEM', 'Louvor', '2005-04-10', 'MEMBRO'),
     -- ACESSO_COMUM da sede (congregante com login)
     ('b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
      'Beatriz Carvalho Lima', 'membro1@gmail.com', '(11) 98888-0003',
-     '1999-11-05', 'SOLTEIRO', NULL, NULL, 'CONGREGANTE'),
+     '1999-11-05', 'SOLTEIRO', 'MULHER', NULL, NULL, 'CONGREGANTE'),
     -- ADMIN_IGREJA de cada congregação
     ('b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000002',
      'Marcos Vinícius Ferreira', 'congregacao1@gmail.com', '(11) 98888-0004',
-     '1980-02-10', 'CASADO', 'Diaconato', '2000-01-15', 'MEMBRO'),
+     '1980-02-10', 'CASADO', 'HOMEM', 'Diaconato', '2000-01-15', 'MEMBRO'),
     ('b0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000003',
      'Camila Santos Rodrigues', 'congregacao2@gmail.com', '(11) 98888-0005',
-     '1982-09-30', 'CASADO', 'Diaconato', '2001-05-20', 'MEMBRO'),
+     '1982-09-30', 'CASADO', 'MULHER', 'Diaconato', '2001-05-20', 'MEMBRO'),
     ('b0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000004',
      'Eduardo Barbosa Melo', 'congregacao3@gmail.com', '(11) 98888-0006',
-     '1978-12-01', 'CASADO', 'Diaconato', '1999-08-08', 'MEMBRO'),
+     '1978-12-01', 'CASADO', 'HOMEM', 'Diaconato', '1999-08-08', 'MEMBRO'),
     -- LIDER e ACESSO_COMUM na congregação 1, para variar onde o demo mostra os perfis
     ('b0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000002',
      'Larissa Gomes Pereira', 'lider2@gmail.com', '(11) 98888-0007',
-     '1990-05-18', 'SOLTEIRO', 'Recepção', '2010-03-01', 'MEMBRO'),
+     '1990-05-18', 'SOLTEIRO', 'MULHER', 'Recepção', '2010-03-01', 'MEMBRO'),
+    -- Sem sexo de propósito: demonstra o caso SEM_SEXO em evento restrito por sexo.
     ('b0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000002',
      'Gustavo Lopes Araújo', 'membro2@gmail.com', '(11) 98888-0008',
-     '2001-08-25', 'SOLTEIRO', NULL, NULL, 'CONGREGANTE');
+     '2001-08-25', 'SOLTEIRO', NULL, NULL, NULL, 'CONGREGANTE');
 
 INSERT INTO tmp_pessoas
 SELECT igreja_id, id, vinculo, 'CONTA' FROM pessoa

@@ -22,6 +22,11 @@ const VINCULO_OPTIONS = [
   { value: 'CONGREGANTE', titulo: 'Congregante', descricao: 'Frequenta a igreja, não é batizado.' },
 ]
 
+const SEXO_OPTIONS = [
+  { value: 'HOMEM', titulo: 'Homem', descricao: '' },
+  { value: 'MULHER', titulo: 'Mulher', descricao: '' },
+]
+
 const ESTADO_CIVIL_OPTIONS = [
   { value: 'SOLTEIRO', label: 'Solteiro(a)' },
   { value: 'CASADO', label: 'Casado(a)' },
@@ -50,6 +55,7 @@ export function PessoaForm(props: PessoaFormProps) {
   } = props
 
   const vinculoAtual = watch('vinculo')
+  const sexoAtual = watch('sexo')
   const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
@@ -112,6 +118,10 @@ export function PessoaForm(props: PessoaFormProps) {
               <Select id="estadoCivil" label="ESTADO CIVIL" placeholder="Selecione"
                 options={ESTADO_CIVIL_OPTIONS} error={errors.estadoCivil?.message} {...register('estadoCivil')} />
             </div>
+            {/* Nulável de propósito — não é sobre identidade, é pra restringir
+                inscrição em evento ("encontro de mulheres", "café dos homens"). */}
+            <StatusCards label="SEXO" options={SEXO_OPTIONS}
+              selecionado={sexoAtual} {...register('sexo')} />
           </section>
 
           {/* Localização */}

@@ -72,7 +72,7 @@ class PessoaServiceTest {
 
     private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo, UUID fotoId) {
         return new PessoaRequestDTO("Maria", null, null, null, null,
-                vinculo, null, null, null, dataBatismo, fotoId);
+                vinculo, null, null, null, null, dataBatismo, fotoId);
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.domus.api.modules.pessoa.DTO;
 
 import com.domus.api.modules.pessoa.EstadoCivil;
 import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.Sexo;
 import com.domus.api.modules.pessoa.Vinculo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ public record PessoaResponse(
         EnderecoDTO endereco,
         Vinculo vinculo,
         EstadoCivil estadoCivil,
+        Sexo sexo,
         String ministerio,
         UUID fotoId,
         String observacoes,
@@ -57,7 +59,7 @@ public record PessoaResponse(
                 m.getDataNascimento(),
                 incluirDadosSensiveis ? enderecoDe(m.getEndereco()) : null,
                 m.getVinculo(),
-                m.getEstadoCivil(), m.getMinisterio(),
+                m.getEstadoCivil(), m.getSexo(), m.getMinisterio(),
                 m.getFoto() != null ? m.getFoto().getId() : null,
                 incluirDadosSensiveis ? m.getObservacoes() : null,
                 m.getCreatedAt(),

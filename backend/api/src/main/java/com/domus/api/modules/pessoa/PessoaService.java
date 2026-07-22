@@ -91,6 +91,7 @@ public class PessoaService {
                 .endereco(paraEndereco(data.endereco()))
                 .vinculo(data.vinculo())
                 .estadoCivil(data.estadoCivil())
+                .sexo(data.sexo())
                 .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
                 .dataBatismo(data.dataBatismo())
@@ -165,6 +166,7 @@ public class PessoaService {
         membro.setEndereco(paraEndereco(data.endereco()));
         membro.setVinculo(data.vinculo());
         membro.setEstadoCivil(data.estadoCivil());
+        membro.setSexo(data.sexo());
         membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
         membro.setDataBatismo(data.dataBatismo());

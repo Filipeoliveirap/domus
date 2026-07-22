@@ -10,7 +10,7 @@ public record InscritoResponse(
         UUID id,
         UUID pessoaId,
         String nome,
-        String foto,
+        UUID fotoId,
         /** NULL = a pessoa se inscreveu sozinha. */
         UUID inscritoPorUsuarioId,
         /**
@@ -19,7 +19,7 @@ public record InscritoResponse(
          * dois casos o front não deve inventar um nome, só decidir a mensagem certa.
          */
         String inscritoPorNome,
-        String inscritoPorFoto,
+        UUID inscritoPorFotoId,
         LocalDateTime inscritoEm,
         List<AcompanhanteResponse> acompanhantes
 ) {
@@ -33,10 +33,10 @@ public record InscritoResponse(
                 i.getId(),
                 i.getPessoa().getId(),
                 i.getPessoa().getNome(),
-                i.getPessoa().getFoto(),
+                i.getPessoa().getFoto() != null ? i.getPessoa().getFoto().getId() : null,
                 i.getInscritoPorUsuarioId(),
                 registrante == null ? null : registrante.nome(),
-                registrante == null ? null : registrante.foto(),
+                registrante == null ? null : registrante.fotoId(),
                 i.getCreatedAt(),
                 i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList()
         );

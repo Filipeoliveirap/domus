@@ -169,7 +169,6 @@ public class IgrejaService {
         igreja.setDenominacao(TextoUtil.capitalizar(data.denominacao()));
         igreja.setEmailContato(data.emailContato());
         igreja.setTelefoneContato(data.telefoneContato());
-        igreja.setLogoUrl(data.logoUrl());
         igreja.setEndereco(paraEndereco(data.endereco()));
         igreja.setAtualizadoPor(usuarioRepository.getReferenceById(usuarioId));
 

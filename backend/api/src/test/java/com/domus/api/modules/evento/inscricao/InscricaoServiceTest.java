@@ -557,14 +557,14 @@ class InscricaoServiceTest {
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
         when(usuarioRepository.buscarRegistrantes(java.util.List.of(usuarioId)))
-                .thenReturn(java.util.List.of(new RegistranteResumo(usuarioId, "João Líder", "joao.jpg")));
+                .thenReturn(java.util.List.of(new RegistranteResumo(usuarioId, "João Líder", null)));
 
         var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
 
         assertThat(inscritos).hasSize(1);
         assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);
         assertThat(inscritos.get(0).inscritoPorNome()).isEqualTo("João Líder");
-        assertThat(inscritos.get(0).inscritoPorFoto()).isEqualTo("joao.jpg");
+        assertThat(inscritos.get(0).inscritoPorFotoId()).isNull();
     }
 
     @Test
@@ -609,7 +609,7 @@ class InscricaoServiceTest {
         assertThat(inscritos).hasSize(1);
         assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);
         assertThat(inscritos.get(0).inscritoPorNome()).isNull();
-        assertThat(inscritos.get(0).inscritoPorFoto()).isNull();
+        assertThat(inscritos.get(0).inscritoPorFotoId()).isNull();
     }
 
     @Test

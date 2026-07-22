@@ -7,5 +7,5 @@ import java.util.UUID;
  * {@code inscritoPorUsuarioId} em lote na lista de inscritos — evita N+1 (ver
  * {@link com.domus.api.modules.usuario.UsuarioRepository#buscarRegistrantes}).
  */
-public record RegistranteResumo(UUID usuarioId, String nome, String foto) {
+public record RegistranteResumo(UUID usuarioId, String nome, UUID fotoId) {
 }

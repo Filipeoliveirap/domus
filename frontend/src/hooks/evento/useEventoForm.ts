@@ -35,7 +35,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       tipoInscricao: 'GRATUITO',
       preco: undefined,
       exclusivoMembros: false,
-      exclusivoBatizados: false,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -73,7 +72,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         // evento pago falhava na validação até a pessoa apagar e redigitar o valor.
         preco: eventoInicial.preco != null ? String(eventoInicial.preco) : undefined,
         exclusivoMembros: eventoInicial.exclusivoMembros,
-        exclusivoBatizados: eventoInicial.exclusivoBatizados,
       })
     }
   }, [eventoInicial, reset])
@@ -89,7 +87,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         : undefined
 
       // O backend faz PUT (substitui a entidade inteira) e lê booleano JSON ausente como
-      // false. Por isso requerInscricao/exclusivoMembros/exclusivoBatizados são SEMPRE
+      // false. Por isso requerInscricao/exclusivoMembros são SEMPRE
       // enviados com o valor atual do form — mesmo quando a seção "Inscrições" está
       // recolhida na tela — nunca omitidos condicionalmente. O RHF não desmonta esses
       // campos do estado do form ao escondê-los (shouldUnregister não está ativo em
@@ -102,7 +100,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         local: data.local || undefined,
         requerInscricao: data.requerInscricao,
         exclusivoMembros: data.exclusivoMembros,
-        exclusivoBatizados: data.exclusivoBatizados,
         vagas: data.requerInscricao ? data.vagas : undefined,
         preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
           ? data.preco

@@ -6,7 +6,7 @@ import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X } from
 import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { versiculoDoDia } from '@/lib/versiculos'
-import { iniciais } from '@/lib/formats/membroFormat'
+import { iniciais } from '@/lib/formats/pessoaFormat'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { ModalEventoResumo } from './ModalEventoResumo'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'

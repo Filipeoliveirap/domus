@@ -160,7 +160,7 @@ export function useRegistrarIgreja () {
         }
     }
 
-    const irParaMembros = () => router.push('/membros')
+    const irParaPessoas = () => router.push('/pessoas')
     const irParaPerfilIgreja = () => router.push('/configuracoes/igreja')
     const irParaMeuPerfil = () => router.push('/perfil')
     const irParaPainelInicial = () => router.push('/inicio')
@@ -188,7 +188,7 @@ export function useRegistrarIgreja () {
         onGoogleError,
         onSubmitGoogle,
         dadosSucesso,
-        irParaMembros,
+        irParaPessoas,
         irParaPerfilIgreja,
         irParaMeuPerfil,
         irParaPainelInicial,

@@ -39,11 +39,11 @@ const opcional = <T extends z.ZodType<string>>(schema: T) =>
     schema.optional(),
   )
 
-export const membroSchema = z.object({
+export const pessoaSchema = z.object({
   nome: z
     .string()
     .trim()
-    .min(2, 'Nome do membro deve ter pelo menos 2 caracteres')
+    .min(2, 'Nome da pessoa deve ter pelo menos 2 caracteres')
     .max(255, 'O nome deve ter no máximo 255 caracteres'),
 
   email: opcional(
@@ -74,9 +74,9 @@ export const membroSchema = z.object({
     uf: opcional(z.string().length(2, 'UF deve ter 2 letras')),
   }).optional(),
 
-  status: z
-    .enum(['ATIVO', 'INATIVO', 'VISITANTE'])
-    .default('ATIVO'),
+  vinculo: z
+    .enum(['MEMBRO', 'CONGREGANTE'])
+    .default('CONGREGANTE'),
 
   estadoCivil: z.enum(
     ['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']
@@ -88,7 +88,7 @@ export const membroSchema = z.object({
 
   observacoes: opcional(z.string()),
 
-  batizado: z.boolean().default(false),
+  // Só faz sentido quando vinculo === 'MEMBRO' — a UI esconde o campo para CONGREGANTE.
   dataBatismo: opcional(
     z.string().refine(
       (val) => new Date(val) <= new Date(),
@@ -98,10 +98,14 @@ export const membroSchema = z.object({
 })
 
 export const concederAcessoSchema = z.object({
+  // NOTA: `Role` (src/types/usuario.types.ts) ainda usa o literal 'MEMBRO' — a role só
+  // foi renomeada para ACESSO_COMUM no backend (ver design doc), não no front. Fora do
+  // escopo desta rename (membro→pessoa); mantido igual ao tipo `Role` para não quebrar
+  // o tsc.
   role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
     message: 'Selecione um perfil para o usuário',
   }),
-  // Só usado quando o membro ainda não tem e-mail (o modal pede um).
+  // Só usado quando a pessoa ainda não tem e-mail (o modal pede um).
   email: opcional(
     z.email('E-mail inválido').transform((v) => v.trim().toLowerCase()),
   ),
@@ -144,8 +148,9 @@ const eventoSchemaBase = z.object({
   preco: opcional(
     z.string().refine((v) => parseFloat(v) > 0, 'Preço deve ser maior que zero.'),
   ),
+  // "Exclusivo para membros" é vocabulário de domínio (vínculo com a igreja), não do
+  // cadastro — barra quem tem vínculo CONGREGANTE.
   exclusivoMembros: z.boolean().default(false),
-  exclusivoBatizados: z.boolean().default(false),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -171,7 +176,7 @@ export const movimentacaoSchema = z.object({
     .refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
   categoriaId: z.string().min(1, 'Selecione a categoria.'),
   dataMovimentacao: z.string().min(1, 'A data é obrigatória.'),
-  membroId: opcional(z.string()),
+  pessoaId: opcional(z.string()),
   descricao: opcional(z.string().max(1000, 'Máximo 1000 caracteres.')),
 })
 
@@ -207,8 +212,8 @@ export const redefinirSenhaSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
-export type MembroFormData = z.infer<typeof membroSchema> 
-export type MembroFormInput = z.input<typeof membroSchema>  
+export type PessoaFormData = z.infer<typeof pessoaSchema>
+export type PessoaFormInput = z.input<typeof pessoaSchema>
 export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>
 export type ConcederAcessoFormInput = z.input<typeof concederAcessoSchema>
 export type EventoFormData = z.infer<typeof eventoSchema>

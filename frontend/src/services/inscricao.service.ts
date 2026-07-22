@@ -4,7 +4,7 @@ import type {
   MinhaInscricaoResponse,
   ParticipanteResponse,
   ListaInscritosResponse,
-  InscreverMembrosRequest,
+  InscreverPessoasRequest,
   AcompanhanteRequest,
   AcompanhanteResponse,
 } from '@/types/inscricao.type'
@@ -16,7 +16,7 @@ export const inscricoesService = {
   minhaInscricao: (eventoId: string): Promise<MinhaInscricaoResponse> =>
     api.get<MinhaInscricaoResponse>(Endpoints.inscricoes.MINHA(eventoId)).then(res => res.data),
 
-  inscreverMembros: (eventoId: string, data: InscreverMembrosRequest): Promise<void> =>
+  inscreverPessoas: (eventoId: string, data: InscreverPessoasRequest): Promise<void> =>
     api.post(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data).then(() => undefined),
 
   adicionarAcompanhante: (

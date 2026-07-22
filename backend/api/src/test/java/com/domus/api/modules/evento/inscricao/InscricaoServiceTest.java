@@ -139,20 +139,20 @@ class InscricaoServiceTest {
     // MEMBRO|CONGREGANTE, então os dois testes colapsam em um só, sem perder cobertura.
 
     @Test
-    void inscreverMembrosRecusaQuandoEventoNaoOrganizaInscricaoDeTerceiros() {
+    void inscreverPessoasRecusaQuandoEventoNaoOrganizaInscricaoDeTerceiros() {
         // Diferente da auto-inscrição: inscrever OUTRA pessoa continua exigindo requerInscricao.
         Evento e = evento(10);
         e.setRequerInscricao(false);
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
 
-        assertThatThrownBy(() -> service.inscreverMembros(
+        assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("não organiza inscrição de outras pessoas");
     }
 
     @Test
-    void inscreverMembrosNomeiaQuantosJaEstavamInscritos() {
+    void inscreverPessoasNomeiaQuantosJaEstavamInscritos() {
         Evento e = evento(10);
         UUID outroMembroId = UUID.randomUUID();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
@@ -160,7 +160,7 @@ class InscricaoServiceTest {
                 java.util.List.of(pessoaId, outroMembroId)))
                 .thenReturn(java.util.List.of(pessoaId, outroMembroId));
 
-        assertThatThrownBy(() -> service.inscreverMembros(
+        assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId, outroMembroId), usuarioId, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("2 membros já estão inscritos");
@@ -196,15 +196,15 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void inscreverMembrosRecusaQuandoEventoEmAndamento() {
-        // B3: a validação de "evento aberto" tem que valer também para inscreverMembros, não
-        // só para a auto-inscrição — checada ANTES do laço, então nem chega a olhar membroIds.
+    void inscreverPessoasRecusaQuandoEventoEmAndamento() {
+        // B3: a validação de "evento aberto" tem que valer também para inscreverPessoas, não
+        // só para a auto-inscrição — checada ANTES do laço, então nem chega a olhar pessoaIds.
         Evento e = evento(10);
         e.setInicioEm(LocalDateTime.now().minusHours(1));
         e.setFimEm(LocalDateTime.now().plusHours(1));
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
 
-        assertThatThrownBy(() -> service.inscreverMembros(
+        assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já começou");

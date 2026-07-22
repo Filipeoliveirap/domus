@@ -30,7 +30,7 @@ public class MovimentacaoDocument {
     private String categoriaNome;
 
     @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
-    private String membroNome;
+    private String pessoaNome;
 
     @Field(type = FieldType.Keyword)
     private String tipo;
@@ -41,7 +41,7 @@ public class MovimentacaoDocument {
         doc.setIgrejaId(mov.getIgreja().getId().toString());
         doc.setDescricao(mov.getDescricao());
         doc.setCategoriaNome(mov.getCategoria() != null ? mov.getCategoria().getNome() : null);
-        doc.setMembroNome(mov.getPessoa() != null ? mov.getPessoa().getNome() : null);
+        doc.setPessoaNome(mov.getPessoa() != null ? mov.getPessoa().getNome() : null);
         doc.setTipo(mov.getTipo() != null ? mov.getTipo().name() : null);
         return doc;
     }

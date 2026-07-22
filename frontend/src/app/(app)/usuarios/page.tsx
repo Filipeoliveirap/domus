@@ -7,7 +7,7 @@ import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-reac
 import { notificar } from "@/components/common/Notificacao/notificar";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidarCache } from "@/lib/cacheInvalidacao";
-import { membrosService } from "@/services/membro.service";
+import { pessoasService } from "@/services/pessoa.service";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import type { ApiError } from "@/types/api.types";
 import {
@@ -58,7 +58,7 @@ function UsuariosConteudo() {
 
   async function reenviarConvite(u: UsuarioResponse) {
     try {
-      await membrosService.reenviarConvite(u.id)
+      await pessoasService.reenviarConvite(u.id)
       invalidarCache(queryClient, 'usuario')
       notificar.sucesso(`Convite reenviado para ${u.nome}.`)
     } catch (error: unknown) {

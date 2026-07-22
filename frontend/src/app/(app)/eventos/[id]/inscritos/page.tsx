@@ -10,14 +10,14 @@ import { useEvento } from '@/hooks/evento/useEvento'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
-import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
+import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
-import { iniciais } from '@/lib/formats/membroFormat'
-import { formatarData } from '@/lib/formats/membroFormat'
+import { iniciais } from '@/lib/formats/pessoaFormat'
+import { formatarData } from '@/lib/formats/pessoaFormat'
 import type { InscritoResponse } from '@/types/inscricao.type'
 import styles from './inscritos.module.css'
 
@@ -251,11 +251,10 @@ export default function InscritosPage() {
       )}
 
       {modalInscreverAberto && evento && (
-        <ModalInscreverMembros
+        <ModalInscreverPessoas
           eventoId={eventoId}
           tituloEvento={evento.titulo}
           exclusivoMembros={evento.exclusivoMembros}
-          exclusivoBatizados={evento.exclusivoBatizados}
           onClose={() => setModalInscreverAberto(false)}
         />
       )}

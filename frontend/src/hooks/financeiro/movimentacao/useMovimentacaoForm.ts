@@ -31,7 +31,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
       valor: '',
       categoriaId: '',
       dataMovimentacao: '',
-      membroId: '',
+      pessoaId: '',
       descricao: '',
     },
     requiredFields: ['tipo', 'valor', 'categoriaId', 'dataMovimentacao'],
@@ -46,7 +46,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: String(movimentacaoInicial.valor),  
         categoriaId: movimentacaoInicial.categoriaId,
         dataMovimentacao: movimentacaoInicial.dataMovimentacao.split('T')[0],
-        membroId: movimentacaoInicial.membroId ?? '',
+        pessoaId: movimentacaoInicial.pessoaId ?? '',
         descricao: movimentacaoInicial.descricao ?? '',
       })
     }
@@ -61,7 +61,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: data.valor,
         categoriaId: data.categoriaId,
         dataMovimentacao: data.dataMovimentacao,
-        membroId: data.membroId || undefined,    
+        pessoaId: data.pessoaId || undefined,
         descricao: data.descricao || undefined,
       }
 

@@ -28,7 +28,7 @@ export function EventoForm(props: EventoFormProps) {
 
   const requerInscricao = watch('requerInscricao')
   const tipoInscricao = watch('tipoInscricao')
-  const exclusivoBatizados = watch('exclusivoBatizados')
+  const exclusivoMembros = watch('exclusivoMembros')
   const inicioData = (watch('inicioData') as string) ?? ''
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
@@ -270,22 +270,12 @@ export function EventoForm(props: EventoFormProps) {
                   </span>
                 </label>
 
-                <label className={styles.toggleRow}>
-                  <span className={styles.toggleTexto}>
-                    <span className={styles.toggleTitulo}>Somente membros batizados</span>
-                  </span>
-                  <span className={styles.switch}>
-                    <input type="checkbox" className={styles.switchInput} {...register('exclusivoBatizados')} />
-                    <span className={styles.switchTrilho} />
-                  </span>
-                </label>
-
-                {exclusivoBatizados && (
+                {exclusivoMembros && (
                   <div className={styles.infoBox}>
                     <AlertTriangle size={18} className={styles.infoIcon} />
                     <p className={styles.infoText}>
-                      Membros que não estiverem marcados como batizados não poderão se
-                      inscrever nem ser inscritos.
+                      Pessoas com vínculo Congregante não poderão se inscrever nem ser
+                      inscritas.
                     </p>
                   </div>
                 )}

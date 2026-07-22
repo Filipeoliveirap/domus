@@ -5,7 +5,7 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 
-/** Cancela uma inscrição — a própria (membro) ou de outro (ADMIN/LÍDER), regra fica no backend. */
+/** Cancela uma inscrição — a própria (pessoa) ou de outro (ADMIN/LÍDER), regra fica no backend. */
 export function useCancelarInscricao() {
   const queryClient = useQueryClient()
 

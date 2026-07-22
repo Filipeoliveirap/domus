@@ -63,7 +63,7 @@ public class DashboardService {
                         .stream().map(EventoResumoDTO::from).toList();
 
         return new DashboardResponse(
-                new DashboardResponse.Membros(totalMembros, novosMembros),
+                new DashboardResponse.Pessoas(totalMembros, novosMembros),
                 new DashboardResponse.Eventos(eventosMes, eventosSemana),
                 new DashboardResponse.Financeiro(entradas, saidas, saldo),
                 recentes,

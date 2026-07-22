@@ -32,6 +32,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
       vinculo: 'CONGREGANTE', estadoCivil: '',
       ministerio: '', observacoes: '',
+      fotoId: null,
     },
     requiredFields: ['nome'],
   })
@@ -59,6 +60,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         estadoCivil: pessoaInicial.estadoCivil ?? '',
         ministerio: pessoaInicial.ministerio ?? '',
         observacoes: pessoaInicial.observacoes ?? '',
+        fotoId: pessoaInicial.fotoId ?? null,
       })
     }
   }, [pessoaInicial, reset])

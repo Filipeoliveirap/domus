@@ -87,7 +87,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      */
     @Query("""
         SELECT new com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo(
-            u.id, u.pessoa.nome, u.pessoa.foto)
+            u.id, u.pessoa.nome, u.pessoa.foto.id)
         FROM Usuario u
         WHERE u.id IN :ids
     """)

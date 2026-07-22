@@ -17,7 +17,7 @@ public record ParticipanteResponse(
         UUID id,
         UUID pessoaId,
         String nome,
-        String foto,
+        UUID fotoId,
         List<String> convidados
 ) {
     public static ParticipanteResponse from(InscricaoEvento i) {
@@ -25,7 +25,7 @@ public record ParticipanteResponse(
                 i.getId(),
                 i.getPessoa().getId(),
                 i.getPessoa().getNome(),
-                i.getPessoa().getFoto(),
+                i.getPessoa().getFoto() != null ? i.getPessoa().getFoto().getId() : null,
                 i.getAcompanhantes().stream().map(a -> a.getNome()).toList()
         );
     }

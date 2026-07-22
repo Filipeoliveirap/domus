@@ -30,6 +30,20 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
+		<!-- R2 é compatível com a API do S3; o SDK da AWS fala com ele sem adaptação. -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.31.7</version>
+		</dependency>
+
+		<!-- Redimensiona e, crucialmente, APLICA a orientação do EXIF antes de descartá-lo.
+		     Sem isso, foto de celular tirada em pé aparece deitada. -->
+		<dependency>
+			<groupId>net.coobird</groupId>
+			<artifactId>thumbnailator</artifactId>
+			<version>0.4.20</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -165,6 +179,23 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<!--
+						  Testes usam armazenamento EM MEMORIA: sem isto eles tentariam falar com o
+						  R2 de verdade — rede, credencial e lixo no bucket.
+
+						  Definido AQUI e nao num src/test/resources/application.properties porque
+						  aquele arquivo SUBSTITUI o principal em vez de complementar: criar um
+						  apagaria a configuracao de banco e derrubaria todo @SpringBootTest.
+						-->
+						<app.fotos.armazenamento>memoria</app.fotos.armazenamento>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>

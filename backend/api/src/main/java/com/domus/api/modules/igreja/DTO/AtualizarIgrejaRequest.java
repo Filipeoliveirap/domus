@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 /**
  * Só o nome e o e-mail são obrigatórios — são {@code NOT NULL} na tabela desde a V1.
@@ -24,7 +25,9 @@ public record AtualizarIgrejaRequest(
         @Size(max = 255) String emailContato,
 
         @Size(max = 50) String telefoneContato,
-        @Size(max = 500) String logoUrl,
 
-        @Valid EnderecoDTO endereco
+        @Valid EnderecoDTO endereco,
+
+        /** Id da foto (logo) já enviada via {@code POST /fotos}; {@code null} = sem logo. */
+        UUID logoFotoId
 ) {}

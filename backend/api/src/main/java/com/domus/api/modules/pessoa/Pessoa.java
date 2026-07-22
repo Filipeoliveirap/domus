@@ -57,8 +57,9 @@ public class Pessoa {
     @Column(name = "ministerio", length = 255)
     private String ministerio;
 
-    @Column(name = "foto", length = 500)
-    private String foto;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "foto_id")
+    private com.domus.api.modules.foto.Foto foto;
 
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;

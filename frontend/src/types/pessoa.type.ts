@@ -24,6 +24,7 @@ export interface PessoaRequest {
   ministerio?: string
   observacoes?: string
   dataBatismo?: string
+  fotoId?: string | null
 }
 
 export interface PessoaResponse {
@@ -36,7 +37,7 @@ export interface PessoaResponse {
   vinculo: Vinculo
   estadoCivil: EstadoCivil | null
   ministerio: string | null
-  foto: string | null
+  fotoId: string | null
   observacoes: string | null
   createdAt: string
   dataBatismo: string | null

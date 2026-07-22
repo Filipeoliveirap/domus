@@ -105,7 +105,7 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V1**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V2**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -129,6 +129,9 @@ erDiagram
     USUARIO ||--o{ IGREJA : "atualizou/vinculou"
     EVENTO ||--o{ INSCRICAO_EVENTO : "tem"
     INSCRICAO_EVENTO ||--o{ ACOMPANHANTE_INSCRICAO : "pode ter"
+    PESSOA }o--o| FOTO : tem
+    EVENTO }o--o| FOTO : tem
+    IGREJA }o--o| FOTO : "tem (logo)"
 
     IGREJA {
         uuid      id PK
@@ -143,7 +146,7 @@ erDiagram
         varchar   denominacao "V13"
         varchar   email "contato"
         varchar   telefone
-        varchar   logo_url "V13"
+        uuid      logo_foto_id FK "V2 - era logo_url; agora aponta pra FOTO"
         varchar   plano
         varchar   cep_logradouro_numero "V13 - endereço estruturado"
         varchar   complemento_bairro_cidade_uf "V13"
@@ -160,7 +163,7 @@ erDiagram
         varchar   vinculo "MEMBRO|CONGREGANTE - substitui status+batizado"
         varchar   estado_civil
         varchar   ministerio
-        varchar   foto
+        uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         varchar   cep_logradouro_numero "V11 - endereço estruturado"
         varchar   complemento_bairro_cidade_uf "V11"
         date      data_batismo "só tem sentido se vinculo=MEMBRO"
@@ -193,7 +196,7 @@ erDiagram
         timestamp inicio_em
         timestamp fim_em "NULL = sem fim declarado"
         varchar   local
-        varchar   foto
+        uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         integer   vagas "V15 - NULL = sem limite"
         numeric   preco "V15 - NULL = gratuito"
         boolean   exclusivo_membros "cobre batizados - vinculo=MEMBRO é quem é batizado"
@@ -246,6 +249,14 @@ erDiagram
         varchar operacao
         boolean processado "transactional outbox p/ Elasticsearch"
     }
+
+    FOTO {
+        uuid      id PK
+        uuid      igreja_id FK "isolamento multi-tenant"
+        varchar   chave UK "V2 - prefixo aleatório no bucket R2"
+        varchar   tipo "V2 - image/jpeg|image/png|image/webp, do original"
+        bigint    bytes "V2 - do original, pra acompanhar consumo"
+    }
 ```
 
 ### O que ler neste diagrama
@@ -272,6 +283,13 @@ erDiagram
   (preserva histórico de quem inscreveu quem); reinscricão reaproveita a mesma linha
   graças ao `UNIQUE (evento_id, pessoa_id)`. O `requer_inscricao` é o master toggle
   que separa evento que se organiza de evento que só acontece.
+
+- **`FOTO`** (V2) é metadado apenas — os bytes vivem num bucket **privado** do Cloudflare
+  R2, servido pela própria API (`GET /fotos/{id}`), nunca por URL pública. `pessoa.foto`,
+  `evento.foto` e `igreja.logo_url` deixaram de ser `varchar` de URL e viraram
+  `foto_id`/`logo_foto_id` (`uuid`, `ON DELETE RESTRICT`): o job de limpeza decide o que
+  apagar por **ausência** de referência, e a FK faz o banco recusar apagar uma foto ainda
+  referenciada — a proteção não depende de a consulta da limpeza estar certa.
 
 > **Consolidação das migrations (2026-07-21):** `V1__schema_inicial.sql` substitui as
 > antigas V1–V16 num único arquivo — não havia dado real em produção, então as duas
@@ -417,11 +435,21 @@ erDiagram
 
 > **Objetivo:** o que faz a igreja realmente querer usar.
 
-- **Upload de foto** (pessoa e evento)
-    - *Back:* armazenamento externo (S3 / Cloudflare R2 / similar — **evitar guardar
-      binário no Postgres**), validação de tipo/tamanho, geração de URL. O campo `foto` já
-      existe nas tabelas `pessoa` e `evento`.
-    - *Front:* componente de upload com preview (recorte opcional).
+- [x] **Upload de foto** (pessoa, evento e logo da igreja) — **FEITO** (2026-07-22):
+  tabela `foto` (V2) + bucket **privado** no Cloudflare R2, servido pela própria API
+  (`GET /fotos/{id}?tamanho=thumb|display`, sessão e igreja validadas — nunca URL pública,
+  porque são rostos de membros, inclusive crianças). Três versões (`original` guardado,
+  nunca servido; `display` 1200px; `thumb` 200px). Validação por **conteúdo** (não
+  extensão), limite de 50 megapixels checado no header antes de decodificar, e
+  redecodificação que descarta EXIF (inclusive a coordenada de GPS do celular). Limpeza
+  automática: órfã após 24h, foto de pessoa arquivada após 6 meses, troca remove a
+  anterior na hora — ambas as janelas configuráveis (`app.fotos.orfa-horas`,
+  `app.fotos.arquivada-meses`). `pessoa.foto`/`evento.foto`/`igreja.logo_url` viraram FK
+  (`ON DELETE RESTRICT`) pra `foto.id`. Componente único `<UploadFoto>` no front, com
+  recorte obrigatório em pessoa/logo (formato fixo) e opcional no banner de evento. Ver
+  spec em `docs/superpowers/specs/2026-07-22-upload-foto-design.md`.
+    - *Ficou de fora* (fora de escopo desta entrega): galeria (múltiplas fotos por
+      entidade), vídeo, CDN de borda, e WebP como formato de **entrada** (ver BACKLOG).
 
 - **Endereço estruturado** *(colunas, não tabela nova)*
     - *Decisão:* substituir `endereco VARCHAR(500)` por colunas na própria tabela `pessoa`:

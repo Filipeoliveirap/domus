@@ -3,6 +3,7 @@ package com.domus.api.modules.evento;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.evento.DTOs.ImpactoRestricaoResponse;
 import com.domus.api.modules.evento.elegibilidade.DTOs.ElegibilidadeResponse;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
@@ -22,12 +23,14 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
+import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -131,6 +134,22 @@ public class EventoService {
 
     @Transactional
     public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId) {
+        return atualizarEvento(id, data, igrejaId, usuarioId, false);
+    }
+
+    /**
+     * @param cancelarNaoElegiveis Task 6: escolha EXPLÍCITA do admin ({@code PUT
+     *                             /eventos/{id}?cancelarNaoElegiveis=true}) para cancelar quem
+     *                             não é mais elegível sob a configuração nova. {@code false}
+     *                             (o padrão) NUNCA cancela ninguém sozinho — apertar uma faixa
+     *                             etária ou ligar {@code exclusivoMembros} não apaga mais em
+     *                             silêncio as exceções que o admin abriu com "inscrever mesmo
+     *                             assim" (ver Javadoc de
+     *                             {@link InscricaoService#removerInscritosNaoElegiveis}).
+     */
+    @Transactional
+    public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
+                                          boolean cancelarNaoElegiveis) {
         log.info("Atualizando evento. id={}, igreja_id={}", id, igrejaId);
         validarDatas(data);
         validarIdades(data);
@@ -208,10 +227,12 @@ public class EventoService {
             fotoService.remover(fotoAntiga.getId());
         }
 
-        // B4: restringir o evento pode deixar gente já confirmada inelegível — cancela quem
-        // não se qualifica mais (mesmo cancelamento manual, convidados incluídos).
-        int inscricoesRemovidas = inscricaoService.removerInscritosNaoElegiveis(
-                salvo.getId(), exclusivoMembros);
+        // Task 6: NUNCA cancela sozinho mais. Só quando o admin escolhe explicitamente
+        // cancelarNaoElegiveis=true (depois de ver a prévia de POST .../impacto-restricao) —
+        // ver Javadoc de removerInscritosNaoElegiveis para o porquê da mudança.
+        int inscricoesRemovidas = cancelarNaoElegiveis
+                ? inscricaoService.removerInscritosNaoElegiveis(salvo.getId())
+                : 0;
 
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
@@ -264,6 +285,43 @@ public class EventoService {
         Pessoa pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
         return ElegibilidadeResponse.from(elegibilidadeService.avaliar(evento, pessoa));
+    }
+
+    /**
+     * Prévia PURA (nada é gravado) de quem, dentre os inscritos confirmados de HOJE, ficaria de
+     * fora se {@code data} fosse salvo — alimenta {@code POST /eventos/{id}/impacto-restricao}
+     * (Task 6). É o que substitui o cancelamento automático que existia antes: em vez de
+     * cancelar em silêncio ao apertar/ligar uma restrição, o admin vê a lista e decide, via
+     * {@code PUT /eventos/{id}?cancelarNaoElegiveis=true}, se quer mesmo cancelar.
+     *
+     * <p><b>Privacidade:</b> a resposta traz nome e motivo (ex.: "34 anos") de terceiros — só
+     * quem {@link Permissoes#podeGerenciarEventos(String)} pode chamar (mesmo vazamento da
+     * revisão da Task 4, fechado aqui na origem).
+     */
+    @Transactional(readOnly = true)
+    public ImpactoRestricaoResponse calcularImpacto(UUID eventoId, EventoRequest data, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarEventos(role)) {
+            throw new AccessDeniedException(
+                    "Você não tem permissão para ver o impacto desta restrição.");
+        }
+
+        eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        validarIdades(data);
+
+        // Evento "de mentira", nunca persistido: só carrega as regras hipotéticas que
+        // ElegibilidadeService lê (idade, estado civil, sexo, exclusivoMembros — ver Javadoc
+        // de ElegibilidadeService sobre RegraVagas ficar de fora dessa lista).
+        Evento regrasHipoteticas = Evento.builder()
+                .idadeMin(data.idadeMin())
+                .idadeMax(data.idadeMax())
+                .restricaoEstadoCivil(data.restricaoEstadoCivil())
+                .restricaoSexo(data.restricaoSexo())
+                .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
+                .build();
+
+        return new ImpactoRestricaoResponse(
+                inscricaoService.calcularImpacto(eventoId, regrasHipoteticas));
     }
 
     private void validarDatas(EventoRequest data) {

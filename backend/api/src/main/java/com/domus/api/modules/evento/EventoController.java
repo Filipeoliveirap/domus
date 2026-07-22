@@ -2,6 +2,7 @@ package com.domus.api.modules.evento;
 
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.evento.DTOs.ImpactoRestricaoResponse;
 import com.domus.api.modules.evento.elegibilidade.DTOs.ElegibilidadeResponse;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;
@@ -73,10 +74,28 @@ public class EventoController {
     @PutMapping("/{id}")
     public ResponseEntity<EventoResponse> atualizar(
             @PathVariable UUID id,
-            @Valid @RequestBody EventoRequest data) {
+            @Valid @RequestBody EventoRequest data,
+            @RequestParam(defaultValue = "false") boolean cancelarNaoElegiveis) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UUID usuarioId = usuarioAutenticado.getUsuarioId();
-        return ResponseEntity.ok(eventoService.atualizarEvento(id, data, igrejaId, usuarioId));
+        return ResponseEntity.ok(eventoService.atualizarEvento(
+                id, data, igrejaId, usuarioId, cancelarNaoElegiveis));
+    }
+
+    /**
+     * Prévia PURA de impacto — Task 6. Devolve quem ficaria de fora se {@code data} fosse
+     * salvo, SEM gravar nada. Só quem {@link com.domus.api.shared.security.Permissoes
+     * #podeGerenciarEventos} pode chamar (a resposta traz nome e motivo de terceiros); a rota já
+     * é coberta pelo matcher {@code POST /eventos/**} do SecurityConfig (ADMIN/LÍDER), e o
+     * service repete a checagem como defesa em profundidade (mesmo padrão de
+     * {@code InscricaoService}).
+     */
+    @PostMapping("/{id}/impacto-restricao")
+    public ResponseEntity<ImpactoRestricaoResponse> impactoRestricao(
+            @PathVariable UUID id, @Valid @RequestBody EventoRequest data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String role = usuarioAutenticado.getRole();
+        return ResponseEntity.ok(eventoService.calcularImpacto(id, data, igrejaId, role));
     }
 
     @DeleteMapping("/{id}")

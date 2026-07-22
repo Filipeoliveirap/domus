@@ -8,7 +8,7 @@ export interface EventoResponse {
   inicioEm: string
   fimEm: string | null
   local: string | null
-  foto: string | null
+  fotoId: string | null
   createdAt: string
   vagas: number | null
   /**
@@ -30,7 +30,7 @@ export interface EventoRequest {
   inicioEm: string
   fimEm?: string
   local?: string
-  foto?: string
+  fotoId?: string | null
   vagas?: number
   preco?: string
   exclusivoMembros?: boolean

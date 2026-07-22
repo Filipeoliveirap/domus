@@ -7,6 +7,7 @@ import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
 import { useDebounce } from '@/hooks/useDebounce'
 import { iniciais, rotuloVinculo } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import type { PessoaResponse } from '@/types/pessoa.type'
 import styles from './ModalInscreverPessoas.module.css'
 
@@ -152,9 +153,9 @@ export function ModalInscreverPessoas({
                     onChange={() => alternarSelecao(p.id)}
                   />
                   <span className={styles.avatar}>
-                    {p.foto ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo
-                      <img src={p.foto} alt="" className={styles.avatarFoto} />
+                    {urlFoto(p.fotoId, 'THUMB') ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                      <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
                     ) : (
                       iniciais(p.nome)
                     )}

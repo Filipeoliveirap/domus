@@ -17,7 +17,7 @@ public record PessoaResponse(
         Vinculo vinculo,
         EstadoCivil estadoCivil,
         String ministerio,
-        String foto,
+        UUID fotoId,
         String observacoes,
         LocalDateTime createdAt,
         LocalDate dataBatismo,
@@ -57,7 +57,8 @@ public record PessoaResponse(
                 m.getDataNascimento(),
                 incluirDadosSensiveis ? enderecoDe(m.getEndereco()) : null,
                 m.getVinculo(),
-                m.getEstadoCivil(), m.getMinisterio(), m.getFoto(),
+                m.getEstadoCivil(), m.getMinisterio(),
+                m.getFoto() != null ? m.getFoto().getId() : null,
                 incluirDadosSensiveis ? m.getObservacoes() : null,
                 m.getCreatedAt(),
                 m.getDataBatismo(), avisoTelefoneDuplicado

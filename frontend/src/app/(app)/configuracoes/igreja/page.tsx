@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Landmark, Info, ShieldCheck, Save, RotateCcw } from 'lucide-react'
 import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import styles from '../configuracoes.module.css'
 
 const schema = z.object({
@@ -51,6 +52,11 @@ export default function DadosDaIgrejaPage() {
   const atualizar = useAtualizarIgreja()
   const { buscar: buscarCep, carregando: buscandoCep } = useBuscaCep()
 
+  // O logo não faz parte do schema do RHF (não é um <input> comum, é o UploadFoto) — vive
+  // em estado próprio, espelhado da igreja como o resto do formulário via reset().
+  const [logoFotoId, setLogoFotoId] = useState<string | null>(null)
+  const [logoAlterada, setLogoAlterada] = useState(false)
+
   const {
     register, handleSubmit, reset, watch, setValue,
     formState: { errors, isDirty },
@@ -74,6 +80,8 @@ export default function DadosDaIgrejaPage() {
       cidade: igreja.endereco?.cidade ?? '',
       uf: igreja.endereco?.uf ?? '',
     })
+    setLogoFotoId(igreja.logoFotoId ?? null)
+    setLogoAlterada(false)
   }, [igreja, reset])
 
   const valores = watch()
@@ -98,7 +106,7 @@ export default function DadosDaIgrejaPage() {
       denominacao: data.denominacao || null,
       emailContato: data.emailContato,
       telefoneContato: data.telefoneContato || null,
-      logoUrl: igreja?.logoUrl ?? null,
+      logoFotoId,
       endereco: {
         cep: data.cep || undefined,
         logradouro: data.logradouro || undefined,
@@ -141,6 +149,15 @@ export default function DadosDaIgrejaPage() {
         </aside>
 
         <form className={styles.cartao} onSubmit={handleSubmit(aoSalvar)} noValidate>
+          <div className={styles.logoWrap}>
+            <UploadFoto
+              valor={logoFotoId}
+              onChange={(id) => { setLogoFotoId(id); setLogoAlterada(true) }}
+              formato="circulo"
+              nomeFallback={igreja.nome}
+            />
+          </div>
+
           <div className={styles.grade}>
             <div className={`${styles.campo} ${styles.campoLargo}`}>
               <label className={styles.rotulo} htmlFor="nome">Nome da igreja</label>
@@ -226,8 +243,12 @@ export default function DadosDaIgrejaPage() {
             <button
               type="button"
               className={styles.botaoSecundario}
-              onClick={() => reset()}
-              disabled={!isDirty || atualizar.isPending}
+              onClick={() => {
+                reset()
+                setLogoFotoId(igreja?.logoFotoId ?? null)
+                setLogoAlterada(false)
+              }}
+              disabled={(!isDirty && !logoAlterada) || atualizar.isPending}
             >
               <RotateCcw size={16} aria-hidden="true" />
               Descartar alterações
@@ -236,7 +257,7 @@ export default function DadosDaIgrejaPage() {
             <button
               type="submit"
               className={styles.botaoPrimario}
-              disabled={!isDirty || atualizar.isPending}
+              disabled={(!isDirty && !logoAlterada) || atualizar.isPending}
             >
               <Save size={16} aria-hidden="true" />
               {atualizar.isPending ? 'Salvando...' : 'Salvar alterações'}

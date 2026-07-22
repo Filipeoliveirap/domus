@@ -6,6 +6,8 @@ import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 import com.domus.api.modules.pessoa.Endereco;
 import com.domus.api.modules.pessoa.Pessoa;
@@ -42,6 +44,7 @@ public class IgrejaService {
     private final RefreshTokenService refreshTokenService;
     private final PessoaRepository  membroRepository;
     private final CacheManager cacheManager;
+    private final FotoService fotoService;
 
     @Transactional
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
@@ -169,11 +172,24 @@ public class IgrejaService {
         igreja.setDenominacao(TextoUtil.capitalizar(data.denominacao()));
         igreja.setEmailContato(data.emailContato());
         igreja.setTelefoneContato(data.telefoneContato());
-        igreja.setLogoUrl(data.logoUrl());
         igreja.setEndereco(paraEndereco(data.endereco()));
         igreja.setAtualizadoPor(usuarioRepository.getReferenceById(usuarioId));
 
+        // Logo: mesma ordem de PessoaService/EventoService — aponta para a nova antes de
+        // remover a antiga (ON DELETE RESTRICT recusaria o contrário).
+        Foto logoAntiga = igreja.getLogoFoto();
+        Foto logoNova = fotoService.buscarParaVincular(data.logoFotoId(), igrejaId);
+        igreja.setLogoFoto(logoNova);
+
         igrejaRepository.save(igreja);
+
+        boolean logoMudou = !java.util.Objects.equals(
+                logoAntiga == null ? null : logoAntiga.getId(),
+                logoNova == null ? null : logoNova.getId());
+        if (logoMudou && logoAntiga != null) {
+            fotoService.remover(logoAntiga.getId());
+        }
+
         // O resumo público é cacheado por id — sem isso a tela mostraria o nome antigo.
         cacheManager.getCache("igreja").evictIfPresent(igrejaId);
 

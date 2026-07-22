@@ -1,0 +1,146 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) + 10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.2);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast);
+}
+
+.fechar:hover { background: var(--color-bg-page); }
+
+/* Área de recorte: overflow hidden é o que faz o "viewport" — a imagem por dentro pode
+   ser bem maior, só o que cai nesta caixa entra no arquivo final. touch-action:none
+   evita que o navegador role a página enquanto a pessoa arrasta a foto no celular. */
+.viewport {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--color-bg-sidebar);
+  touch-action: none;
+  cursor: grab;
+  min-width: 0;
+}
+
+.viewport:active { cursor: grabbing; }
+
+.viewportCirculo {
+  max-width: 280px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-full);
+}
+
+.viewportBanner {
+  aspect-ratio: 3 / 1;
+  border-radius: var(--radius-md);
+}
+
+.imagem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.controles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.zoomIcone {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.zoomSlider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--color-primary);
+}
+
+.rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btnCancelar {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+}
+
+.btnCancelar:hover:not(:disabled) { background: var(--color-bg-page); }
+.btnCancelar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btnConfirmar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.btnConfirmar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .modal { padding: 16px; }
+  .rodape { flex-direction: column-reverse; }
+  .btnCancelar, .btnConfirmar { width: 100%; justify-content: center; }
+}

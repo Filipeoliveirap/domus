@@ -20,7 +20,7 @@ public record IgrejaDetalheDTO(
         String denominacao,
         String emailContato,
         String telefoneContato,
-        String logoUrl,
+        UUID logoFotoId,
         EnderecoDTO endereco,
         // Alimenta o card "Logs de atividade".
         LocalDateTime atualizadoEm,
@@ -36,7 +36,7 @@ public record IgrejaDetalheDTO(
                 igreja.getDenominacao(),
                 igreja.getEmailContato(),
                 igreja.getTelefoneContato(),
-                igreja.getLogoUrl(),
+                igreja.getLogoFoto() == null ? null : igreja.getLogoFoto().getId(),
                 e == null ? null : new EnderecoDTO(
                         e.getCep(), e.getLogradouro(), e.getNumero(), e.getComplemento(),
                         e.getBairro(), e.getCidade(), e.getUf()),

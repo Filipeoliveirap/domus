@@ -9,6 +9,7 @@ import { useEvento } from '@/hooks/evento/useEvento'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { iniciais } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
@@ -83,9 +84,9 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
             <X size={18} />
           </button>
 
-          {evento?.foto ? (
-            // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo; next/image exigiria configurar domínios
-            <img src={evento.foto} alt="" className={styles.capaFoto} />
+          {urlFoto(evento?.fotoId, 'DISPLAY') ? (
+            // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+            <img src={urlFoto(evento?.fotoId, 'DISPLAY')!} alt="" className={styles.capaFoto} />
           ) : (
             <div className={styles.capaVazia} aria-hidden="true">
               <CalendarDays size={56} />
@@ -153,9 +154,9 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   <div className={styles.pilhaAvatares}>
                     {participantes.slice(0, MAX_AVATARES).map((p) => (
                       <span key={p.id} className={styles.avatarPresenca} title={p.nome}>
-                        {p.foto ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo
-                          <img src={p.foto} alt="" className={styles.avatarPresencaFoto} />
+                        {urlFoto(p.fotoId, 'THUMB') ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                          <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarPresencaFoto} />
                         ) : (
                           iniciais(p.nome)
                         )}

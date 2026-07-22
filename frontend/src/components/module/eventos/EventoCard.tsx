@@ -17,6 +17,7 @@ import {
 import { podeGerenciarEventos } from '@/lib/permissoes'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
+import { urlFoto } from '@/lib/urlFoto'
 import styles from './EventoCard.module.css'
 
 interface EventoCardProps {
@@ -55,8 +56,8 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
       onClick={() => onAbrirDetalhe(evento)}
     >
       <div className={styles.imagem}>
-        {evento.foto ? (
-          <img src={evento.foto} alt={evento.titulo} className={styles.imagemFoto} />
+        {urlFoto(evento.fotoId, 'THUMB') ? (
+          <img src={urlFoto(evento.fotoId, 'THUMB')!} alt={evento.titulo} className={styles.imagemFoto} />
         ) : (
           <div className={styles.imagemPlaceholder}>
             <CalendarDays size={32} />

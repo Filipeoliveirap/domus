@@ -9,6 +9,7 @@ import {
 } from '@/lib/formats/pessoaFormat'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { SkeletonDrawerPessoa } from './SkeletonDrawerPessoa'
+import { urlFoto } from '@/lib/urlFoto'
 import styles from './DrawerDetalhePessoa.module.css'
 
 interface DrawerDetalhePessoaProps {
@@ -54,7 +55,14 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
           <>
             <div className={styles.conteudo}>
               <div className={styles.topo}>
-                <span className={styles.avatar}>{iniciais(pessoa.nome)}</span>
+                <span className={styles.avatar}>
+                  {urlFoto(pessoa.fotoId, 'DISPLAY') ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                    <img src={urlFoto(pessoa.fotoId, 'DISPLAY')!} alt="" className={styles.avatarFoto} />
+                  ) : (
+                    iniciais(pessoa.nome)
+                  )}
+                </span>
                 <div className={styles.identidade}>
                   <span className={styles.nome}>{pessoa.nome}</span>
                   {pessoa.email && <span className={styles.email}>{pessoa.email}</span>}

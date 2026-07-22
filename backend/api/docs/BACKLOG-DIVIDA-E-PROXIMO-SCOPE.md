@@ -414,3 +414,49 @@ porque uma oferta pode vir de um casal ou de uma família.
 
 Estava no CLAUDE.md como "múltiplos atribuintes" fora de escopo desde o começo; o autor
 confirmou em 2026-07-22 que quer.
+
+---
+
+## Upload de foto (V2, 2026-07-22) — resíduos
+
+- **WebP como formato de entrada.** A spec previa aceitar JPEG, PNG e WebP; ficou só JPEG e
+  PNG. Motivo: `ImageIO` do Java 21 não lê WebP sem uma dependência extra (ex.:
+  `webp-imageio`), e na prática os seletores de arquivo do celular/navegador entregam JPEG
+  ou PNG. Reavaliar se aparecer um caso real de upload em WebP.
+
+- **Revisar `next/image` nas telas de foto.** Hoje elas usam `<img>` com
+  `eslint-disable` justificado como "URL de storage externo" — justificativa que **deixou
+  de valer**: as fotos são servidas pelo próprio domínio (`GET /fotos/{id}`), não por uma
+  URL de R2. Trocar por `next/image` (otimização, lazy loading) é seguro agora, mas não
+  entrou nesta entrega de propósito — misturaria dois assuntos (ver spec de upload de foto).
+
+- **CDN de borda para `/fotos/{id}`.** Toda imagem passa pela própria API hoje; a resposta
+  é `Cache-Control: immutable`, então cada navegador busca uma vez só — suficiente no
+  tamanho de uma igreja. Se o volume um dia incomodar, a saída é colocar o Cloudflare na
+  frente com cache de borda, sem mexer no modelo (o id nunca é reaproveitado, então cache
+  de borda não tem problema de invalidação).
+
+### Separar as credenciais de backup das de foto (2026-07-22)
+
+Hoje **o mesmo token do R2** atende os dois buckets, com leitura e escrita em ambos.
+
+⚠️ **Isso desfez uma proteção que existia por desenho.** O bucket de backup era **write-only**:
+o CI escrevia e não conseguia ler. Se aquela credencial vazasse, o atacante gravaria lixo, mas
+**não baixaria os backups** — que contêm o banco inteiro da igreja.
+
+Foto precisa de leitura (a API busca os bytes para servir), então o token ganhou leitura — e o
+backup deixou de ser write-only junto.
+
+**O certo:**
+
+| Uso | Bucket | Permissão |
+|---|---|---|
+| Backup | `domus-backups` | **só escrita** |
+| Fotos | `domus-fotos` | leitura e escrita |
+
+Dois tokens distintos. Quando separar, lembrar que o backup usa os secrets do **GitHub**
+(`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) e as fotos usam o `.env.prod` da **VPS**
+(`R2_FOTOS_*`) — são lugares diferentes, e trocar num não afeta o outro.
+
+Origem: em 2026-07-22 as credenciais foram rotacionadas porque vazaram numa conversa, e na
+recriação os dois usos ficaram com o mesmo token.

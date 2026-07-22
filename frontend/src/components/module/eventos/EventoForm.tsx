@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, ImageIcon, Info, Ticket, AlertTriangle } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { formatarHoraDigitada } from '@/lib/masks'
 import { CampoData } from '@/components/common/CampoData/CampoData'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -32,6 +33,7 @@ export function EventoForm(props: EventoFormProps) {
   const inicioData = (watch('inicioData') as string) ?? ''
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
+  const fotoIdAtual = watch('fotoId') as string | null | undefined
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -158,14 +160,14 @@ export function EventoForm(props: EventoFormProps) {
               </div>
             </div>
 
-            {/* Área de imagem — desabilitada (sem storage ainda) */}
+            {/* Imagem do evento (capa/banner) */}
             <div className={styles.imagemWrap}>
               <span className={styles.labelData}>IMAGEM DO EVENTO</span>
-              <div className={styles.imagemUpload}>
-                <ImageIcon size={24} />
-                <span>Adicionar imagem</span>
-                <small>Em breve</small>
-              </div>
+              <UploadFoto
+                valor={fotoIdAtual}
+                onChange={(id) => setValue('fotoId', id, { shouldValidate: true, shouldDirty: true })}
+                formato="banner"
+              />
             </div>
 
             <div className={styles.infoBox}>

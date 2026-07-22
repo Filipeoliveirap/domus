@@ -54,6 +54,10 @@ public class Pessoa {
     @Column(name = "estado_civil")
     private EstadoCivil estadoCivil;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sexo", length = 10)
+    private Sexo sexo;
+
     @Column(name = "ministerio", length = 255)
     private String ministerio;
 

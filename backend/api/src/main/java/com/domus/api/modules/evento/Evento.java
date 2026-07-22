@@ -1,6 +1,11 @@
 package com.domus.api.modules.evento;
 
+import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.pessoa.EstadoCivil;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.Sexo;
+import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -39,7 +44,46 @@ public class Evento {
     @Column(name = "fim_em")
     private LocalDateTime fimEm;
 
-    private String local;
+    /** Local cadastrado. Mutuamente exclusivo com {@link #localTexto} (CHECK no banco). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "local_id")
+    private LocalEvento local;
+
+    /** Local ad-hoc ("chácara do João"). Era a coluna `local` até a V3. */
+    @Column(name = "local_texto")
+    private String localTexto;
+
+    /** Texto normalizado por TextoUtil.capitalizar. NULL = sem tipo. */
+    @Column(name = "tipo", length = 80)
+    private String tipo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsavel_pessoa_id")
+    private Pessoa responsavel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "criado_por_usuario_id")
+    private Usuario criadoPor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "atualizado_por_usuario_id")
+    private Usuario atualizadoPor;
+
+    /** Nome do recorte (Kids, Jovens...). Alimenta selo e filtro; NÃO valida nada. */
+    @Column(name = "recorte_etario", length = 40)
+    private String recorteEtario;
+
+    /** Quem valida é este par. NULL = sem restrição daquele lado. */
+    @Column(name = "idade_min") private Integer idadeMin;
+    @Column(name = "idade_max") private Integer idadeMax;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "restricao_estado_civil", length = 20)
+    private EstadoCivil restricaoEstadoCivil;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "restricao_sexo", length = 10)
+    private Sexo restricaoSexo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "foto_id")
@@ -96,5 +140,11 @@ public class Evento {
             return SituacaoEvento.ENCERRADO;
         }
         return SituacaoEvento.EM_ANDAMENTO;
+    }
+
+    /** O local a exibir: o nome do cadastrado, ou o texto ad-hoc, ou null. */
+    public String getLocalExibicao() {
+        if (local != null) return local.getNome();
+        return localTexto;
     }
 }

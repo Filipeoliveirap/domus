@@ -414,3 +414,24 @@ porque uma oferta pode vir de um casal ou de uma família.
 
 Estava no CLAUDE.md como "múltiplos atribuintes" fora de escopo desde o começo; o autor
 confirmou em 2026-07-22 que quer.
+
+---
+
+## Upload de foto (V2, 2026-07-22) — resíduos
+
+- **WebP como formato de entrada.** A spec previa aceitar JPEG, PNG e WebP; ficou só JPEG e
+  PNG. Motivo: `ImageIO` do Java 21 não lê WebP sem uma dependência extra (ex.:
+  `webp-imageio`), e na prática os seletores de arquivo do celular/navegador entregam JPEG
+  ou PNG. Reavaliar se aparecer um caso real de upload em WebP.
+
+- **Revisar `next/image` nas telas de foto.** Hoje elas usam `<img>` com
+  `eslint-disable` justificado como "URL de storage externo" — justificativa que **deixou
+  de valer**: as fotos são servidas pelo próprio domínio (`GET /fotos/{id}`), não por uma
+  URL de R2. Trocar por `next/image` (otimização, lazy loading) é seguro agora, mas não
+  entrou nesta entrega de propósito — misturaria dois assuntos (ver spec de upload de foto).
+
+- **CDN de borda para `/fotos/{id}`.** Toda imagem passa pela própria API hoje; a resposta
+  é `Cache-Control: immutable`, então cada navegador busca uma vez só — suficiente no
+  tamanho de uma igreja. Se o volume um dia incomodar, a saída é colocar o Cloudflare na
+  frente com cache de borda, sem mexer no modelo (o id nunca é reaproveitado, então cache
+  de borda não tem problema de invalidação).

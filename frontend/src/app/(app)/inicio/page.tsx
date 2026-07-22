@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { versiculoDoDia } from '@/lib/versiculos'
 import { iniciais } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { ModalEventoResumo } from './ModalEventoResumo'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
@@ -25,13 +26,14 @@ function dataEvento(iso: string): { dia: string; mes: string; hora: string } {
   }
 }
 
-/** Foto quando existe, iniciais quando não — o upload de foto é da Fase 2. */
-function Avatar({ nome, foto }: { nome: string; foto: string | null }) {
+/** Foto quando existe, iniciais quando não — nunca uma silhueta genérica. */
+function Avatar({ nome, fotoId }: { nome: string; fotoId: string | null }) {
+  const url = urlFoto(fotoId, 'THUMB')
   return (
     <span className={styles.avatar}>
-      {foto ? (
-        // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo; next/image exigiria configurar domínios
-        <img src={foto} alt="" className={styles.avatarFoto} />
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+        <img src={url} alt="" className={styles.avatarFoto} />
       ) : (
         iniciais(nome)
       )}
@@ -50,7 +52,7 @@ function ItemAniversariante({
 
   return (
     <li className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''}`}>
-      <Avatar nome={aniversariante.nome} foto={aniversariante.foto} />
+      <Avatar nome={aniversariante.nome} fotoId={aniversariante.fotoId} />
       <span className={styles.anivInfo}>
         <span className={styles.anivNome}>{aniversariante.nome}</span>
         <span className={styles.anivData}>{ehHoje ? 'Hoje' : `Dia ${aniversariante.dia}`}</span>

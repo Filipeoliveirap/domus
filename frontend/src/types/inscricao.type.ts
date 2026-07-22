@@ -21,7 +21,7 @@ export interface ParticipanteResponse {
   id: string
   pessoaId: string
   nome: string
-  foto: string | null
+  fotoId: string | null
   convidados: string[]
 }
 
@@ -30,7 +30,7 @@ export interface InscritoResponse {
   id: string
   pessoaId: string
   nome: string
-  foto: string | null
+  fotoId: string | null
   /** null = a pessoa se inscreveu sozinha. */
   inscritoPorUsuarioId: string | null
   /**
@@ -39,7 +39,7 @@ export interface InscritoResponse {
    * segundo caso o id continua presente, mas sem nome pra exibir.
    */
   inscritoPorNome: string | null
-  inscritoPorFoto: string | null
+  inscritoPorFotoId: string | null
   inscritoEm: string
   acompanhantes: AcompanhanteResponse[]
 }

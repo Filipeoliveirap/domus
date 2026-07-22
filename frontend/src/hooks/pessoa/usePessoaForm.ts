@@ -31,7 +31,7 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
       vinculo: 'CONGREGANTE', estadoCivil: '',
       ministerio: '', observacoes: '',
-      dataBatismo: '',
+      dataBatismo: '', fotoId: null,
     },
     requiredFields: ['nome'],
   })
@@ -59,6 +59,7 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
         ministerio: pessoaInicial.ministerio ?? '',
         observacoes: pessoaInicial.observacoes ?? '',
         dataBatismo: pessoaInicial.dataBatismo ?? '',
+        fotoId: pessoaInicial.fotoId ?? null,
       })
     }
 

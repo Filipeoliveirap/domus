@@ -95,6 +95,9 @@ export const pessoaSchema = z.object({
       'A data de batismo não pode estar no futuro',
     ),
   ),
+
+  // Id da foto já enviada via POST /fotos (ver UploadFoto). null = sem foto.
+  fotoId: z.string().nullable().default(null),
 })
 
 export const concederAcessoSchema = z.object({
@@ -127,6 +130,9 @@ const eventoSchemaBase = z.object({
   fimData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
   fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
   local: opcional(z.string()),
+
+  // Id da foto (capa do evento) já enviada via POST /fotos. null = sem foto.
+  fotoId: z.string().nullable().default(null),
 
   // ─── Inscrições (Fase 2) ───
   // requerInscricao é o "interruptor mestre": quando false, os demais campos desta seção

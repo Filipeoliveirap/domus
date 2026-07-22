@@ -6,6 +6,7 @@ import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class EventoServiceCamposInscricaoTest {
     CacheEvictor cacheEvictor;
     OutboxRegistrador outboxRegistrador;
     InscricaoService inscricaoService;
+    FotoService fotoService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -48,8 +50,9 @@ class EventoServiceCamposInscricaoTest {
         cacheEvictor = mock(CacheEvictor.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         inscricaoService = mock(InscricaoService.class);
+        fotoService = mock(FotoService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
-                outboxRegistrador, inscricaoService);
+                outboxRegistrador, inscricaoService, fotoService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean()))
@@ -64,7 +67,7 @@ class EventoServiceCamposInscricaoTest {
 
     private EventoRequest request(Integer vagas, BigDecimal preco, Boolean exclusivoMembros) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
-                "Templo", vagas, preco, exclusivoMembros, true);
+                "Templo", vagas, preco, exclusivoMembros, true, null);
     }
 
     @Test

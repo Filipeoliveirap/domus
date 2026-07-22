@@ -22,7 +22,7 @@ import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
-import { ModalInscreverMembros } from '@/components/module/eventos/ModalInscreverMembros'
+import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
@@ -229,11 +229,10 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
             )}
 
             {modalAberto === 'membros' && (
-              <ModalInscreverMembros
+              <ModalInscreverPessoas
                 eventoId={evento.id}
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
-                exclusivoBatizados={evento.exclusivoBatizados}
                 onClose={() => setModalAberto(null)}
               />
             )}

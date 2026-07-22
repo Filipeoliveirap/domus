@@ -38,11 +38,11 @@ public class InscricaoController {
     }
 
     /** Inscrever outras pessoas: aqui os ids VÊM do cliente, então são validados um a um. */
-    @PostMapping("/eventos/{eventoId}/inscricoes/membros")
-    public ResponseEntity<Void> inscreverMembros(@PathVariable UUID eventoId,
-                                                 @Valid @RequestBody InscreverMembrosRequest data) {
+    @PostMapping("/eventos/{eventoId}/inscricoes/pessoas")
+    public ResponseEntity<Void> inscreverPessoas(@PathVariable UUID eventoId,
+                                                 @Valid @RequestBody InscreverPessoasRequest data) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.inscreverMembros(eventoId, data.membroIds(),
+        inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(),
                 usuario.getId(), usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

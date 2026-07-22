@@ -45,7 +45,7 @@ public class ConsolidadoService {
 
         LocalDateTime agora = LocalDateTime.now();
 
-        Map<UUID, Membros> membrosPorIgreja = agruparMembros(idsDaFamilia);
+        Map<UUID, Pessoas> membrosPorIgreja = agruparMembros(idsDaFamilia);
         Map<UUID, Eventos> eventosPorIgreja = agruparEventos(idsDaFamilia, agora);
         Map<UUID, Financeiro> financeiroPorIgreja = agruparFinanceiro(idsDaFamilia, dataInicio, dataFim);
 
@@ -60,7 +60,7 @@ public class ConsolidadoService {
                     id,
                     nomes.getOrDefault(id, "—"),
                     id.equals(igrejaSolicitanteId),
-                    membrosPorIgreja.getOrDefault(id, membrosZerado()),
+                    membrosPorIgreja.getOrDefault(id, pessoasZerado()),
                     eventosPorIgreja.getOrDefault(id, new Eventos(0, 0, 0)),
                     financeiroPorIgreja.getOrDefault(id, financeiroZerado())));
         }
@@ -68,7 +68,7 @@ public class ConsolidadoService {
         return new ConsolidadoResponse(somar(linhas), linhas);
     }
 
-    private Map<UUID, Membros> agruparMembros(List<UUID> ids) {
+    private Map<UUID, Pessoas> agruparMembros(List<UUID> ids) {
         // A consulta devolve uma linha por (igreja, vinculo); aqui viram os 2 números de cada
         // igreja. Chave é o próprio enum Vinculo (EnumMap), não ordinal(): indexar por posição
         // era um off-by-one esperando acontecer no dia em que um 3º vínculo for adicionado —
@@ -82,11 +82,11 @@ public class ConsolidadoService {
             contagens.merge(vinculo, linha.getTotal(), Long::sum);
         }
 
-        Map<UUID, Membros> resultado = new HashMap<>();
+        Map<UUID, Pessoas> resultado = new HashMap<>();
         acumulador.forEach((id, contagens) -> {
             long membros = contagens.getOrDefault(Vinculo.MEMBRO, 0L);
             long congregantes = contagens.getOrDefault(Vinculo.CONGREGANTE, 0L);
-            resultado.put(id, new Membros(membros + congregantes, membros, congregantes));
+            resultado.put(id, new Pessoas(membros + congregantes, membros, congregantes));
         });
         return resultado;
     }
@@ -118,8 +118,8 @@ public class ConsolidadoService {
         BigDecimal entradas = BigDecimal.ZERO, saidas = BigDecimal.ZERO;
 
         for (LinhaIgreja l : linhas) {
-            membrosTotal += l.membros().membros();
-            congregantesTotal += l.membros().congregantes();
+            membrosTotal += l.pessoas().membros();
+            congregantesTotal += l.pessoas().congregantes();
             eventosRealizados += l.eventos().realizados();
             eventosProximos += l.eventos().proximos();
             entradas = entradas.add(l.financeiro().entradas());
@@ -127,13 +127,13 @@ public class ConsolidadoService {
         }
 
         return new Totais(
-                new Membros(membrosTotal + congregantesTotal, membrosTotal, congregantesTotal),
+                new Pessoas(membrosTotal + congregantesTotal, membrosTotal, congregantesTotal),
                 new Eventos(eventosRealizados + eventosProximos, eventosRealizados, eventosProximos),
                 new Financeiro(entradas, saidas, entradas.subtract(saidas)));
     }
 
-    private Membros membrosZerado() {
-        return new Membros(0, 0, 0);
+    private Pessoas pessoasZerado() {
+        return new Pessoas(0, 0, 0);
     }
 
     private Financeiro financeiroZerado() {

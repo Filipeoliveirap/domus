@@ -233,7 +233,7 @@ function MovimentacoesConteudo() {
                 <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
                   <div className={styles.colDesc}>
                     <span className={styles.descTexto}>{mov.descricao || '—'}</span>
-                    {mov.membroNome && <span className={styles.descMembro}>{mov.membroNome}</span>}
+                    {mov.pessoaNome && <span className={styles.descMembro}>{mov.pessoaNome}</span>}
                   </div>
                   <div className={styles.colCat}>{mov.categoriaNome}</div>
                   <div className={styles.colData}>{formatarData(mov.dataMovimentacao)}</div>

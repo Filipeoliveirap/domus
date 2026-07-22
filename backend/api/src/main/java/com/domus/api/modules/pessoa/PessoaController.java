@@ -25,10 +25,11 @@ public class PessoaController {
     @GetMapping
     public ResponseEntity<PagedResponse<PessoaResponse>> listar(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) Vinculo vinculo,
             @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(
-                membroService.listarMembros(igrejaId, q, pageable, podeVerDadosSensiveis()));
+                membroService.listarMembros(igrejaId, q, pageable, podeVerDadosSensiveis(), vinculo));
     }
 
     @GetMapping("/bairros")

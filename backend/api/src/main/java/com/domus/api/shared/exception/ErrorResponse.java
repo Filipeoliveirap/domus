@@ -1,6 +1,5 @@
 package com.domus.api.shared.exception;
 
-import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.LocalDateTime;
@@ -14,7 +13,7 @@ public record ErrorResponse(
     String message,
     LocalDateTime timestamp,
     Map<String, String> campos,
-    List<Impedimento> impedimentos
+    List<DetalheErro> impedimentos
 ) {
     public static ErrorResponse of(int status, String erro, String mensagem) {
         return new ErrorResponse(status, erro, mensagem, LocalDateTime.now(), null, null);
@@ -32,7 +31,7 @@ public record ErrorResponse(
 
     // 422 de NAO_ELEGIVEL: além do código/mensagem de sempre, carrega a lista de
     // impedimentos — é o que permite o front mostrar CADA restrição, não só uma frase.
-    public static ErrorResponse ofElegibilidade(String codigo, String mensagem, List<Impedimento> impedimentos) {
+    public static ErrorResponse ofElegibilidade(String codigo, String mensagem, List<DetalheErro> impedimentos) {
         return new ErrorResponse(422, codigo, mensagem, LocalDateTime.now(), null, impedimentos);
     }
 

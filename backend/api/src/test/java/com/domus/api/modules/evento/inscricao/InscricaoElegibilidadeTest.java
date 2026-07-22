@@ -32,6 +32,11 @@ import static org.mockito.Mockito.*;
 /**
  * Task 4: a Task 3 entregou o MECANISMO de elegibilidade; este teste prova que ele foi
  * CONECTADO ao fluxo de inscrição de verdade — as quatro regras que não podem ser erradas.
+ *
+ * <p>Pós-revisão: os testes de {@link InscricaoService#inscreverPessoas} foram acrescentados
+ * porque era exatamente ali — não em {@link InscricaoService#inscrever} direto — que um
+ * admin conseguia contornar FAIXA_ETARIA para SI MESMO (ver
+ * {@code auto_inscricao_via_inscreverPessoas_com_o_proprio_pessoaId_e_recusada}).
  */
 class InscricaoElegibilidadeTest {
 
@@ -102,6 +107,18 @@ class InscricaoElegibilidadeTest {
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
+    /** Idêntico ao {@link #dado}, mas usado pelo caminho de {@code inscreverPessoas}. */
+    private void dadoParaInscreverPessoas(Evento e, Pessoa pessoa, long ocupadas) {
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(membroRepository.findByIdAndIgrejaId(pessoa.getId(), igrejaId)).thenReturn(Optional.of(pessoa));
+        when(inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, List.of(pessoa.getId())))
+                .thenReturn(List.of());
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoa.getId())).thenReturn(Optional.empty());
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(ocupadas);
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
+
     @Test
     void auto_inscricao_fora_da_faixa_e_recusada_mesmo_para_admin() {
         // A exceção existe para inscrever TERCEIROS. Deixar o admin burlar a própria
@@ -109,9 +126,10 @@ class InscricaoElegibilidadeTest {
         Pessoa admin40 = pessoaComIdade(40);
         dado(eventoJovens(), admin40, 0);
 
-        // auto-inscrição: inscritoPorOuNull == null, mesmo passando role/confirmado de admin.
+        // auto-inscrição: minhaPessoaId == pessoaId (o alvo é a própria pessoa do usuário),
+        // mesmo passando role/confirmado de admin.
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, admin40.getId(), null, "ADMIN_IGREJA", true, igrejaId))
+                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", true, igrejaId))
                 .isInstanceOf(NaoElegivelException.class)
                 .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
 
@@ -121,9 +139,11 @@ class InscricaoElegibilidadeTest {
     @Test
     void admin_inscreve_terceiro_fora_da_faixa_com_confirmado() {
         Pessoa lider34 = pessoaComIdade(34);
+        UUID minhaPessoaId = UUID.randomUUID(); // pessoa do admin, DIFERENTE do alvo
         dado(eventoJovens(), lider34, 0);
 
-        service.inscrever(eventoId, lider34.getId(), adminUsuarioId, "ADMIN_IGREJA", true, igrejaId);
+        service.inscrever(eventoId, lider34.getId(), adminUsuarioId, minhaPessoaId,
+                "ADMIN_IGREJA", true, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
@@ -131,11 +151,12 @@ class InscricaoElegibilidadeTest {
     @Test
     void confirmado_de_quem_nao_gerencia_e_ignorado() {
         Pessoa lider34 = pessoaComIdade(34);
+        UUID minhaPessoaId = UUID.randomUUID();
         dado(eventoJovens(), lider34, 0);
 
         // ACESSO_COMUM não gerencia inscrições: confirmado=true é ignorado, não aceito.
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, lider34.getId(), adminUsuarioId, "ACESSO_COMUM", true, igrejaId))
+                eventoId, lider34.getId(), adminUsuarioId, minhaPessoaId, "ACESSO_COMUM", true, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
 
@@ -146,10 +167,12 @@ class InscricaoElegibilidadeTest {
     void confirmado_nao_derruba_vagas_esgotadas() {
         // Vaga que não existe não vira exceção administrativa.
         Pessoa pessoaQualquer = pessoaComIdade(30);
+        UUID minhaPessoaId = UUID.randomUUID();
         dado(eventoLotado(), pessoaQualquer, 1); // 1 vaga, 1 já ocupada -> esgotado
 
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, pessoaQualquer.getId(), adminUsuarioId, "ADMIN_IGREJA", true, igrejaId))
+                eventoId, pessoaQualquer.getId(), adminUsuarioId, minhaPessoaId,
+                "ADMIN_IGREJA", true, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("codigo", "VAGAS_ESGOTADAS");
     }
@@ -166,8 +189,91 @@ class InscricaoElegibilidadeTest {
         dado(evento, pessoaDe34, 0);
         // POST direto (auto-inscrição, sem confirmar nada) tem que concordar com o GET.
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, pessoaDe34.getId(), null, "ACESSO_COMUM", false, igrejaId))
+                eventoId, pessoaDe34.getId(), null, pessoaDe34.getId(), "ACESSO_COMUM", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
+    }
+
+    // ---------------------------------------------------------------------------------
+    // inscreverPessoas — Achado 1 (CRITICAL) da revisão pós-Task-4.
+    //
+    // O bug: autoInscricao era derivado só de "inscritoPorOuNull == null". Em
+    // inscreverPessoas, inscritoPorUsuarioId é SEMPRE o id de usuário de quem chama (nunca
+    // null), então autoInscricao dava sempre false — mesmo quando o admin colocava o PRÓPRIO
+    // pessoaId na lista. Resultado: admin inscrevia A SI MESMO com confirmado=true e
+    // contornava FAIXA_ETARIA, que "auto-inscrição nunca contorna" deveria proibir.
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void auto_inscricao_via_inscreverPessoas_com_o_proprio_pessoaId_e_recusada() {
+        // Admin de 40 anos tenta se auto-inscrever passando o PRÓPRIO pessoaId pela rota de
+        // terceiros, com confirmado=true — o ataque descrito no Achado 1.
+        Pessoa admin40 = pessoaComIdade(40);
+        dadoParaInscreverPessoas(eventoJovens(), admin40, 0);
+
+        assertThatThrownBy(() -> service.inscreverPessoas(
+                eventoId, List.of(admin40.getId()), adminUsuarioId, admin40.getId(),
+                "ADMIN_IGREJA", true, igrejaId))
+                .isInstanceOf(NaoElegivelException.class)
+                .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void admin_inscreve_outra_pessoa_fora_da_faixa_via_inscreverPessoas_com_confirmado() {
+        Pessoa lider34 = pessoaComIdade(34);
+        UUID minhaPessoaId = UUID.randomUUID(); // pessoa do admin, DIFERENTE do alvo
+        dadoParaInscreverPessoas(eventoJovens(), lider34, 0);
+
+        service.inscreverPessoas(eventoId, List.of(lider34.getId()), adminUsuarioId,
+                minhaPessoaId, "ADMIN_IGREJA", true, igrejaId);
+
+        verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void acesso_comum_com_confirmado_via_inscreverPessoas_e_recusado() {
+        Pessoa lider34 = pessoaComIdade(34);
+        UUID minhaPessoaId = UUID.randomUUID();
+        dadoParaInscreverPessoas(eventoJovens(), lider34, 0);
+
+        assertThatThrownBy(() -> service.inscreverPessoas(
+                eventoId, List.of(lider34.getId()), UUID.randomUUID(), minhaPessoaId,
+                "ACESSO_COMUM", true, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Achado 3 (IMPORTANT): o 422 não pode vazar nome/idade de terceiro para quem não
+    // gerencia inscrições.
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void gestor_ve_mensagem_detalhada_com_nome_e_idade_no_422() {
+        Pessoa admin40 = pessoaComIdade(40);
+        dado(eventoJovens(), admin40, 0);
+
+        assertThatThrownBy(() -> service.inscrever(
+                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", true, igrejaId))
+                .isInstanceOf(NaoElegivelException.class)
+                .hasMessageContaining("Fulano")
+                .hasMessageContaining("40 anos");
+    }
+
+    @Test
+    void nao_gestor_recebe_mensagem_generica_sem_nome_nem_idade_no_422() {
+        Pessoa pessoaDe34 = pessoaComIdade(34);
+        dado(eventoJovens(), pessoaDe34, 0);
+
+        assertThatThrownBy(() -> service.inscrever(
+                eventoId, pessoaDe34.getId(), null, pessoaDe34.getId(), "ACESSO_COMUM", false, igrejaId))
+                .isInstanceOf(NaoElegivelException.class)
+                .hasMessageNotContaining("Fulano")
+                .hasMessageNotContaining("34 anos")
+                .hasMessageContaining("não atende aos requisitos");
     }
 }

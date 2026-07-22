@@ -49,9 +49,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNaoElegivel(
             com.domus.api.modules.evento.elegibilidade.NaoElegivelException ex, HttpServletRequest request) {
         log.warn("Inscrição recusada por inelegibilidade. path={}", request.getRequestURI());
+        // Mapeamento Impedimento -> DetalheErro: é aqui, e só aqui, que shared "enxerga" o
+        // módulo evento (ver Javadoc de DetalheErro) — o JSON de resposta sai idêntico ao de
+        // antes, só o tipo interno do campo mudou.
+        java.util.List<DetalheErro> detalhes = ex.getImpedimentos().stream()
+                .map(i -> new DetalheErro(i.codigo(), i.mensagem(), i.contornavel()))
+                .toList();
         return ResponseEntity
                 .status(422)
-                .body(ErrorResponse.ofElegibilidade(ex.getCodigo(), ex.getMessage(), ex.getImpedimentos()));
+                .body(ErrorResponse.ofElegibilidade(ex.getCodigo(), ex.getMessage(), detalhes));
     }
 
     @ExceptionHandler(SessaoExpiradaException.class)

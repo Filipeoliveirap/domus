@@ -42,6 +42,18 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(400, ex.getCodigo(), ex.getMessage()));
     }
 
+    // 422, não 400: a inscrição não tem dado inválido — a PESSOA não é elegível para o
+    // evento. Handler específico vence o de BusinessException acima (Spring casa pelo tipo
+    // mais específico, não pela ordem de declaração).
+    @ExceptionHandler(com.domus.api.modules.evento.elegibilidade.NaoElegivelException.class)
+    public ResponseEntity<ErrorResponse> handleNaoElegivel(
+            com.domus.api.modules.evento.elegibilidade.NaoElegivelException ex, HttpServletRequest request) {
+        log.warn("Inscrição recusada por inelegibilidade. path={}", request.getRequestURI());
+        return ResponseEntity
+                .status(422)
+                .body(ErrorResponse.ofElegibilidade(ex.getCodigo(), ex.getMessage(), ex.getImpedimentos()));
+    }
+
     @ExceptionHandler(SessaoExpiradaException.class)
     public ResponseEntity<ErrorResponse> handleSessaoExpirada(SessaoExpiradaException ex, HttpServletRequest request) {
         log.warn("Sessão expirada ou inválida. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());

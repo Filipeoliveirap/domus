@@ -5,9 +5,11 @@ import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +40,8 @@ class EventoServiceCamposInscricaoTest {
     OutboxRegistrador outboxRegistrador;
     InscricaoService inscricaoService;
     FotoService fotoService;
+    ElegibilidadeService elegibilidadeService;
+    PessoaRepository pessoaRepository;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -51,8 +55,10 @@ class EventoServiceCamposInscricaoTest {
         outboxRegistrador = mock(OutboxRegistrador.class);
         inscricaoService = mock(InscricaoService.class);
         fotoService = mock(FotoService.class);
+        elegibilidadeService = mock(ElegibilidadeService.class);
+        pessoaRepository = mock(PessoaRepository.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
-                outboxRegistrador, inscricaoService, fotoService);
+                outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean()))

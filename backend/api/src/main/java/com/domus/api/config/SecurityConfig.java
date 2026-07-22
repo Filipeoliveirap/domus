@@ -124,6 +124,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
 
+                        //Elegibilidade — DEVE vir ANTES dos curingas /eventos/** (mesma armadilha
+                        //de ordenação já mordida três vezes neste projeto: matcher específico
+                        //sempre antes do curinga, "/**" casa zero segmentos e o curinga também
+                        //casaria "/eventos/{id}/elegibilidade" se viesse antes).
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
+                        .authenticated()
+
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)

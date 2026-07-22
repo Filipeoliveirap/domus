@@ -3,6 +3,8 @@ package com.domus.api.modules.evento;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.evento.elegibilidade.DTOs.ElegibilidadeResponse;
+import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
@@ -11,6 +13,8 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -34,6 +38,8 @@ public class EventoService {
     private final OutboxRegistrador outboxRegistrador;
     private final InscricaoService inscricaoService;
     private final FotoService fotoService;
+    private final ElegibilidadeService elegibilidadeService;
+    private final PessoaRepository pessoaRepository;
 
     @Cacheable(
             value = "eventos",
@@ -194,6 +200,22 @@ public class EventoService {
         );
         log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
+    }
+
+    /**
+     * Prévia de elegibilidade PARA A PRÓPRIA PESSOA logada — é o que alimenta o
+     * {@code GET /eventos/{id}/elegibilidade}, conveniência de UX para a tela decidir o que
+     * mostrar ANTES do POST de inscrição. NUNCA é defesa: o {@code InscricaoService} roda a
+     * MESMA {@link ElegibilidadeService#avaliar} de novo dentro da transação de inscrever,
+     * então quem chamar o POST direto (Insomnia, curl) esbarra na regra igual.
+     */
+    @Transactional(readOnly = true)
+    public ElegibilidadeResponse elegibilidade(UUID eventoId, UUID pessoaId, UUID igrejaId) {
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Pessoa pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+        return ElegibilidadeResponse.from(elegibilidadeService.avaliar(evento, pessoa));
     }
 
     private void validarDatas(EventoRequest data) {

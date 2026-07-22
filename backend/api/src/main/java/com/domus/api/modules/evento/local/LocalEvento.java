@@ -10,11 +10,18 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * {@code @BatchSize} na CLASSE (não dá em campo @ManyToOne): agrupa a resolução de proxies
+ * LAZY pendentes deste tipo num único {@code SELECT ... WHERE id IN (...)}, em vez de um
+ * SELECT por linha — resolve o N+1 de {@code Evento.local} na listagem paginada ({@code
+ * Evento.local} não pode usar JOIN FETCH porque a query de listagem é nativa).
+ */
 @Entity
 @Table(name = "local_evento")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @SQLDelete(sql = "UPDATE local_evento SET deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
+@org.hibernate.annotations.BatchSize(size = 25)
 public class LocalEvento {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)

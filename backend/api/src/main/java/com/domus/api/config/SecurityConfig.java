@@ -131,6 +131,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
                         .authenticated()
 
+                        //Sugestões de tipo — DEVE vir ANTES do curinga /eventos/** (mesma
+                        //armadilha de ordenação já mordida três vezes neste projeto).
+                        .requestMatchers(HttpMethod.GET, "/eventos/tipos")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
+
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)

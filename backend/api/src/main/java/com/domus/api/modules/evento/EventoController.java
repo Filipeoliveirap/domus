@@ -13,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,6 +32,16 @@ public class EventoController {
         String termo = (q == null || q.isBlank()) ? null : q.trim();
         Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, semSort));
+    }
+
+    /**
+     * Sugestões de tipo para o autocomplete do cadastro. Precisa vir ANTES de
+     * {@code GET /eventos/**} no SecurityConfig (matcher específico antes do curinga).
+     */
+    @GetMapping("/tipos")
+    public ResponseEntity<List<String>> tipos() {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(eventoService.tiposSugeridos(igrejaId));
     }
 
     @GetMapping("/{id}")
@@ -54,7 +65,8 @@ public class EventoController {
     @PostMapping
     public ResponseEntity<EventoResponse> cadastrar(@Valid @RequestBody EventoRequest data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        EventoResponse response = eventoService.cadastrarEvento(data, igrejaId);
+        UUID usuarioId = usuarioAutenticado.getUsuarioId();
+        EventoResponse response = eventoService.cadastrarEvento(data, igrejaId, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -63,7 +75,8 @@ public class EventoController {
             @PathVariable UUID id,
             @Valid @RequestBody EventoRequest data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(eventoService.atualizarEvento(id, data, igrejaId));
+        UUID usuarioId = usuarioAutenticado.getUsuarioId();
+        return ResponseEntity.ok(eventoService.atualizarEvento(id, data, igrejaId, usuarioId));
     }
 
     @DeleteMapping("/{id}")

@@ -28,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -79,7 +78,7 @@ class EventoTipoENormalizacaoTest {
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));
         when(fotoService.buscarParaVincular(any(), any())).thenReturn(null);
-        when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean())).thenReturn(0);
+        when(inscricaoService.removerInscritosNaoElegiveis(any())).thenReturn(0);
 
         Usuario usuario = new Usuario();
         usuario.setId(usuarioId);

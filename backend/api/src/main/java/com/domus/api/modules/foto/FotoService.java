@@ -8,6 +8,8 @@ import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -75,14 +77,61 @@ public class FotoService {
         return armazenamentoFotos.ler(foto.getChave() + "/" + tamanho.sufixo());
     }
 
+    /**
+     * Resolve o id de foto enviado por um formulário (pessoa/evento/igreja), validando que
+     * ela pertence à igreja de quem está salvando. Nunca vincula um FK "no escuro": se o id
+     * não existir ou for de outra igreja, falha antes de gravar qualquer referência.
+     *
+     * @return {@code null} quando {@code fotoId} é {@code null} — "sem foto" é uma escolha
+     *         válida, não um erro.
+     */
+    @Transactional(readOnly = true)
+    public Foto buscarParaVincular(UUID fotoId, UUID igrejaId) {
+        if (fotoId == null) return null;
+        return fotoRepository.findByIdAndIgrejaId(fotoId, igrejaId)
+                .orElseThrow(() -> new BusinessException("FOTO_INVALIDA",
+                        "Foto não encontrada ou não pertence a esta igreja."));
+    }
+
     /** Apaga as três versões do bucket e a linha em {@code foto}. */
     @Transactional
+    /**
+     * Remove a foto: a linha DENTRO da transação, os arquivos só DEPOIS do commit.
+     *
+     * <p><b>Por que separado:</b> o bucket não participa de transação. Apagando os arquivos
+     * junto com a linha, um erro posterior na mesma transação (outbox, reindexação, qualquer
+     * regra que rode depois) faria rollback — a linha voltaria, a pessoa continuaria
+     * apontando para ela, e os BYTES já teriam sumido. A foto existiria no banco e daria 404
+     * para sempre.
+     *
+     * <p>Adiando o apagamento para depois do commit: se a transação der certo, o arquivo
+     * some; se der errado, o rollback restaura a linha e o arquivo nunca foi tocado.
+     *
+     * <p>Sem transação ativa (o job de limpeza roda assim), apaga na hora — não há rollback
+     * a temer.
+     */
     public void remover(UUID id) {
         Foto foto = fotoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Foto não encontrada."));
-        armazenamentoFotos.remover(foto.getChave());
+        String chave = foto.getChave();
+
         fotoRepository.delete(foto);
-        log.info("Foto removida. foto_id={}", id);
+        apagarArquivosAposCommit(chave, id);
+    }
+
+    private void apagarArquivosAposCommit(String chave, UUID id) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            armazenamentoFotos.remover(chave);
+            log.info("Foto removida. foto_id={}", id);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                armazenamentoFotos.remover(chave);
+                log.info("Foto removida. foto_id={}", id);
+            }
+        });
     }
 
     private byte[] lerBytes(MultipartFile arquivo) {

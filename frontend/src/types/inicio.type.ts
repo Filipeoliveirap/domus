@@ -9,8 +9,8 @@ export interface Aniversariante {
   id: string
   nome: string
   dia: number
-  /** Nulo enquanto o upload de foto (Fase 2) não existir — a tela cai nas iniciais. */
-  foto: string | null
+  /** Nulo até a pessoa ter foto — a tela cai nas iniciais. */
+  fotoId: string | null
 }
 
 export interface InicioResponse {

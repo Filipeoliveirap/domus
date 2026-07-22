@@ -7,6 +7,7 @@ import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
 import { iniciais } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
@@ -56,13 +57,13 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
     ? (listaAdmin?.inscritos ?? []).map((i) => ({
         id: i.id,
         nome: i.nome,
-        foto: i.foto,
+        fotoId: i.fotoId,
         convidados: i.acompanhantes.map((a) => a.nome),
       }))
     : participantes.map((p) => ({
         id: p.id,
         nome: p.nome,
-        foto: p.foto,
+        fotoId: p.fotoId,
         convidados: p.convidados,
       }))
 
@@ -105,9 +106,9 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
               <div key={l.id} className={styles.grupo}>
                 <div className={styles.linha}>
                   <span className={styles.avatar}>
-                    {l.foto ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo
-                      <img src={l.foto} alt="" className={styles.avatarFoto} />
+                    {urlFoto(l.fotoId, 'THUMB') ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                      <img src={urlFoto(l.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
                     ) : (
                       iniciais(l.nome)
                     )}

@@ -3,6 +3,8 @@ package com.domus.api.modules.pessoa;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -34,6 +36,7 @@ class PessoaServiceTest {
     CacheEvictor cacheEvictor;
     OutboxRegistrador outboxRegistrador;
     ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
+    FotoService fotoService;
     PessoaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -48,8 +51,10 @@ class PessoaServiceTest {
         cacheEvictor = mock(CacheEvictor.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         reindexacaoMovimentacaoService = mock(ReindexacaoMovimentacaoService.class);
+        fotoService = mock(FotoService.class);
         service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
-                inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService);
+                inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService,
+                fotoService);
 
         Igreja igreja = new Igreja();
         igreja.setId(igrejaId);
@@ -60,8 +65,12 @@ class PessoaServiceTest {
     }
 
     private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo) {
+        return dto(vinculo, dataBatismo, null);
+    }
+
+    private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo, UUID fotoId) {
         return new PessoaRequestDTO("Maria", null, null, null, null,
-                vinculo, null, null, null, dataBatismo);
+                vinculo, null, null, null, dataBatismo, fotoId);
     }
 
     @Test
@@ -108,5 +117,51 @@ class PessoaServiceTest {
         service.atualizarMembro(pessoaId, dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1)), igrejaId);
 
         verify(inscricaoService, never()).cancelarInscricoesEmEventosExclusivos(any());
+    }
+
+    /**
+     * Trocar a foto (id antigo → id novo) precisa remover a foto ANTIGA — senão o bucket
+     * acumula arquivo órfão para sempre, já que nada mais aponta para ele.
+     */
+    @Test
+    void atualizarRemoveFotoAntigaQuandoFotoMuda() {
+        UUID fotoAntigaId = UUID.randomUUID();
+        UUID fotoNovaId = UUID.randomUUID();
+
+        Foto fotoAntiga = new Foto();
+        fotoAntiga.setId(fotoAntigaId);
+        Foto fotoNova = new Foto();
+        fotoNova.setId(fotoNovaId);
+
+        Pessoa existente = Pessoa.builder().id(pessoaId).nome("Maria")
+                .vinculo(Vinculo.MEMBRO).foto(fotoAntiga).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+        when(fotoService.buscarParaVincular(fotoNovaId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarMembro(pessoaId,
+                dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1), fotoNovaId), igrejaId);
+
+        verify(fotoService).remover(fotoAntigaId);
+    }
+
+    /**
+     * Sem troca de foto (mesmo id, ou os dois nulos), NADA deve ser removido — a foto atual
+     * continua sendo a mesma referenciada pela pessoa.
+     */
+    @Test
+    void atualizarNaoRemoveFotoQuandoNaoMuda() {
+        UUID fotoId = UUID.randomUUID();
+        Foto foto = new Foto();
+        foto.setId(fotoId);
+
+        Pessoa existente = Pessoa.builder().id(pessoaId).nome("Maria")
+                .vinculo(Vinculo.MEMBRO).foto(foto).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+        when(fotoService.buscarParaVincular(fotoId, igrejaId)).thenReturn(foto);
+
+        service.atualizarMembro(pessoaId,
+                dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1), fotoId), igrejaId);
+
+        verify(fotoService, never()).remover(any());
     }
 }

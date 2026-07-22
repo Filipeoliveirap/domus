@@ -18,6 +18,7 @@ import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { formatarData } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import type { InscritoResponse } from '@/types/inscricao.type'
 import styles from './inscritos.module.css'
 
@@ -168,9 +169,9 @@ export default function InscritosPage() {
                       <div className={styles.linha}>
                         <div className={styles.colParticipante}>
                           <span className={styles.avatar}>
-                            {inscrito.foto ? (
-                              // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo
-                              <img src={inscrito.foto} alt="" className={styles.avatarFoto} />
+                            {urlFoto(inscrito.fotoId, 'THUMB') ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                              <img src={urlFoto(inscrito.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
                             ) : (
                               iniciais(inscrito.nome)
                             )}
@@ -184,9 +185,9 @@ export default function InscritosPage() {
                           ) : inscrito.inscritoPorNome ? (
                             <span className={styles.inscritoPor}>
                               <span className={styles.avatarInscritoPor}>
-                                {inscrito.inscritoPorFoto ? (
-                                  // eslint-disable-next-line @next/next/no-img-element -- URL de storage externo
-                                  <img src={inscrito.inscritoPorFoto} alt="" className={styles.avatarFoto} />
+                                {urlFoto(inscrito.inscritoPorFotoId, 'THUMB') ? (
+                                  // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                                  <img src={urlFoto(inscrito.inscritoPorFotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
                                 ) : (
                                   iniciais(inscrito.inscritoPorNome)
                                 )}

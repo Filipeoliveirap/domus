@@ -1,0 +1,149 @@
+.botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.botao:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.botao:disabled {
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ---- F1: "Eu vou" (curtida leve, não é CTA formal) ---- */
+
+.euVou {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.euVou:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.euVou:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.euVouAtivo {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/*
+  O feedback de marcar presença é o BOTÃO, não um aviso no canto: um pulo curto no ícone,
+  como curtir um post. O gesto é leve e a resposta tem que ser do mesmo tamanho.
+
+  Só na entrada em "ativo" (`.euVouAtivo .icone`), nunca ao desmarcar — animar a saída
+  daria ao "não vou" uma comemoração que ele não merece.
+*/
+.euVouAtivo .icone {
+  animation: pulo 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pulo {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35) rotate(-8deg); }
+  70%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+/*
+  Quem pediu menos movimento no sistema não recebe o pulo — a mudança de cor e de texto
+  já comunica o estado sozinha.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .euVouAtivo .icone {
+    animation: none;
+  }
+}
+
+/* O botão inteiro afunda de leve ao clicar — resposta imediata, antes da resposta do servidor. */
+.euVou:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ---- Estado inscrito ---- */
+
+.inscrito {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg, #ecfdf5);
+}
+
+.inscritoStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-success, #059669);
+}
+
+.inscritoTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.inscritoTexto span {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.cancelarLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  transition: color var(--transition-fast);
+}
+
+.cancelarLink:hover {
+  color: var(--color-danger, #dc2626);
+}
+
+/* ---- A2/rodada 3: presença em evento não-AGENDADO não é mais cancelável — histórico ---- */
+
+.participou {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}

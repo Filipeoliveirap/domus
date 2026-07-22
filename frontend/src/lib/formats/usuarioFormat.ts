@@ -1,17 +1,17 @@
 const ROTULOS_ROLE: Record<string, string> = {
   ADMIN_IGREJA: "Administrador",
   LIDER: "Líder",
-  MEMBRO: "Membro",
+  ACESSO_COMUM: "Acesso comum",
 };
 
 export function rotuloRole(role: string): string {
   return ROTULOS_ROLE[role] ?? role;
 }
 
-export function varianteRole(role: string): "admin" | "lider" | "membro" | "outro" {
+export function varianteRole(role: string): "admin" | "lider" | "comum" | "outro" {
   if (role === "ADMIN_IGREJA") return "admin";
   if (role === "LIDER") return "lider";
-  if (role === "MEMBRO") return "membro";
+  if (role === "ACESSO_COMUM") return "comum";
   return "outro";
 }
 

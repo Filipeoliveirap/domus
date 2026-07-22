@@ -14,23 +14,35 @@ import type { QueryClient } from '@tanstack/react-query'
  * <p><b>Ao criar uma tela nova que agrega dados de outras, adicione a chave dela aqui</b> —
  * é o único lugar que precisa saber.
  */
-type Entidade = 'evento' | 'membro' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja'
+type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao'
 
 /** Prefixos de queryKey. O TanStack invalida por prefixo, então `['relatorios']` pega todas. */
 const AFETADAS: Record<Entidade, string[][]> = {
   evento: [
     ['eventos'],
+    // ATENÇÃO: `['eventos']` (lista) NÃO cobre `['evento', id]` (detalhe) — a invalidação é
+    // por prefixo, e "evento" não é prefixo de "eventos". Faltando esta linha, o detalhe
+    // seguia mostrando o evento velho depois de editado. Chave nova de evento entra aqui.
+    ['evento'],
     ['inicio'], // próximos eventos
     ['dashboard'],
     ['busca-global'],
+    // Rodada 2 (F12): restringir um evento (exclusivoMembros) cancela
+    // inscrições no backend, mas a tela de detalhe continuava mostrando a lista velha —
+    // atualizar um evento também precisa invalidar quem está inscrito nele.
+    ['inscricoes'],
   ],
-  membro: [
-    ['membros'],
-    ['usuarios'], // usuário carrega o nome do membro
+  pessoa: [
+    ['pessoas'],
+    // ATENÇÃO (mesma armadilha do evento acima): `['pessoas']` (lista) NÃO cobre
+    // `['pessoa', id]` (detalhe) — a invalidação é por prefixo. Faltando esta linha, o
+    // detalhe seguiria mostrando a pessoa velha depois de editada.
+    ['pessoa'],
+    ['usuarios'], // usuário carrega o nome da pessoa
     ['inicio'], // aniversariantes do mês
     ['dashboard'],
     ['busca-global'],
-    ['relatorios'], // contagem de membros no consolidado da família
+    ['relatorios'], // contagem de membros/congregantes no consolidado da família
   ],
   movimentacao: [
     ['movimentacoes'],
@@ -53,6 +65,12 @@ const AFETADAS: Record<Entidade, string[][]> = {
     ['igreja'],
     ['igrejas-vinculadas'],
     ['relatorios'], // o consolidado mostra nome e composição da família
+  ],
+  inscricao: [
+    ['inscricoes'], // minha inscrição, participantes e lista de inscritos
+    ['eventos'], // cards de evento mostram vagas restantes
+    ['evento'], // tela de detalhe do evento
+    ['inicio'], // próximos eventos também mostram vagas
   ],
 }
 

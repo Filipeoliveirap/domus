@@ -43,6 +43,23 @@ public class Evento {
 
     private String foto;
 
+    /** NULL = sem limite de vagas. */
+    @Column(name = "vagas")
+    private Integer vagas;
+
+    /** NULL = gratuito. Informativo: o Domus registra a inscrição, não o pagamento. */
+    @Column(name = "preco", precision = 10, scale = 2)
+    private java.math.BigDecimal preco;
+
+    @Column(name = "exclusivo_membros", nullable = false)
+    @Builder.Default
+    private boolean exclusivoMembros = false;
+
+    /** Só evento marcado mostra o botão "Confirmar presença" e a lista de inscritos. */
+    @Column(name = "requer_inscricao", nullable = false)
+    @Builder.Default
+    private boolean requerInscricao = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -53,4 +70,29 @@ public class Evento {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * Situação do evento AGORA, derivada de {@code inicioEm}/{@code fimEm} — nunca armazenada
+     * (ver {@link SituacaoEvento}). Mora na entidade porque é uma regra sobre os próprios
+     * campos do evento, sem depender de nada externo (inscrições, igreja etc.).
+     *
+     * <p>Sem {@code fimEm} declarado, o evento é considerado em andamento até o fim do PRÓPRIO
+     * dia de início, e encerrado a partir do dia seguinte — não dá pra saber quando um evento
+     * sem horário de término "acaba", mas também não faz sentido continuar "em andamento" para
+     * sempre.
+     */
+    public SituacaoEvento getSituacao() {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime fimEfetivo = fimEm != null
+                ? fimEm
+                : inicioEm.toLocalDate().atTime(23, 59, 59);
+
+        if (agora.isBefore(inicioEm)) {
+            return SituacaoEvento.AGENDADO;
+        }
+        if (agora.isAfter(fimEfetivo)) {
+            return SituacaoEvento.ENCERRADO;
+        }
+        return SituacaoEvento.EM_ANDAMENTO;
+    }
 }

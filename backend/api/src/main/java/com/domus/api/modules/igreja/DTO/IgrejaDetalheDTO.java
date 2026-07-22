@@ -1,7 +1,7 @@
 package com.domus.api.modules.igreja.DTO;
 
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.DTO.EnderecoDTO;
+import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

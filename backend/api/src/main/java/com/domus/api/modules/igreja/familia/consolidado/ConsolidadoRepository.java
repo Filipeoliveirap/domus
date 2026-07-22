@@ -1,6 +1,6 @@
 package com.domus.api.modules.igreja.familia.consolidado;
 
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,23 +12,23 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * As três consultas do consolidado. O soft delete de Membro e Evento é aplicado
+ * As três consultas do consolidado. O soft delete de Pessoa e Evento é aplicado
  * automaticamente pelo {@code @SQLRestriction} das entidades — não precisa entrar no WHERE.
  *
  * <p>{@code :igrejaIds} SEMPRE vem de {@code FamiliaIgrejaService.idsDaFamilia} — nunca
  * direto da requisição.
  */
 @Repository
-public interface ConsolidadoRepository extends JpaRepository<Membro, UUID> {
+public interface ConsolidadoRepository extends JpaRepository<Pessoa, UUID> {
 
     @Query("""
     SELECT
         m.igreja.id AS igrejaId,
-        CAST(m.status AS string) AS status,
+        CAST(m.vinculo AS string) AS vinculo,
         COUNT(m) AS total
-    FROM Membro m
+    FROM Pessoa m
     WHERE m.igreja.id IN :igrejaIds
-    GROUP BY m.igreja.id, m.status
+    GROUP BY m.igreja.id, m.vinculo
 """)
     List<ConsolidadoProjections.MembrosPorIgreja> contarMembros(
             @Param("igrejaIds") List<UUID> igrejaIds);

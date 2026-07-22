@@ -22,7 +22,7 @@ public record MovimentacaoRequestDTO(
         @NotNull(message = "A data é obrigatória")
         LocalDate dataMovimentacao,
 
-        UUID membroId,          // opcional — contribuinte/beneficiário
+        UUID pessoaId,          // opcional — contribuinte/beneficiário
 
         @Size(max = 1000, message = "A descrição deve ter no máximo 1000 caracteres")
         String descricao

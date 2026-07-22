@@ -1,6 +1,6 @@
-import type { Endereco } from '@/types/membro.type'
+import type { Endereco } from '@/types/pessoa.type'
 
-/** Reusa o mesmo `Endereco` do membro — no backend as colunas são idênticas (V11 e V13). */
+/** Reusa o mesmo `Endereco` da pessoa — no backend as colunas são idênticas (V11 e V13). */
 export interface IgrejaDetalhe {
   id: string
   nome: string

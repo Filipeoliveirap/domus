@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Archive, History, Info } from 'lucide-react'
+import { Archive, History, Info, type LucideIcon } from 'lucide-react'
 import styles from './ModalArquivar.module.css'
 
 interface ModalArquivarProps {
@@ -13,7 +13,11 @@ interface ModalArquivarProps {
   isLoading?: boolean
   erro?: string | null
   textoConfirmar?: string
+  /** Texto do botão de confirmar enquanto a ação está em andamento. */
+  textoCarregando?: string
   reversivel?: boolean
+  /** Ícone do cabeçalho — permite reusar este modal para confirmações leves não ligadas a arquivamento (ex.: A11). */
+  icone?: LucideIcon
 }
 
 export function ModalArquivar({
@@ -25,7 +29,9 @@ export function ModalArquivar({
   isLoading = false,
   erro = null,
   textoConfirmar = 'Confirmar arquivamento',
+  textoCarregando = 'Arquivando…',
   reversivel = true,
+  icone: Icone = Archive,
 }: ModalArquivarProps) {
   
   useEffect(() => {
@@ -46,7 +52,7 @@ export function ModalArquivar({
       >
         <div className={styles.corpo}>
           <div className={styles.iconBox}>
-            <Archive size={28} />
+            <Icone size={28} />
           </div>
 
           <h2 className={styles.titulo}>{titulo}</h2>
@@ -85,7 +91,7 @@ export function ModalArquivar({
             onClick={onConfirmar}
             disabled={isLoading}
           >
-            {isLoading ? 'Arquivando…' : textoConfirmar}
+            {isLoading ? textoCarregando : textoConfirmar}
           </button>
         </div>
       </div>

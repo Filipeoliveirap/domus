@@ -3,6 +3,7 @@ package com.domus.api.modules.evento;
 import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
+import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -29,6 +30,7 @@ public class EventoService {
     private final IgrejaRepository igrejaRepository;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
+    private final InscricaoService inscricaoService;
 
     @Cacheable(
             value = "eventos",
@@ -36,7 +38,8 @@ public class EventoService {
     )
     @Transactional(readOnly = true)
     public PagedResponse<EventoResponse> listarEventos(UUID igrejaId, String q, Pageable pageable) {
-        Page<EventoResponse> pagina = eventoRepository.buscarPorIgreja(igrejaId, q, pageable)
+        Page<EventoResponse> pagina = eventoRepository
+                .buscarPorIgreja(igrejaId, q, java.time.LocalDateTime.now(), pageable)
                 .map(EventoResponse::from);
         return PagedResponse.from(pagina);
     }
@@ -64,6 +67,10 @@ public class EventoService {
                 .fimEm(data.fimEm())
                 .local(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()))
                 .foto(data.foto())
+                .vagas(data.vagas())
+                .preco(data.preco())
+                .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
+                .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -86,6 +93,19 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
+        // Editar um evento que já começou reescreveria o passado (data, local, vagas) debaixo
+        // de gente que já confirmou presença ou já foi. AGENDADO é a única situação em que
+        // editar ainda faz sentido.
+        SituacaoEvento situacaoAtual = evento.getSituacao();
+        if (situacaoAtual == SituacaoEvento.EM_ANDAMENTO) {
+            throw new BusinessException("EVENTO_EM_ANDAMENTO",
+                    "Não é possível editar um evento em andamento.");
+        }
+        if (situacaoAtual == SituacaoEvento.ENCERRADO) {
+            throw new BusinessException("EVENTO_ENCERRADO",
+                    "Não é possível editar um evento encerrado.");
+        }
+
         evento.setTitulo(com.domus.api.shared.util.TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
         evento.setInicioEm(data.inicioEm());
@@ -93,7 +113,32 @@ public class EventoService {
         evento.setLocal(com.domus.api.shared.util.TextoUtil.capitalizar(data.local()));
         evento.setFoto(data.foto());
 
+        // A9: vagas contam PESSOAS (inscritos confirmados + acompanhantes) — reduzir abaixo
+        // de quem já está confirmado deixaria o evento com mais gente que vaga declarada, e
+        // "vagas restantes" (evento.getVagas() - total) ficaria negativo. null (sem limite)
+        // sempre é permitido, não há o que estourar.
+        if (data.vagas() != null) {
+            long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
+            if (data.vagas() < pessoasConfirmadas) {
+                throw new BusinessException("VAGAS_MENOR_QUE_INSCRITOS",
+                        "Não é possível reduzir as vagas para " + data.vagas() + ": "
+                        + pessoasConfirmadas + " pessoas já estão confirmadas neste evento. "
+                        + "Cancele inscrições antes de reduzir o limite.");
+            }
+        }
+        evento.setVagas(data.vagas());
+        evento.setPreco(data.preco());
+        boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
+        evento.setExclusivoMembros(exclusivoMembros);
+        evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
+
         Evento salvo = eventoRepository.save(evento);
+
+        // B4: restringir o evento pode deixar gente já confirmada inelegível — cancela quem
+        // não se qualifica mais (mesmo cancelamento manual, convidados incluídos).
+        int inscricoesRemovidas = inscricaoService.removerInscritosNaoElegiveis(
+                salvo.getId(), exclusivoMembros);
+
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.ATUALIZADO,
@@ -102,7 +147,7 @@ public class EventoService {
         );
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo);
+        return EventoResponse.from(salvo, inscricoesRemovidas);
     }
 
     @Transactional
@@ -110,6 +155,16 @@ public class EventoService {
         log.info("Arquivando evento. id={}, igreja_id={}", id, igrejaId);
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        // Só bloqueia em andamento: arquivar um evento ENCERRADO é faxina normal (o piloto vai
+        // acumular evento passado toda semana), e travar isso empurraria o usuário pra pedir
+        // exceção sem necessidade. Em andamento é diferente — arquivar um evento que está
+        // rolando AGORA tira ele da lista de quem ainda vai chegar.
+        if (evento.getSituacao() == SituacaoEvento.EM_ANDAMENTO) {
+            throw new BusinessException("EVENTO_EM_ANDAMENTO",
+                    "Não é possível arquivar um evento em andamento.");
+        }
+
         eventoRepository.delete(evento);
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,

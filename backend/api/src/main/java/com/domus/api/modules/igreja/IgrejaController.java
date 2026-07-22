@@ -2,7 +2,6 @@ package com.domus.api.modules.igreja;
 
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
-import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
@@ -38,11 +37,14 @@ public class IgrejaController {
                         response.igrejaId(), response.igrejaNome()));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<IgrejaDTO> buscarIgrejaPorId(@PathVariable UUID id) {
-        IgrejaDTO igreja = igrejaService.buscarPorId(id);
-        return ResponseEntity.ok(igreja);
-    }
+    /*
+     * REMOVIDO em 2026-07-21: GET /igrejas/{id} lia QUALQUER igreja por UUID, sem checar
+     * tenant — um usuário logado de outra igreja obtinha nome, CNPJ, e-mail e telefone dela.
+     * Já tinha sido endurecido uma vez (era permitAll, virou authenticated), mas o acesso
+     * cruzado seguia. Não havia um único consumidor no front nem em teste, então apagar
+     * elimina a superfície em vez de remendá-la. O caso legítimo é GET /igrejas/minha, que
+     * tira o tenant do JWT e por isso não tem como pedir a igreja de outro.
+     */
 
     /**
      * Dados completos da MINHA igreja (Configurações). Sem {@code id} no path de propósito:

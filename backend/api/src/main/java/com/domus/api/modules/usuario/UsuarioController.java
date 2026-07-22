@@ -1,6 +1,6 @@
 package com.domus.api.modules.usuario;
 
-import com.domus.api.modules.membro.DTO.ConcederAcessoRequestDTO;
+import com.domus.api.modules.pessoa.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.usuario.DTO.*;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;

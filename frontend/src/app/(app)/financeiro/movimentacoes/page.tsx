@@ -17,9 +17,11 @@ import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonMovimentacoes } from "./SkeletonMovimentacoes";
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 
 const TAMANHO_PAGINA = 15
@@ -52,7 +54,7 @@ function MovimentacoesConteudo() {
   const detalheId = searchParams.get('detalhe')
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
     tipo: '',
@@ -165,21 +167,19 @@ function MovimentacoesConteudo() {
 
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>DE</label>
-          <input
-            type="date"
-            className={styles.filtroInput}
+          <CampoData
+            semLabel
             value={filtros.dataInicio}
-            onChange={(e) => { setFiltro('dataInicio', e.target.value); resetarPagina() }}
+            onChange={(v) => { setFiltro('dataInicio', v); resetarPagina() }}
           />
         </div>
 
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>ATÉ</label>
-          <input
-            type="date"
-            className={styles.filtroInput}
+          <CampoData
+            semLabel
             value={filtros.dataFim}
-            onChange={(e) => { setFiltro('dataFim', e.target.value); resetarPagina() }}
+            onChange={(v) => { setFiltro('dataFim', v); resetarPagina() }}
           />
         </div>
 
@@ -233,7 +233,7 @@ function MovimentacoesConteudo() {
                 <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
                   <div className={styles.colDesc}>
                     <span className={styles.descTexto}>{mov.descricao || '—'}</span>
-                    {mov.membroNome && <span className={styles.descMembro}>{mov.membroNome}</span>}
+                    {mov.pessoaNome && <span className={styles.descMembro}>{mov.pessoaNome}</span>}
                   </div>
                   <div className={styles.colCat}>{mov.categoriaNome}</div>
                   <div className={styles.colData}>{formatarData(mov.dataMovimentacao)}</div>

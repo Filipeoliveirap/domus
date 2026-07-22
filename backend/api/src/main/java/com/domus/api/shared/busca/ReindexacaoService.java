@@ -9,9 +9,9 @@ import com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepositor
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoDocument;
 import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.busca.MembroDocument;
-import com.domus.api.modules.membro.busca.MembroSearchRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.busca.PessoaDocument;
+import com.domus.api.modules.pessoa.busca.PessoaSearchRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.usuario.busca.UsuarioDocument;
 import com.domus.api.modules.usuario.busca.UsuarioSearchRepository;
@@ -45,8 +45,8 @@ public class ReindexacaoService {
         ops.createWithMapping();
     }
 
-    private final MembroRepository membroRepository;
-    private final MembroSearchRepository membroSearchRepository;
+    private final PessoaRepository pessoaRepository;
+    private final PessoaSearchRepository pessoaSearchRepository;
     private final EventoRepository eventoRepository;
     private final EventoSearchRepository eventoSearchRepository;
     private final UsuarioRepository usuarioRepository;
@@ -60,7 +60,7 @@ public class ReindexacaoService {
     public Map<String, Long> reindexarTudo() {
         Map<String, Long> resultado = new HashMap<>();
 
-        resultado.put("membros", reindexarMembros());
+        resultado.put("pessoas", reindexarPessoas());
         resultado.put("eventos", reindexarEventos());
         resultado.put("usuarios", reindexarUsuarios());
         resultado.put("movimentacoes", reindexarMovimentacoes());
@@ -70,13 +70,13 @@ public class ReindexacaoService {
         return resultado;
     }
 
-    private long reindexarMembros() {
-        recriarIndice(MembroDocument.class);
-        var docs = membroRepository.findAll().stream()
-                .map(MembroDocument::de)
+    private long reindexarPessoas() {
+        recriarIndice(PessoaDocument.class);
+        var docs = pessoaRepository.findAll().stream()
+                .map(PessoaDocument::de)
                 .toList();
-        membroSearchRepository.saveAll(docs);
-        log.info("Reindexados {} membros.", docs.size());
+        pessoaSearchRepository.saveAll(docs);
+        log.info("Reindexadas {} pessoas.", docs.size());
         return docs.size();
     }
 

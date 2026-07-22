@@ -1,0 +1,395 @@
+/* ─── Página ─── */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+.breadcrumbLink {
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+}
+.breadcrumbSep {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+.breadcrumbAtual {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Cabeçalho ─── */
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.cabecalhoTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.eventoTitulo {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+.botaoPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-bg-white);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-btn-primary);
+  transition: opacity var(--transition-normal);
+  flex-shrink: 0;
+}
+.botaoPrimario:hover {
+  opacity: 0.9;
+}
+
+/* ─── Estatísticas ─── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.statIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-igreja-card);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.statValor {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+.statLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Painel / tabela ─── */
+.painel {
+  min-height: 200px;
+  padding: 20px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-lg);
+}
+.estado {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.tabelaHeader {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.2fr 1fr 100px;
+  gap: 16px;
+  padding: 0 16px 12px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.linha,
+.linhaConvidado {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.2fr 1fr 100px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+}
+
+.linhaConvidado {
+  position: relative;
+  margin-left: 28px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: var(--color-bg-page);
+}
+
+/* Conector visual: mostra que o convidado pertence à linha acima */
+.conector {
+  position: absolute;
+  top: -6px;
+  left: -16px;
+  width: 16px;
+  height: calc(50% + 6px);
+  border-left: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
+  border-bottom-left-radius: 8px;
+}
+
+/* ─── Colunas ─── */
+.colParticipante {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.avatar,
+.avatarConvidado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-bg-igreja-card);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.avatarConvidado {
+  width: 28px;
+  height: 28px;
+  background: var(--color-bg-table-header);
+  color: var(--color-text-secondary);
+}
+.avatarFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nome {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.pillConvidado {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-table-header);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+.colData,
+.colInscritoPor {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.textoMuted {
+  color: var(--color-text-muted);
+}
+.inscritoPor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.avatarInscritoPor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-bg-igreja-card);
+  color: var(--color-primary);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.colConvidados {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.colAcoes {
+  display: flex;
+  justify-content: flex-end;
+}
+.btnCancelar {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+.btnCancelar:hover {
+  background: var(--color-danger-bg);
+}
+
+/* ─── Confirmação inline (remoção de convidado) ─── */
+.confirmInlineOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  padding: 16px;
+}
+.confirmInline {
+  width: 100%;
+  max-width: 360px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.confirmInlineTexto {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+.confirmInlineAcoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btnConfirmarInline {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger);
+  color: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.btnConfirmarInline:disabled,
+.btnCancelar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Responsivo ─── */
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .tabelaHeader {
+    display: none;
+  }
+
+  .linha,
+  .linhaConvidado {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "participante acoes"
+      "data data"
+      "inscritopor convidados";
+    gap: 6px 12px;
+    padding: 14px 16px;
+  }
+
+  .colParticipante { grid-area: participante; }
+  .colAcoes { grid-area: acoes; }
+  .colData { grid-area: data; }
+  .colInscritoPor { grid-area: inscritopor; }
+  .colConvidados { grid-area: convidados; }
+
+  .colData,
+  .colInscritoPor,
+  .colConvidados {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+  }
+
+  .linhaConvidado {
+    margin-left: 20px;
+  }
+  .conector {
+    left: -12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .botaoPrimario {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: 4px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.voltar:hover {
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+}

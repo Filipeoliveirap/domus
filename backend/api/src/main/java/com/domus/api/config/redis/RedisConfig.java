@@ -3,8 +3,8 @@ package com.domus.api.config.redis;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.financeiro.categoria.DTOs.CategoriaResponse;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
-import com.domus.api.modules.igreja.DTO.IgrejaDTO;
-import com.domus.api.modules.membro.DTO.MembroResponse;
+import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,18 +53,18 @@ public class RedisConfig implements CachingConfigurer {
         RedisCacheConfiguration igrejaConfig = base
                 .entryTtl(Duration.ofHours(1))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
-                        new Jackson2JsonRedisSerializer<>(mapper, IgrejaDTO.class)));
+                        new Jackson2JsonRedisSerializer<>(mapper, IgrejaDetalheDTO.class)));
 
         RedisCacheConfiguration usuariosConfig = base
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serUsuarios));
 
         JavaType tipoMembros = mapper.getTypeFactory()
-                .constructParametricType(PagedResponse.class, MembroResponse.class);
+                .constructParametricType(PagedResponse.class, PessoaResponse.class);
         Jackson2JsonRedisSerializer<Object> serMembros =
                 new Jackson2JsonRedisSerializer<>(mapper, tipoMembros);
 
-        RedisCacheConfiguration membrosConfig = base
+        RedisCacheConfiguration pessoasConfig = base
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMembros));
 
@@ -99,7 +99,7 @@ public class RedisConfig implements CachingConfigurer {
 
         caches.put("igreja", igrejaConfig);
         caches.put("usuarios", usuariosConfig);
-        caches.put("membros", membrosConfig);
+        caches.put("pessoas", pessoasConfig);
         caches.put("eventos", eventosConfig);
         caches.put("categorias", categoriasConfig);
         caches.put("movimentacoes", movimentacoesConfig);

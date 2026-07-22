@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
-import { SelecaoMembro } from './SelecaoMembro'
+import { SelecaoPessoa } from './SelecaoPessoa'
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { formatarMoeda, formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { UseFormReturn } from 'react-hook-form'
 import type { MovimentacaoFormInput, MovimentacaoFormData } from '@/lib/validators'
@@ -17,20 +18,22 @@ type MovimentacaoFormProps = UseFormReturn<MovimentacaoFormInput, unknown, Movim
   isLoading: boolean
   ehEdicao: boolean
   onSubmit: (data: MovimentacaoFormData) => void
-  membroNomeInicial?: string
+  // Nome vem assim da API (`MovimentacaoResponse.pessoaNome`, backend) — não renomeado por lá.
+  pessoaNomeInicial?: string
 }
 
 export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, ehEdicao, onSubmit, membroNomeInicial,
+    erroGeral, isLoading, isFormIncomplete, ehEdicao, onSubmit, pessoaNomeInicial,
   } = props
 
   const tipo = watch('tipo') as TipoMovimentacao | undefined
   const categoriaId = watch('categoriaId') as string
   const valor = watch('valor') as string
-  const membroId = watch('membroId') as string | undefined
+  const pessoaId = watch('pessoaId') as string | undefined
+  const dataMovimentacao = (watch('dataMovimentacao') as string) ?? ''
 
   const { data: categorias, isPending: categoriasCarregando } = useCategoriasSelect()
 
@@ -46,7 +49,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   // Existe categoria, mas nenhuma compatível com o tipo escolhido.
   const semCategoriaParaTipo = !semNenhumaCategoria && !!tipo && categoriasCompativeis.length === 0
 
-  const labelMembro = tipo === 'SAIDA' ? 'Beneficiário' : 'Contribuinte'
+  const labelPessoa = tipo === 'SAIDA' ? 'Beneficiário' : 'Contribuinte'
   const categoriaNome = categoriasCompativeis.find((c: CategoriaResponse) => c.id === categoriaId)?.nome
 
   const valorInvalido = !valor || parseFloat(valor) <= 0
@@ -154,26 +157,26 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
 
                 <div className={styles.campo}>
                   <label className={styles.label} htmlFor="dataMovimentacao">DATA</label>
-                  <input
+                  <CampoData
                     id="dataMovimentacao"
-                    type="date"
-                    className={styles.input}
-                    {...register('dataMovimentacao')}
+                    semLabel
+                    value={dataMovimentacao}
+                    onChange={(v) => setValue('dataMovimentacao', v, { shouldValidate: true, shouldDirty: true })}
                   />
                   {errors.dataMovimentacao && <span className={styles.erroCampo}>{errors.dataMovimentacao.message}</span>}
                 </div>
               </div>
 
-              {/* Membro */}
+              {/* Pessoa (contribuinte/beneficiário) */}
               <div className={styles.campo}>
                 <label className={styles.label}>
-                  {labelMembro} <span className={styles.opcional}>(opcional)</span>
+                  {labelPessoa} <span className={styles.opcional}>(opcional)</span>
                 </label>
-                <SelecaoMembro
-                  membroIdSelecionado={membroId || undefined}
-                  nomeSelecionado={membroId ? membroNomeInicial : undefined}
-                  label={labelMembro}
-                  onSelecionar={(id) => setValue('membroId', id ?? '', { shouldDirty: true })}
+                <SelecaoPessoa
+                  pessoaIdSelecionado={pessoaId || undefined}
+                  nomeSelecionado={pessoaId ? pessoaNomeInicial : undefined}
+                  label={labelPessoa}
+                  onSelecionar={(id) => setValue('pessoaId', id ?? '', { shouldDirty: true })}
                 />
               </div>
 

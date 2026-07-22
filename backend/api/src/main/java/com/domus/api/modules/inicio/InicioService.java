@@ -3,7 +3,7 @@ package com.domus.api.modules.inicio;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.inicio.dto.EventoResumoDTO;
 import com.domus.api.modules.inicio.dto.InicioResponse;
-import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class InicioService {
 
     private static final int LIMITE_EVENTOS = 5;
 
-    private final MembroRepository membroRepository;
+    private final PessoaRepository pessoaRepository;
     private final EventoRepository eventoRepository;
 
     @Transactional(readOnly = true)
@@ -28,7 +28,7 @@ public class InicioService {
         int mes = LocalDate.now().getMonthValue();
 
         List<InicioResponse.Aniversariante> aniversariantes =
-                membroRepository.aniversariantesDoMes(igrejaId, mes).stream()
+                pessoaRepository.aniversariantesDoMes(igrejaId, mes).stream()
                         .map(m -> new InicioResponse.Aniversariante(
                                 m.getId(), m.getNome(), m.getDataNascimento().getDayOfMonth(),
                                 m.getFoto()))

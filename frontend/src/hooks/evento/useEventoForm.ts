@@ -30,6 +30,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
       local: '',
+      requerInscricao: false,
+      vagas: undefined,
+      tipoInscricao: 'GRATUITO',
+      preco: undefined,
+      exclusivoMembros: false,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -38,8 +43,10 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
 
   useEffect(() => {
     if (eventoInicial) {
+      // O CampoData fala ISO, igual ao <input type="date"> que ele substitui — então o
+      // valor do form JÁ é o formato que o backend espera, sem conversão de ida e volta.
       const [inicioData, inicioHoraFull] = eventoInicial.inicioEm.split('T')
-      const inicioHora = inicioHoraFull ? inicioHoraFull.slice(0, 5) : ''  
+      const inicioHora = inicioHoraFull ? inicioHoraFull.slice(0, 5) : ''
 
       let fimData = ''
       let fimHora = ''
@@ -57,6 +64,14 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         fimData,
         fimHora,
         local: eventoInicial.local ?? '',
+        requerInscricao: eventoInicial.requerInscricao,
+        vagas: eventoInicial.vagas ?? undefined,
+        tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
+        // String() na BORDA, como o formulário de movimentação já faz com `valor`: a API
+        // manda número e a máscara de dinheiro trabalha com string. Sem isto, editar um
+        // evento pago falhava na validação até a pessoa apagar e redigitar o valor.
+        preco: eventoInicial.preco != null ? String(eventoInicial.preco) : undefined,
+        exclusivoMembros: eventoInicial.exclusivoMembros,
       })
     }
   }, [eventoInicial, reset])
@@ -65,17 +80,30 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     setErroGeral(null)
     setIsLoading(true)
     try {
+      // Já em ISO: o CampoData guarda aaaa-mm-dd no form e só exibe em pt-BR.
       const inicioEm = `${data.inicioData}T${data.inicioHora}:00`
       const fimEm = (data.fimData && data.fimHora)
         ? `${data.fimData}T${data.fimHora}:00`
         : undefined
 
+      // O backend faz PUT (substitui a entidade inteira) e lê booleano JSON ausente como
+      // false. Por isso requerInscricao/exclusivoMembros são SEMPRE
+      // enviados com o valor atual do form — mesmo quando a seção "Inscrições" está
+      // recolhida na tela — nunca omitidos condicionalmente. O RHF não desmonta esses
+      // campos do estado do form ao escondê-los (shouldUnregister não está ativo em
+      // useAppForm), então o valor sobrevive intacto até aqui mesmo com o input invisível.
       const payload: EventoRequest = {
         titulo: data.titulo,
         descricao: data.descricao || undefined,
         inicioEm,
         fimEm,
         local: data.local || undefined,
+        requerInscricao: data.requerInscricao,
+        exclusivoMembros: data.exclusivoMembros,
+        vagas: data.requerInscricao ? data.vagas : undefined,
+        preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
+          ? data.preco
+          : undefined,
       }
 
       if (ehEdicao) {

@@ -45,9 +45,12 @@ export function ModalConfirmacaoCritica({
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
 
-  const confere =
-    digitado.trim().toLocaleLowerCase('pt-BR') ===
-    palavraConfirmacao.trim().toLocaleLowerCase('pt-BR')
+  // Compara ignorando acento e caixa ("retiro de jovens" bate com "Retiro de Jovens") —
+  // a exigência de digitar o nome continua, só a rigidez da comparação afrouxa.
+  const normalizar = (v: string) =>
+    v.trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+  const confere = normalizar(digitado) === normalizar(palavraConfirmacao)
 
   useEffect(() => {
     inputRef.current?.focus()

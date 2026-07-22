@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { formatarMoeda, formatarData } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
 import type { EventoResumo } from '@/types/inicio.type'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import styles from './dashboard.module.css'
 
 function dataEvento(iso: string) {
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
   const { data, isLoading, isError, refetch } = useDashboard(autorizado)
 
   if (!hidratado) return <div className={styles.pagina} />
@@ -49,9 +50,9 @@ export default function DashboardPage() {
         <>
           {/* Cards de número */}
           <div className={styles.cards}>
-            <Card icone={<Users size={22} />} label="Total de membros"
-              valor={isLoading || !data ? null : String(data.membros.total)}
-              badge={data ? `+${data.membros.novosMes} este mês` : ''} badgeCor="verde" />
+            <Card icone={<Users size={22} />} label="Total de pessoas"
+              valor={isLoading || !data ? null : String(data.pessoas.total)}
+              badge={data ? `+${data.pessoas.novosMes} este mês` : ''} badgeCor="verde" />
             <Card icone={<Calendar size={22} />} label="Eventos este mês"
               valor={isLoading || !data ? null : String(data.eventos.mes)}
               badge={data ? `${data.eventos.semana} esta semana` : ''} badgeCor="azul" />

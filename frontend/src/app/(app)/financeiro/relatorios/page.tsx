@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useResumo } from '@/hooks/financeiro/relatorio/useResumo'
 import { usePorCategoria } from '@/hooks/financeiro/relatorio/usePorCategoria'
 import { useEvolucaoMensal } from '@/hooks/financeiro/relatorio/useEvolucaoMensal'
@@ -15,8 +16,12 @@ import { useMaiorLancamento } from '@/hooks/financeiro/relatorio/useMaiorLancame
 import styles from './relatorios.module.css'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { useConsolidado, useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { VisaoGeralCongregacoes } from './VisaoGeralCongregacoes'
+import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
+import type { Vinculo } from '@/types/pessoa.type'
 import {
   SkeletonCardsResumo,
   SkeletonBarraProporcao,
@@ -26,6 +31,17 @@ import {
 } from './SkeletonRelatorios'
 
 const PRESETS: PresetPeriodo[] = ['ESTE_MES', 'MES_ANTERIOR', 'ULTIMOS_3_MESES', 'ULTIMOS_6_MESES', 'ESTE_ANO']
+
+const GRUPOS_FILTRO: GrupoFiltro[] = [
+  {
+    chave: 'vinculo',
+    titulo: 'Vínculo de quem contribuiu',
+    opcoes: [
+      { valor: 'MEMBRO', label: 'Membros' },
+      { valor: 'CONGREGANTE', label: 'Congregantes' },
+    ],
+  },
+]
 
 type Aba = 'MINHA_IGREJA' | 'CONGREGACOES'
 
@@ -47,13 +63,15 @@ export default function RelatoriosPage() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [aba, setAba] = useState<Aba>('MINHA_IGREJA')
+  const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
+  const vinculoFiltro = filtros.vinculo as Vinculo | ''
   // Guarda id E nome: derivar o nome de `consolidado.data` fazia o título sumir durante o
   // refetch (trocar o período), deixando os valores financeiros na tela sem dizer de quem são.
   const [igrejaSelecionada, setIgrejaSelecionada] = useState<{ id: string; nome: string } | null>(null)
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const periodo: PeriodoRelatorio =
     custom && dataInicio && dataFim
@@ -81,10 +99,10 @@ export default function RelatoriosPage() {
   const mostrandoRelatoriosFinanceiros = abaEfetiva === 'MINHA_IGREJA' || !!selecao
   const habilitado = autorizado && mostrandoRelatoriosFinanceiros
 
-  const resumo = useResumo(periodo, habilitado, igrejaDoRelatorio)
-  const categorias = usePorCategoria(periodo, habilitado, igrejaDoRelatorio)
-  const evolucao = useEvolucaoMensal(periodo, habilitado, igrejaDoRelatorio)
-  const maiorLanc = useMaiorLancamento(periodo, habilitado, igrejaDoRelatorio)
+  const resumo = useResumo(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
+  const categorias = usePorCategoria(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
+  const evolucao = useEvolucaoMensal(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
+  const maiorLanc = useMaiorLancamento(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
 
   const consolidado = useConsolidado(periodo, autorizado && abaEfetiva === 'CONGREGACOES')
 
@@ -113,6 +131,11 @@ export default function RelatoriosPage() {
           <h1 className={styles.titulo}>Relatórios</h1>
           <p className={styles.subtitulo}>Análise das movimentações financeiras.</p>
         </div>
+        <PainelFiltros
+          grupos={GRUPOS_FILTRO}
+          valores={filtros}
+          onAplicar={(v) => setFiltros(v as { vinculo: string })}
+        />
       </header>
 
       {ehMae && (
@@ -159,20 +182,18 @@ export default function RelatoriosPage() {
           <div className={styles.customDatas}>
             <div className={styles.customCampo}>
               <label className={styles.customLabel}>DE</label>
-              <input
-                type="date"
-                className={styles.customInput}
+              <CampoData
+                semLabel
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                onChange={setDataInicio}
               />
             </div>
             <div className={styles.customCampo}>
               <label className={styles.customLabel}>ATÉ</label>
-              <input
-                type="date"
-                className={styles.customInput}
+              <CampoData
+                semLabel
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onChange={setDataFim}
               />
             </div>
           </div>

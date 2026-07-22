@@ -39,11 +39,11 @@ const opcional = <T extends z.ZodType<string>>(schema: T) =>
     schema.optional(),
   )
 
-export const membroSchema = z.object({
+export const pessoaSchema = z.object({
   nome: z
     .string()
     .trim()
-    .min(2, 'Nome do membro deve ter pelo menos 2 caracteres')
+    .min(2, 'Nome da pessoa deve ter pelo menos 2 caracteres')
     .max(255, 'O nome deve ter no máximo 255 caracteres'),
 
   email: opcional(
@@ -74,9 +74,9 @@ export const membroSchema = z.object({
     uf: opcional(z.string().length(2, 'UF deve ter 2 letras')),
   }).optional(),
 
-  status: z
-    .enum(['ATIVO', 'INATIVO', 'VISITANTE'])
-    .default('ATIVO'),
+  vinculo: z
+    .enum(['MEMBRO', 'CONGREGANTE'])
+    .default('CONGREGANTE'),
 
   estadoCivil: z.enum(
     ['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']
@@ -87,26 +87,66 @@ export const membroSchema = z.object({
   ),
 
   observacoes: opcional(z.string()),
+
+  // Só faz sentido quando vinculo === 'MEMBRO' — a UI esconde o campo para CONGREGANTE.
+  dataBatismo: opcional(
+    z.string().refine(
+      (val) => new Date(val) <= new Date(),
+      'A data de batismo não pode estar no futuro',
+    ),
+  ),
 })
 
 export const concederAcessoSchema = z.object({
-  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
+  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'], {
     message: 'Selecione um perfil para o usuário',
   }),
-  // Só usado quando o membro ainda não tem e-mail (o modal pede um).
+  // Só usado quando a pessoa ainda não tem e-mail (o modal pede um).
   email: opcional(
     z.email('E-mail inválido').transform((v) => v.trim().toLowerCase()),
   ),
 })
 
+const opcionalNumero = <T extends z.ZodType<number>>(schema: T) =>
+  z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    schema.optional(),
+  )
+
 const eventoSchemaBase = z.object({
   titulo: z.string().trim().min(1, 'O título é obrigatório.'),
   descricao: opcional(z.string()),
-  inicioData: z.string().min(1, 'A data de início é obrigatória.'),
-  inicioHora: z.string().min(1, 'A hora de início é obrigatória.'),
-  fimData: opcional(z.string()),
-  fimHora: opcional(z.string()),
+  // ISO (aaaa-mm-dd): é o que o CampoData guarda e o que o backend espera. A exibição em
+  // dd/mm/aaaa é assunto interno do componente, não do formulário.
+  inicioData: z.string()
+    .min(1, 'A data de início é obrigatória.')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.'),
+  inicioHora: z.string()
+    .min(1, 'A hora de início é obrigatória.')
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.'),
+  fimData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
+  fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
   local: opcional(z.string()),
+
+  // ─── Inscrições (Fase 2) ───
+  // requerInscricao é o "interruptor mestre": quando false, os demais campos desta seção
+  // ficam ocultos na UI, mas continuam registrados no RHF (não são desmontados/unregister —
+  // o form não usa shouldUnregister), então o valor atual sempre viaja no payload do PUT.
+  requerInscricao: z.boolean().default(false),
+  vagas: opcionalNumero(
+    z.coerce.number().int().positive('Vagas deve ser um número inteiro positivo.'),
+  ),
+  // Campo só de UI (não existe no backend): decide se `preco` é enviado ou limpo.
+  tipoInscricao: z.enum(['GRATUITO', 'PAGO']).default('GRATUITO'),
+  // Canônico como string "12.34" (igual ao `valor` de movimentação financeira) — o mesmo
+  // formato que `EventoResponse.preco` já usa na API (BigDecimal serializado como string).
+  // O input usa a mesma máscara de dinheiro (da direita para a esquerda) do financeiro.
+  preco: opcional(
+    z.string().refine((v) => parseFloat(v) > 0, 'Preço deve ser maior que zero.'),
+  ),
+  // "Exclusivo para membros" é vocabulário de domínio (vínculo com a igreja), não do
+  // cadastro — barra quem tem vínculo CONGREGANTE.
+  exclusivoMembros: z.boolean().default(false),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -114,6 +154,7 @@ export const eventoSchema = eventoSchemaBase.refine(
     if (!data.fimData || !data.fimHora) return true
     const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
     const fim = new Date(`${data.fimData}T${data.fimHora}`)
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return true // o regex já pega formato
     return fim >= inicio
   },
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }
@@ -131,12 +172,26 @@ export const movimentacaoSchema = z.object({
     .refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
   categoriaId: z.string().min(1, 'Selecione a categoria.'),
   dataMovimentacao: z.string().min(1, 'A data é obrigatória.'),
-  membroId: opcional(z.string()),
+  pessoaId: opcional(z.string()),
   descricao: opcional(z.string().max(1000, 'Máximo 1000 caracteres.')),
 })
 
 
 
+
+export const convidadoSchema = z.object({
+  nome: z.string().trim().min(2, 'O nome do convidado deve ter pelo menos 2 caracteres').max(255, 'Máximo 255 caracteres.'),
+  // Aceita qualquer forma de digitação (com/sem espaço, com/sem máscara) — a UI já formata
+  // visualmente com `formatarTelefone` (lib/masks) a cada tecla; aqui só validamos a
+  // quantidade de dígitos e enviamos ao backend só os dígitos (sem máscara).
+  telefone: opcional(
+    z.string()
+      .transform((v) => v.replace(/\D/g, ''))
+      .refine((v) => v.length === 10 || v.length === 11, {
+        message: 'Telefone inválido. Digite um número válido com DDD.',
+      }),
+  ),
+})
 
 export const esqueciSenhaSchema = z.object({
   email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
@@ -153,8 +208,8 @@ export const redefinirSenhaSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>
-export type MembroFormData = z.infer<typeof membroSchema> 
-export type MembroFormInput = z.input<typeof membroSchema>  
+export type PessoaFormData = z.infer<typeof pessoaSchema>
+export type PessoaFormInput = z.input<typeof pessoaSchema>
 export type ConcederAcessoFormData = z.infer<typeof concederAcessoSchema>
 export type ConcederAcessoFormInput = z.input<typeof concederAcessoSchema>
 export type EventoFormData = z.infer<typeof eventoSchema>
@@ -163,5 +218,7 @@ export type CategoriaFormData = z.infer<typeof categoriaSchema>
 export type CategoriaFormInput = z.input<typeof categoriaSchema>
 export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
 export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>
+export type ConvidadoFormData = z.infer<typeof convidadoSchema>
+export type ConvidadoFormInput = z.input<typeof convidadoSchema>
 export type EsqueciSenhaFormData = z.infer<typeof esqueciSenhaSchema>
 export type RedefinirSenhaFormData = z.infer<typeof redefinirSenhaSchema>

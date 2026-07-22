@@ -8,18 +8,19 @@ export interface MovimentacaoResponse {
   descricao: string | null
   categoriaId: string
   categoriaNome: string
-  membroId: string | null
-  membroNome: string | null
+  pessoaId: string | null
+  // Nome vem assim da API (`MovimentacaoResponse.pessoaNome`, backend) — não renomeado por lá.
+  pessoaNome: string | null
   criadoPorNome: string
   atualizadoPorNome: string | null
 }
 
 export interface MovimentacaoRequest {
   tipo: TipoMovimentacao
-  valor: string 
+  valor: string
   categoriaId: string
-  dataMovimentacao: string        
-  membroId?: string | null
+  dataMovimentacao: string
+  pessoaId?: string | null
   descricao?: string | null
 }
 

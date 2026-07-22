@@ -57,6 +57,12 @@ via *transactional outbox*).
   commitar depois do teste — e num commit só, coerente, em vez de vários commits parciais
   da mesma coisa. Exceção: algo que valha por si (ex.: uma correção isolada que não depende
   do resto). Isso vale para **toda a aplicação**, não só para a feature da vez.
+- **Nunca imprimir segredo.** Não despejar `.env`, chave, token ou senha na conversa — nem via
+  `cat`, nem por script que gere `export` no stdout. Segredo impresso não se apaga: fica no
+  histórico e só sai por rotação, que custa ao autor. Para carregar variáveis, redirecione para
+  arquivo e faça `source`. Para conferir um valor, mostre só a forma, mascarada.
+  *(Aconteceu em 2026-07-22: o `.env` inteiro foi impresso e as credenciais do R2 — que eram as
+  mesmas do backup — tiveram de ser rotacionadas.)*
 - **Esconder no front não é esconder.** Dado que um perfil não pode ver não pode sair da API:
   se o JSON traz o campo, basta abrir o DevTools. Restrição por perfil se faz no **backend**
   (DTO reduzido ou endpoint próprio); a tela só reflete o que já foi omitido.

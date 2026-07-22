@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { ChevronRight, Pencil, KeyRound, Archive } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
+import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
+import type { Vinculo } from '@/types/pessoa.type'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/pessoaFormat'
@@ -24,9 +27,21 @@ import { podeGerenciarPessoas } from '@/lib/permissoes'
 
 const TAMANHO_PAGINA = 10
 
+const GRUPOS_FILTRO: GrupoFiltro[] = [
+  {
+    chave: 'vinculo',
+    titulo: 'Vínculo',
+    opcoes: [
+      { valor: 'MEMBRO', label: 'Membros' },
+      { valor: 'CONGREGANTE', label: 'Congregantes' },
+    ],
+  },
+]
+
 function PessoasConteudo() {
   const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
+  const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
   const [pagina, setPagina] = useState(0)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
@@ -40,7 +55,13 @@ function PessoasConteudo() {
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
+    vinculo: filtros.vinculo as Vinculo | '',
   })
+
+  function aoAplicarFiltros(valores: Record<string, string>) {
+    setFiltros(valores as { vinculo: string })
+    setPagina(0)
+  }
 
   const pessoas = data?.content ?? []
   const totalPaginas = data?.totalPages ?? 0
@@ -103,6 +124,7 @@ function PessoasConteudo() {
           placeholder="Buscar por nome ou e-mail..."
           className={styles.inputBusca}
         />
+        <PainelFiltros grupos={GRUPOS_FILTRO} valores={filtros} onAplicar={aoAplicarFiltros} />
         {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 

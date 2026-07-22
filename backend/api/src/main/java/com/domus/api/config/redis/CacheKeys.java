@@ -1,5 +1,6 @@
 package com.domus.api.config.redis;
 
+import com.domus.api.modules.pessoa.Vinculo;
 import org.springframework.data.domain.Pageable;
 
 import java.nio.charset.StandardCharsets;
@@ -24,12 +25,19 @@ public final class CacheKeys {
      * primeira consulta de um ADMIN encheria o cache e o LÍDER seguinte receberia a versão
      * dele — endereço de toda a igreja entregue pelo Redis, sem passar por autorização nenhuma.
      */
-    public static String membros(UUID igrejaId, String q, Pageable pageable, boolean sensiveis) {
+    /**
+     * <p><b>{@code vinculo} também faz parte da chave.</b> A lista filtrada por MEMBRO e a lista
+     * sem filtro são respostas diferentes para o mesmo {@code igrejaId}+{@code q}+{@code pageable}
+     * — sem esta dimensão, quem pedisse CONGREGANTE receberia do Redis a página cacheada por quem
+     * pediu MEMBRO (ou vice-versa).
+     */
+    public static String membros(UUID igrejaId, String q, Pageable pageable, boolean sensiveis, Vinculo vinculo) {
         String bruto = (q == null ? "" : q) + "|"
                 + pageable.getPageNumber() + "|"
                 + pageable.getPageSize() + "|"
                 + pageable.getSort().toString() + "|"
-                + (sensiveis ? "full" : "reduzido");
+                + (sensiveis ? "full" : "reduzido") + "|"
+                + (vinculo == null ? "todos" : vinculo.name());
         return igrejaId + ":" + sha256Curto(bruto);
     }
 

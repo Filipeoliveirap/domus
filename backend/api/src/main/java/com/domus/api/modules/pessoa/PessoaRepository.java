@@ -22,9 +22,11 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
             OR LOWER(m.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
             OR m.telefone LIKE CONCAT('%', CAST(:q AS string), '%')
           )
+          AND (:vinculo IS NULL OR m.vinculo = :vinculo)
         """)
     Page<Pessoa> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
                                  @Param("q") String q,
+                                 @Param("vinculo") Vinculo vinculo,
                                  Pageable pageable);
 
     Optional<Pessoa> findByIdAndIgrejaId(UUID id, UUID igrejaId);

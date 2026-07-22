@@ -4,6 +4,7 @@ import type {
   PessoaRequest,
   PessoaResponse,
   ConcederAcessoRequest,
+  Vinculo,
 } from '@/types/pessoa.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
 import type { UsuarioResponse } from '@/types/usuario.types'
@@ -12,6 +13,7 @@ interface ListarPessoasParams {
   q?: string
   page?: number
   size?: number
+  vinculo?: Vinculo | ''
 }
 
 export const pessoasService = {
@@ -21,6 +23,7 @@ export const pessoasService = {
         q: params.q || undefined,
         page: params.page ?? 0,
         size: params.size ?? 20,
+        vinculo: params.vinculo || undefined,
       },
     }).then(res => res.data),
 

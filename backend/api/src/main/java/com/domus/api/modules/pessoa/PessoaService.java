@@ -42,12 +42,12 @@ public class PessoaService {
 
     @Cacheable(
             value = "membros",
-            key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable, #podeVerDadosSensiveis)"
+            key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable, #podeVerDadosSensiveis, #vinculo)"
     )
     @Transactional(readOnly = true)
     public PagedResponse<PessoaResponse> listarMembros(UUID igrejaId, String q, Pageable pageable,
-                                                       boolean podeVerDadosSensiveis) {
-        Page<PessoaResponse> pagina = membroRepository.buscarPorIgreja(igrejaId, q, pageable)
+                                                       boolean podeVerDadosSensiveis, Vinculo vinculo) {
+        Page<PessoaResponse> pagina = membroRepository.buscarPorIgreja(igrejaId, q, vinculo, pageable)
                 .map(m -> PessoaResponse.from(m, null, podeVerDadosSensiveis));
         return PagedResponse.from(pagina);
     }

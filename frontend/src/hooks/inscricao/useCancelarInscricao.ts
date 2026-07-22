@@ -5,15 +5,21 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 
-/** Cancela uma inscrição — a própria (pessoa) ou de outro (ADMIN/LÍDER), regra fica no backend. */
-export function useCancelarInscricao() {
+/**
+ * Cancela uma inscrição — a própria (pessoa) ou de outro (ADMIN/LÍDER); a regra é do backend.
+ *
+ * <p><b>`silencioso`</b> existe para o modo "Eu vou": desmarcar uma presença casual é como
+ * descurtir um post — o botão voltando ao estado normal já é o feedback. Um toast dizendo
+ * "inscrição cancelada" daria peso de cancelamento formal a um gesto que não é.
+ */
+export function useCancelarInscricao(silencioso = false) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (inscricaoId: string) => inscricoesService.cancelar(inscricaoId),
     onSuccess: () => {
       invalidarCache(queryClient, 'inscricao')
-      notificar.sucesso('Inscrição cancelada.')
+      if (!silencioso) notificar.sucesso('Inscrição cancelada.')
     },
     onError: (error: unknown) => {
       const mensagem = axios.isAxiosError<ApiError>(error)

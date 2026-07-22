@@ -662,16 +662,20 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void removerInscritosNaoElegiveisNaoCancelaNinguemQuandoNadaFoiLigado() {
-        int removidos = service.removerInscritosNaoElegiveis(eventoId, false);
+    void removerInscritosNaoElegiveisNaoCancelaNinguemQuandoTodosSaoElegiveis() {
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+
+        int removidos = service.removerInscritosNaoElegiveis(eventoId);
 
         assertThat(removidos).isEqualTo(0);
-        verify(inscricaoRepository, never()).listarPorEvento(any());
     }
 
     @Test
     void removerInscritosNaoElegiveisCancelaCongreganteQuandoExclusivoMembros() {
+        // Task 6: o método agora lê a configuração ATUAL do evento (via inscricao.getEvento()),
+        // não recebe mais o booleano como parâmetro — só roda com escolha explícita do admin.
         Evento e = evento(10);
+        e.setExclusivoMembros(true);
         InscricaoEvento visitante = InscricaoEvento.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.CONGREGANTE))
@@ -683,11 +687,32 @@ class InscricaoServiceTest {
         when(inscricaoRepository.listarPorEvento(eventoId))
                 .thenReturn(java.util.List.of(visitante, ativo));
 
-        int removidos = service.removerInscritosNaoElegiveis(eventoId, true);
+        int removidos = service.removerInscritosNaoElegiveis(eventoId);
 
         assertThat(removidos).isEqualTo(1);
         assertThat(visitante.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
         assertThat(ativo.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    @Test
+    void removerInscritosNaoElegiveisPreservaAExcecaoDeliberada() {
+        // Task 6, achado da revisão da Task 4: o motorista CONGREGANTE inscrito de propósito
+        // ("inscrever mesmo assim") não pode ser cancelado por uma edição futura do evento —
+        // a marca inscritoPorExcecao=true é justamente o registro dessa decisão.
+        Evento e = evento(10);
+        e.setExclusivoMembros(true);
+        InscricaoEvento motorista = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA)
+                .inscritoPorExcecao(true)
+                .build();
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(motorista));
+
+        int removidos = service.removerInscritosNaoElegiveis(eventoId);
+
+        assertThat(removidos).isEqualTo(0);
+        assertThat(motorista.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
     }
 
     @Test

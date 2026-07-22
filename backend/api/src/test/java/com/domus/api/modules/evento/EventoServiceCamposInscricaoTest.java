@@ -25,7 +25,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 /**
@@ -71,7 +70,7 @@ class EventoServiceCamposInscricaoTest {
                 localEventoRepository, usuarioRepository);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean()))
+        when(inscricaoService.removerInscritosNaoElegiveis(any()))
                 .thenReturn(0);
         when(eventoRepository.tiposUsadosPorFrequencia(any())).thenReturn(java.util.List.of());
         Usuario usuario = new Usuario();
@@ -147,19 +146,39 @@ class EventoServiceCamposInscricaoTest {
     }
 
     @Test
-    void atualizarDevolveQuantasInscricoesForamRemovidasAoRestringir() {
+    void atualizarDevolveQuantasInscricoesForamRemovidasQuandoCancelarNaoElegiveisEhTrue() {
+        // Task 6: só cancela com escolha EXPLÍCITA — sem cancelarNaoElegiveis=true, o método
+        // nem é chamado (ver teste NAO_chama_removerInscritosNaoElegiveis_por_padrao abaixo).
         Evento existente = Evento.builder()
                 .id(eventoId).igreja(igreja()).titulo("Retiro")
                 .inicioEm(LocalDateTime.now().plusDays(5))
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
-        when(inscricaoService.removerInscritosNaoElegiveis(eventoId, false)).thenReturn(3);
+        when(inscricaoService.removerInscritosNaoElegiveis(eventoId)).thenReturn(3);
 
         EventoResponse r = service.atualizarEvento(
-                eventoId, request(null, null, false), igrejaId, usuarioId);
+                eventoId, request(null, null, false), igrejaId, usuarioId, true);
 
         assertThat(r.inscricoesRemovidas()).isEqualTo(3);
+    }
+
+    @Test
+    void atualizarNAOchamaRemoverInscritosNaoElegiveisPorPadrao() {
+        // Mudança de comportamento da Task 6: ligar/apertar uma restrição não cancela mais
+        // ninguém sozinho — precisa da escolha explícita cancelarNaoElegiveis=true.
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(igreja()).titulo("Retiro")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoResponse r = service.atualizarEvento(
+                eventoId, request(null, null, true), igrejaId, usuarioId);
+
+        assertThat(r.inscricoesRemovidas()).isEqualTo(0);
+        verify(inscricaoService, never()).removerInscritosNaoElegiveis(any());
     }
 
     @Test

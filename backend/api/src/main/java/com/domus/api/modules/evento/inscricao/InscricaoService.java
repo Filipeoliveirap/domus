@@ -3,8 +3,10 @@ package com.domus.api.modules.evento.inscricao;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.SituacaoEvento;
+import com.domus.api.modules.evento.DTOs.ImpactoRestricaoResponse;
 import com.domus.api.modules.evento.elegibilidade.Elegibilidade;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
@@ -15,7 +17,6 @@ import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
-import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +78,7 @@ public class InscricaoService {
 
         validarEventoAberto(evento);
         boolean autoInscricao = pessoaId.equals(minhaPessoaId);
-        validarElegibilidade(evento, membro, autoInscricao, role, confirmado);
+        boolean porExcecao = validarElegibilidade(evento, membro, autoInscricao, role, confirmado);
 
         InscricaoEvento inscricao = inscricaoRepository
                 .findByEventoIdAndPessoaId(eventoId, pessoaId)
@@ -99,6 +101,7 @@ public class InscricaoService {
             // outra, e sem isto quem cancelasse ficaria impedido de voltar ao próprio evento.
             inscricao.setStatus(StatusInscricao.CONFIRMADA);
             inscricao.setInscritoPorUsuarioId(inscritoPorOuNull);
+            inscricao.setInscritoPorExcecao(porExcecao);
         } else {
             inscricao = InscricaoEvento.builder()
                     .igreja(evento.getIgreja())
@@ -106,6 +109,7 @@ public class InscricaoService {
                     .pessoa(membro)
                     .inscritoPorUsuarioId(inscritoPorOuNull)
                     .status(StatusInscricao.CONFIRMADA)
+                    .inscritoPorExcecao(porExcecao)
                     .build();
         }
 
@@ -263,11 +267,16 @@ public class InscricaoService {
      * um oráculo de dados pessoais. Só quem {@link Permissoes#podeGerenciarInscricoes(String)}
      * vê o texto detalhado (ele já tem acesso à lista de pessoas e precisa da informação para
      * decidir sobre o contorno).
+     *
+     * @return {@code true} quando a inscrição só existe porque um impedimento foi contornado
+     *         deliberadamente ("inscrever mesmo assim") — vira a marca DURÁVEL
+     *         {@link InscricaoEvento#isInscritoPorExcecao()} (Task 6), que protege esta
+     *         inscrição de ser cancelada em silêncio numa edição futura do evento.
      */
-    private void validarElegibilidade(Evento evento, Pessoa membro, boolean autoInscricao,
-                                      String role, boolean confirmado) {
+    private boolean validarElegibilidade(Evento evento, Pessoa membro, boolean autoInscricao,
+                                         String role, boolean confirmado) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
-        if (elegibilidade.apto()) return;
+        if (elegibilidade.apto()) return false;
 
         boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role);
         boolean podeContornar = !autoInscricao
@@ -278,6 +287,7 @@ public class InscricaoService {
         if (!podeContornar) {
             throw NaoElegivelException.para(elegibilidade.impedimentos(), podeGerenciar);
         }
+        return true;
     }
 
     /**
@@ -422,40 +432,77 @@ public class InscricaoService {
     }
 
     /**
-     * Ao restringir um evento (ligar {@code exclusivoMembros}), cancela automaticamente quem já
-     * estava confirmado mas não se qualifica mais — mesma regra de {@link #validarElegibilidade},
-     * e mesmo cancelamento de {@link #cancelarInterno} (leva os convidados junto).
+     * Cancela, dos CONFIRMADOS de hoje, quem não é mais elegível para a configuração ATUAL do
+     * evento — mesma regra de {@link #validarElegibilidade} (via
+     * {@link ElegibilidadeService#avaliar}), mesmo cancelamento de {@link #cancelarInterno}
+     * (leva os convidados junto).
      *
-     * <p>Roda mesmo quando a restrição já estava ligada antes (não só na transição de
-     * false→true): é idempotente e barato — se ninguém desqualificado sobrou de uma vez
-     * anterior, não cancela ninguém agora — e evita o {@link EventoService} ter que guardar e
-     * comparar o estado anterior só para decidir se chama isto.
+     * <p><b>Task 6 — só roda com escolha EXPLÍCITA do admin</b> ({@code cancelarNaoElegiveis=true}
+     * no {@code PUT /eventos/{id}}), nunca mais automaticamente ao salvar o evento. Apertar uma
+     * faixa etária ou ligar {@code exclusivoMembros} sozinho NÃO cancela mais ninguém — cancelar
+     * em silêncio apagaria as exceções que o próprio admin abriu com "inscrever mesmo assim"
+     * (ver {@link EventoService#calcularImpacto} para a prévia que substitui o cancelamento
+     * automático).
+     *
+     * <p><b>Preserva a exceção deliberada:</b> pula quem tem
+     * {@link InscricaoEvento#isInscritoPorExcecao()} — o motorista CONGREGANTE inscrito de
+     * propósito num evento exclusivo continua confirmado mesmo com {@code cancelarNaoElegiveis=true},
+     * porque a marca V5 é justamente o registro de que aquela irregularidade é intencional, não
+     * um efeito colateral da regra mudar.
      *
      * @return quantas inscrições foram canceladas, para o chamador logar/devolver ao front.
      */
     @Transactional
-    public int removerInscritosNaoElegiveis(UUID eventoId, boolean exclusivoMembros) {
-        if (!exclusivoMembros) {
-            return 0;
-        }
-
+    public int removerInscritosNaoElegiveis(UUID eventoId) {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int removidos = 0;
         for (InscricaoEvento inscricao : inscricoes) {
-            Pessoa membro = inscricao.getPessoa();
-            boolean desqualificado = membro.getVinculo() != Vinculo.MEMBRO;
+            if (inscricao.isInscritoPorExcecao()) continue;
 
-            if (desqualificado) {
+            Elegibilidade elegibilidade = elegibilidadeService.avaliar(
+                    inscricao.getEvento(), inscricao.getPessoa());
+            if (!elegibilidade.apto()) {
                 cancelarInterno(inscricao);
                 removidos++;
             }
         }
 
         if (removidos > 0) {
-            log.info("Inscrições removidas por restrição de evento. evento_id={}, removidos={}",
-                    eventoId, removidos);
+            log.info("Inscrições removidas por restrição de evento (escolha explícita). "
+                    + "evento_id={}, removidos={}", eventoId, removidos);
         }
         return removidos;
+    }
+
+    /**
+     * Prévia PURA (nada é gravado) de quem, dentre os CONFIRMADOS de hoje, ficaria de fora sob
+     * {@code regrasHipoteticas} — alimenta {@code POST /eventos/{id}/impacto-restricao}
+     * (ver {@link EventoService#calcularImpacto}).
+     *
+     * <p>Pula quem já tem {@link InscricaoEvento#isInscritoPorExcecao()}: essas exceções são
+     * permanentes por decisão do admin, então nunca aparecem como "afetadas" nem sob regra mais
+     * apertada — o admin já escolheu, uma vez, mantê-las.
+     */
+    @Transactional(readOnly = true)
+    public List<ImpactoRestricaoResponse.InscritoImpactado> calcularImpacto(
+            UUID eventoId, Evento regrasHipoteticas) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        List<ImpactoRestricaoResponse.InscritoImpactado> afetados = new ArrayList<>();
+
+        for (InscricaoEvento inscricao : inscricoes) {
+            if (inscricao.isInscritoPorExcecao()) continue;
+
+            Elegibilidade elegibilidade = elegibilidadeService.avaliar(
+                    regrasHipoteticas, inscricao.getPessoa());
+            if (!elegibilidade.apto()) {
+                List<String> motivos = elegibilidade.impedimentos().stream()
+                        .map(Impedimento::mensagem)
+                        .toList();
+                afetados.add(new ImpactoRestricaoResponse.InscritoImpactado(
+                        inscricao.getPessoa().getId(), inscricao.getPessoa().getNome(), motivos));
+            }
+        }
+        return afetados;
     }
 
     /**

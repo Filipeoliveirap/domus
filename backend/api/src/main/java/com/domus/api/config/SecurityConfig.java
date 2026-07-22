@@ -134,6 +134,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER)
 
+                        // Locais de evento — GET (só leitura) é aberto a todo autenticado
+                        // (a lista alimenta o formulário de evento, que qualquer perfil pode
+                        // ver); escrever exige gestor. O específico do GET vem ANTES do
+                        // curinga — regra que já mordeu este projeto três vezes.
+                        .requestMatchers(HttpMethod.GET, "/locais-evento").authenticated()
+                        .requestMatchers("/locais-evento/**").hasAnyRole(ADMIN, LIDER)
+
                         //Igrejas vinculadas (mãe/congregações) — expõe financeiro entre igrejas,
                         //então segue a mesma trava do financeiro: só ADMIN_IGREJA.
                         .requestMatchers("/igrejas-vinculadas/**").hasRole(ADMIN)

@@ -17,6 +17,14 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     Optional<Evento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
     /**
+     * Eventos que apontam para um local cadastrado. Usado ao arquivar o local: como o
+     * {@code ON DELETE SET NULL} da FK nunca dispara (local usa soft delete via
+     * {@code @SQLDelete}, não DELETE de verdade), é este método que resolve o vínculo antes
+     * de arquivar — ver {@code LocalEventoService.arquivar}.
+     */
+    List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
+
+    /**
      * Trava a LINHA do evento para serializar a contagem de vagas.
      *
      * <p>Sem isto, sob READ COMMITTED duas inscrições simultâneas na última vaga leem a

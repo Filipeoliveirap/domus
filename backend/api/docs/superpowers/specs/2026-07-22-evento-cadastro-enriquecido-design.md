@@ -130,6 +130,28 @@ desligar — e desligá-la a derruba para todo mundo.
 exceção administrativa. O `Impedimento` carrega essa distinção como dado (`contornavel`), não
 como regra espalhada por quem consome.
 
+### 6. Apertar a restrição avisa; nunca cancela em silêncio
+
+O código já faz isso hoje para o `exclusivoMembros`: `removerInscritosNaoElegiveis` cancela
+automaticamente quem não é membro quando a restrição é ligada.
+
+**Isso não pode ser generalizado para as quatro restrições**, e o motivo é a decisão 5. Se o
+admin inscreveu deliberadamente o líder de 34 anos e depois ajusta a faixa de 18–29 para 18–25,
+o cancelamento automático apagaria **a exceção que ele mesmo criou** — e ninguém saberia até o
+dia do embarque.
+
+Regra nova, valendo para as quatro: ao salvar um evento com restrição ligada ou apertada, o
+sistema **mostra quem ficaria fora** e pergunta — manter todos (as inscrições permanecem como
+exceções) ou cancelar os que não se encaixam.
+
+**Isso altera o comportamento atual do `exclusivoMembros`**, que passa a avisar em vez de
+cancelar sozinho. É uma mudança deliberada: torna as quatro restrições coerentes e elimina o
+único ponto onde o sistema desfazia trabalho do usuário sem contar.
+
+O `cancelarInscricoesEmEventosExclusivos(pessoaId)` — disparado quando a pessoa deixa de ser
+membro — fica **como está**: ali a mudança partiu da pessoa, não da regra do evento, e não há
+exceção deliberada a preservar.
+
 ---
 
 ## Modelo de dados (migration V3)
@@ -332,6 +354,12 @@ não deve depender só dele para dar mensagem decente.
 - Normalização do tipo: "culto", "Culto " e "CULTO" convergem; "Culto" e "Cultinho" não.
 - Arquivar a pessoa responsável não apaga nem quebra o evento.
 - Evento existente (com `local` texto) segue íntegro após a migration.
+- Apertar a faixa etária **não** cancela sozinho quem já está inscrito: devolve a lista de quem
+  ficaria fora e só cancela com a escolha explícita.
+- Ligar `exclusivoMembros` também passa a avisar em vez de cancelar sozinho (mudança de
+  comportamento deliberada).
+- `cancelarInscricoesEmEventosExclusivos` (pessoa deixou de ser membro) **continua** cancelando
+  automaticamente — ali não há exceção deliberada a preservar.
 
 ## Fora de escopo
 

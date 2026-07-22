@@ -1,6 +1,6 @@
 package com.domus.api.shared.armazenamento;
 
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Guarda em memória. Existe para o teste não depender de rede nem de credencial. */
 @Component
-@Profile("test")
+@ConditionalOnProperty(name = "app.fotos.armazenamento", havingValue = "memoria")
 public class ArmazenamentoEmMemoria implements ArmazenamentoFotos {
 
     private final Map<String, byte[]> arquivos = new ConcurrentHashMap<>();

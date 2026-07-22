@@ -39,6 +39,7 @@ public class PessoaService {
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
     private final FotoService fotoService;
+    private final com.domus.api.modules.evento.EventoRepository eventoRepository;
 
     @Transactional(readOnly = true)
     public java.util.List<String> listarBairros(UUID igrejaId) {
@@ -243,6 +244,15 @@ public class PessoaService {
     public void arquivarMembro(UUID id, UUID igrejaId) {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        // O ON DELETE SET NULL de evento.responsavel_pessoa_id NUNCA dispara: Pessoa usa
+        // soft delete (@SQLDelete/@SQLRestriction), não DELETE de verdade. Sem este passo, um
+        // evento com essa pessoa como responsável ficaria com a FK apontando para uma linha que
+        // o @SQLRestriction esconde — EventoResponse.PessoaResumo.dePessoa resolveria o proxy
+        // LAZY e estouraria EntityNotFoundException, derrubando a listagem INTEIRA de eventos
+        // (mesmo padrão já corrigido para LocalEvento em LocalEventoService.arquivar).
+        // Antes do soft delete da pessoa, porque copia o NOME atual dela.
+        eventoRepository.desvincularResponsavel(membro.getId(), membro.getNome());
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);

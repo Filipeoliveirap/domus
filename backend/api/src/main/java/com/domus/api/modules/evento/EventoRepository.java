@@ -60,6 +60,43 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     int desvincularLocal(@Param("localId") UUID localId, @Param("nomeLocal") String nomeLocal);
 
     /**
+     * Desvincula o RESPONSÁVEL de todos os eventos que apontam para essa pessoa — inclusive os
+     * ARQUIVADOS. Mesmo padrão de {@link #desvincularLocal}: {@code responsavel_pessoa_id}
+     * também tem {@code ON DELETE SET NULL} que nunca dispara ({@link Pessoa} usa soft delete),
+     * e {@code Evento} tem {@code @SQLRestriction}, então só SQL nativo enxerga arquivados.
+     * Chamado por {@code PessoaService.arquivarMembro} ANTES do soft delete da pessoa.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET responsavel_texto = :nome, responsavel_pessoa_id = NULL
+         WHERE responsavel_pessoa_id = :pessoaId
+        """, nativeQuery = true)
+    int desvincularResponsavel(@Param("pessoaId") UUID pessoaId, @Param("nome") String nome);
+
+    /**
+     * Desvincula um USUÁRIO de {@code criado_por_usuario_id} e/ou {@code atualizado_por_usuario_id}
+     * — o mesmo usuário pode aparecer nas duas colunas do mesmo evento (criou e depois editou),
+     * por isso o {@code CASE WHEN} trata as duas independentemente numa única instrução.
+     *
+     * <p>Diferente do responsável, aqui não existe "opcional": TODO evento tem
+     * {@code criado_por_usuario_id} preenchido — arquivar um usuário que já cadastrou qualquer
+     * evento do sistema, sem este desvínculo, derrubaria a listagem inteira (o pior dos dois
+     * casos encontrados na revisão). Chamado tanto por {@code UsuarioService.arquivarUsuario}
+     * quanto por {@code arquivarPorMembro} (cascata do arquivamento de pessoa).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    /**
      * Trava a LINHA do evento para serializar a contagem de vagas.
      *
      * <p>Sem isto, sob READ COMMITTED duas inscrições simultâneas na última vaga leem a

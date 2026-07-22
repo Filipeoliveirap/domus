@@ -37,6 +37,7 @@ class PessoaServiceTest {
     OutboxRegistrador outboxRegistrador;
     ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
     FotoService fotoService;
+    com.domus.api.modules.evento.EventoRepository eventoRepository;
     PessoaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -52,9 +53,10 @@ class PessoaServiceTest {
         outboxRegistrador = mock(OutboxRegistrador.class);
         reindexacaoMovimentacaoService = mock(ReindexacaoMovimentacaoService.class);
         fotoService = mock(FotoService.class);
+        eventoRepository = mock(com.domus.api.modules.evento.EventoRepository.class);
         service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
                 inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService,
-                fotoService);
+                fotoService, eventoRepository);
 
         Igreja igreja = new Igreja();
         igreja.setId(igrejaId);

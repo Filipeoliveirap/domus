@@ -70,15 +70,33 @@ public class Evento {
     @JoinColumn(name = "responsavel_pessoa_id")
     private Pessoa responsavel;
 
+    /**
+     * Nome do responsável no momento em que a pessoa foi arquivada (V4). Mesmo raciocínio de
+     * {@link #localTexto}: como {@link Pessoa} usa soft delete, o {@code ON DELETE SET NULL}
+     * de {@code responsavel_pessoa_id} nunca dispara — {@code PessoaService.arquivarMembro}
+     * zera a FK via UPDATE nativo e copia o nome para cá, preservando a informação mesmo sem
+     * o vínculo. {@code null} enquanto o responsável ainda existe (o nome vem de {@link #responsavel}).
+     */
+    @Column(name = "responsavel_texto")
+    private String responsavelTexto;
+
     /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "criado_por_usuario_id")
     private Usuario criadoPor;
 
+    /** Mesmo raciocínio do {@link #responsavelTexto}, para quando o USUÁRIO que criou é arquivado. */
+    @Column(name = "criado_por_texto")
+    private String criadoPorTexto;
+
     /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;
+
+    /** Mesmo raciocínio do {@link #responsavelTexto}, para quando o USUÁRIO que atualizou é arquivado. */
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
 
     /** Nome do recorte (Kids, Jovens...). Alimenta selo e filtro; NÃO valida nada. */
     @Column(name = "recorte_etario", length = 40)

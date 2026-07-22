@@ -59,12 +59,21 @@ public record EventoResponse(
     }
 
     public record PessoaResumo(UUID id, String nome) {
-        static PessoaResumo dePessoa(Pessoa p) {
-            return p == null ? null : new PessoaResumo(p.getId(), p.getNome());
+        /**
+         * {@code textoFallback} é o nome congelado no momento em que a pessoa foi arquivada
+         * (ver {@code Evento#responsavelTexto} etc.) — {@code id() == null} nesse caso sinaliza
+         * "não é mais um cadastro navegável", igual ao {@code LocalInfo} com local ad-hoc.
+         * Sem este fallback, arquivar a pessoa/usuário deixaria {@code p}/{@code u} null (a FK
+         * já foi zerada no arquivamento) e a resposta perderia silenciosamente "quem cadastrou".
+         */
+        static PessoaResumo dePessoa(Pessoa p, String textoFallback) {
+            if (p != null) return new PessoaResumo(p.getId(), p.getNome());
+            return textoFallback == null ? null : new PessoaResumo(null, textoFallback);
         }
 
-        static PessoaResumo deUsuario(Usuario u) {
-            return u == null ? null : new PessoaResumo(u.getId(), u.getPessoa().getNome());
+        static PessoaResumo deUsuario(Usuario u, String textoFallback) {
+            if (u != null) return new PessoaResumo(u.getId(), u.getPessoa().getNome());
+            return textoFallback == null ? null : new PessoaResumo(null, textoFallback);
         }
     }
 
@@ -76,9 +85,9 @@ public record EventoResponse(
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), LocalInfo.from(e), e.getTipo(),
-                PessoaResumo.dePessoa(e.getResponsavel()),
-                PessoaResumo.deUsuario(e.getCriadoPor()),
-                PessoaResumo.deUsuario(e.getAtualizadoPor()),
+                PessoaResumo.dePessoa(e.getResponsavel(), e.getResponsavelTexto()),
+                PessoaResumo.deUsuario(e.getCriadoPor(), e.getCriadoPorTexto()),
+                PessoaResumo.deUsuario(e.getAtualizadoPor(), e.getAtualizadoPorTexto()),
                 e.getFoto() != null ? e.getFoto().getId() : null, e.getCreatedAt(),
                 e.getVagas(), e.getPreco(), e.isExclusivoMembros(),
                 e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas,

@@ -13,7 +13,6 @@ public record EventoRequest(
         LocalDateTime inicioEm,
         LocalDateTime fimEm,
         String local,
-        String foto,
         @Positive(message = "As vagas devem ser maiores que zero.")
         Integer vagas,
         @Positive(message = "O valor deve ser maior que zero.")

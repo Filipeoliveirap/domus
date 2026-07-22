@@ -31,7 +31,7 @@ public class InicioService {
                 pessoaRepository.aniversariantesDoMes(igrejaId, mes).stream()
                         .map(m -> new InicioResponse.Aniversariante(
                                 m.getId(), m.getNome(), m.getDataNascimento().getDayOfMonth(),
-                                m.getFoto()))
+                                m.getFoto() != null ? m.getFoto().getId() : null))
                         .toList();
 
         List<EventoResumoDTO> proximos =

@@ -10,6 +10,8 @@ public record LocalEventoRequest(
         String nome,
         @Positive(message = "A capacidade deve ser maior que zero.")
         Integer capacidade,
+        @Size(max = 255, message = "O CEP/logradouro/número deve ter no máximo 255 caracteres.")
         String cepLogradouroNumero,
+        @Size(max = 255, message = "O complemento/bairro/cidade/UF deve ter no máximo 255 caracteres.")
         String complementoBairroCidadeUf
 ) {}

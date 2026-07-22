@@ -1,6 +1,5 @@
 package com.domus.api.modules.evento.local;
 
-import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoRequest;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
@@ -96,12 +95,12 @@ public class LocalEventoService {
         // que é exatamente o que o campo já representa para locais ad-hoc). Preferido a
         // recusar o arquivamento: não bloqueia o usuário (o local pode ter sido descontinuado
         // de verdade) e reaproveita um caminho que já existe (localTexto).
-        List<Evento> eventosVinculados = eventoRepository.findByLocalIdAndIgrejaId(id, igrejaId);
-        for (Evento evento : eventosVinculados) {
-            evento.setLocalTexto(local.getNome());
-            evento.setLocal(null);
-        }
-        eventoRepository.saveAll(eventosVinculados);
+        //
+        // Usa SQL nativo (EventoRepository.desvincularLocal), NÃO findByLocalIdAndIgrejaId +
+        // save: eventos ARQUIVADOS também têm que ser desvinculados (senão ficam órfãos pra
+        // sempre — ver o comentário do método no repository), e o @SQLRestriction de Evento
+        // esconde os arquivados de qualquer busca via JPQL/derived query.
+        eventoRepository.desvincularLocal(id, local.getNome());
 
         localEventoRepository.delete(local);
     }

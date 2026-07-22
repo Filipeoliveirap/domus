@@ -70,8 +70,6 @@ public class EventoService {
                 .vagas(data.vagas())
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
-                // exclusivoBatizados: coluna removida do banco na Task 3; a Task 6 tira o campo
-                // do contrato da API. Por ora, o dado que chega do front é apenas ignorado aqui.
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .build();
 
@@ -131,8 +129,6 @@ public class EventoService {
         evento.setVagas(data.vagas());
         evento.setPreco(data.preco());
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
-        // exclusivoBatizados: idem — ignorado aqui, coluna não existe mais no banco.
-        boolean exclusivoBatizados = Boolean.TRUE.equals(data.exclusivoBatizados());
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
 
@@ -141,7 +137,7 @@ public class EventoService {
         // B4: restringir o evento pode deixar gente já confirmada inelegível — cancela quem
         // não se qualifica mais (mesmo cancelamento manual, convidados incluídos).
         int inscricoesRemovidas = inscricaoService.removerInscritosNaoElegiveis(
-                salvo.getId(), exclusivoMembros, exclusivoBatizados);
+                salvo.getId(), exclusivoMembros);
 
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,

@@ -58,12 +58,16 @@ public class InscricaoService {
      *
      * <p>{@code role}/{@code confirmado} só importam quando {@code inscritoPorOuNull != null}
      * (inscrevendo um TERCEIRO): é a única situação em que a elegibilidade pode ser contornada
-     * por quem gerencia. Na auto-inscrição ({@code inscritoPorOuNull == null}) os dois são
-     * ignorados — ver Javadoc de {@link #validarElegibilidade}.
+     * por quem gerencia. Na auto-inscrição os dois são ignorados — ver Javadoc de
+     * {@link #validarElegibilidade}.
+     *
+     * <p>{@code minhaPessoaId} é a pessoa do USUÁRIO LOGADO (nunca do corpo da requisição).
+     * É contra ela — não contra {@code inscritoPorOuNull} — que decidimos se isto é
+     * auto-inscrição: ver Javadoc de {@link #validarElegibilidade} para o porquê.
      */
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
-                                            String role, boolean confirmado, UUID igrejaId) {
+                                            UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
         Evento evento = eventoRepository.buscarComLock(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -71,7 +75,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
-        boolean autoInscricao = inscritoPorOuNull == null;
+        boolean autoInscricao = pessoaId.equals(minhaPessoaId);
         validarElegibilidade(evento, membro, autoInscricao, role, confirmado);
 
         InscricaoEvento inscricao = inscricaoRepository
@@ -130,7 +134,7 @@ public class InscricaoService {
      */
     @Transactional
     public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
-                                 String role, boolean confirmado, UUID igrejaId) {
+                                 UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
@@ -147,7 +151,11 @@ public class InscricaoService {
         }
 
         for (UUID pessoaId : pessoaIds) {
-            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, role, confirmado, igrejaId);
+            // minhaPessoaId segue até inscrever() SEM alteração: é lá, no único ponto que
+            // decide "isto é auto-inscrição?", que pessoaId (alvo) é comparado com ela — não
+            // com inscritoPorUsuarioId (id de USUÁRIO, nunca de pessoa; comparar os dois nunca
+            // bateria por acidente, e foi exatamente isso que escondeu o furo antes desta correção).
+            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado, igrejaId);
         }
     }
 
@@ -231,8 +239,15 @@ public class InscricaoService {
      * <p><b>Regra 1 — auto-inscrição NUNCA contorna, nem para quem gerencia.</b> A exceção
      * existe para inscrever TERCEIROS (equipe, preletor, motorista); se o próprio admin
      * pudesse burlar a própria inscrição, a restrição viraria decoração para quem tem acesso.
-     * {@code autoInscricao} é a MESMA distinção que já existia em {@code inscritoPorOuNull}
-     * ({@code null} = auto-inscrição): não duplicamos o conceito, só o nomeamos aqui.
+     * {@code autoInscricao} é decidido em {@link #inscrever} comparando a PESSOA ALVO com a
+     * pessoa do usuário logado — NUNCA com {@code inscritoPorOuNull}/{@code
+     * inscritoPorUsuarioId}, que é id de USUÁRIO, sempre não-nulo em {@link #inscreverPessoas}
+     * (o controller manda {@code usuario.getId()} mesmo quando o admin bota o PRÓPRIO
+     * pessoaId na lista). Usar esse campo como sinal de auto-inscrição é exatamente o furo
+     * que já existiu aqui: {@code inscritoPorOuNull == null} nunca é verdade em
+     * {@code inscreverPessoas}, então "auto-inscrição nunca contorna" silenciosamente virava
+     * "auto-inscrição contorna igual a qualquer terceiro" para quem passasse pelo modal em vez
+     * da rota de auto-inscrição.
      *
      * <p><b>Regra 2 — {@code confirmado=true} de quem NÃO gerencia é IGNORADO</b>, não aceito:
      * {@link Permissoes#podeGerenciarInscricoes(String)} é checado ANTES de olhar
@@ -241,19 +256,27 @@ public class InscricaoService {
      * <p><b>Regra 3 — vaga não entra aqui.</b> {@code VAGAS_ESGOTADAS} não é produzido por
      * {@link ElegibilidadeService} (ver Javadoc dele) — quem barra vaga é
      * {@link #validarVaga}, sempre, sem exceção administrativa.
+     *
+     * <p><b>Regra 4 — quem NÃO gerencia não vê nome/idade de terceiro no 422.</b> ACESSO_COMUM
+     * pode chamar {@code POST .../inscricoes/pessoas} com um {@code pessoaId} arbitrário da
+     * igreja; o impedimento é sempre recusado para ele (Regra 2), mas a MENSAGEM não pode virar
+     * um oráculo de dados pessoais. Só quem {@link Permissoes#podeGerenciarInscricoes(String)}
+     * vê o texto detalhado (ele já tem acesso à lista de pessoas e precisa da informação para
+     * decidir sobre o contorno).
      */
     private void validarElegibilidade(Evento evento, Pessoa membro, boolean autoInscricao,
                                       String role, boolean confirmado) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
         if (elegibilidade.apto()) return;
 
+        boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role);
         boolean podeContornar = !autoInscricao
-                && Permissoes.podeGerenciarInscricoes(role)
+                && podeGerenciar
                 && confirmado
                 && elegibilidade.totalmenteContornavel();
 
         if (!podeContornar) {
-            throw new NaoElegivelException(elegibilidade.impedimentos());
+            throw NaoElegivelException.para(elegibilidade.impedimentos(), podeGerenciar);
         }
     }
 

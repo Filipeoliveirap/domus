@@ -210,6 +210,6 @@ class ImpactoRestricaoTest {
     private PessoaRequestDTO requisicaoDeVinculo(Pessoa pessoa, Vinculo vinculo) {
         return new PessoaRequestDTO(pessoa.getNome(), null, null, pessoa.getDataNascimento(),
                 new EnderecoDTO(null, null, null, null, null, null, null), vinculo, null, null,
-                null, null, null);
+                null, null, null, null);
     }
 }

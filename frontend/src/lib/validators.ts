@@ -82,6 +82,10 @@ export const pessoaSchema = z.object({
     ['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']
   ).or(z.literal('')).optional(),
 
+  // Nulável de propósito: pessoas já cadastradas não têm valor. Usado só pra
+  // restringir inscrição em evento, não pra descrever identidade.
+  sexo: z.enum(['HOMEM', 'MULHER']).or(z.literal('')).optional(),
+
   ministerio: opcional(
     z.string().max(255, 'O ministério deve ter no máximo 255 caracteres'),
   ),

@@ -12,6 +12,7 @@ import styles from './categoria.module.css'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
+import { podeVerFinanceiro } from '@/lib/permissoes'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonCategorias } from "./SkeletonCategorias";
@@ -51,7 +52,7 @@ function CategoriasConteudo() {
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA'
+  const autorizado = podeVerFinanceiro(role)
 
   const { data, isLoading, isError, refetch } = useCategorias({
     q: buscaDebounced,

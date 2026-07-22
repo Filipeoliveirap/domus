@@ -111,13 +111,15 @@
   gap: 10px;
 }
 .campoDataWrap {
-  flex: 2;   
+  flex: 2;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .campoHoraWrap {
-  flex: 1;   
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -128,6 +130,11 @@
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--color-text-secondary);
+}
+.subLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
 }
 .opcional {
   font-weight: var(--font-weight-normal);
@@ -184,6 +191,100 @@
   font-weight: var(--font-weight-medium);
 }
 .imagemUpload small {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Toggle (interruptor) ─── */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+.toggleTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.toggleTitulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.toggleDescricao {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+}
+.switchInput {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switchTrilho {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-border-input);
+  transition: background-color var(--transition-fast);
+}
+.switchTrilho::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-bg-white);
+  transition: transform var(--transition-fast);
+}
+.switchInput:checked + .switchTrilho {
+  background: var(--color-primary);
+}
+.switchInput:checked + .switchTrilho::before {
+  transform: translateX(16px);
+}
+
+/* ─── Segmentado (Gratuito / Pago) ─── */
+.segmentado {
+  display: flex;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segmentoBtn {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-white);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.segmentoBtn:not(:last-child) {
+  border-right: 1px solid var(--color-border-input);
+}
+.segmentoAtivo {
+  background: var(--color-primary);
+  color: var(--color-bg-white);
+}
+
+.campoHint {
+  display: block;
+  margin-top: 4px;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }

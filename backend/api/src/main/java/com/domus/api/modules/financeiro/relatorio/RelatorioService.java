@@ -2,6 +2,7 @@ package com.domus.api.modules.financeiro.relatorio;
 
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
 import com.domus.api.modules.financeiro.relatorio.DTOs.*;
+import com.domus.api.modules.pessoa.Vinculo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,10 @@ public class RelatorioService {
     private final RelatorioRepository repository;
 
     @Transactional(readOnly = true)
-    public ResumoPeriodoResponse resumoPorPeriodo(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim) {
+    public ResumoPeriodoResponse resumoPorPeriodo(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim, Vinculo vinculo) {
         log.info("Gerando resumo financeiro. periodo={} a {}, igreja_id={}", dataInicio, dataFim, igrejaId);
 
-        var atual = repository.agregarResumo(igrejaId, dataInicio, dataFim);
+        var atual = repository.agregarResumo(igrejaId, dataInicio, dataFim, vinculo);
         BigDecimal entradas = atual.getTotalEntradas();
         BigDecimal saidas = atual.getTotalSaidas();
         BigDecimal saldo = entradas.subtract(saidas);
@@ -33,7 +34,7 @@ public class RelatorioService {
         long dias = ChronoUnit.DAYS.between(dataInicio, dataFim) + 1;
         LocalDate fimAnterior = dataInicio.minusDays(1);
         LocalDate inicioAnterior = fimAnterior.minusDays(dias - 1);
-        var anterior = repository.agregarResumo(igrejaId, inicioAnterior, fimAnterior);
+        var anterior = repository.agregarResumo(igrejaId, inicioAnterior, fimAnterior, vinculo);
 
         var comparacao = new ResumoPeriodoResponse.VariacaoPercentual(
                 calcularVariacao(anterior.getTotalEntradas(), entradas),
@@ -45,10 +46,10 @@ public class RelatorioService {
     }
 
     @Transactional(readOnly = true)
-    public List<CategoriaBreakdownResponse> porCategoria(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim) {
+    public List<CategoriaBreakdownResponse> porCategoria(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim, Vinculo vinculo) {
         log.info("Gerando relatório por categoria. periodo={} a {}, igreja_id={}", dataInicio, dataFim, igrejaId);
 
-        var agregados = repository.agregarPorCategoria(igrejaId, dataInicio, dataFim);
+        var agregados = repository.agregarPorCategoria(igrejaId, dataInicio, dataFim, vinculo);
 
         BigDecimal totalEntradas = agregados.stream()
                 .filter(a -> a.getTipo() == TipoMovimentacao.ENTRADA)
@@ -68,10 +69,10 @@ public class RelatorioService {
     }
 
     @Transactional(readOnly = true)
-    public List<EvolucaoMensalResponse> evolucaoMensal(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim) {
+    public List<EvolucaoMensalResponse> evolucaoMensal(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim, Vinculo vinculo) {
         log.info("Gerando evolução mensal. periodo={} a {}, igreja_id={}", dataInicio, dataFim, igrejaId);
 
-        return repository.agregarEvolucaoMensal(igrejaId, dataInicio, dataFim).stream()
+        return repository.agregarEvolucaoMensal(igrejaId, dataInicio, dataFim, vinculo).stream()
                 .map(m -> new EvolucaoMensalResponse(
                         m.getAno(), m.getMes(), m.getEntradas(), m.getSaidas(),
                         m.getEntradas().subtract(m.getSaidas())))
@@ -88,9 +89,9 @@ public class RelatorioService {
     }
 
     @Transactional(readOnly = true)
-    public MaiorLancamentoResponse maiorLancamento(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim) {
+    public MaiorLancamentoResponse maiorLancamento(UUID igrejaId, LocalDate dataInicio, LocalDate dataFim, Vinculo vinculo) {
         log.info("Buscando maior lançamento. periodo={} a {}, igreja_id={}", dataInicio, dataFim, igrejaId);
-        var m = repository.buscarMaiorLancamento(igrejaId, dataInicio, dataFim);
+        var m = repository.buscarMaiorLancamento(igrejaId, dataInicio, dataFim, vinculo);
         if (m == null) {
             return null;
         }

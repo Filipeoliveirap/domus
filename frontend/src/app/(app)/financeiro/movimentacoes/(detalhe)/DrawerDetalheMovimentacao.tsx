@@ -74,14 +74,14 @@ export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDet
                   </div>
                 </div>
 
-                {mov.membroNome && (
+                {mov.pessoaNome && (
                   <div className={styles.infoItem}>
                     <span className={styles.infoIcone}><User size={18} /></span>
                     <div>
                       <p className={styles.infoLabel}>
                         {mov.tipo === 'ENTRADA' ? 'Contribuinte' : 'Beneficiário'}
                       </p>
-                      <p className={styles.infoValor}>{mov.membroNome}</p>
+                      <p className={styles.infoValor}>{mov.pessoaNome}</p>
                     </div>
                   </div>
                 )}

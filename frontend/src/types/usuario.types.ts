@@ -1,4 +1,4 @@
-export type Role = 'ADMIN_IGREJA' | 'LIDER' | 'MEMBRO';
+export type Role = 'ADMIN_IGREJA' | 'LIDER' | 'ACESSO_COMUM';
 
 export interface UsuarioResponse {
   id: string;

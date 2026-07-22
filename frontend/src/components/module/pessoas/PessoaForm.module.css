@@ -1,0 +1,279 @@
+/* ─── Página ─────────────────────────────────────────────── */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ─── Breadcrumb ─────────────────────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+.breadcrumbLink {
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+}
+.breadcrumbSep {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+.breadcrumbAtual {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Cabeçalho ──────────────────────────────────────────── */
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+}
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-dark);
+}
+
+/* ─── Form + colunas ─────────────────────────────────────── */
+.form {
+  width: 100%;
+}
+
+.colunas {
+  display: grid;
+  grid-template-columns: 2fr 1fr;  /* esquerda larga, direita estreita */
+  gap: 32px;
+  align-items: start;
+}
+
+.colunaEsquerda {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.colunaDireita {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 24px;  /* acompanha o scroll, fica visível ao preencher os campos longos */
+}
+
+/* ─── Seções (cards) ─────────────────────────────────────── */
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: 0 6px 8px -1px rgba(19, 27, 46, 0.10), 0 12px 30px -3px rgba(19, 27, 46, 0.08);
+}
+.secaoIgreja {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: var(--color-bg-igreja-card);   /* azul, só aqui */
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+}
+
+.secaoHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.secaoIgreja .secaoHeader {
+  margin-bottom: 0;
+}
+
+.secaoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-white);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.secaoTitulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* ─── Grid de 2 campos ───────────────────────────────────── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+/* ─── Textarea (endereço, observações) ───────────────────── */
+.campoTextarea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.labelTextarea {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background-color: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.textarea::placeholder {
+  color: var(--color-placeholder);
+}
+.textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.erroCampo {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Ministério ─────────────────────────────────────────── */
+.ministerioWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.labelMinisterio {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ─── Batismo ─────────────────────────────────────────────── */
+.batismoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+.campoHint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Info box (aviso azul) ──────────────────────────────── */
+.infoBox {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-white);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+}
+.infoIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.infoText {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ─── Erro geral da API ──────────────────────────────────── */
+.erroGeral {
+  padding: 12px 16px;
+  background-color: var(--color-danger-bg);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+}
+
+/* ─── Ações (salvar / cancelar) ──────────────────────────── */
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cancelarLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-table-header);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+.cancelarLink:hover {
+  background-color: var(--color-bg-table-head);
+}
+
+/* ─── Responsivo ─────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .colunas {
+    grid-template-columns: 1fr;  /* empilha em tela menor */
+  }
+  .colunaDireita {
+    position: static;  /* sem sticky quando empilhado */
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}

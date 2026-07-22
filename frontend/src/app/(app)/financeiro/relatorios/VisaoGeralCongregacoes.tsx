@@ -16,11 +16,10 @@ function Numeros({ totais }: { totais: TotaisConsolidado }) {
   return (
     <div className={styles.numeros}>
       <div className={styles.numero}>
-        <span className={styles.numeroRotulo}>Membros</span>
-        <strong className={styles.numeroValor}>{totais.membros.total}</strong>
+        <span className={styles.numeroRotulo}>Pessoas</span>
+        <strong className={styles.numeroValor}>{totais.pessoas.total}</strong>
         <span className={styles.numeroDetalhe}>
-          {totais.membros.ativos} ativos · {totais.membros.inativos} inativos ·{' '}
-          {totais.membros.visitantes} visitantes
+          {totais.pessoas.membros} membros · {totais.pessoas.congregantes} congregantes
         </span>
       </div>
 
@@ -79,13 +78,18 @@ export function VisaoGeralCongregacoes({
   return (
     <div className={styles.container}>
       <section className={styles.blocoFamilia}>
-        <h2 className={styles.tituloBloco}>Família (consolidado)</h2>
+        {/*
+          "Família (consolidado)" era jargão nosso: "família" é como o CÓDIGO chama o
+          conjunto sede + congregações, não como a igreja fala. "Todas as igrejas" diz o
+          que o número é sem exigir que a pessoa aprenda o vocabulário do sistema.
+        */}
+        <h2 className={styles.tituloBloco}>Todas as igrejas</h2>
         <Numeros totais={data.familia} />
       </section>
 
       {/* A decisão de projeto que o usuário precisa enxergar: nem tudo segue o período. */}
       <p className={styles.avisoPeriodo}>
-        Membros e eventos refletem a situação atual. Apenas os valores financeiros seguem o
+        Pessoas e eventos refletem a situação atual. Apenas os valores financeiros seguem o
         período selecionado.
       </p>
 
@@ -98,7 +102,7 @@ export function VisaoGeralCongregacoes({
             <thead>
               <tr>
                 <th>Igreja</th>
-                <th>Membros</th>
+                <th>Pessoas</th>
                 <th>Eventos</th>
                 <th className={styles.alinhaDireita}>Saldo</th>
                 <th />
@@ -111,10 +115,10 @@ export function VisaoGeralCongregacoes({
                     <span className={styles.nomeIgreja}>{linha.nome}</span>
                     {linha.ehMae && <span className={styles.selo}>Sede</span>}
                   </td>
-                  <td data-rotulo="Membros">
-                    {linha.membros.total}{' '}
+                  <td data-rotulo="Pessoas">
+                    {linha.pessoas.total}{' '}
                     <span className={styles.detalheCelula}>
-                      ({linha.membros.ativos}/{linha.membros.inativos}/{linha.membros.visitantes})
+                      ({linha.pessoas.membros}m/{linha.pessoas.congregantes}c)
                     </span>
                   </td>
                   <td data-rotulo="Eventos">

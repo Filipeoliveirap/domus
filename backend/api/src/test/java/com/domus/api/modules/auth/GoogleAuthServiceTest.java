@@ -4,7 +4,7 @@ import com.domus.api.config.TokenService;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaService;
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -58,12 +58,12 @@ class GoogleAuthServiceTest {
     private Usuario usuarioFake() {
         Igreja igreja = Igreja.builder().nome("Igreja X").build();
         igreja.setId(UUID.randomUUID());
-        Membro membro = Membro.builder().nome("Fulano").email("fulano@x.com").igreja(igreja).build();
+        Pessoa membro = Pessoa.builder().nome("Fulano").email("fulano@x.com").igreja(igreja).build();
         Role role = Role.builder().nome("ADMIN_IGREJA").build();
         return Usuario.builder()
                 .id(UUID.randomUUID())
                 .igreja(igreja)
-                .membro(membro)
+                .pessoa(membro)
                 .role(role)
                 .ativo(true)
                 .build();

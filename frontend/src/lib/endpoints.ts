@@ -26,12 +26,12 @@ export const Endpoints = {
     REATIVAR_ACESSO: '/usuarios/reativar-acesso',
     REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
   },
-  membros: {
-    LISTAR: '/membros',
-    CRIAR: '/membros',
-    BY_ID: (id: string) => `/membros/${id}`,
-    ARQUIVAR: (id: string) => `/membros/${id}`,
-    BAIRROS: '/membros/bairros',
+  pessoas: {
+    LISTAR: '/pessoas',
+    CRIAR: '/pessoas',
+    BY_ID: (id: string) => `/pessoas/${id}`,
+    ARQUIVAR: (id: string) => `/pessoas/${id}`,
+    BAIRROS: '/pessoas/bairros',
   },
 
   eventos: {
@@ -40,10 +40,23 @@ export const Endpoints = {
     BY_ID: (id: string) => `/eventos/${id}`,
   },
 
+  inscricoes: {
+    INSCREVER: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
+    MINHA: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha`,
+    INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/pessoas`,
+    ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
+      `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
+    PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,
+    LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
+    CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
+    REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
+  },
+
   categorias: {
     base: '/categorias',
     todas: '/categorias/todas',
     porId: (id: string) => `/categorias/${id}`,
+    contagemMovimentacoes: (id: string) => `/categorias/${id}/contagem-movimentacoes`,
   },
 
   movimentacoes: {

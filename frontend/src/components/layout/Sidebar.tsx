@@ -11,13 +11,14 @@ import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
+import { podeVerConfiguracoes } from '@/lib/permissoes'
 import styles from './Sidebar.module.css'
 
 const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
-  { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
+  { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
-  { href: '/membros',    label: 'Membros',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
-  { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'MEMBRO'] },
+  { href: '/pessoas',    label: 'Pessoas',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+  { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/financeiro/movimentacoes', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
 ]
@@ -37,13 +38,13 @@ const configuracoesSubItems: { href: string; label: string }[] = [
 const roleLabels: Record<string, string> = {
   ADMIN_IGREJA: 'Administrador',
   LIDER: 'Líder',
-  MEMBRO: 'Membro',
+  ACESSO_COMUM: 'Acesso comum',
 }
 
 const roleStyles: Record<string, string> = {
   ADMIN_IGREJA: styles.roleAdmin,
   LIDER: styles.roleLider,
-  MEMBRO: styles.roleMembro,
+  ACESSO_COMUM: styles.roleComum,
 }
 
 export function Sidebar() {
@@ -92,7 +93,7 @@ export function Sidebar() {
     router.replace('/login')
   }
 
-  const podeVerConfiguracoes = role === 'ADMIN_IGREJA'
+  const exibirConfiguracoes = podeVerConfiguracoes(role)
   // Começa aberto quando já estamos numa das abas — senão o item ativo ficaria escondido.
   const [configAberto, setConfigAberto] = useState(() => pathname.startsWith('/configuracoes'))
 
@@ -114,7 +115,7 @@ export function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        {podeVerConfiguracoes && (
+        {exibirConfiguracoes && (
           <div className={styles.grupo}>
             <button
               type="button"
@@ -170,7 +171,7 @@ export function Sidebar() {
         <div className={styles.profileInfo}>
           <p className={styles.profileName}>{nome ?? 'Usuário'}</p>
           {role && (
-            <span className={`${styles.profileRole} ${roleStyles[role] ?? styles.roleMembro}`}>
+            <span className={`${styles.profileRole} ${roleStyles[role] ?? styles.roleComum}`}>
               {roleLabels[role] ?? role}
             </span>
           )}

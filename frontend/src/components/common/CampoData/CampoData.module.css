@@ -1,0 +1,81 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.caixa {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.entrada {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 38px 10px 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.entrada:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.entrada::placeholder {
+  color: var(--color-placeholder);
+}
+
+.botaoCalendario {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.botaoCalendario:hover {
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+}
+
+/*
+  Ocupa o mesmo ponto do ícone com tamanho zero: o showPicker() de alguns navegadores
+  ancora o calendário na posição do input, então escondê-lo com display:none faria o
+  seletor abrir no canto da tela.
+*/
+.seletorOculto {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.erro {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}

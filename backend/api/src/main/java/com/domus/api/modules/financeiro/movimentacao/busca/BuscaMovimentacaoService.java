@@ -29,7 +29,7 @@ public class BuscaMovimentacaoService {
         Query fuzzy = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("descricao^2", "categoriaNome", "membroNome")
+                        .fields("descricao^2", "categoriaNome", "pessoaNome")
                         .fuzziness("AUTO")
                         .prefixLength(1)
                 )
@@ -38,7 +38,7 @@ public class BuscaMovimentacaoService {
         Query prefixo = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("descricao^2", "categoriaNome", "membroNome")
+                        .fields("descricao^2", "categoriaNome", "pessoaNome")
                         .type(TextQueryType.BoolPrefix)
                         .boost(2.0f)
                 )

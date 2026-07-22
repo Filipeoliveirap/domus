@@ -4,7 +4,7 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.igreja.familia.consolidado.DTO.ConsolidadoResponse;
 import com.domus.api.modules.igreja.familia.consolidado.DTO.ConsolidadoResponse.*;
-import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.pessoa.Vinculo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class ConsolidadoService {
 
         LocalDateTime agora = LocalDateTime.now();
 
-        Map<UUID, Membros> membrosPorIgreja = agruparMembros(idsDaFamilia);
+        Map<UUID, Pessoas> membrosPorIgreja = agruparMembros(idsDaFamilia);
         Map<UUID, Eventos> eventosPorIgreja = agruparEventos(idsDaFamilia, agora);
         Map<UUID, Financeiro> financeiroPorIgreja = agruparFinanceiro(idsDaFamilia, dataInicio, dataFim);
 
@@ -59,7 +60,7 @@ public class ConsolidadoService {
                     id,
                     nomes.getOrDefault(id, "—"),
                     id.equals(igrejaSolicitanteId),
-                    membrosPorIgreja.getOrDefault(id, membrosZerado()),
+                    membrosPorIgreja.getOrDefault(id, pessoasZerado()),
                     eventosPorIgreja.getOrDefault(id, new Eventos(0, 0, 0)),
                     financeiroPorIgreja.getOrDefault(id, financeiroZerado())));
         }
@@ -67,21 +68,25 @@ public class ConsolidadoService {
         return new ConsolidadoResponse(somar(linhas), linhas);
     }
 
-    private Map<UUID, Membros> agruparMembros(List<UUID> ids) {
-        // A consulta devolve uma linha por (igreja, status); aqui viram os 3 números de cada igreja.
-        Map<UUID, long[]> acumulador = new HashMap<>();
+    private Map<UUID, Pessoas> agruparMembros(List<UUID> ids) {
+        // A consulta devolve uma linha por (igreja, vinculo); aqui viram os 2 números de cada
+        // igreja. Chave é o próprio enum Vinculo (EnumMap), não ordinal(): indexar por posição
+        // era um off-by-one esperando acontecer no dia em que um 3º vínculo for adicionado —
+        // o array teria tamanho 2 fixo e o índice do novo valor estouraria ou colidiria, sem
+        // o compilador acusar nada.
+        Map<UUID, Map<Vinculo, Long>> acumulador = new HashMap<>();
         for (var linha : repository.contarMembros(ids)) {
-            long[] contagens = acumulador.computeIfAbsent(linha.getIgrejaId(), k -> new long[3]);
-            StatusMembro status = StatusMembro.valueOf(linha.getStatus());
-            contagens[status.ordinal()] += linha.getTotal();
+            Map<Vinculo, Long> contagens = acumulador.computeIfAbsent(
+                    linha.getIgrejaId(), k -> new EnumMap<>(Vinculo.class));
+            Vinculo vinculo = Vinculo.valueOf(linha.getVinculo());
+            contagens.merge(vinculo, linha.getTotal(), Long::sum);
         }
 
-        Map<UUID, Membros> resultado = new HashMap<>();
-        acumulador.forEach((id, c) -> {
-            long ativos = c[StatusMembro.ATIVO.ordinal()];
-            long inativos = c[StatusMembro.INATIVO.ordinal()];
-            long visitantes = c[StatusMembro.VISITANTE.ordinal()];
-            resultado.put(id, new Membros(ativos + inativos + visitantes, ativos, inativos, visitantes));
+        Map<UUID, Pessoas> resultado = new HashMap<>();
+        acumulador.forEach((id, contagens) -> {
+            long membros = contagens.getOrDefault(Vinculo.MEMBRO, 0L);
+            long congregantes = contagens.getOrDefault(Vinculo.CONGREGANTE, 0L);
+            resultado.put(id, new Pessoas(membros + congregantes, membros, congregantes));
         });
         return resultado;
     }
@@ -108,14 +113,13 @@ public class ConsolidadoService {
 
     /** O consolidado é mãe + filhas — a mãe opera, não pode ficar de fora da soma. */
     private Totais somar(List<LinhaIgreja> linhas) {
-        long membrosAtivos = 0, membrosInativos = 0, membrosVisitantes = 0;
+        long membrosTotal = 0, congregantesTotal = 0;
         long eventosRealizados = 0, eventosProximos = 0;
         BigDecimal entradas = BigDecimal.ZERO, saidas = BigDecimal.ZERO;
 
         for (LinhaIgreja l : linhas) {
-            membrosAtivos += l.membros().ativos();
-            membrosInativos += l.membros().inativos();
-            membrosVisitantes += l.membros().visitantes();
+            membrosTotal += l.pessoas().membros();
+            congregantesTotal += l.pessoas().congregantes();
             eventosRealizados += l.eventos().realizados();
             eventosProximos += l.eventos().proximos();
             entradas = entradas.add(l.financeiro().entradas());
@@ -123,14 +127,13 @@ public class ConsolidadoService {
         }
 
         return new Totais(
-                new Membros(membrosAtivos + membrosInativos + membrosVisitantes,
-                        membrosAtivos, membrosInativos, membrosVisitantes),
+                new Pessoas(membrosTotal + congregantesTotal, membrosTotal, congregantesTotal),
                 new Eventos(eventosRealizados + eventosProximos, eventosRealizados, eventosProximos),
                 new Financeiro(entradas, saidas, entradas.subtract(saidas)));
     }
 
-    private Membros membrosZerado() {
-        return new Membros(0, 0, 0, 0);
+    private Pessoas pessoasZerado() {
+        return new Pessoas(0, 0, 0);
     }
 
     private Financeiro financeiroZerado() {

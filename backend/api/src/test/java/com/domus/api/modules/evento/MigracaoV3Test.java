@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SpringBootTest
 @Transactional
@@ -27,6 +28,19 @@ class MigracaoV3Test {
                 "SELECT COUNT(*) FROM information_schema.columns " +
                 "WHERE table_name='evento' AND column_name='local'", Integer.class);
         assertThat(antiga).isZero();
+
+        // Checar só o schema não denuncia o cenário desastroso ADD+DROP (coluna nova,
+        // 100% NULL). Aqui verificamos o DADO: se existe evento, tem que existir pelo
+        // menos um com local_texto preenchido — senão o RENAME não preservou nada.
+        Integer totalEventos = jdbc.queryForObject("SELECT COUNT(*) FROM evento", Integer.class);
+        assumeTrue(totalEventos != null && totalEventos > 0,
+                "Banco sem eventos — pula a checagem de dado para não virar ruído.");
+
+        Integer comLocalPreenchido = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM evento WHERE local_texto IS NOT NULL", Integer.class);
+        assertThat(comLocalPreenchido)
+                .as("esperado ao menos 1 evento com local_texto preenchido (dado preservado do RENAME)")
+                .isGreaterThan(0);
     }
 
     @Test

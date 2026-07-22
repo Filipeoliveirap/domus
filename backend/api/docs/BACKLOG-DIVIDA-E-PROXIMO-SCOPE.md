@@ -435,3 +435,28 @@ confirmou em 2026-07-22 que quer.
   tamanho de uma igreja. Se o volume um dia incomodar, a saída é colocar o Cloudflare na
   frente com cache de borda, sem mexer no modelo (o id nunca é reaproveitado, então cache
   de borda não tem problema de invalidação).
+
+### Separar as credenciais de backup das de foto (2026-07-22)
+
+Hoje **o mesmo token do R2** atende os dois buckets, com leitura e escrita em ambos.
+
+⚠️ **Isso desfez uma proteção que existia por desenho.** O bucket de backup era **write-only**:
+o CI escrevia e não conseguia ler. Se aquela credencial vazasse, o atacante gravaria lixo, mas
+**não baixaria os backups** — que contêm o banco inteiro da igreja.
+
+Foto precisa de leitura (a API busca os bytes para servir), então o token ganhou leitura — e o
+backup deixou de ser write-only junto.
+
+**O certo:**
+
+| Uso | Bucket | Permissão |
+|---|---|---|
+| Backup | `domus-backups` | **só escrita** |
+| Fotos | `domus-fotos` | leitura e escrita |
+
+Dois tokens distintos. Quando separar, lembrar que o backup usa os secrets do **GitHub**
+(`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) e as fotos usam o `.env.prod` da **VPS**
+(`R2_FOTOS_*`) — são lugares diferentes, e trocar num não afeta o outro.
+
+Origem: em 2026-07-22 as credenciais foram rotacionadas porque vazaram numa conversa, e na
+recriação os dois usos ficaram com o mesmo token.

@@ -88,9 +88,10 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 - Camadas `controller → service → repository`; services retornam **DTOs**, nunca
   entidades de persistência.
 - **Soft delete** (`deleted_at`) nas entidades.
-- Perfis de acesso: `ADMIN_IGREJA`, `LIDER`, `MEMBRO`.
+- Perfis de acesso: `ADMIN_IGREJA`, `LIDER`, `ACESSO_COMUM`.
 - Relação central: todo **usuário** (credencial de acesso) está vinculado a exatamente
-  um **membro** (pessoa). Nem todo membro tem usuário. `membro.email` é **único**.
+  uma **pessoa**. Nem toda pessoa tem usuário. `pessoa.email` é **único**. `MEMBRO` é um
+  **vínculo** (batizado), não o cadastro — o cadastro é `pessoa`.
 - **Responsividade é obrigatória em toda feature de front.** Toda funcionalidade nova
   (tela, formulário, modal, drawer, tabela) tem que ser ajustada para **mobile** como
   parte da própria entrega — não é etapa separada nem opcional. Padrões já usados:
@@ -104,24 +105,25 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V16**.
-> Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram omitidos por ruído,
-> exceto quando têm significado (soft delete).
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V1**.
+> `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
+> abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
+> omitidos por ruído, exceto quando têm significado (soft delete).
 
 ```mermaid
 erDiagram
     IGREJA ||--o{ IGREJA : "é sede de (igreja_mae_id)"
-    IGREJA ||--o{ MEMBRO : tem
+    IGREJA ||--o{ PESSOA : tem
     IGREJA ||--o{ USUARIO : tem
     IGREJA ||--o{ EVENTO : tem
     IGREJA ||--o{ CATEGORIA_FINANCEIRA : tem
     IGREJA ||--o{ MOVIMENTACAO_FINANCEIRA : tem
     IGREJA ||--o{ INSCRICAO_EVENTO : tem
-    MEMBRO ||--o| USUARIO : "pode ter (1-1)"
-    MEMBRO ||--o{ INSCRICAO_EVENTO : "se inscreve em"
+    PESSOA ||--o| USUARIO : "pode ter (1-1)"
+    PESSOA ||--o{ INSCRICAO_EVENTO : "se inscreve em"
     ROLE   ||--o{ USUARIO : define
     CATEGORIA_FINANCEIRA ||--o{ MOVIMENTACAO_FINANCEIRA : classifica
-    MEMBRO ||--o{ MOVIMENTACAO_FINANCEIRA : "atribuída a"
+    PESSOA ||--o{ MOVIMENTACAO_FINANCEIRA : "atribuída a"
     USUARIO ||--o{ MOVIMENTACAO_FINANCEIRA : "criou/atualizou"
     USUARIO ||--o{ INSCRICAO_EVENTO : "inscreveu"
     USUARIO ||--o{ IGREJA : "atualizou/vinculou"
@@ -148,28 +150,27 @@ erDiagram
         uuid      atualizado_por_usuario_id FK "V13 - logs de atividade"
     }
 
-    MEMBRO {
+    PESSOA {
         uuid      id PK
         uuid      igreja_id FK "isolamento multi-tenant"
         varchar   nome
         varchar   email UK "único - vira a chave de login"
         varchar   telefone
         date      data_nascimento
-        varchar   status "ATIVO|INATIVO|VISITANTE"
+        varchar   vinculo "MEMBRO|CONGREGANTE - substitui status+batizado"
         varchar   estado_civil
         varchar   ministerio
         varchar   foto
         varchar   cep_logradouro_numero "V11 - endereço estruturado"
         varchar   complemento_bairro_cidade_uf "V11"
-        boolean   batizado "V15"
-        date      data_batismo "V15"
+        date      data_batismo "só tem sentido se vinculo=MEMBRO"
         timestamp deleted_at "soft delete"
     }
 
     USUARIO {
         uuid      id PK
         uuid      igreja_id FK
-        uuid      membro_id FK,UK "1-1: todo usuário é um membro"
+        uuid      pessoa_id FK,UK "1-1: todo usuário é uma pessoa"
         uuid      role_id FK
         varchar   senha_hash "nullable desde V10 (conta só-Google)"
         varchar   google_sub UK "V10"
@@ -180,7 +181,7 @@ erDiagram
 
     ROLE {
         uuid    id PK
-        varchar nome UK "ADMIN_IGREJA|LIDER|MEMBRO"
+        varchar nome UK "ADMIN_IGREJA|LIDER|ACESSO_COMUM"
         varchar descricao
     }
 
@@ -195,8 +196,7 @@ erDiagram
         varchar   foto
         integer   vagas "V15 - NULL = sem limite"
         numeric   preco "V15 - NULL = gratuito"
-        boolean   exclusivo_membros "V15"
-        boolean   exclusivo_batizados "V15"
+        boolean   exclusivo_membros "cobre batizados - vinculo=MEMBRO é quem é batizado"
         boolean   requer_inscricao "V16"
         timestamp deleted_at "soft delete"
     }
@@ -205,7 +205,7 @@ erDiagram
         uuid      id PK
         uuid      igreja_id FK "isolamento multi-tenant"
         uuid      evento_id FK
-        uuid      membro_id FK
+        uuid      pessoa_id FK
         uuid      inscrito_por_usuario_id FK "V15 - NULL = auto-inscrição"
         varchar   status "CONFIRMADA|CANCELADA"
     }
@@ -229,7 +229,7 @@ erDiagram
         uuid      id PK
         uuid      igreja_id FK
         uuid      categoria_id FK
-        uuid      membro_id FK "opcional - atribuinte"
+        uuid      pessoa_id FK "opcional - atribuinte"
         uuid      criado_por_usuario_id FK
         uuid      atualizado_por_usuario_id FK
         varchar   tipo "ENTRADA|SAIDA"
@@ -255,17 +255,29 @@ erDiagram
 - **A auto-relação de `IGREJA`** (`igreja_mae_id`) é a hierarquia sede↔congregações. Uma
   congregação **é** uma igreja que tem mãe — por isso as checagens de isolamento
   continuam valendo sem alteração. **Regra dos 2 níveis:** quem tem mãe não pode ser mãe.
-- **`MEMBRO ||--o| USUARIO`** é 1-para-1 opcional: todo usuário tem um membro; nem todo
-  membro tem usuário (só quem recebeu acesso).
+- **`PESSOA ||--o| USUARIO`** é 1-para-1 opcional: todo usuário está vinculado a uma
+  pessoa; nem toda pessoa tem usuário (só quem recebeu acesso). O cadastro é `pessoa` —
+  `MEMBRO` é um **vínculo** dela, não o registro em si (dá pra ter login sem ser batizado).
+- **`pessoa.vinculo`** (`MEMBRO`|`CONGREGANTE`) substitui o antigo `status` +
+  `batizado`: `MEMBRO` é quem foi batizado e formalmente membro; `CONGREGANTE` é quem
+  frequenta sem ser batizado (absorve o antigo `VISITANTE`). Não existe "inativo" — quem
+  parou de frequentar é **arquivado** (`deleted_at`), o mecanismo que já existia.
+  `data_batismo` só faz sentido quando `vinculo = MEMBRO`.
 - **`igreja` referencia `usuario` e vice-versa.** As FKs circulares são intencionais e
   seguras porque as de `igreja → usuario` são todas nuláveis (auditoria).
-- **Inscrição em evento (V15–V16):** uma inscrição pertence a um membro e a um evento.
+- **Inscrição em evento:** uma inscrição pertence a uma pessoa e a um evento.
   Vagas contam **pessoas** (inscritos confirmados + seus acompanhantes), não inscrições.
-  Acompanhantes (`acompanhante_inscricao`) existem apenas para quem NÃO é membro da
+  Acompanhantes (`acompanhante_inscricao`) existem apenas para quem NÃO tem vínculo com a
   igreja e servem para saber "de onde essa pessoa veio". Cancelamento é mudança de status
   (preserva histórico de quem inscreveu quem); reinscricão reaproveita a mesma linha
-  graças ao `UNIQUE (evento_id, membro_id)`. O `requer_inscricao` (V16) é o master toggle
+  graças ao `UNIQUE (evento_id, pessoa_id)`. O `requer_inscricao` é o master toggle
   que separa evento que se organiza de evento que só acontece.
+
+> **Consolidação das migrations (2026-07-21):** `V1__schema_inicial.sql` substitui as
+> antigas V1–V16 num único arquivo — não havia dado real em produção, então as duas
+> bases (dev e produção) foram recriadas do zero. **Backups tirados antes dessa data não
+> restauram contra o código atual** (o schema não bate mais: `membro` virou `pessoa`,
+> `status`/`batizado` viraram `vinculo`, etc.).
 
 ---
 
@@ -404,25 +416,26 @@ erDiagram
 
 > **Objetivo:** o que faz a igreja realmente querer usar.
 
-- **Upload de foto** (membro e evento)
+- **Upload de foto** (pessoa e evento)
     - *Back:* armazenamento externo (S3 / Cloudflare R2 / similar — **evitar guardar
       binário no Postgres**), validação de tipo/tamanho, geração de URL. O campo `foto` já
-      existe nas tabelas `membro` e `evento`.
+      existe nas tabelas `pessoa` e `evento`.
     - *Front:* componente de upload com preview (recorte opcional).
 
 - **Endereço estruturado** *(colunas, não tabela nova)*
-    - *Decisão:* substituir `endereco VARCHAR(500)` por colunas na própria tabela `membro`:
+    - *Decisão:* substituir `endereco VARCHAR(500)` por colunas na própria tabela `pessoa`:
       `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, `uf`. Isso
       **habilita filtro por bairro/cidade** sem JOIN extra.
     - *Back:* migration Flyway (nova estrutura + migração dos dados existentes), ajuste de
       DTOs.
     - *Front:* formulário com **auto-preenchimento via ViaCEP** (gratuito) ao digitar o CEP.
 
-- [x] **Inscrição de membro em evento + preço e vagas** — **FEITO (2026-07-21):**
-  inscrição dois níveis (self + inscrever outros), acompanhantes para visitantes,
-  contagem de vagas com lock pessimista, `requer_inscricao` como toggle master, campo
-  `batizado`, lista reduzida para membros (sem telefone de convidado) e completa para
-  admins/líderes, preço apenas informativo (cobrança decidida na Fase 6).
+- [x] **Inscrição de pessoa em evento + preço e vagas** — **FEITO (2026-07-21):**
+  inscrição dois níveis (self + inscrever outros), acompanhantes para quem não tem
+  vínculo com a igreja, contagem de vagas com lock pessimista, `requer_inscricao` como
+  toggle master, campo `vinculo` (`MEMBRO`|`CONGREGANTE`), lista reduzida para pessoas
+  comuns (sem telefone de convidado) e completa para admins/líderes, preço apenas
+  informativo (cobrança decidida na Fase 6).
 
 - **Auditoria de evento (criado_por / atualizado_por)**
     - *Reutilizar o padrão que já existe em `movimentacao_financeira`* — barato e deixa o
@@ -443,7 +456,7 @@ erDiagram
       de convite.
 
 - **Validação de formato de e-mail e telefone (BR)**
-    - *E-mail:* validar **formato** no cadastro de membro (Zod no front + defensivo no
+    - *E-mail:* validar **formato** no cadastro de pessoa (Zod no front + defensivo no
       back). Importante porque o e-mail vira a **chave de login** (ver Fase 1). Sem
       verificação de posse — o primeiro login com Google já cobre isso.
     - *Telefone:* só formato brasileiro (grátis), **sem SMS**.
@@ -454,7 +467,7 @@ erDiagram
 
 - **Aba de Configuração:** perfil do usuário + dados da igreja (visualizar e editar).
 - **Excluir conta.**
-- **Lista de arquivados por módulo + exclusão definitiva** (usuários, membros, eventos…).
+- **Lista de arquivados por módulo + exclusão definitiva** (usuários, pessoas, eventos…).
   Complementa o soft delete já existente; a exclusão definitiva atende ao **direito de
   eliminação da LGPD**.
 - **Termos de Uso + Política de Privacidade.** Necessário sob a LGPD antes de usuário

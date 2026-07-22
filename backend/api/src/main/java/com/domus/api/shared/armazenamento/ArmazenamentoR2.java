@@ -2,7 +2,7 @@ package com.domus.api.shared.armazenamento;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -21,7 +21,7 @@ import java.net.URI;
  * Ninguém lê daqui a não ser o próprio Domus, servindo em GET /fotos/{id}.
  */
 @Component
-@Profile("!test")
+@ConditionalOnProperty(name = "app.fotos.armazenamento", havingValue = "r2", matchIfMissing = true)
 @Slf4j
 public class ArmazenamentoR2 implements ArmazenamentoFotos {
 

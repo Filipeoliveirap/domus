@@ -9,14 +9,14 @@ class PermissoesTest {
     void gerenciarInscricoes_valeParaAdminELider_naoParaComum() {
         assertThat(Permissoes.podeGerenciarInscricoes("ADMIN_IGREJA")).isTrue();
         assertThat(Permissoes.podeGerenciarInscricoes("LIDER")).isTrue();
-        assertThat(Permissoes.podeGerenciarInscricoes("MEMBRO")).isFalse();
+        assertThat(Permissoes.podeGerenciarInscricoes("ACESSO_COMUM")).isFalse();
     }
 
     @Test
     void dadosSensiveisDePessoa_soAdmin() {
         assertThat(Permissoes.podeVerDadosSensiveisDePessoa("ADMIN_IGREJA")).isTrue();
         assertThat(Permissoes.podeVerDadosSensiveisDePessoa("LIDER")).isFalse();
-        assertThat(Permissoes.podeVerDadosSensiveisDePessoa("MEMBRO")).isFalse();
+        assertThat(Permissoes.podeVerDadosSensiveisDePessoa("ACESSO_COMUM")).isFalse();
     }
 
     @Test

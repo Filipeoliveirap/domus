@@ -91,7 +91,7 @@ class InscricaoConcorrenciaTest {
                                  AtomicInteger sucessos, AtomicInteger recusasPorVaga) throws Exception {
         largada.await();
         try {
-            inscricaoService.inscrever(eventoId, pessoaId, null, igrejaId);
+            inscricaoService.inscrever(eventoId, pessoaId, null, null, false, igrejaId);
             sucessos.incrementAndGet();
         } catch (BusinessException e) {
             // Só conta como "recusa esperada" o motivo de vaga esgotada. Qualquer outra

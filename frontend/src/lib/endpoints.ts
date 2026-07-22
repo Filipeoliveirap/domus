@@ -83,4 +83,9 @@ export const Endpoints = {
     DESVINCULAR: (congregacaoId: string) => `/igrejas-vinculadas/congregacoes/${congregacaoId}`,
     SAIR: '/igrejas-vinculadas/sair',
   },
+
+  fotos: {
+    UPLOAD: '/fotos',
+    BY_ID: (id: string) => `/fotos/${id}`,
+  },
 }

@@ -1,0 +1,84 @@
+/*
+  200, acima dos drawers (100): este visualizador nasce de dentro de um deles.
+*/
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Mais escuro que o overlay dos modais comuns: aqui o assunto é olhar a imagem, e
+     qualquer coisa visível em volta disputa atenção com ela. */
+  background: rgba(19, 27, 46, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.imagem {
+  /* Cabe na tela inteira sem cortar nem esticar: a foto manda na proporção. */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  animation: zoomIn 0.2s ease-out;
+  cursor: default;
+}
+
+.fechar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fechar:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.fechar:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .imagem { animation: none; }
+}
+
+/*
+  Mobile: o botão encosta menos no canto (área de gesto do sistema) e a margem em volta
+  da imagem diminui — numa tela pequena, padding grande é área de foto desperdiçada.
+*/
+@media (max-width: 640px) {
+  .overlay {
+    padding: 12px;
+  }
+  .fechar {
+    top: 12px;
+    right: 12px;
+  }
+}

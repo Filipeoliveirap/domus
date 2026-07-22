@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import {
@@ -10,6 +10,7 @@ import {
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { SkeletonDrawerPessoa } from './SkeletonDrawerPessoa'
 import { urlFoto } from '@/lib/urlFoto'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import styles from './DrawerDetalhePessoa.module.css'
 
 interface DrawerDetalhePessoaProps {
@@ -19,6 +20,7 @@ interface DrawerDetalhePessoaProps {
 
 export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaProps) {
   const { data: pessoa, isPending, isError, refetch } = usePessoa(pessoaId)
+  const [ampliada, setAmpliada] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -32,6 +34,7 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
   const nascimento = pessoa ? formatarDataNascimento(pessoa.dataNascimento) : null
 
   return (
+    <>
     <div className={styles.overlay} onMouseDown={onClose}>
       <aside
         className={styles.drawer}
@@ -55,14 +58,24 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
           <>
             <div className={styles.conteudo}>
               <div className={styles.topo}>
-                <span className={styles.avatar}>
-                  {urlFoto(pessoa.fotoId, 'DISPLAY') ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                {/*
+                  Vira <button> só quando HÁ foto. Sem foto o avatar mostra iniciais, e
+                  não há nada para ampliar — um botão ali prometeria uma ação que não
+                  existe, e no teclado viraria uma parada inútil na navegação.
+                */}
+                {pessoa.fotoId ? (
+                  <button
+                    type="button"
+                    className={`${styles.avatar} ${styles.avatarClicavel}`}
+                    onClick={() => setAmpliada(true)}
+                    aria-label={`Ampliar foto de ${pessoa.nome}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
                     <img src={urlFoto(pessoa.fotoId, 'DISPLAY')!} alt="" className={styles.avatarFoto} />
-                  ) : (
-                    iniciais(pessoa.nome)
-                  )}
-                </span>
+                  </button>
+                ) : (
+                  <span className={styles.avatar}>{iniciais(pessoa.nome)}</span>
+                )}
                 <div className={styles.identidade}>
                   <span className={styles.nome}>{pessoa.nome}</span>
                   {pessoa.email && <span className={styles.email}>{pessoa.email}</span>}
@@ -156,5 +169,18 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
         )}
       </aside>
     </div>
+
+    {/*
+      Irmão do overlay do drawer, não filho: o overlay fecha o drawer no mouseDown, e um
+      clique para dispensar a foto ampliada levaria o cadastro junto.
+    */}
+    {ampliada && pessoa?.fotoId && (
+      <VisualizadorFoto
+        fotoId={pessoa.fotoId}
+        descricao={`Foto de ${pessoa.nome}`}
+        onClose={() => setAmpliada(false)}
+      />
+    )}
+    </>
   )
 }

@@ -17,6 +17,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * {@code @BatchSize} na CLASSE: agrupa a resolução de proxies LAZY pendentes deste tipo num
+ * único {@code SELECT ... WHERE id IN (...)}, em vez de um SELECT por linha — resolve o N+1
+ * de {@code Evento.criadoPor}/{@code Evento.atualizadoPor} na listagem paginada de eventos
+ * (query nativa, sem JOIN FETCH — mesmo raciocínio de {@code Evento.local}/{@code Evento.responsavel}).
+ */
 @Entity
 @Table(name = "usuario")
 @AllArgsConstructor
@@ -26,6 +32,7 @@ import java.util.UUID;
 @Builder
 @SQLDelete(sql = "UPDATE usuario SET delete_at = NOW(), ativo = false WHERE id = ?")
 @SQLRestriction("delete_at IS NULL")
+@org.hibernate.annotations.BatchSize(size = 25)
 public class Usuario implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

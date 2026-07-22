@@ -678,6 +678,45 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void cancelarInscricoesEmEventosExclusivosCancelaSoOsExclusivosDaPessoa() {
+        // A pessoa deixou de ser MEMBRO: deve perder a vaga no evento exclusivo, mas
+        // manter a inscrição num evento comum (que a query já filtra fora).
+        Evento exclusivo = evento(10);
+        exclusivo.setExclusivoMembros(true);
+        InscricaoEvento inscricaoExclusiva = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(exclusivo)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        AcompanhanteInscricao convidado = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(inscricaoExclusiva).nome("Convidado").build();
+        inscricaoExclusiva.getAcompanhantes().add(convidado);
+
+        when(inscricaoRepository.findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(
+                pessoaId, StatusInscricao.CONFIRMADA))
+                .thenReturn(java.util.List.of(inscricaoExclusiva));
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        int canceladas = service.cancelarInscricoesEmEventosExclusivos(pessoaId);
+
+        assertThat(canceladas).isEqualTo(1);
+        assertThat(inscricaoExclusiva.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        // convidado vai junto — mesma regra de cancelarInterno reusada aqui.
+        assertThat(inscricaoExclusiva.getAcompanhantes()).isEmpty();
+    }
+
+    @Test
+    void cancelarInscricoesEmEventosExclusivosNaoCancelaNadaQuandoNaoHaInscricaoExclusiva() {
+        when(inscricaoRepository.findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(
+                pessoaId, StatusInscricao.CONFIRMADA))
+                .thenReturn(java.util.List.of());
+
+        int canceladas = service.cancelarInscricoesEmEventosExclusivos(pessoaId);
+
+        assertThat(canceladas).isEqualTo(0);
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
     void cancelarRecusaQuandoEventoEncerrado() {
         // A2: cancelar reescreveria histórico de presença de um evento que já aconteceu.
         Evento e = evento(10);

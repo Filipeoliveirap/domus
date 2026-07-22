@@ -1,0 +1,112 @@
+package com.domus.api.modules.pessoa;
+
+import com.domus.api.config.redis.CacheEvictor;
+import com.domus.api.modules.evento.inscricao.InscricaoService;
+import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
+import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
+import com.domus.api.modules.usuario.UsuarioService;
+import com.domus.api.shared.exception.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * M5: data de batismo só faz sentido para vínculo MEMBRO (ver design doc). M6: perder o
+ * vínculo MEMBRO cancela as inscrições em eventos exclusivos, reusando o InscricaoService.
+ */
+class PessoaServiceTest {
+
+    PessoaRepository pessoaRepository;
+    IgrejaRepository igrejaRepository;
+    UsuarioService usuarioService;
+    InscricaoService inscricaoService;
+    CacheEvictor cacheEvictor;
+    OutboxRegistrador outboxRegistrador;
+    ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
+    PessoaService service;
+
+    UUID igrejaId = UUID.randomUUID();
+    UUID pessoaId = UUID.randomUUID();
+
+    @BeforeEach
+    void setup() {
+        pessoaRepository = mock(PessoaRepository.class);
+        igrejaRepository = mock(IgrejaRepository.class);
+        usuarioService = mock(UsuarioService.class);
+        inscricaoService = mock(InscricaoService.class);
+        cacheEvictor = mock(CacheEvictor.class);
+        outboxRegistrador = mock(OutboxRegistrador.class);
+        reindexacaoMovimentacaoService = mock(ReindexacaoMovimentacaoService.class);
+        service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
+                inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService);
+
+        Igreja igreja = new Igreja();
+        igreja.setId(igrejaId);
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(pessoaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pessoaRepository.findByIgrejaIdAndTelefoneIsNotNull(igrejaId))
+                .thenReturn(java.util.List.of());
+    }
+
+    private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo) {
+        return new PessoaRequestDTO("Maria", null, null, null, null,
+                vinculo, null, null, null, dataBatismo);
+    }
+
+    @Test
+    void cadastrarRecusaDataDeBatismoParaCongregante() {
+        assertThatThrownBy(() -> service.cadastrarMembro(
+                dto(Vinculo.CONGREGANTE, LocalDate.now().minusYears(1)), igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("MEMBRO");
+        verify(pessoaRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarAceitaDataDeBatismoParaMembro() {
+        service.cadastrarMembro(dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1)), igrejaId);
+        verify(pessoaRepository).save(any());
+    }
+
+    @Test
+    void atualizarRecusaDataDeBatismoParaCongregante() {
+        Pessoa existente = Pessoa.builder().id(pessoaId).nome("Maria").vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        assertThatThrownBy(() -> service.atualizarMembro(pessoaId,
+                dto(Vinculo.CONGREGANTE, LocalDate.now().minusYears(1)), igrejaId))
+                .isInstanceOf(BusinessException.class);
+        verify(pessoaRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarCancelaInscricoesExclusivasQuandoPerdeVinculoMembro() {
+        Pessoa existente = Pessoa.builder().id(pessoaId).nome("Maria").vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        service.atualizarMembro(pessoaId, dto(Vinculo.CONGREGANTE, null), igrejaId);
+
+        verify(inscricaoService).cancelarInscricoesEmEventosExclusivos(pessoaId);
+    }
+
+    @Test
+    void atualizarNaoCancelaInscricoesQuandoContinuaMembro() {
+        Pessoa existente = Pessoa.builder().id(pessoaId).nome("Maria").vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        service.atualizarMembro(pessoaId, dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1)), igrejaId);
+
+        verify(inscricaoService, never()).cancelarInscricoesEmEventosExclusivos(any());
+    }
+}

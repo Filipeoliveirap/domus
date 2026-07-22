@@ -95,19 +95,19 @@ public class SecurityConfig {
                         .requestMatchers("/usuarios/**")
                         .hasRole(ADMIN)
 
-                        //Membros
+                        //Pessoas
                         //Bairros ANTES do curinga: a lista de bairros é derivada do ENDEREÇO
-                        //dos membros, que é dado só de ADMIN. Deixá-la aberta entregaria pela
+                        //das pessoas, que é dado só de ADMIN. Deixá-la aberta entregaria pela
                         //porta lateral exatamente o que o DTO reduzido esconde.
-                        .requestMatchers(HttpMethod.GET, "/membros/bairros")
+                        .requestMatchers(HttpMethod.GET, "/pessoas/bairros")
                         .hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/membros/**")
+                        .requestMatchers(HttpMethod.GET, "/pessoas/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
-                        .requestMatchers(HttpMethod.POST, "/membros/**")
+                        .requestMatchers(HttpMethod.POST, "/pessoas/**")
                         .hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.PUT, "/membros/**")
+                        .requestMatchers(HttpMethod.PUT, "/pessoas/**")
                         .hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.DELETE, "/membros/**")
+                        .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
                         .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
 

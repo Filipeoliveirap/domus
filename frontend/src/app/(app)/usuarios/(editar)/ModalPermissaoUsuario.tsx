@@ -5,11 +5,9 @@ import { UsuarioResponse, Role } from '@/types/usuario.types'
 import styles from './ModalPermissaoUsuario.module.css'
 
 const roleOptions = [
-  { value: 'ADMIN_IGREJA', label: 'ADMIN_IGREJA', badge: 'Gestor Total', icon: ShieldCheck, descricao: 'Acesso total ao sistema, configurações da igreja, gestão financeira e controle de pessoas.' },
-  { value: 'LIDER', label: 'LIDER', badge: 'Gestor de Grupo', icon: Users, descricao: 'Acesso às pessoas e gerência de eventos. Sem acesso à gestão financeira global.' },
-  // value ainda é 'MEMBRO' no contrato do front (ver nota em lib/validators.ts) — o rótulo já
-  // reflete o novo nome (Acesso comum).
-  { value: 'MEMBRO', label: 'ACESSO_COMUM', badge: 'Restrito', icon: User, descricao: 'Acesso a pessoas e eventos.' },
+  { value: 'ADMIN_IGREJA', label: 'Administrador', badge: 'Gestor Total', icon: ShieldCheck, descricao: 'Acesso total ao sistema, configurações da igreja, gestão financeira e controle de pessoas.' },
+  { value: 'LIDER', label: 'Líder', badge: 'Gestor de Grupo', icon: Users, descricao: 'Acesso às pessoas e gerência de eventos. Sem acesso à gestão financeira global.' },
+  { value: 'ACESSO_COMUM', label: 'Acesso comum', badge: 'Restrito', icon: User, descricao: 'Vê pessoas e eventos, e se inscreve. Sem gestão.' },
 ] as const
 
 export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioResponse; onClose: () => void }) {

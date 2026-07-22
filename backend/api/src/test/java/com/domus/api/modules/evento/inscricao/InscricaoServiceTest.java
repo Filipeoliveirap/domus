@@ -2,6 +2,11 @@ package com.domus.api.modules.evento.inscricao;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.elegibilidade.regras.RegraEstadoCivil;
+import com.domus.api.modules.evento.elegibilidade.regras.RegraFaixaEtaria;
+import com.domus.api.modules.evento.elegibilidade.regras.RegraSexo;
+import com.domus.api.modules.evento.elegibilidade.regras.RegraVinculo;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.igreja.Igreja;
@@ -44,8 +49,13 @@ class InscricaoServiceTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        // Real (não mock): as regras precisam rodar de verdade para os testes de elegibilidade
+        // fazerem sentido (ex.: exclusivoMembros/Congregante via RegraVinculo).
+        ElegibilidadeService elegibilidadeService = new ElegibilidadeService(java.util.List.of(
+                new RegraFaixaEtaria(), new RegraVinculo(),
+                new RegraEstadoCivil(), new RegraSexo()));
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository);
+                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService);
     }
 
     private Igreja igreja() {
@@ -84,7 +94,7 @@ class InscricaoServiceTest {
     void inscreveQuandoHaVaga() {
         dado(evento(10), membro(Vinculo.MEMBRO), 3);
 
-        service.inscrever(eventoId, pessoaId, null, igrejaId);
+        service.inscrever(eventoId, pessoaId, null, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
@@ -93,7 +103,7 @@ class InscricaoServiceTest {
     void recusaQuandoVagasEsgotadas() {
         dado(evento(5), membro(Vinculo.MEMBRO), 5);
 
-        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, igrejaId))
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, null, false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("esgotadas");
     }
@@ -102,7 +112,7 @@ class InscricaoServiceTest {
     void vagasNulasSignificamSemLimite() {
         dado(evento(null), membro(Vinculo.MEMBRO), 9999);
 
-        service.inscrever(eventoId, pessoaId, null, igrejaId);
+        service.inscrever(eventoId, pessoaId, null, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
@@ -117,7 +127,7 @@ class InscricaoServiceTest {
         e.setExclusivoMembros(true);
         dado(e, membro(Vinculo.CONGREGANTE), 0);
 
-        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, igrejaId))
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, null, false, igrejaId))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -129,7 +139,7 @@ class InscricaoServiceTest {
         e.setRequerInscricao(false);
         dado(e, membro(Vinculo.MEMBRO), 0);
 
-        service.inscrever(eventoId, pessoaId, null, igrejaId);
+        service.inscrever(eventoId, pessoaId, null, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
@@ -146,7 +156,7 @@ class InscricaoServiceTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
-                eventoId, java.util.List.of(pessoaId), usuarioId, igrejaId))
+                eventoId, java.util.List.of(pessoaId), usuarioId, "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("não organiza inscrição de outras pessoas");
     }
@@ -161,7 +171,7 @@ class InscricaoServiceTest {
                 .thenReturn(java.util.List.of(pessoaId, outroMembroId));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
-                eventoId, java.util.List.of(pessoaId, outroMembroId), usuarioId, igrejaId))
+                eventoId, java.util.List.of(pessoaId, outroMembroId), usuarioId, "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("2 membros já estão inscritos");
     }
@@ -175,7 +185,7 @@ class InscricaoServiceTest {
         e.setFimEm(LocalDateTime.now().minusDays(1));
         dado(e, membro(Vinculo.MEMBRO), 0);
 
-        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, igrejaId))
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, null, false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já aconteceu");
     }
@@ -189,7 +199,7 @@ class InscricaoServiceTest {
         e.setFimEm(LocalDateTime.now().plusHours(1));
         dado(e, membro(Vinculo.MEMBRO), 0);
 
-        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, igrejaId))
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, null, false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já começou")
                 .hasMessageNotContaining("já aconteceu");
@@ -205,7 +215,7 @@ class InscricaoServiceTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
-                eventoId, java.util.List.of(pessoaId), usuarioId, igrejaId))
+                eventoId, java.util.List.of(pessoaId), usuarioId, "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já começou");
     }
@@ -306,7 +316,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, igrejaId))
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, null, false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está inscrit");
     }
@@ -319,7 +329,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId))
                 .thenReturn(Optional.of(cancelada));
 
-        service.inscrever(eventoId, pessoaId, null, igrejaId);
+        service.inscrever(eventoId, pessoaId, null, null, false, igrejaId);
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(cancelada);

@@ -3,6 +3,9 @@ package com.domus.api.modules.evento.inscricao;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.SituacaoEvento;
+import com.domus.api.modules.evento.elegibilidade.Elegibilidade;
+import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -38,6 +41,7 @@ public class InscricaoService {
     private final AcompanhanteRepository acompanhanteRepository;
     private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ElegibilidadeService elegibilidadeService;
 
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
@@ -51,10 +55,15 @@ public class InscricaoService {
      * senão duas inscrições simultâneas na última vaga passam as duas. {@code validarVaga}
      * já não faz nada quando {@code vagas} é NULL, que é o caso comum de evento casual —
      * então a auto-inscrição neles nunca esbarra em limite de vaga.
+     *
+     * <p>{@code role}/{@code confirmado} só importam quando {@code inscritoPorOuNull != null}
+     * (inscrevendo um TERCEIRO): é a única situação em que a elegibilidade pode ser contornada
+     * por quem gerencia. Na auto-inscrição ({@code inscritoPorOuNull == null}) os dois são
+     * ignorados — ver Javadoc de {@link #validarElegibilidade}.
      */
     @Transactional
-    public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId,
-                                            UUID inscritoPorOuNull, UUID igrejaId) {
+    public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
+                                            String role, boolean confirmado, UUID igrejaId) {
         Evento evento = eventoRepository.buscarComLock(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -62,7 +71,8 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
-        validarElegibilidade(evento, membro);
+        boolean autoInscricao = inscritoPorOuNull == null;
+        validarElegibilidade(evento, membro, autoInscricao, role, confirmado);
 
         InscricaoEvento inscricao = inscricaoRepository
                 .findByEventoIdAndPessoaId(eventoId, pessoaId)
@@ -112,10 +122,15 @@ public class InscricaoService {
      * <p>Os "já inscritos" são checados ANTES do laço (uma query só, com os ids todos) para
      * poder nomear a QUANTIDADE na mensagem — se deixássemos o laço descobrir um de cada vez
      * via {@link #inscrever}, o erro só falaria do primeiro que bateu, nunca do total.
+     *
+     * <p>{@code confirmado} só faz efeito se {@code role} tiver
+     * {@link Permissoes#podeGerenciarInscricoes(String)} — de quem NÃO gerencia, o parâmetro
+     * é simplesmente ignorado (nunca aceito "por engano"), checagem que vive dentro de
+     * {@link #validarElegibilidade}, não aqui.
      */
     @Transactional
-    public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
-                                 UUID inscritoPorUsuarioId, UUID igrejaId) {
+    public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
+                                 String role, boolean confirmado, UUID igrejaId) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
@@ -132,7 +147,7 @@ public class InscricaoService {
         }
 
         for (UUID pessoaId : pessoaIds) {
-            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, igrejaId);
+            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, role, confirmado, igrejaId);
         }
     }
 
@@ -209,14 +224,36 @@ public class InscricaoService {
         }
     }
 
-    private void validarElegibilidade(Evento evento, Pessoa membro) {
-        // Exclusivo para membros barra quem não tem vínculo MEMBRO com a igreja. No modelo
-        // novo "só batizados" e "só membros" são a MESMA pergunta — MEMBRO já significa
-        // batizado — e não existe mais "inativo" para excluir (quem parou de frequentar é
-        // arquivado e some de toda lista). Por isso uma condição só, não duas.
-        if (evento.isExclusivoMembros() && membro.getVinculo() != Vinculo.MEMBRO) {
-            throw new BusinessException("EXCLUSIVO_MEMBROS",
-                    "Este evento é exclusivo para membros da igreja.");
+    /**
+     * Roda todas as regras de {@link ElegibilidadeService} (faixa etária, vínculo, sexo,
+     * estado civil...) e decide se o impedimento pode ser contornado.
+     *
+     * <p><b>Regra 1 — auto-inscrição NUNCA contorna, nem para quem gerencia.</b> A exceção
+     * existe para inscrever TERCEIROS (equipe, preletor, motorista); se o próprio admin
+     * pudesse burlar a própria inscrição, a restrição viraria decoração para quem tem acesso.
+     * {@code autoInscricao} é a MESMA distinção que já existia em {@code inscritoPorOuNull}
+     * ({@code null} = auto-inscrição): não duplicamos o conceito, só o nomeamos aqui.
+     *
+     * <p><b>Regra 2 — {@code confirmado=true} de quem NÃO gerencia é IGNORADO</b>, não aceito:
+     * {@link Permissoes#podeGerenciarInscricoes(String)} é checado ANTES de olhar
+     * {@code confirmado}, então o parâmetro nunca é decisivo sozinho.
+     *
+     * <p><b>Regra 3 — vaga não entra aqui.</b> {@code VAGAS_ESGOTADAS} não é produzido por
+     * {@link ElegibilidadeService} (ver Javadoc dele) — quem barra vaga é
+     * {@link #validarVaga}, sempre, sem exceção administrativa.
+     */
+    private void validarElegibilidade(Evento evento, Pessoa membro, boolean autoInscricao,
+                                      String role, boolean confirmado) {
+        Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
+        if (elegibilidade.apto()) return;
+
+        boolean podeContornar = !autoInscricao
+                && Permissoes.podeGerenciarInscricoes(role)
+                && confirmado
+                && elegibilidade.totalmenteContornavel();
+
+        if (!podeContornar) {
+            throw new NaoElegivelException(elegibilidade.impedimentos());
         }
     }
 

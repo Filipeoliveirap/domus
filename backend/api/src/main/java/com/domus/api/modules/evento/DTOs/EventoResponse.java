@@ -33,7 +33,7 @@ public record EventoResponse(
     public static EventoResponse from(Evento e, Integer inscricoesRemovidas) {
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
-                e.getInicioEm(), e.getFimEm(), e.getLocal(),
+                e.getInicioEm(), e.getFimEm(), e.getLocalExibicao(),
                 e.getFoto() != null ? e.getFoto().getId() : null, e.getCreatedAt(),
                 e.getVagas(), e.getPreco(), e.isExclusivoMembros(),
                 e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas

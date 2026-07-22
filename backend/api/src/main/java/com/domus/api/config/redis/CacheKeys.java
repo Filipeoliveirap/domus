@@ -20,18 +20,19 @@ public final class CacheKeys {
     }
 
     /**
-     * <p><b>{@code sensiveis} faz parte da chave de propósito.</b> A resposta de membros varia
-     * por perfil (ADMIN vê endereço e observações; LÍDER e MEMBRO não). Sem esta dimensão, a
-     * primeira consulta de um ADMIN encheria o cache e o LÍDER seguinte receberia a versão
-     * dele — endereço de toda a igreja entregue pelo Redis, sem passar por autorização nenhuma.
+     * Chave da listagem de pessoas. <b>Toda dimensão que muda a RESPOSTA precisa entrar aqui</b>,
+     * senão o Redis serve a resposta de uma pergunta como se fosse de outra — sem passar por
+     * autorização nem por filtro nenhum.
+     *
+     * <p>{@code sensiveis}: ADMIN vê endereço e observações; LÍDER e ACESSO_COMUM não. Sem esta
+     * dimensão, a consulta de um ADMIN encheria o cache e o LÍDER seguinte receberia a versão
+     * dele — endereço da igreja inteira entregue pelo cache.
+     *
+     * <p>{@code vinculo}: a lista filtrada por MEMBRO e a lista sem filtro são respostas
+     * diferentes para o mesmo {@code igrejaId}+{@code q}+{@code pageable}. Sem ela, quem pedisse
+     * CONGREGANTE receberia a página cacheada por quem pediu MEMBRO.
      */
-    /**
-     * <p><b>{@code vinculo} também faz parte da chave.</b> A lista filtrada por MEMBRO e a lista
-     * sem filtro são respostas diferentes para o mesmo {@code igrejaId}+{@code q}+{@code pageable}
-     * — sem esta dimensão, quem pedisse CONGREGANTE receberia do Redis a página cacheada por quem
-     * pediu MEMBRO (ou vice-versa).
-     */
-    public static String membros(UUID igrejaId, String q, Pageable pageable, boolean sensiveis, Vinculo vinculo) {
+    public static String pessoas(UUID igrejaId, String q, Pageable pageable, boolean sensiveis, Vinculo vinculo) {
         String bruto = (q == null ? "" : q) + "|"
                 + pageable.getPageNumber() + "|"
                 + pageable.getPageSize() + "|"

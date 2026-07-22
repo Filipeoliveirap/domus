@@ -10,7 +10,7 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-@Document(indexName = "membros")
+@Document(indexName = "pessoas")
 @Setting(settingPath = "elasticsearch/domus-analyzer.json")
 @Getter
 @Setter

@@ -25,7 +25,7 @@ public class BuscaController {
     private final BuscaCategoriaService buscaCategoriaService;
     private final BuscaGlobalService buscaGlobalService;
 
-    @GetMapping("/membros")
+    @GetMapping("/pessoas")
     public List<ResultadoBusca> buscarMembros(@RequestParam String q) {
         if (q == null || q.isBlank()) {
             return List.of();

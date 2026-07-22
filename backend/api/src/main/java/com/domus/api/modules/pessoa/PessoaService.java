@@ -42,7 +42,7 @@ public class PessoaService {
 
     @Cacheable(
             value = "membros",
-            key = "T(com.domus.api.config.redis.CacheKeys).membros(#igrejaId, #q, #pageable, #podeVerDadosSensiveis, #vinculo)"
+            key = "T(com.domus.api.config.redis.CacheKeys).pessoas(#igrejaId, #q, #pageable, #podeVerDadosSensiveis, #vinculo)"
     )
     @Transactional(readOnly = true)
     public PagedResponse<PessoaResponse> listarMembros(UUID igrejaId, String q, Pageable pageable,
@@ -88,7 +88,7 @@ public class PessoaService {
 
         Pessoa salvo = membroRepository.save(membro);
         outboxRegistrador.registrar(
-                TipoEntidadeOutbox.MEMBRO,
+                TipoEntidadeOutbox.PESSOA,
                 TipoEventoOutbox.CRIADO,
                 salvo.getId(),
                 igrejaId
@@ -138,7 +138,7 @@ public class PessoaService {
         Pessoa salvo = membroRepository.save(membro);
 
         outboxRegistrador.registrar(
-                TipoEntidadeOutbox.MEMBRO,
+                TipoEntidadeOutbox.PESSOA,
                 TipoEventoOutbox.ATUALIZADO,
                 membro.getId(),
                 igrejaId
@@ -188,7 +188,7 @@ public class PessoaService {
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
         outboxRegistrador.registrar(
-                TipoEntidadeOutbox.MEMBRO,
+                TipoEntidadeOutbox.PESSOA,
                 TipoEventoOutbox.REMOVIDO,
                 membro.getId(),
                 igrejaId

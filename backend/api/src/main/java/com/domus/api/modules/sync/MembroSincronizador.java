@@ -20,7 +20,7 @@ public class MembroSincronizador implements SincronizadorEntidade {
 
     @Override
     public TipoEntidadeOutbox getTipoEntidade() {
-        return TipoEntidadeOutbox.MEMBRO;
+        return TipoEntidadeOutbox.PESSOA;
     }
 
     @Override

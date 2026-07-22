@@ -37,8 +37,15 @@ public record LocalEventoResponse(
     private static String formatarEnderecoDaIgreja(Endereco e) {
         if (e == null) return null;
 
+        // CEP entra na mesma posição em que aparece no campo espelhado do local
+        // (cepLogradouroNumero) — sem isso, local com endereço PRÓPRIO mostra CEP e local
+        // HERDADO da igreja não, uma assimetria que não faz sentido pro usuário.
         StringBuilder logradouroNumero = new StringBuilder();
-        if (naoVazio(e.getLogradouro())) logradouroNumero.append(e.getLogradouro());
+        if (naoVazio(e.getCep())) logradouroNumero.append(e.getCep());
+        if (naoVazio(e.getLogradouro())) {
+            if (!logradouroNumero.isEmpty()) logradouroNumero.append(", ");
+            logradouroNumero.append(e.getLogradouro());
+        }
         if (naoVazio(e.getNumero())) {
             if (!logradouroNumero.isEmpty()) logradouroNumero.append(", ");
             logradouroNumero.append(e.getNumero());

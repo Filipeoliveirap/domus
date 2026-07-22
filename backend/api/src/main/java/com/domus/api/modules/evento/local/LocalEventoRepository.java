@@ -11,6 +11,4 @@ public interface LocalEventoRepository extends JpaRepository<LocalEvento, UUID> 
 
     /** Isolamento multi-tenant: NUNCA busque por id sozinho. */
     Optional<LocalEvento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
-
-    boolean existsByIgrejaIdAndNomeIgnoreCase(UUID igrejaId, String nome);
 }

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
@@ -23,6 +24,40 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
      * de arquivar — ver {@code LocalEventoService.arquivar}.
      */
     List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
+
+    /**
+     * Desvincula TODOS os eventos que apontam para o local — inclusive os ARQUIVADOS.
+     *
+     * <p>Nativa de propósito: {@code Evento} tem {@code @SQLRestriction("deleted_at IS NULL")},
+     * então qualquer busca via JPQL/derived query (inclusive {@link #findByLocalIdAndIgrejaId})
+     * simplesmente não enxerga eventos arquivados. Um evento arquivado com {@code local_id}
+     * apontando pra um local também arquivado ficaria órfão pra sempre — e ao ser restaurado
+     * (Fase 3 do roadmap), {@code EventoResponse.from} resolveria o proxy LAZY de local, o
+     * {@code @SQLRestriction} de {@code LocalEvento} filtraria a linha, e estouraria
+     * {@code EntityNotFoundException} — derrubando a listagem INTEIRA de eventos com HTTP 500.
+     * SQL nativo ignora esses filtros do Hibernate e enxerga a tabela como ela é de verdade.
+     *
+     * <p>Seta {@code local_texto} e zera {@code local_id} NA MESMA instrução: o
+     * {@code CHECK (local_id IS NULL OR local_texto IS NULL)} é avaliado por linha ao FIM da
+     * instrução (não a cada coluna), então isso é seguro — não separe em dois UPDATEs, ou o
+     * CHECK vai violar no meio do caminho (linha com as duas colunas preenchidas ao mesmo tempo).
+     *
+     * <p>Não filtra por {@code igreja_id}: o local já foi validado como pertencente à igreja
+     * ANTES de chegar aqui (ver {@code LocalEventoService.arquivar}), e um {@code local_id} só
+     * existe dentro de uma igreja — filtrar de novo seria redundante.
+     *
+     * <p>{@code clearAutomatically = true}: como o UPDATE roda direto no banco (sem passar
+     * pelo Hibernate), qualquer {@code Evento} já carregado na sessão ficaria com o estado
+     * ANTIGO em memória (local/localTexto desatualizados) até a transação acabar. Limpar a
+     * persistence context força a próxima leitura a ir buscar a linha de novo no banco.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET local_texto = :nomeLocal, local_id = NULL
+         WHERE local_id = :localId
+        """, nativeQuery = true)
+    int desvincularLocal(@Param("localId") UUID localId, @Param("nomeLocal") String nomeLocal);
 
     /**
      * Trava a LINHA do evento para serializar a contagem de vagas.

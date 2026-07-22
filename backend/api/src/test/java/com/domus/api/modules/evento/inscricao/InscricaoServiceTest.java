@@ -372,7 +372,7 @@ class InscricaoServiceTest {
         when(acompanhanteRepository.findById(acompanhante.getId()))
                 .thenReturn(Optional.of(acompanhante));
 
-        service.removerAcompanhante(acompanhante.getId(), pessoaId, "MEMBRO", igrejaId);
+        service.removerAcompanhante(acompanhante.getId(), pessoaId, "ACESSO_COMUM", igrejaId);
 
         verify(acompanhanteRepository).delete(acompanhante);
     }
@@ -392,7 +392,7 @@ class InscricaoServiceTest {
         UUID membroDoTerceiro = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.removerAcompanhante(
-                acompanhante.getId(), membroDoTerceiro, "MEMBRO", igrejaId))
+                acompanhante.getId(), membroDoTerceiro, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class);
         verify(acompanhanteRepository, never()).delete(any());
     }
@@ -415,7 +415,7 @@ class InscricaoServiceTest {
         UUID membroDeOutraPessoa = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.removerAcompanhante(
-                acompanhante.getId(), membroDeOutraPessoa, "MEMBRO", igrejaId))
+                acompanhante.getId(), membroDeOutraPessoa, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class);
         verify(acompanhanteRepository, never()).delete(any());
     }
@@ -469,7 +469,7 @@ class InscricaoServiceTest {
 
         // sou MEMBRO, o membro da inscrição não sou eu
         assertThatThrownBy(() -> service.cancelar(
-                outra.getId(), usuarioId, UUID.randomUUID(), "MEMBRO", igrejaId))
+                outra.getId(), usuarioId, UUID.randomUUID(), "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("não pode cancelar");
     }
@@ -483,7 +483,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
                 .thenReturn(Optional.of(minha));
 
-        service.cancelar(minha.getId(), usuarioId, pessoaId, "MEMBRO", igrejaId);
+        service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
     }
@@ -502,7 +502,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
                 .thenReturn(Optional.of(minha));
 
-        service.cancelar(minha.getId(), usuarioId, pessoaId, "MEMBRO", igrejaId);
+        service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
         assertThat(minha.getAcompanhantes()).isEmpty();
     }
@@ -648,12 +648,9 @@ class InscricaoServiceTest {
         assertThat(service.listarParticipantes(eventoId, igrejaId)).isEmpty();
     }
 
-    // removerInscritosNaoElegiveisCancelaNaoBatizadosEMantemBatizados removido: idem, feature
-    // de exclusivoBatizados saiu do modelo (Task 3/4).
-
     @Test
     void removerInscritosNaoElegiveisNaoCancelaNinguemQuandoNadaFoiLigado() {
-        int removidos = service.removerInscritosNaoElegiveis(eventoId, false, false);
+        int removidos = service.removerInscritosNaoElegiveis(eventoId, false);
 
         assertThat(removidos).isEqualTo(0);
         verify(inscricaoRepository, never()).listarPorEvento(any());
@@ -673,7 +670,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.listarPorEvento(eventoId))
                 .thenReturn(java.util.List.of(visitante, ativo));
 
-        int removidos = service.removerInscritosNaoElegiveis(eventoId, true, false);
+        int removidos = service.removerInscritosNaoElegiveis(eventoId, true);
 
         assertThat(removidos).isEqualTo(1);
         assertThat(visitante.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
@@ -693,7 +690,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
                 .thenReturn(Optional.of(minha));
 
-        assertThatThrownBy(() -> service.cancelar(minha.getId(), usuarioId, pessoaId, "MEMBRO", igrejaId))
+        assertThatThrownBy(() -> service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já aconteceu");
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
@@ -733,7 +730,7 @@ class InscricaoServiceTest {
         when(acompanhanteRepository.findById(acompanhante.getId()))
                 .thenReturn(Optional.of(acompanhante));
 
-        assertThatThrownBy(() -> service.removerAcompanhante(acompanhante.getId(), pessoaId, "MEMBRO", igrejaId))
+        assertThatThrownBy(() -> service.removerAcompanhante(acompanhante.getId(), pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já aconteceu");
         verify(acompanhanteRepository, never()).delete(any());

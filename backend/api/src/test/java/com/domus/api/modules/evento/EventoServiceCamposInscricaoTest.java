@@ -22,7 +22,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 /**
- * Trava os campos de inscrição (vagas, preço e as duas restrições) nos dois caminhos de escrita.
+ * Trava os campos de inscrição (vagas, preço e a restrição de exclusividade) nos dois
+ * caminhos de escrita.
  *
  * <p>Existe por causa do modo de falha específico deste tipo de mudança: um campo ligado só no
  * cadastro faz a API <b>aceitar</b> a edição e <b>descartar</b> em silêncio. Não quebra teste
@@ -51,7 +52,7 @@ class EventoServiceCamposInscricaoTest {
                 outboxRegistrador, inscricaoService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean(), anyBoolean()))
+        when(inscricaoService.removerInscritosNaoElegiveis(any(), anyBoolean()))
                 .thenReturn(0);
     }
 
@@ -61,10 +62,9 @@ class EventoServiceCamposInscricaoTest {
         return i;
     }
 
-    private EventoRequest request(Integer vagas, BigDecimal preco,
-                                  Boolean exclusivoMembros, Boolean exclusivoBatizados) {
+    private EventoRequest request(Integer vagas, BigDecimal preco, Boolean exclusivoMembros) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
-                "Templo", null, vagas, preco, exclusivoMembros, exclusivoBatizados, true);
+                "Templo", null, vagas, preco, exclusivoMembros, true);
     }
 
     @Test
@@ -72,13 +72,11 @@ class EventoServiceCamposInscricaoTest {
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
 
         EventoResponse r = service.cadastrarEvento(
-                request(50, new BigDecimal("120.00"), true, true), igrejaId);
+                request(50, new BigDecimal("120.00"), true), igrejaId);
 
         assertThat(r.vagas()).isEqualTo(50);
         assertThat(r.preco()).isEqualByComparingTo("120.00");
         assertThat(r.exclusivoMembros()).isTrue();
-        // exclusivoBatizados saiu do modelo (coluna removida na Task 3); o campo no DTO
-        // de resposta é lixo temporário até a Task 6 tirá-lo do contrato da API.
     }
 
     @Test
@@ -91,7 +89,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        service.atualizarEvento(eventoId, request(30, new BigDecimal("80.50"), true, true), igrejaId);
+        service.atualizarEvento(eventoId, request(30, new BigDecimal("80.50"), true), igrejaId);
 
         assertThat(existente.getVagas()).isEqualTo(30);
         assertThat(existente.getPreco()).isEqualByComparingTo("80.50");
@@ -111,7 +109,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        service.atualizarEvento(eventoId, request(null, null, null, null), igrejaId);
+        service.atualizarEvento(eventoId, request(null, null, null), igrejaId);
 
         assertThat(existente.getVagas()).isNull();
         assertThat(existente.getPreco()).isNull();
@@ -128,10 +126,10 @@ class EventoServiceCamposInscricaoTest {
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
-        when(inscricaoService.removerInscritosNaoElegiveis(eventoId, false, true)).thenReturn(3);
+        when(inscricaoService.removerInscritosNaoElegiveis(eventoId, false)).thenReturn(3);
 
         EventoResponse r = service.atualizarEvento(
-                eventoId, request(null, null, false, true), igrejaId);
+                eventoId, request(null, null, false), igrejaId);
 
         assertThat(r.inscricoesRemovidas()).isEqualTo(3);
     }
@@ -207,7 +205,7 @@ class EventoServiceCamposInscricaoTest {
                 .thenReturn(Optional.of(existente));
 
         assertThatThrownBy(() -> service.atualizarEvento(
-                eventoId, request(null, null, null, null), igrejaId))
+                eventoId, request(null, null, null), igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
                 .hasMessageContaining("em andamento");
     }
@@ -223,7 +221,7 @@ class EventoServiceCamposInscricaoTest {
                 .thenReturn(Optional.of(existente));
 
         assertThatThrownBy(() -> service.atualizarEvento(
-                eventoId, request(null, null, null, null), igrejaId))
+                eventoId, request(null, null, null), igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
                 .hasMessageContaining("encerrado");
     }
@@ -241,7 +239,7 @@ class EventoServiceCamposInscricaoTest {
         when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
 
         assertThatThrownBy(() -> service.atualizarEvento(
-                eventoId, request(9, null, null, null), igrejaId))
+                eventoId, request(9, null, null), igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
                 .hasMessageContaining("10");
         assertThat(existente.getVagas()).isEqualTo(20); // não mudou nada
@@ -258,7 +256,7 @@ class EventoServiceCamposInscricaoTest {
                 .thenReturn(Optional.of(existente));
         when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
 
-        service.atualizarEvento(eventoId, request(10, null, null, null), igrejaId);
+        service.atualizarEvento(eventoId, request(10, null, null), igrejaId);
 
         assertThat(existente.getVagas()).isEqualTo(10);
     }
@@ -274,7 +272,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        service.atualizarEvento(eventoId, request(null, null, null, null), igrejaId);
+        service.atualizarEvento(eventoId, request(null, null, null), igrejaId);
 
         assertThat(existente.getVagas()).isNull();
         verify(inscricaoService, never()).contarPessoasConfirmadas(any());

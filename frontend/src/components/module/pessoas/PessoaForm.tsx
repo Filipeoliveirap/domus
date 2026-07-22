@@ -11,6 +11,7 @@ import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { MinisterioInput } from '@/components/module/pessoas/MinisterioInput'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import styles from './PessoaForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -52,6 +53,8 @@ export function PessoaForm(props: PessoaFormProps) {
   const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
+  const nomeAtual = (watch('nome') as string | undefined) ?? ''
+  const fotoIdAtual = watch('fotoId') as string | null | undefined
 
   // Auto-preenchimento por CEP (ViaCEP). Nunca trava: erro/CEP inexistente só sinalizam.
   const { buscar, carregando: carregandoCep } = useBuscaCep()
@@ -84,6 +87,14 @@ export function PessoaForm(props: PessoaFormProps) {
             <div className={styles.secaoHeader}>
               <span className={styles.secaoIcone}><User size={20} /></span>
               <h2 className={styles.secaoTitulo}>Informações pessoais</h2>
+            </div>
+            <div className={styles.fotoWrap}>
+              <UploadFoto
+                valor={fotoIdAtual}
+                onChange={(id) => setValue('fotoId', id, { shouldDirty: true })}
+                formato="circulo"
+                nomeFallback={nomeAtual}
+              />
             </div>
             <div className={styles.grid2}>
               <div className={styles.spanFull}>

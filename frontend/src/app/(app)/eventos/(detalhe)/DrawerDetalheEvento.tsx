@@ -18,6 +18,7 @@ import {
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
+import { urlFoto } from '@/lib/urlFoto'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -170,8 +171,8 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
 
             {/* Imagem */}
             <div className={styles.imagemBloco}>
-              {evento.foto ? (
-                <img src={evento.foto} alt={evento.titulo} className={styles.imagem} />
+              {urlFoto(evento.fotoId, 'DISPLAY') ? (
+                <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagem} />
               ) : (
                 <div className={styles.imagemPlaceholder}>
                   <CalendarDays size={40} />

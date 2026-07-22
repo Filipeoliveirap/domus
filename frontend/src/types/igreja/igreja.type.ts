@@ -9,7 +9,7 @@ export interface IgrejaDetalhe {
   denominacao: string | null
   emailContato: string
   telefoneContato: string | null
-  logoUrl: string | null
+  logoFotoId: string | null
   endereco: Endereco | null
   /** Alimentam o card "Logs de atividade". Nulos enquanto ninguém tiver editado. */
   atualizadoEm: string | null
@@ -23,6 +23,6 @@ export interface AtualizarIgrejaRequest {
   denominacao?: string | null
   emailContato: string
   telefoneContato?: string | null
-  logoUrl?: string | null
+  logoFotoId?: string | null
   endereco?: Endereco | null
 }

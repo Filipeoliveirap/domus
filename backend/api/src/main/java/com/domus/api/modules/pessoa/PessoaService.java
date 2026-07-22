@@ -8,6 +8,8 @@ import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
@@ -36,6 +38,7 @@ public class PessoaService {
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
+    private final FotoService fotoService;
 
     @Transactional(readOnly = true)
     public java.util.List<String> listarBairros(UUID igrejaId) {
@@ -76,6 +79,8 @@ public class PessoaService {
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
+        Foto foto = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+
         Pessoa membro = Pessoa.builder()
                 .igreja(igreja)
                 .nome(normalizar(data.nome()))
@@ -88,6 +93,7 @@ public class PessoaService {
                 .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
                 .dataBatismo(data.dataBatismo())
+                .foto(foto)
                 .build();
 
         Pessoa salvo = membroRepository.save(membro);
@@ -145,6 +151,12 @@ public class PessoaService {
             }
         }
 
+        // Foto: resolve a NOVA antes de tocar no membro (valida que é da mesma igreja) e só
+        // grava a ANTIGA como candidata a remoção — nunca apaga antes de o membro apontar
+        // para a nova. Ver ordem completa logo após o save, mais abaixo.
+        Foto fotoAntiga = membro.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+
         membro.setNome(normalizar(data.nome()));
         membro.setEmail(emailNovo);
         membro.setTelefone(data.telefone());
@@ -155,8 +167,24 @@ public class PessoaService {
         membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
         membro.setDataBatismo(data.dataBatismo());
+        membro.setFoto(fotoNova);
 
         Pessoa salvo = membroRepository.save(membro);
+
+        // Remove a foto antiga só DEPOIS que a pessoa já aponta para a nova — antes, o
+        // ON DELETE RESTRICT recusaria (a FK ainda apontaria para ela).
+        //
+        // O apagamento do ARQUIVO é adiado para depois do commit dentro do FotoService: o
+        // bucket não participa de transação, e aqui ainda rodam outbox, reindexação e
+        // cancelamento de inscrição — qualquer um pode estourar. Se isso acontecesse com o
+        // arquivo já apagado, o rollback traria a linha de volta e a foto daria 404 para
+        // sempre.
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
 
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.PESSOA,

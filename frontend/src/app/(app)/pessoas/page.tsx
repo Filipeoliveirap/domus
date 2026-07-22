@@ -11,6 +11,7 @@ import type { Vinculo } from '@/types/pessoa.type'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/pessoaFormat'
+import { urlFoto } from '@/lib/urlFoto'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { PessoaResponse } from '@/types/pessoa.type'
 import styles from './page.module.css'
@@ -181,7 +182,14 @@ function PessoasConteudo() {
                   >
                     <td>
                       <div className={styles.celulaPessoa}>
-                        <span className={styles.avatar}>{iniciais(p.nome)}</span>
+                        <span className={styles.avatar}>
+                          {urlFoto(p.fotoId, 'THUMB') ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                            <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                          ) : (
+                            iniciais(p.nome)
+                          )}
+                        </span>
                         <div className={styles.pessoaInfo}>
                           <span className={styles.nome}>{p.nome}</span>
                           {p.email && <span className={styles.email}>{p.email}</span>}

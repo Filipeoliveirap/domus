@@ -4,6 +4,7 @@ import com.domus.api.modules.pessoa.EstadoCivil;
 import com.domus.api.modules.pessoa.Vinculo;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record PessoaRequestDTO(
         @NotBlank(message = "Nome é obrigatório")
@@ -32,5 +33,8 @@ public record PessoaRequestDTO(
         String observacoes,
 
         @Past(message = "A data de batismo deve ser uma data no passado.")
-        LocalDate dataBatismo
+        LocalDate dataBatismo,
+
+        /** Id da foto já enviada via {@code POST /fotos}; {@code null} = sem foto. */
+        UUID fotoId
 ) {}

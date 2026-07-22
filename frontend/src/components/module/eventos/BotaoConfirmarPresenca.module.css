@@ -55,6 +55,39 @@
   color: var(--color-primary);
 }
 
+/*
+  O feedback de marcar presença é o BOTÃO, não um aviso no canto: um pulo curto no ícone,
+  como curtir um post. O gesto é leve e a resposta tem que ser do mesmo tamanho.
+
+  Só na entrada em "ativo" (`.euVouAtivo .icone`), nunca ao desmarcar — animar a saída
+  daria ao "não vou" uma comemoração que ele não merece.
+*/
+.euVouAtivo .icone {
+  animation: pulo 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pulo {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35) rotate(-8deg); }
+  70%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+/*
+  Quem pediu menos movimento no sistema não recebe o pulo — a mudança de cor e de texto
+  já comunica o estado sozinha.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .euVouAtivo .icone {
+    animation: none;
+  }
+}
+
+/* O botão inteiro afunda de leve ao clicar — resposta imediata, antes da resposta do servidor. */
+.euVou:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
 /* ---- Estado inscrito ---- */
 
 .inscrito {

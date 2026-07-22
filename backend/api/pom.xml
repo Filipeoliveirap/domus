@@ -181,6 +181,23 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<!--
+						  Testes usam armazenamento EM MEMORIA: sem isto eles tentariam falar com o
+						  R2 de verdade — rede, credencial e lixo no bucket.
+
+						  Definido AQUI e nao num src/test/resources/application.properties porque
+						  aquele arquivo SUBSTITUI o principal em vez de complementar: criar um
+						  apagaria a configuracao de banco e derrubaria todo @SpringBootTest.
+						-->
+						<app.fotos.armazenamento>memoria</app.fotos.armazenamento>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

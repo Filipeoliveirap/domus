@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,18 +69,23 @@ public class ConsolidadoService {
     }
 
     private Map<UUID, Membros> agruparMembros(List<UUID> ids) {
-        // A consulta devolve uma linha por (igreja, vinculo); aqui viram os 2 números de cada igreja.
-        Map<UUID, long[]> acumulador = new HashMap<>();
+        // A consulta devolve uma linha por (igreja, vinculo); aqui viram os 2 números de cada
+        // igreja. Chave é o próprio enum Vinculo (EnumMap), não ordinal(): indexar por posição
+        // era um off-by-one esperando acontecer no dia em que um 3º vínculo for adicionado —
+        // o array teria tamanho 2 fixo e o índice do novo valor estouraria ou colidiria, sem
+        // o compilador acusar nada.
+        Map<UUID, Map<Vinculo, Long>> acumulador = new HashMap<>();
         for (var linha : repository.contarMembros(ids)) {
-            long[] contagens = acumulador.computeIfAbsent(linha.getIgrejaId(), k -> new long[2]);
+            Map<Vinculo, Long> contagens = acumulador.computeIfAbsent(
+                    linha.getIgrejaId(), k -> new EnumMap<>(Vinculo.class));
             Vinculo vinculo = Vinculo.valueOf(linha.getVinculo());
-            contagens[vinculo.ordinal()] += linha.getTotal();
+            contagens.merge(vinculo, linha.getTotal(), Long::sum);
         }
 
         Map<UUID, Membros> resultado = new HashMap<>();
-        acumulador.forEach((id, c) -> {
-            long membros = c[Vinculo.MEMBRO.ordinal()];
-            long congregantes = c[Vinculo.CONGREGANTE.ordinal()];
+        acumulador.forEach((id, contagens) -> {
+            long membros = contagens.getOrDefault(Vinculo.MEMBRO, 0L);
+            long congregantes = contagens.getOrDefault(Vinculo.CONGREGANTE, 0L);
             resultado.put(id, new Membros(membros + congregantes, membros, congregantes));
         });
         return resultado;

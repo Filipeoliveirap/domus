@@ -11,8 +11,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Endereço do membro como objeto de valor. É {@code @Embeddable}: as 7 colunas vivem na
- * própria tabela {@code membro} (sem JOIN), mas o código trata endereço como um conceito só.
+ * Endereço da pessoa como objeto de valor. É {@code @Embeddable}: as 7 colunas vivem na
+ * própria tabela {@code pessoa} (sem JOIN), mas o código trata endereço como um conceito só.
  * Tudo nulável — um membro pode ter endereço parcial ou nenhum.
  */
 @Embeddable

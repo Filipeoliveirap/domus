@@ -64,7 +64,7 @@ public class RedisConfig implements CachingConfigurer {
         Jackson2JsonRedisSerializer<Object> serMembros =
                 new Jackson2JsonRedisSerializer<>(mapper, tipoMembros);
 
-        RedisCacheConfiguration membrosConfig = base
+        RedisCacheConfiguration pessoasConfig = base
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMembros));
 
@@ -99,7 +99,7 @@ public class RedisConfig implements CachingConfigurer {
 
         caches.put("igreja", igrejaConfig);
         caches.put("usuarios", usuariosConfig);
-        caches.put("membros", membrosConfig);
+        caches.put("pessoas", pessoasConfig);
         caches.put("eventos", eventosConfig);
         caches.put("categorias", categoriasConfig);
         caches.put("movimentacoes", movimentacoesConfig);

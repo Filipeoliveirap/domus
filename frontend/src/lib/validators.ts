@@ -98,11 +98,7 @@ export const pessoaSchema = z.object({
 })
 
 export const concederAcessoSchema = z.object({
-  // NOTA: `Role` (src/types/usuario.types.ts) ainda usa o literal 'MEMBRO' — a role só
-  // foi renomeada para ACESSO_COMUM no backend (ver design doc), não no front. Fora do
-  // escopo desta rename (membro→pessoa); mantido igual ao tipo `Role` para não quebrar
-  // o tsc.
-  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'MEMBRO'], {
+  role: z.enum(['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'], {
     message: 'Selecione um perfil para o usuário',
   }),
   // Só usado quando a pessoa ainda não tem e-mail (o modal pede um).

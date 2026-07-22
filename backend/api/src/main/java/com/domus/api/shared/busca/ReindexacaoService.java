@@ -45,8 +45,8 @@ public class ReindexacaoService {
         ops.createWithMapping();
     }
 
-    private final PessoaRepository membroRepository;
-    private final PessoaSearchRepository membroSearchRepository;
+    private final PessoaRepository pessoaRepository;
+    private final PessoaSearchRepository pessoaSearchRepository;
     private final EventoRepository eventoRepository;
     private final EventoSearchRepository eventoSearchRepository;
     private final UsuarioRepository usuarioRepository;
@@ -60,7 +60,7 @@ public class ReindexacaoService {
     public Map<String, Long> reindexarTudo() {
         Map<String, Long> resultado = new HashMap<>();
 
-        resultado.put("membros", reindexarMembros());
+        resultado.put("pessoas", reindexarPessoas());
         resultado.put("eventos", reindexarEventos());
         resultado.put("usuarios", reindexarUsuarios());
         resultado.put("movimentacoes", reindexarMovimentacoes());
@@ -70,13 +70,13 @@ public class ReindexacaoService {
         return resultado;
     }
 
-    private long reindexarMembros() {
+    private long reindexarPessoas() {
         recriarIndice(PessoaDocument.class);
-        var docs = membroRepository.findAll().stream()
+        var docs = pessoaRepository.findAll().stream()
                 .map(PessoaDocument::de)
                 .toList();
-        membroSearchRepository.saveAll(docs);
-        log.info("Reindexados {} membros.", docs.size());
+        pessoaSearchRepository.saveAll(docs);
+        log.info("Reindexadas {} pessoas.", docs.size());
         return docs.size();
     }
 

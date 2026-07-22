@@ -36,7 +36,7 @@ public class PessoaDocument {
     private String ministerio;
 
     @Field(type = FieldType.Keyword)
-    private String status;
+    private String vinculo;
 
     public static PessoaDocument de(Pessoa membro) {
         PessoaDocument doc = new PessoaDocument();
@@ -46,7 +46,7 @@ public class PessoaDocument {
         doc.setEmail(membro.getEmail());
         doc.setTelefone(membro.getTelefone());
         doc.setMinisterio(membro.getMinisterio());
-        doc.setStatus(membro.getVinculo() != null ? membro.getVinculo().name() : null);
+        doc.setVinculo(membro.getVinculo() != null ? membro.getVinculo().name() : null);
         return doc;
     }
 }

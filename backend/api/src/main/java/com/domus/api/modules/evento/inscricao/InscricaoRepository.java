@@ -41,6 +41,14 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     List<InscricaoEvento> findByPessoaIdAndStatus(UUID pessoaId, StatusInscricao status);
 
     /**
+     * Inscrições CONFIRMADAS de uma pessoa em eventos {@code exclusivoMembros} — usada quando
+     * o vínculo da pessoa deixa de ser MEMBRO, para cancelar automaticamente onde ela não é
+     * mais elegível (ver {@link InscricaoService#cancelarInscricoesEmEventosExclusivos}).
+     */
+    List<InscricaoEvento> findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(
+            UUID pessoaId, StatusInscricao status);
+
+    /**
      * Ids, dentre {@code pessoaIds}, que já têm inscrição CONFIRMADA no evento — usada para
      * validar a inscrição em lote ANTES de inserir qualquer linha (tudo-ou-nada), permitindo
      * uma mensagem que nomeia quantos já estavam inscritos.

@@ -27,7 +27,7 @@ public class DashboardService {
 
     private static final int LIMITE = 5;
 
-    private final PessoaRepository membroRepository;
+    private final PessoaRepository pessoaRepository;
     private final EventoRepository eventoRepository;
     private final RelatorioRepository relatorioRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
@@ -40,8 +40,8 @@ public class DashboardService {
         LocalDate inicioSemana = hoje.with(DayOfWeek.MONDAY);
         LocalDate fimSemana = inicioSemana.plusDays(6);
 
-        long totalMembros = membroRepository.countByIgrejaId(igrejaId);
-        long novosMembros = membroRepository.countByIgrejaIdAndCreatedAtAfter(igrejaId, inicioMes.atStartOfDay());
+        long totalMembros = pessoaRepository.countByIgrejaId(igrejaId);
+        long novosMembros = pessoaRepository.countByIgrejaIdAndCreatedAtAfter(igrejaId, inicioMes.atStartOfDay());
 
         long eventosMes = eventoRepository.countByIgrejaIdAndInicioEmBetween(
                 igrejaId, inicioMes.atStartOfDay(), fimMes.atTime(LocalTime.MAX));

@@ -398,6 +398,34 @@ public class InscricaoService {
         return removidos;
     }
 
+    /**
+     * Cancela as inscrições CONFIRMADAS de uma pessoa em eventos {@code exclusivoMembros},
+     * chamada quando o vínculo dela deixa de ser MEMBRO (ver {@link
+     * com.domus.api.modules.pessoa.PessoaService#atualizarMembro}).
+     *
+     * <p>Sem isto, alguém que perde o vínculo MEMBRO continuaria confirmado e ocupando vaga
+     * num evento exclusivo para membros — a mesma inscrição que {@link #validarElegibilidade}
+     * recusaria se fosse tentada de novo. Reusa {@link #cancelarInterno}, então os
+     * acompanhantes são removidos junto, igual a qualquer outro cancelamento.
+     *
+     * @return quantas inscrições foram canceladas.
+     */
+    @Transactional
+    public int cancelarInscricoesEmEventosExclusivos(UUID pessoaId) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository
+                .findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(pessoaId, StatusInscricao.CONFIRMADA);
+
+        for (InscricaoEvento inscricao : inscricoes) {
+            cancelarInterno(inscricao);
+        }
+
+        if (!inscricoes.isEmpty()) {
+            log.info("Inscrições canceladas por perda de vínculo MEMBRO. pessoa_id={}, canceladas={}",
+                    pessoaId, inscricoes.size());
+        }
+        return inscricoes.size();
+    }
+
     /** Lista de inscritos confirmados + contagem de vagas restantes. */
     @Transactional(readOnly = true)
     public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId) {

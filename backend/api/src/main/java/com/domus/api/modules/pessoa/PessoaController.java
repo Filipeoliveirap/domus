@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/membros")
+@RequestMapping("/pessoas")
 @RequiredArgsConstructor
 public class PessoaController {
 
-    private final PessoaService membroService;
+    private final PessoaService pessoaService;
     private final UsuarioAutenticado usuarioAutenticado;
 
     @GetMapping
@@ -29,19 +29,19 @@ public class PessoaController {
             @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(
-                membroService.listarMembros(igrejaId, q, pageable, podeVerDadosSensiveis(), vinculo));
+                pessoaService.listarMembros(igrejaId, q, pageable, podeVerDadosSensiveis(), vinculo));
     }
 
     @GetMapping("/bairros")
     public ResponseEntity<java.util.List<String>> bairros() {
-        return ResponseEntity.ok(membroService.listarBairros(usuarioAutenticado.getIgrejaId()));
+        return ResponseEntity.ok(pessoaService.listarBairros(usuarioAutenticado.getIgrejaId()));
     }
 
     @PostMapping
     public ResponseEntity<PessoaResponse> cadastrar(
             @Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        PessoaResponse response = membroService.cadastrarMembro(data, igrejaId);
+        PessoaResponse response = pessoaService.cadastrarMembro(data, igrejaId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -50,13 +50,13 @@ public class PessoaController {
             @PathVariable UUID id,
             @Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(membroService.atualizarMembro(id, data, igrejaId));
+        return ResponseEntity.ok(pessoaService.atualizarMembro(id, data, igrejaId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PessoaResponse> buscarPorId(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(membroService.buscarPorId(id, igrejaId, podeVerDadosSensiveis()));
+        return ResponseEntity.ok(pessoaService.buscarPorId(id, igrejaId, podeVerDadosSensiveis()));
     }
 
     /**
@@ -73,7 +73,7 @@ public class PessoaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        membroService.arquivarMembro(id, igrejaId);
+        pessoaService.arquivarMembro(id, igrejaId);
         return ResponseEntity.noContent().build();
     }
 }

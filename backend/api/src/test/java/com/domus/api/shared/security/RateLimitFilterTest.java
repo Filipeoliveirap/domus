@@ -53,7 +53,7 @@ class RateLimitFilterTest {
 
     @Test
     void abaixoDoLimite_deixaPassar() throws Exception {
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         incrementaPara("rl:global:", 1L);
 
         filtro(100, 10, false).doFilter(request, response, chain);
@@ -64,7 +64,7 @@ class RateLimitFilterTest {
 
     @Test
     void acimaDoLimiteGlobal_bloqueiaCom429() throws Exception {
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         incrementaPara("rl:global:", 101L);
 
         filtro(100, 10, false).doFilter(request, response, chain);
@@ -88,7 +88,7 @@ class RateLimitFilterTest {
 
     @Test
     void rotaNaoAuth_naoContaNoBaldeDeAuth() throws Exception {
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         incrementaPara("rl:global:", 1L);
 
         filtro(100, 10, false).doFilter(request, response, chain);
@@ -109,7 +109,7 @@ class RateLimitFilterTest {
 
     @Test
     void trustForwardedFor_usaPrimeiroIpDoHeader() throws Exception {
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         when(request.getHeader("X-Forwarded-For")).thenReturn("9.9.9.9, 10.0.0.1");
         incrementaPara("rl:global:", 1L);
 
@@ -122,7 +122,7 @@ class RateLimitFilterTest {
     void comTrust_prefereCfConnectingIp() throws Exception {
         // Atrás da Cloudflare, o CF-Connecting-IP é o IP real do cliente, sem a ambiguidade
         // do X-Forwarded-For (que pode ter itens forjados antes de chegar na Cloudflare).
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         when(request.getHeader("CF-Connecting-IP")).thenReturn("9.9.9.9");
         when(request.getHeader("X-Forwarded-For")).thenReturn("6.6.6.6, 1.1.1.1");
         incrementaPara("rl:global:", 1L);
@@ -135,7 +135,7 @@ class RateLimitFilterTest {
     @Test
     void semTrust_ignoraOsHeadersEUsaOSocket() throws Exception {
         // Sem proxy confiável, os headers seriam forjáveis: usa o IP do socket (getRemoteAddr).
-        when(request.getRequestURI()).thenReturn("/membros");
+        when(request.getRequestURI()).thenReturn("/pessoas");
         lenient().when(request.getHeader("CF-Connecting-IP")).thenReturn("9.9.9.9");
         incrementaPara("rl:global:", 1L);
 

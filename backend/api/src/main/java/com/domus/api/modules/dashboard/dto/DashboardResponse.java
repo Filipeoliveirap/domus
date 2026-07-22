@@ -9,13 +9,13 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record DashboardResponse(
-        Membros membros,
+        Pessoas pessoas,
         Eventos eventos,
         Financeiro financeiro,
         List<MovimentacaoResponse> movimentacoesRecentes,
         List<EventoResumoDTO> proximosEventos
 ) {
-    public record Membros(long total, long novosMes) {}
+    public record Pessoas(long total, long novosMes) {}
 
     public record Eventos(long mes, long semana) {}
 

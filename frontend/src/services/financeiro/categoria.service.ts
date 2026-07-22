@@ -38,4 +38,11 @@ export const categoriasService = {
   arquivar: async (id: string): Promise<void> => {
     await api.delete(Endpoints.categorias.porId(id))
   },
+
+  // A11/rodada 3: quantos lançamentos usam a categoria — consultado só ao abrir a edição,
+  // para decidir se pede confirmação de que a mudança vale para todos eles.
+  contarMovimentacoes: async (id: string): Promise<number> => {
+    const { data } = await api.get<{ total: number }>(Endpoints.categorias.contagemMovimentacoes(id))
+    return data.total
+  },
 }

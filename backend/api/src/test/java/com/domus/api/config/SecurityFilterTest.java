@@ -1,7 +1,7 @@
 package com.domus.api.config;
 
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.membro.Membro;
+import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -52,7 +52,7 @@ class SecurityFilterTest {
         Usuario usuario = Usuario.builder()
                 .id(usuarioId)
                 .ativo(true)
-                .membro(Membro.builder().nome("Ana").build())
+                .pessoa(Pessoa.builder().nome("Ana").build())
                 .role(Role.builder().nome("ADMIN_IGREJA").build())
                 .igreja(Igreja.builder().id(igrejaId).nome("Igreja Central").build())
                 .build();
@@ -79,8 +79,8 @@ class SecurityFilterTest {
         Usuario desativado = Usuario.builder()
                 .id(usuarioId)
                 .ativo(false)
-                .membro(Membro.builder().nome("Bia").build())
-                .role(Role.builder().nome("MEMBRO").build())
+                .pessoa(Pessoa.builder().nome("Bia").build())
+                .role(Role.builder().nome("ACESSO_COMUM").build())
                 .igreja(Igreja.builder().id(UUID.randomUUID()).nome("Igreja Central").build())
                 .build();
 

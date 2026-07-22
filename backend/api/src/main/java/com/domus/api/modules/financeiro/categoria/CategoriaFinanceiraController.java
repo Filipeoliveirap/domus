@@ -56,6 +56,14 @@ public class CategoriaFinanceiraController {
         service.arquivar(id, igrejaId);
     }
 
+    /** A11: contagem de lançamentos da categoria, para o front decidir se pede confirmação
+     *  antes de salvar a edição. Não bloqueia nada aqui — é só informação. */
+    @GetMapping("/{id}/contagem-movimentacoes")
+    public ContagemMovimentacoesResponse contarMovimentacoes(@PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return service.contarMovimentacoes(id, igrejaId);
+    }
+
     @GetMapping("/todas")
     public List<CategoriaResponse> listarTodas() {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

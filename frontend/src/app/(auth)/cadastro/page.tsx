@@ -19,7 +19,7 @@ export default function CadastroPage() {
     register2, handleSubmit2, errors2, passo2Incompleto, watch2,
     erroGeral, isLoading, onSubmit,
     googleData, onGoogleAuth, onGoogleError, onSubmitGoogle,
-    dadosSucesso, irParaMembros, irParaPerfilIgreja, irParaMeuPerfil,
+    dadosSucesso, irParaPessoas, irParaPerfilIgreja, irParaMeuPerfil,
       irParaPainelInicial,
   } = useRegistrarIgreja()
 
@@ -81,11 +81,11 @@ export default function CadastroPage() {
             <button
               type="button"
               className={`${styles.atalho} ${styles.atalhoPrimario}`}
-              onClick={irParaMembros}
+              onClick={irParaPessoas}
             >
               <span className={styles.atalhoIcone}><Users size={20} /></span>
               <span className={styles.atalhoTexto}>
-                <strong>Cadastrar membros</strong>
+                <strong>Cadastrar pessoas</strong>
                 <span>Comece adicionando as pessoas da sua comunidade.</span>
               </span>
               <ArrowRight size={16} className={styles.atalhoSeta} />

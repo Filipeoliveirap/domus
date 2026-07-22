@@ -68,7 +68,7 @@ class AuthenticationControllerCookieTest {
     void googleLoginTambemEmiteCookies() {
         UUID id = UUID.randomUUID();
         when(googleAuthService.login("id-token-do-google")).thenReturn(new LoginResponseDTO(
-                id, "Bia", "MEMBRO", UUID.randomUUID(), "Igreja Central", "jwt-g", "refresh-g"));
+                id, "Bia", "ACESSO_COMUM", UUID.randomUUID(), "Igreja Central", "jwt-g", "refresh-g"));
 
         ResponseEntity<SessaoDTO> resposta =
                 controller().googleLogin(new GoogleLoginDTO("id-token-do-google"));

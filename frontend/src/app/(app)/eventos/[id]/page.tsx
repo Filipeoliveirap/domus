@@ -8,6 +8,7 @@ import { useEventoForm } from '@/hooks/evento/useEventoForm'
 import { EventoForm } from '@/components/module/eventos/EventoForm'
 import styles from '@/components/module/eventos/EventoForm.module.css'
 import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarEventos } from '@/lib/permissoes'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { SkeletonEventoForm } from './SkeletonEventoForm'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -17,7 +18,7 @@ export default function EditarEventoPage() {
   const id = params.id as string
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = role === 'ADMIN_IGREJA' || role === 'LIDER'
+  const autorizado = podeGerenciarEventos(role)
 
   const { data: evento, isPending, isError, refetch } = useEvento(id)
   const form = useEventoForm({ eventoId: id, eventoInicial: evento })

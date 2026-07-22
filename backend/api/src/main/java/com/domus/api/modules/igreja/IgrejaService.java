@@ -3,15 +3,14 @@ package com.domus.api.modules.igreja;
 import com.domus.api.config.TokenService;
 import com.domus.api.shared.security.RefreshTokenService;
 import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
-import com.domus.api.modules.igreja.DTO.IgrejaDTO;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
-import com.domus.api.modules.membro.DTO.EnderecoDTO;
-import com.domus.api.modules.membro.Endereco;
-import com.domus.api.modules.membro.Membro;
-import com.domus.api.modules.membro.MembroRepository;
-import com.domus.api.modules.membro.StatusMembro;
+import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
+import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -28,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import com.domus.api.shared.security.Perfil;
 
 @Slf4j
 @Service
@@ -40,7 +40,7 @@ public class IgrejaService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final RefreshTokenService refreshTokenService;
-    private final MembroRepository  membroRepository;
+    private final PessoaRepository  membroRepository;
     private final CacheManager cacheManager;
 
     @Transactional
@@ -98,20 +98,23 @@ public class IgrejaService {
         igrejaRepository.save(igreja);
         log.info("Igreja criada. id={}, nome={}", igreja.getId(), igreja.getNome());
 
-        Role roleAdmin = roleRepository.findByNome("ADMIN_IGREJA")
+        Role roleAdmin = roleRepository.findByNome(Perfil.ADMIN_IGREJA.name())
                 .orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
 
-        Membro membroAdmin = Membro.builder()
+        // Quem cadastra a própria igreja quase sempre é membro batizado — não há opção
+        // neutra aqui (CONGREGANTE afirmaria o contrário, na direção menos provável).
+        // Se a exceção aparecer, corrige-se depois em dois cliques no cadastro de pessoa.
+        Pessoa membroAdmin = Pessoa.builder()
                 .igreja(igreja)
                 .nome(com.domus.api.shared.util.TextoUtil.capitalizar(dados.nomeAdmin()))
                 .email(dados.emailAdmin())
-                .status(StatusMembro.ATIVO)
+                .vinculo(Vinculo.MEMBRO)
                 .build();
         membroRepository.save(membroAdmin);
 
         Usuario admin = Usuario.builder()
                 .igreja(igreja)
-                .membro(membroAdmin)
+                .pessoa(membroAdmin)
                 .senhaHash(dados.senhaHashOuNull())
                 .googleSub(dados.googleSubOuNull())
                 .ativo(true)
@@ -123,18 +126,17 @@ public class IgrejaService {
         return admin;
     }
 
-    @Cacheable(value = "igreja", key = "#id")
-    public IgrejaDTO buscarPorId(UUID id) {
-        log.info("Buscando igreja no banco. id={}", id);
-        Igreja igreja = igrejaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
-        return IgrejaDTO.from(igreja);
-    }
-
     /**
-     * A igreja inteira para a tela de Configurações. Não é cacheado: é a tela de edição,
-     * onde ver dado velho logo depois de salvar seria pior do que a ida ao banco.
+     * A igreja inteira para a tela de Configurações (e para qualquer outra leitura da própria
+     * igreja). Cacheado por {@code igrejaId} — que vem do JWT, nunca do corpo da requisição,
+     * então não existe chave para "roubar" a igreja de outra pessoa (A10: o antigo
+     * {@code GET /igrejas/{id}} foi removido por isso, e o cache não ressuscita esse risco
+     * porque não aceita um id arbitrário como parâmetro).
+     *
+     * <p>Invalidado em {@link #atualizar}, senão a tela mostraria dado velho logo depois de
+     * editar as Configurações.
      */
+    @Cacheable(value = "igreja", key = "#igrejaId")
     @Transactional(readOnly = true)
     public IgrejaDetalheDTO buscarDetalhe(UUID igrejaId) {
         Igreja igreja = igrejaRepository.findById(igrejaId)
@@ -185,8 +187,8 @@ public class IgrejaService {
     }
 
     private String nomeDoAutor(Usuario usuario) {
-        if (usuario == null || usuario.getMembro() == null) return null;
-        return usuario.getMembro().getNome();
+        if (usuario == null || usuario.getPessoa() == null) return null;
+        return usuario.getPessoa().getNome();
     }
 
     private Endereco paraEndereco(EnderecoDTO dto) {

@@ -7,7 +7,7 @@ import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepos
 import com.domus.api.modules.financeiro.relatorio.RelatorioProjections;
 import com.domus.api.modules.financeiro.relatorio.RelatorioRepository;
 import com.domus.api.modules.inicio.dto.EventoResumoDTO;
-import com.domus.api.modules.membro.MembroRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ public class DashboardService {
 
     private static final int LIMITE = 5;
 
-    private final MembroRepository membroRepository;
+    private final PessoaRepository pessoaRepository;
     private final EventoRepository eventoRepository;
     private final RelatorioRepository relatorioRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
@@ -40,8 +40,8 @@ public class DashboardService {
         LocalDate inicioSemana = hoje.with(DayOfWeek.MONDAY);
         LocalDate fimSemana = inicioSemana.plusDays(6);
 
-        long totalMembros = membroRepository.countByIgrejaId(igrejaId);
-        long novosMembros = membroRepository.countByIgrejaIdAndCreatedAtAfter(igrejaId, inicioMes.atStartOfDay());
+        long totalMembros = pessoaRepository.countByIgrejaId(igrejaId);
+        long novosMembros = pessoaRepository.countByIgrejaIdAndCreatedAtAfter(igrejaId, inicioMes.atStartOfDay());
 
         long eventosMes = eventoRepository.countByIgrejaIdAndInicioEmBetween(
                 igrejaId, inicioMes.atStartOfDay(), fimMes.atTime(LocalTime.MAX));
@@ -49,7 +49,7 @@ public class DashboardService {
                 igrejaId, inicioSemana.atStartOfDay(), fimSemana.atTime(LocalTime.MAX));
 
         RelatorioProjections.ResumoAgregado resumo =
-                relatorioRepository.agregarResumo(igrejaId, inicioMes, fimMes);
+                relatorioRepository.agregarResumo(igrejaId, inicioMes, fimMes, null);
         BigDecimal entradas = resumo.getTotalEntradas();
         BigDecimal saidas = resumo.getTotalSaidas();
         BigDecimal saldo = entradas.subtract(saidas);
@@ -63,7 +63,7 @@ public class DashboardService {
                         .stream().map(EventoResumoDTO::from).toList();
 
         return new DashboardResponse(
-                new DashboardResponse.Membros(totalMembros, novosMembros),
+                new DashboardResponse.Pessoas(totalMembros, novosMembros),
                 new DashboardResponse.Eventos(eventosMes, eventosSemana),
                 new DashboardResponse.Financeiro(entradas, saidas, saldo),
                 recentes,

@@ -22,9 +22,12 @@ const VINCULO_OPTIONS = [
   { value: 'CONGREGANTE', titulo: 'Congregante', descricao: 'Frequenta a igreja, não é batizado.' },
 ]
 
+// Sem `descricao`: "Homem" e "Mulher" se explicam sozinhos, e o componente já trata a
+// ausência. O campo é opcional no cadastro — serve para restringir inscrição em evento
+// ("encontro de mulheres"), então quem não preencher simplesmente não é filtrado por ele.
 const SEXO_OPTIONS = [
-  { value: 'HOMEM', titulo: 'Homem', descricao: '' },
-  { value: 'MULHER', titulo: 'Mulher', descricao: '' },
+  { value: 'HOMEM', titulo: 'Homem' },
+  { value: 'MULHER', titulo: 'Mulher' },
 ]
 
 const ESTADO_CIVIL_OPTIONS = [

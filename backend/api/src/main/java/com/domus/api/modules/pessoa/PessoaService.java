@@ -7,6 +7,7 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
+import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
@@ -31,6 +32,7 @@ public class PessoaService {
     private final PessoaRepository membroRepository;
     private final IgrejaRepository igrejaRepository;
     private final UsuarioService  usuarioService;
+    private final InscricaoService inscricaoService;
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
@@ -41,7 +43,7 @@ public class PessoaService {
     }
 
     @Cacheable(
-            value = "membros",
+            value = "pessoas",
             key = "T(com.domus.api.config.redis.CacheKeys).pessoas(#igrejaId, #q, #pageable, #podeVerDadosSensiveis, #vinculo)"
     )
     @Transactional(readOnly = true)
@@ -69,6 +71,8 @@ public class PessoaService {
             }
         }
 
+        validarDataBatismo(data);
+
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
@@ -94,10 +98,24 @@ public class PessoaService {
                 igrejaId
         );
         log.info("Pessoa cadastrado. id={}, Igreja_id={}", salvo.getId(), igrejaId);
-        cacheEvictor.evictPorIgreja("membros", igrejaId);
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
         return PessoaResponse.from(salvo, aviso);
+    }
+
+    /**
+     * Data de batismo só faz sentido para quem TEM o vínculo MEMBRO (batizado, por definição
+     * — ver design doc). Rejeita em vez de zerar em silêncio: quem manda {@code dataBatismo}
+     * num CONGREGANTE está com um bug no cliente (a UI já esconde o campo nesse caso) ou
+     * tentando registrar direto via API — nos dois casos, o chamador precisa de um erro que
+     * ele consiga agir, não de um campo que some sem aviso na resposta.
+     */
+    private void validarDataBatismo(PessoaRequestDTO data) {
+        if (data.vinculo() != Vinculo.MEMBRO && data.dataBatismo() != null) {
+            throw new BusinessException("DATA_BATISMO_INVALIDA",
+                    "Data de batismo só é válida para pessoas com vínculo MEMBRO.");
+        }
     }
 
     private String normalizarEmail(String email) {
@@ -110,7 +128,10 @@ public class PessoaService {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
+        validarDataBatismo(data);
+
         String nomeAntigo = membro.getNome();
+        Vinculo vinculoAntigo = membro.getVinculo();
 
         String emailNovo = normalizarEmail(data.email());
         if (emailNovo != null && !emailNovo.equals(membro.getEmail())) {
@@ -150,7 +171,17 @@ public class PessoaService {
             reindexacaoMovimentacaoService.reindexarPorMembro(membro.getId(), igrejaId);
         }
 
-        cacheEvictor.evictPorIgreja("membros", igrejaId);
+        // Perdeu o vínculo MEMBRO (ex.: virou CONGREGANTE): quem só é elegível a evento
+        // exclusivo_membros por SER membro não pode continuar confirmado nele — mesma regra
+        // de validarElegibilidade em InscricaoService, aplicada aqui porque a mudança de
+        // vínculo não passa pelo fluxo de atualização de evento (que já cobre o caso
+        // "evento virou exclusivo"). Reusa cancelarInterno via cancelarInscricoesEmEventosExclusivos,
+        // então os acompanhantes vão junto, igual a qualquer outro cancelamento.
+        if (vinculoAntigo == Vinculo.MEMBRO && membro.getVinculo() != Vinculo.MEMBRO) {
+            inscricaoService.cancelarInscricoesEmEventosExclusivos(membro.getId());
+        }
+
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
         log.info("Pessoa atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
@@ -193,7 +224,7 @@ public class PessoaService {
                 membro.getId(),
                 igrejaId
         );
-        cacheEvictor.evictPorIgreja("membros", igrejaId);
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
     }
 
     @Transactional(readOnly = true)

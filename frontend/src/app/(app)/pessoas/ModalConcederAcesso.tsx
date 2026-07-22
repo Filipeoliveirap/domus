@@ -14,9 +14,7 @@ import styles from './ModalConcederAcesso.module.css'
 const ROLES = [
   { value: 'ADMIN_IGREJA', titulo: 'Administrador', descricao: 'Controle total do sistema', icone: ShieldCheck },
   { value: 'LIDER', titulo: 'Líder', descricao: 'Gestão de eventos e visualização de pessoas', icone: Users },
-  // role ainda é 'MEMBRO' no contrato do front (ver nota em lib/validators.ts) — o rótulo
-  // exibido já reflete o novo nome (Acesso comum) para não confundir o usuário.
-  { value: 'MEMBRO', titulo: 'Acesso comum', descricao: 'Acesso a pessoas e eventos', icone: User },
+  { value: 'ACESSO_COMUM', titulo: 'Acesso comum', descricao: 'Vê pessoas e eventos, e se inscreve. Sem gestão.', icone: User },
 ] as const
 
 export function ModalConcederAcesso({
@@ -38,7 +36,7 @@ export function ModalConcederAcesso({
     formState: { errors },
   } = useForm<ConcederAcessoFormInput, unknown, ConcederAcessoFormData>({
     resolver: zodResolver(concederAcessoSchema),
-    defaultValues: { role: 'MEMBRO', email: '' },
+    defaultValues: { role: 'ACESSO_COMUM', email: '' },
   })
 
   const roleSelecionada = watch('role')

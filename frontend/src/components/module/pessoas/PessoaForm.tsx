@@ -165,13 +165,11 @@ export function PessoaForm(props: PessoaFormProps) {
             <StatusCards label="VÍNCULO" options={VINCULO_OPTIONS}
               selecionado={vinculoAtual} {...register('vinculo')} />
 
-            <div className={styles.ministerioWrap}>
-              <span className={styles.labelMinisterio}>MINISTÉRIO</span>
-              <MinisterioInput id="ministerio" value={ministerioAtual}
-                error={errors.ministerio?.message} registerProps={register('ministerio')}
-                onSelecionarSugestao={(valor) => setValue('ministerio', valor, { shouldValidate: true })} />
-            </div>
-
+            {/*
+              A data de batismo vem logo DEPOIS do vínculo, não no fim da seção: ela só
+              existe por causa dele (aparece ao marcar Membro), e um campo que surge longe
+              do que o fez aparecer não é lido como consequência daquela escolha.
+            */}
             {vinculoAtual === 'MEMBRO' && (
               <div className={styles.batismoWrap}>
                 <CampoData id="dataBatismo" label="DATA DE BATISMO"
@@ -180,6 +178,13 @@ export function PessoaForm(props: PessoaFormProps) {
                 <span className={styles.campoHint}>Opcional</span>
               </div>
             )}
+
+            <div className={styles.ministerioWrap}>
+              <span className={styles.labelMinisterio}>MINISTÉRIO</span>
+              <MinisterioInput id="ministerio" value={ministerioAtual}
+                error={errors.ministerio?.message} registerProps={register('ministerio')}
+                onSelecionarSugestao={(valor) => setValue('ministerio', valor, { shouldValidate: true })} />
+            </div>
 
             <div className={styles.infoBox}>
               <Info size={18} className={styles.infoIcon} />

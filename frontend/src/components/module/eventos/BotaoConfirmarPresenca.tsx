@@ -45,8 +45,10 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
   const [mostrarModalPagamento, setMostrarModalPagamento] = useState(false)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
-  const inscrever = useInscrever(eventoId)
-  const cancelar = useCancelarInscricao()
+  // No modo "Eu vou" (evento sem inscrição prévia) o feedback é o botão mudando, não um
+  // toast: a interação é do peso de uma curtida.
+  const inscrever = useInscrever(eventoId, !requerInscricao)
+  const cancelar = useCancelarInscricao(!requerInscricao)
 
   const eventoEncerrado = new Date(inicioEm) < new Date()
   const semVagas = vagasRestantes !== null && vagasRestantes <= 0
@@ -99,7 +101,7 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
         disabled={pendente}
         aria-pressed={marcado}
       >
-        <ThumbsUp size={15} aria-hidden="true" />
+        <ThumbsUp size={15} className={styles.icone} aria-hidden="true" />
         {marcado ? 'Você vai' : 'Eu vou'}
       </button>
     )

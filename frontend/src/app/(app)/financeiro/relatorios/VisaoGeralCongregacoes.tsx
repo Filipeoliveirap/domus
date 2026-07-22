@@ -78,7 +78,12 @@ export function VisaoGeralCongregacoes({
   return (
     <div className={styles.container}>
       <section className={styles.blocoFamilia}>
-        <h2 className={styles.tituloBloco}>Família (consolidado)</h2>
+        {/*
+          "Família (consolidado)" era jargão nosso: "família" é como o CÓDIGO chama o
+          conjunto sede + congregações, não como a igreja fala. "Todas as igrejas" diz o
+          que o número é sem exigir que a pessoa aprenda o vocabulário do sistema.
+        */}
+        <h2 className={styles.tituloBloco}>Todas as igrejas</h2>
         <Numeros totais={data.familia} />
       </section>
 

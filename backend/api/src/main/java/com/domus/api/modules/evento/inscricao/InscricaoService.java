@@ -210,14 +210,14 @@ public class InscricaoService {
     }
 
     private void validarElegibilidade(Evento evento, Pessoa membro) {
-        // Exclusivo para membros barra quem não tem vínculo MEMBRO com a igreja (batizado).
-        // CONGREGANTE absorveu o antigo VISITANTE e o antigo INATIVO (que hoje é arquivamento).
+        // Exclusivo para membros barra quem não tem vínculo MEMBRO com a igreja. No modelo
+        // novo "só batizados" e "só membros" são a MESMA pergunta — MEMBRO já significa
+        // batizado — e não existe mais "inativo" para excluir (quem parou de frequentar é
+        // arquivado e some de toda lista). Por isso uma condição só, não duas.
         if (evento.isExclusivoMembros() && membro.getVinculo() != Vinculo.MEMBRO) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros da igreja.");
         }
-        // exclusivoBatizados: campo/coluna removidos do banco na Task 3; a checagem
-        // correspondente sai daqui até a Task 6 tirar isExclusivoBatizados do contrato da API.
     }
 
     /**
@@ -362,10 +362,9 @@ public class InscricaoService {
     }
 
     /**
-     * Ao restringir um evento (ligar {@code exclusivoMembros} e/ou {@code exclusivoBatizados}),
-     * cancela automaticamente quem já estava confirmado mas não se qualifica mais — mesma regra
-     * de {@link #validarElegibilidade}, e mesmo cancelamento de {@link #cancelarInterno} (leva
-     * os convidados junto).
+     * Ao restringir um evento (ligar {@code exclusivoMembros}), cancela automaticamente quem já
+     * estava confirmado mas não se qualifica mais — mesma regra de {@link #validarElegibilidade},
+     * e mesmo cancelamento de {@link #cancelarInterno} (leva os convidados junto).
      *
      * <p>Roda mesmo quando a restrição já estava ligada antes (não só na transição de
      * false→true): é idempotente e barato — se ninguém desqualificado sobrou de uma vez
@@ -374,11 +373,8 @@ public class InscricaoService {
      *
      * @return quantas inscrições foram canceladas, para o chamador logar/devolver ao front.
      */
-    // exclusivoBatizados: parâmetro mantido só para não mexer na assinatura chamada pelo
-    // EventoService fora desta tarefa; a checagem em si saiu (coluna removida na Task 3).
     @Transactional
-    public int removerInscritosNaoElegiveis(UUID eventoId, boolean exclusivoMembros,
-                                            boolean exclusivoBatizados) {
+    public int removerInscritosNaoElegiveis(UUID eventoId, boolean exclusivoMembros) {
         if (!exclusivoMembros) {
             return 0;
         }

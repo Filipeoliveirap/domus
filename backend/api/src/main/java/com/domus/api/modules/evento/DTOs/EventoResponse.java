@@ -17,13 +17,12 @@ public record EventoResponse(
         Integer vagas,
         java.math.BigDecimal preco,
         boolean exclusivoMembros,
-        boolean exclusivoBatizados,
         boolean requerInscricao,
         SituacaoEvento situacao,
         /**
-         * Só populado pela edição que ligou {@code exclusivoMembros}/{@code exclusivoBatizados}
-         * e removeu automaticamente quem não se qualifica mais (ver B4). {@code null} em toda
-         * outra resposta — campo aditivo, não quebra quem já consome {@code EventoResponse}.
+         * Só populado pela edição que ligou {@code exclusivoMembros} e removeu automaticamente
+         * quem não se qualifica mais (ver B4). {@code null} em toda outra resposta — campo
+         * aditivo, não quebra quem já consome {@code EventoResponse}.
          */
         Integer inscricoesRemovidas
 ) {
@@ -36,9 +35,7 @@ public record EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), e.getLocal(),
                 e.getFoto(), e.getCreatedAt(),
-                // exclusivoBatizados: coluna removida do banco (Task 3); campo aqui é lixo até a Task 6
-                // tirar do contrato da API. Mantido em false para não quebrar o front por ora.
-                e.getVagas(), e.getPreco(), e.isExclusivoMembros(), false,
+                e.getVagas(), e.getPreco(), e.isExclusivoMembros(),
                 e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas
         );
     }

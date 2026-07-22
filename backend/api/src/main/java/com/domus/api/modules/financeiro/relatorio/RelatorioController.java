@@ -2,6 +2,7 @@ package com.domus.api.modules.financeiro.relatorio;
 
 import com.domus.api.modules.financeiro.relatorio.DTOs.*;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -35,31 +36,35 @@ public class RelatorioController {
     public ResumoPeriodoResponse resumo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) UUID igrejaId) {
-        return service.resumoPorPeriodo(escopo(igrejaId), dataInicio, dataFim);
+            @RequestParam(required = false) UUID igrejaId,
+            @RequestParam(required = false) Vinculo vinculo) {
+        return service.resumoPorPeriodo(escopo(igrejaId), dataInicio, dataFim, vinculo);
     }
 
     @GetMapping("/por-categoria")
     public List<CategoriaBreakdownResponse> porCategoria(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) UUID igrejaId) {
-        return service.porCategoria(escopo(igrejaId), dataInicio, dataFim);
+            @RequestParam(required = false) UUID igrejaId,
+            @RequestParam(required = false) Vinculo vinculo) {
+        return service.porCategoria(escopo(igrejaId), dataInicio, dataFim, vinculo);
     }
 
     @GetMapping("/evolucao-mensal")
     public List<EvolucaoMensalResponse> evolucaoMensal(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) UUID igrejaId) {
-        return service.evolucaoMensal(escopo(igrejaId), dataInicio, dataFim);
+            @RequestParam(required = false) UUID igrejaId,
+            @RequestParam(required = false) Vinculo vinculo) {
+        return service.evolucaoMensal(escopo(igrejaId), dataInicio, dataFim, vinculo);
     }
 
     @GetMapping("/maior-lancamento")
     public MaiorLancamentoResponse maiorLancamento(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) UUID igrejaId) {
-        return service.maiorLancamento(escopo(igrejaId), dataInicio, dataFim);
+            @RequestParam(required = false) UUID igrejaId,
+            @RequestParam(required = false) Vinculo vinculo) {
+        return service.maiorLancamento(escopo(igrejaId), dataInicio, dataFim, vinculo);
     }
 }

@@ -135,9 +135,10 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   {formatarQuando(evento.inicioEm)}
                 </span>
                 {evento.local && (
-                  <span className={styles.local}>
+                  <span className={styles.local} title={evento.local.endereco ?? undefined}>
                     <MapPin size={15} aria-hidden="true" />
                     {evento.local.nome}
+                    {evento.local.enderecoHerdado && ' (endereço da igreja)'}
                   </span>
                 )}
               </div>

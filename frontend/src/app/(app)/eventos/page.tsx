@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { useEventos } from '@/hooks/evento/useEventos'
+import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarEventos } from '@/lib/permissoes'
 import { EventoCard } from '@/components/module/eventos/EventoCard'
@@ -12,11 +13,18 @@ import { DrawerDetalheEvento } from '@/app/(app)/eventos/(detalhe)/DrawerDetalhe
 import { ModalArquivarEvento } from './ModalArquivarEvento'
 import { EventoResponse } from '@/types/evento.type'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
+import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
+import { RECORTES_ETARIOS } from '@/components/module/eventos/BlocoParaQuemE'
 import styles from './Page.module.css'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
 import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonEventos } from "./SkeletonEventos";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+
+// Recortes prontos (Kids, Jovens…) como opções de filtro — mesma fonte que alimenta o
+// selo do card e os chips do formulário, nenhum nome de recorte solto por aqui.
+const OPCOES_RECORTE = RECORTES_ETARIOS.map((r) => ({ valor: r.nome, label: r.nome }))
 
 const TAMANHO_PAGINA = 12
 
@@ -30,13 +38,31 @@ function EventosConteudo() {
 
   const [pagina, setPagina] = useState(0)
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
+  const { filtros, setFiltros } = useFiltrosUrl({ tipo: '', recorteEtario: '' })
 
   const [eventoArquivando, setEventoArquivando] = useState<EventoResponse | null>(null)
+
+  const { data: tipos = [] } = useTiposEvento()
+
+  const gruposFiltro: GrupoFiltro[] = [
+    {
+      chave: 'tipo',
+      titulo: 'Tipo',
+      opcoes: tipos.map((t) => ({ valor: t, label: t })),
+    },
+    {
+      chave: 'recorteEtario',
+      titulo: 'Para quem é',
+      opcoes: OPCOES_RECORTE,
+    },
+  ]
 
   const { data, isLoading, isError, isFetching, refetch } = useEventos({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
+    tipo: filtros.tipo,
+    recorteEtario: filtros.recorteEtario,
   })
 
   const eventos = data?.content ?? []
@@ -45,6 +71,11 @@ function EventosConteudo() {
 
   function aoBuscar(valor: string) {
     setBusca(valor)
+    setPagina(0)
+  }
+
+  function aoAplicarFiltros(valores: Record<string, string>) {
+    setFiltros(valores as { tipo: string; recorteEtario: string })
     setPagina(0)
   }
 
@@ -79,9 +110,14 @@ function EventosConteudo() {
           <p className={styles.subtitulo}>Agenda da igreja</p>
         </div>
         {podeGerenciar && (
-          <Link href="/eventos/cadastrar" className={styles.botaoPrimario}>
-            Novo evento
-          </Link>
+          <div className={styles.acoesCabecalho}>
+            <Link href="/eventos/locais" className={styles.botaoSecundario}>
+              Locais
+            </Link>
+            <Link href="/eventos/cadastrar" className={styles.botaoPrimario}>
+              Novo evento
+            </Link>
+          </div>
         )}
       </header>
 
@@ -93,6 +129,7 @@ function EventosConteudo() {
           placeholder="Buscar eventos..."
           className={styles.inputBusca}
         />
+        <PainelFiltros grupos={gruposFiltro} valores={filtros} onAplicar={aoAplicarFiltros} />
         {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 

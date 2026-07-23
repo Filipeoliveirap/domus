@@ -120,6 +120,10 @@ public class SecurityConfig {
                         //senão o POST curinga (ADMIN+LÍDER) barra o ACESSO_COMUM, que é justamente
                         //quem se inscreve, e o GET curinga (todos) vaza a lista de inscritos.
                         //Mesma armadilha de ordenação já corrigida em /igrejas/*.
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/presenca/marcar-todos")
+                        .hasAnyRole(ADMIN, LIDER)
+                        .requestMatchers(HttpMethod.PATCH, "/eventos/*/presenca/**")
+                        .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/eventos/*/inscricoes/**")

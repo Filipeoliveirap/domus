@@ -127,32 +127,39 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
 
               {evento.local && (
                 <div className={styles.infoItem}>
-                  <span className={styles.infoIcone}><MapPin size={20} /></span>
                   {/*
                     Local CADASTRADO (tem id) abre o detalhe do endereço ao clicar — é onde
-                    mora o endereço herdado da igreja, que não cabe inteiro aqui. O ad-hoc de
-                    texto livre não tem o que detalhar, então continua sendo texto simples.
+                    mora o endereço herdado da igreja, que não cabe inteiro aqui. O ícone entra
+                    DENTRO do botão (não como irmão), senão clicar nele não fazia nada — só o
+                    texto abria o modal. O ad-hoc de texto livre não tem o que detalhar, então
+                    continua sendo texto simples, com o ícone como irmão de novo.
                   */}
                   {evento.local.id ? (
                     <button
                       type="button"
-                      className={styles.localBotao}
+                      className={styles.localBotaoLinha}
                       onClick={() => setLocalDetalhe(evento.local)}
                     >
-                      <p className={styles.infoLabel}>Local</p>
-                      <p className={styles.infoValor}>{evento.local.nome}</p>
-                      {evento.local.endereco && (
-                        <p className={styles.infoSecundario}>
-                          {evento.local.endereco}
-                          {evento.local.enderecoHerdado && ' (endereço da igreja)'}
-                        </p>
-                      )}
+                      <span className={styles.infoIcone}><MapPin size={20} /></span>
+                      <span className={styles.localBotaoTexto}>
+                        <p className={styles.infoLabel}>Local</p>
+                        <p className={styles.infoValor}>{evento.local.nome}</p>
+                        {evento.local.endereco && (
+                          <p className={styles.infoSecundario}>
+                            {evento.local.endereco}
+                            {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                          </p>
+                        )}
+                      </span>
                     </button>
                   ) : (
+                  <>
+                  <span className={styles.infoIcone}><MapPin size={20} /></span>
                   <div>
                     <p className={styles.infoLabel}>Local</p>
                     <p className={styles.infoValor}>{evento.local.nome}</p>
                   </div>
+                  </>
                   )}
                 </div>
               )}

@@ -39,6 +39,7 @@ export const Endpoints = {
     CRIAR: '/eventos',
     BY_ID: (id: string) => `/eventos/${id}`,
     TIPOS: '/eventos/tipos',
+    IMPACTO_RESTRICAO: (id: string) => `/eventos/${id}/impacto-restricao`,
   },
 
   locaisEvento: {

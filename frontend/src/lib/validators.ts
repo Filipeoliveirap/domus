@@ -165,6 +165,16 @@ const eventoSchemaBase = z.object({
   // "Exclusivo para membros" é vocabulário de domínio (vínculo com a igreja), não do
   // cadastro — barra quem tem vínculo CONGREGANTE.
   exclusivoMembros: z.boolean().default(false),
+
+  // ─── "Para quem é" (elegibilidade, Task 9) ───
+  // recorteEtario é só o NOME do chip escolhido (Kids, Jovens...) — alimenta o selo no
+  // card e é reaplicado ao reidratar; não valida nada sozinho, quem restringe de fato
+  // são idadeMin/idadeMax.
+  recorteEtario: z.string().nullable().optional(),
+  idadeMin: opcionalNumero(z.coerce.number().int().min(0, 'A idade mínima não pode ser negativa.')),
+  idadeMax: opcionalNumero(z.coerce.number().int().min(0, 'A idade máxima não pode ser negativa.')),
+  restricaoEstadoCivil: z.enum(['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']).nullable().optional(),
+  restricaoSexo: z.enum(['HOMEM', 'MULHER']).nullable().optional(),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -176,6 +186,12 @@ export const eventoSchema = eventoSchemaBase.refine(
     return fim >= inicio
   },
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }
+).refine(
+  (data) => {
+    if (data.idadeMin == null || data.idadeMax == null) return true
+    return data.idadeMin <= data.idadeMax
+  },
+  { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
 )
 
 export const categoriaSchema = z.object({

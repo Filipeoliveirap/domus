@@ -1,6 +1,12 @@
 /** Situação derivada de inicioEm/fimEm no backend (com.domus.api.modules.evento.SituacaoEvento). */
 export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
 
+/** Espelha com.domus.api.modules.pessoa.EstadoCivil — só os dois usados na restrição de evento. */
+export type RestricaoEstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO'
+
+/** Espelha com.domus.api.modules.pessoa.Sexo. */
+export type RestricaoSexo = 'HOMEM' | 'MULHER'
+
 /**
  * Local do evento na resposta: `id` null significa local ad-hoc (o nome veio de texto
  * livre, não de um `LocalEvento` cadastrado) — espelha `EventoResponse.LocalInfo` do back.
@@ -41,6 +47,12 @@ export interface EventoResponse {
   situacao: SituacaoEvento
   /** Só populado na resposta de `atualizarEvento`; null nas demais. */
   inscricoesRemovidas: number | null
+  /** Nome do recorte etário escolhido (Kids, Jovens…) — alimenta o selo, não valida nada. */
+  recorteEtario: string | null
+  idadeMin: number | null
+  idadeMax: number | null
+  restricaoEstadoCivil: RestricaoEstadoCivil | null
+  restricaoSexo: RestricaoSexo | null
 }
 
 export interface EventoRequest {
@@ -61,6 +73,27 @@ export interface EventoRequest {
   preco?: string
   exclusivoMembros?: boolean
   requerInscricao?: boolean
+  /** Nome do recorte etário (Kids, Jovens…); só decorativo/filtro, não valida. */
+  recorteEtario?: string | null
+  idadeMin?: number | null
+  idadeMax?: number | null
+  restricaoEstadoCivil?: RestricaoEstadoCivil | null
+  restricaoSexo?: RestricaoSexo | null
+}
+
+/**
+ * Prévia de quem ficaria de fora ao apertar/ligar a restrição — nunca grava nada, só
+ * informa o admin para ele decidir manter ou cancelar (espelha ImpactoRestricaoResponse).
+ */
+export interface InscritoImpactado {
+  pessoaId: string
+  nome: string
+  /** O mesmo texto do 422 de elegibilidade (Impedimento.mensagem()). */
+  motivos: string[]
+}
+
+export interface ImpactoRestricaoResponse {
+  afetados: InscritoImpactado[]
 }
 
 /** Local cadastrado que aparece no `<SeletorLocal>` (GET /locais-evento). */

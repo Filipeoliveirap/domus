@@ -120,16 +120,41 @@ class InscricaoElegibilidadeTest {
     }
 
     @Test
-    void auto_inscricao_fora_da_faixa_e_recusada_mesmo_para_admin() {
-        // A exceção existe para inscrever TERCEIROS. Deixar o admin burlar a própria
-        // inscrição transformaria a restrição em decoração para quem tem acesso.
+    void auto_inscricao_de_gestor_fora_da_faixa_e_permitida_com_confirmado() {
+        // Decisão do autor (2026-07-23): quem gerencia pode se inscrever num recorte fora do
+        // seu — organiza o evento e pode participar (equipe do retiro de jovens). Exige o
+        // clique de confirmação (confirmado=true), então não é burla casual.
         Pessoa admin40 = pessoaComIdade(40);
         dado(eventoJovens(), admin40, 0);
 
-        // auto-inscrição: minhaPessoaId == pessoaId (o alvo é a própria pessoa do usuário),
-        // mesmo passando role/confirmado de admin.
+        service.inscrever(eventoId, admin40.getId(), null, admin40.getId(),
+                "ADMIN_IGREJA", true, igrejaId);
+
+        verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void auto_inscricao_de_gestor_sem_confirmado_e_recusada() {
+        // Sem o clique explícito, a restrição vale mesmo para o gestor.
+        Pessoa admin40 = pessoaComIdade(40);
+        dado(eventoJovens(), admin40, 0);
+
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", true, igrejaId))
+                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", false, igrejaId))
+                .isInstanceOf(NaoElegivelException.class);
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void auto_inscricao_de_nao_gestor_fora_da_faixa_e_recusada_mesmo_com_confirmado() {
+        // A proteção que importa: o membro comum NUNCA contorna a própria restrição, nem
+        // mandando confirmado=true — podeGerenciar=false barra.
+        Pessoa comum40 = pessoaComIdade(40);
+        dado(eventoJovens(), comum40, 0);
+
+        assertThatThrownBy(() -> service.inscrever(
+                eventoId, comum40.getId(), null, comum40.getId(), "ACESSO_COMUM", true, igrejaId))
                 .isInstanceOf(NaoElegivelException.class)
                 .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
 
@@ -205,19 +230,18 @@ class InscricaoElegibilidadeTest {
     // ---------------------------------------------------------------------------------
 
     @Test
-    void auto_inscricao_via_inscreverPessoas_com_o_proprio_pessoaId_e_recusada() {
-        // Admin de 40 anos tenta se auto-inscrever passando o PRÓPRIO pessoaId pela rota de
-        // terceiros, com confirmado=true — o ataque descrito no Achado 1.
+    void gestor_pode_se_inscrever_via_inscreverPessoas_com_o_proprio_pessoaId_e_confirmado() {
+        // Antes bloqueado (a trava contra burla, quando auto-inscrição nunca contornava).
+        // Com a decisão de 2026-07-23, o gestor pode se inscrever num recorte fora do seu por
+        // qualquer caminho, desde que confirme. A proteção real permanece no papel: um
+        // ACESSO_COMUM continua barrado (acesso_comum_com_confirmado_via_inscreverPessoas).
         Pessoa admin40 = pessoaComIdade(40);
         dadoParaInscreverPessoas(eventoJovens(), admin40, 0);
 
-        assertThatThrownBy(() -> service.inscreverPessoas(
-                eventoId, List.of(admin40.getId()), adminUsuarioId, admin40.getId(),
-                "ADMIN_IGREJA", true, igrejaId))
-                .isInstanceOf(NaoElegivelException.class)
-                .hasFieldOrPropertyWithValue("codigo", "NAO_ELEGIVEL");
+        service.inscreverPessoas(eventoId, List.of(admin40.getId()), adminUsuarioId,
+                admin40.getId(), "ADMIN_IGREJA", true, igrejaId);
 
-        verify(inscricaoRepository, never()).save(any());
+        verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
 
     @Test
@@ -254,11 +278,14 @@ class InscricaoElegibilidadeTest {
 
     @Test
     void gestor_ve_mensagem_detalhada_com_nome_e_idade_no_422() {
+        // Gestor na PRIMEIRA tentativa (sem confirmar ainda): recebe o 422 com o detalhe
+        // (nome + idade) para poder decidir se inscreve mesmo assim. Confirmando, passaria —
+        // auto_inscricao_de_gestor_fora_da_faixa_e_permitida_com_confirmado cobre esse lado.
         Pessoa admin40 = pessoaComIdade(40);
         dado(eventoJovens(), admin40, 0);
 
         assertThatThrownBy(() -> service.inscrever(
-                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", true, igrejaId))
+                eventoId, admin40.getId(), null, admin40.getId(), "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(NaoElegivelException.class)
                 .hasMessageContaining("Fulano")
                 .hasMessageContaining("40 anos");

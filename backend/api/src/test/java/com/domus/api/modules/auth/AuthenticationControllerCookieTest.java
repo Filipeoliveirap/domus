@@ -45,7 +45,7 @@ class AuthenticationControllerCookieTest {
         AuthenticationDTO entrada = new AuthenticationDTO("ana@igreja.com", "senha123");
 
         when(authService.login(entrada)).thenReturn(new LoginResponseDTO(
-                id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", "jwt-abc", "refresh-xyz"));
+                id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", null, "jwt-abc", "refresh-xyz"));
 
         ResponseEntity<SessaoDTO> resposta = controller().login(entrada);
 
@@ -68,7 +68,7 @@ class AuthenticationControllerCookieTest {
     void googleLoginTambemEmiteCookies() {
         UUID id = UUID.randomUUID();
         when(googleAuthService.login("id-token-do-google")).thenReturn(new LoginResponseDTO(
-                id, "Bia", "ACESSO_COMUM", UUID.randomUUID(), "Igreja Central", "jwt-g", "refresh-g"));
+                id, "Bia", "ACESSO_COMUM", UUID.randomUUID(), "Igreja Central", null, "jwt-g", "refresh-g"));
 
         ResponseEntity<SessaoDTO> resposta =
                 controller().googleLogin(new GoogleLoginDTO("id-token-do-google"));
@@ -130,7 +130,7 @@ class AuthenticationControllerCookieTest {
     void meDeveBuscarASessaoPeloIdSemTocarNoPrincipalDesanexado() {
         UUID id = UUID.randomUUID();
         UUID igrejaId = UUID.randomUUID();
-        SessaoDTO esperada = new SessaoDTO(id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central");
+        SessaoDTO esperada = new SessaoDTO(id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", null);
 
         when(authService.sessaoDe(id)).thenReturn(esperada);
 

@@ -12,6 +12,7 @@ import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import { podeVerConfiguracoes } from '@/lib/permissoes'
+import { urlFoto } from '@/lib/urlFoto'
 import styles from './Sidebar.module.css'
 
 const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
@@ -52,7 +53,7 @@ export function Sidebar() {
   const router = useRouter()
   const role = useAuthStore((state) => state.role)
   const nome = useAuthStore((state) => state.nome)
-  const foto = useAuthStore((state) => state.foto)
+  const fotoId = useAuthStore((state) => state.fotoId)
   const logout = useAuthStore((state) => state.logout)
   const navAberta = useUiStore((state) => state.navAberta)
   const fecharNav = useUiStore((state) => state.fecharNav)
@@ -161,8 +162,9 @@ export function Sidebar() {
       </div>
 
       <Link href="/perfil" className={styles.profile} onClick={fecharNav}>
-        {foto ? (
-          <img src={foto} alt={nome ?? 'Perfil'} className={styles.profileAvatar} />
+        {urlFoto(fotoId, 'THUMB') ? (
+          // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+          <img src={urlFoto(fotoId, 'THUMB')!} alt={nome ?? 'Perfil'} className={styles.profileAvatar} />
         ) : (
           <div className={styles.profileAvatar}>
             <User size={20} />

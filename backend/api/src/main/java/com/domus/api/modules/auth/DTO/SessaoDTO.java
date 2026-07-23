@@ -13,6 +13,8 @@ public record SessaoDTO(
         String nome,
         String role,
         UUID igrejaId,
-        String igrejaNome
+        String igrejaNome,
+        /** Foto da PESSOA vinculada (Usuario não tem foto própria). Null = sem foto. */
+        UUID fotoId
 ) {
 }

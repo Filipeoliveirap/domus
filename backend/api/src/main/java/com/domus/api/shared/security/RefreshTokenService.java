@@ -102,6 +102,33 @@ public class RefreshTokenService {
         log.info("Todas as sessões revogadas. usuario_id={}", usuarioId);
     }
 
+    /**
+     * Revoga todas as sessões do usuário MENOS a família do token informado — usado na troca
+     * de senha "sabendo a senha atual" (Meu Perfil), onde derrubar a sessão de quem acabou de
+     * confirmar a própria identidade seria pior UX sem ganho de segurança. `tokenAtual == null`
+     * (ex.: cookie ausente) revoga tudo, igual a `revogarTodasSessoes`.
+     */
+    public void revogarTodasSessoesExceto(UUID usuarioId, String tokenAtual) {
+        String familiaAtual = familiaDoToken(tokenAtual);
+        String chaveIndice = chaveUsuarioFamilias(usuarioId);
+        var familias = redisTemplate.opsForSet().members(chaveIndice);
+        if (familias != null) {
+            for (String familyId : familias) {
+                if (!familyId.equals(familiaAtual)) {
+                    revogarFamilia(familyId);
+                }
+            }
+        }
+        log.info("Sessões revogadas, exceto a atual. usuario_id={}", usuarioId);
+    }
+
+    private String familiaDoToken(String token) {
+        if (token == null || token.isBlank()) return null;
+        String valor = redisTemplate.opsForValue().get(chaveToken(token));
+        if (valor == null) return null;
+        return valor.split("\\" + SEPARADOR)[1];
+    }
+
     private String gerarTokenOpaco() {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);

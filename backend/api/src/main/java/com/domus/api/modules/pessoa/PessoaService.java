@@ -213,6 +213,7 @@ public class PessoaService {
         }
 
         cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         log.info("Pessoa atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
@@ -243,6 +244,7 @@ public class PessoaService {
         }
 
         cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         log.info("Foto de perfil atualizada (self-service). id={}, igreja_id={}", id, igrejaId);
 
         return PessoaResponse.from(salvo, null, true);

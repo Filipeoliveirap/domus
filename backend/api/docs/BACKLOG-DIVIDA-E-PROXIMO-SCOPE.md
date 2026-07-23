@@ -280,15 +280,31 @@ O cadastro de evento virou quatro entregas independentes, nesta ordem:
 
 | Spec | Conteúdo | Estado |
 |------|----------|--------|
-| **A** | Inscrição + vagas + preço informativo + acompanhantes + `batizado` | em spec |
-| **B** | Cadastro enriquecido: layout 2 colunas, responsável, tipo, locais cadastrados | próxima |
+| **A** | Inscrição + vagas + preço informativo + acompanhantes + `batizado` | **feita** |
+| **B** | Cadastro enriquecido: layout 2 colunas, responsável, tipo, locais cadastrados | **feita** (2026-07-22) |
 | **C** | Recorrência (culto semanal cadastrado uma vez) | depois do piloto usar |
 | **D** | Campos personalizados por evento | por último, se a igreja pedir |
+| **E** | Programação do evento + equipe servindo | fora desta entrega, ver abaixo |
 
 Motivo da ordem: A e B são independentes (dá para fazer B com a igreja já usando A). C e D só
 ficam bons com uso real informando o desenho — construir antes é construir no escuro.
 
-### Spec B — cadastro de evento enriquecido
+### Spec B — cadastro de evento enriquecido — **CONCLUÍDA (2026-07-22, migration V3)**
+
+Entregue: `local_evento` (tabela, com capacidade que **sugere** vagas — não impõe limite),
+`local_texto` como alternativa ad-hoc (XOR com `local_id` via CHECK), `tipo` (texto livre
+com autocomplete/normalização, não confundido com "categoria"), `responsavel_pessoa_id`,
+auditoria (`criado_por_usuario_id`/`atualizado_por_usuario_id`, padrão de
+`movimentacao_financeira`), layout de duas colunas no front, e **elegibilidade por perfil**
+(faixa etária, estado civil, sexo, batizado) avaliada no momento da inscrição — ver seção
+abaixo. Banner reusou o `<UploadFoto>` já existente da Fase 2.
+
+**Ficou de fora desta entrega** (ver itens específicos mais abaixo neste arquivo):
+- Capacidade do local **impondo** limite de vagas (hoje só sugere; nada barra cadastrar
+  vagas acima da capacidade).
+- Lista de espera quando as vagas esgotam.
+- Recorrência (Spec C), campos personalizados (Spec D) e programação/equipe (Spec E) —
+  continuam como specs futuras, não tocadas por esta entrega.
 
 - **Layout de duas colunas** (do protótipo): coluna esquerda = *o que é o evento* (título, data,
   local); coluna direita = *como é administrado* (responsável, banner, visibilidade). A
@@ -321,25 +337,31 @@ obrigatoriedade, validação, exibição das respostas) — sozinho é maior que
 os primeiros casos sejam "tamanho da camiseta" e "vai de van?", e que um campo de observação
 livre resolva os dois. Ver três eventos reais antes de construir o gerador.
 
-### Elegibilidade por perfil (ideia nova — provável Spec B)
+### Elegibilidade por perfil — **CONCLUÍDA (2026-07-22, migration V3 + Specs A/B)**
 
-Restringir quem pode se inscrever, com a regra **avaliada no momento da inscrição**:
+Quatro regras **independentes**, cada uma avaliada no momento da inscrição (não no cadastro
+do evento), com bloqueio explícito por código próprio quando o dado da pessoa falta em vez
+de deixar passar em silêncio:
 
-- **Faixa etária** com idade mínima/máxima configurável, em recortes separados (crianças,
-  adolescentes, jovens, adolescentes+jovens, terceira idade). Separados de propósito: é o que
-  permite os filtros e selos do item abaixo.
-- **Estado civil** (só solteiros / só casados) — lido de `membro.estado_civil`, que já existe.
-- **Só batizados** — habilitado pelo campo `batizado` que entra na Spec A.
+- **Faixa etária** (`idade_min`/`idade_max`, com `recorte_etario` como rótulo — Kids,
+  Jovens, 3ª idade). Pessoa sem `data_nascimento` é **bloqueada** com código próprio, não
+  deixada passar — decisão explícita para não virar suporte silencioso.
+- **Estado civil** (`restricao_estado_civil`) — lido de `pessoa.estado_civil`.
+- **Sexo** (`restricao_sexo`) — habilitado pela coluna nova `pessoa.sexo` (V3).
+- **Só batizados** (`exclusivo_membros`, já existente desde a Spec A) — lido de
+  `pessoa.vinculo = MEMBRO`.
 
-⚠️ **Cuidado de dado:** idade depende de `data_nascimento`, que é nulável. Definir desde já o que
-acontece com membro sem data — bloquear ou deixar passar? Um filtro que barra em silêncio quem
-não tem o campo preenchido vira suporte.
+Quem gerencia (ADMIN_IGREJA/LIDER) pode **contornar** a maioria das restrições ao inscrever
+outra pessoa, mas `VAGAS_ESGOTADAS` **não é contornável** por ninguém — e a auto-inscrição
+nunca contorna nada, nem para admin.
 
-### Selos e filtros por tipo de evento (ideia nova)
+**Ficou de fora:** nada pendente da elegibilidade em si — os itens de fora são os já listados
+acima na Spec B (capacidade impondo limite de vagas, lista de espera) e as Specs C/D/E.
+
+### Selos e filtros por tipo de evento — **CONCLUÍDA (2026-07-22)**
 
 Selo compacto no card do evento indicando o recorte ("Kids", "Jovens", "3ª idade"), e filtro
-correspondente na listagem. Depende dos recortes acima existirem como dado estruturado — é a
-razão de guardá-los separados em vez de um campo livre.
+correspondente na listagem, usando `recorte_etario` como dado estruturado.
 
 ### Equipe servindo no evento (ideia nova)
 

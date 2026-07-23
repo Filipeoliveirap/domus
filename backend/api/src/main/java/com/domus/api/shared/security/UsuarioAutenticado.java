@@ -29,5 +29,9 @@ public class UsuarioAutenticado {
         return get().getId();
     }
 
+    public UUID getPessoaId() {
+        return get().getPessoa().getId();
+    }
+
     public String getRole() { return get().getRole().getNome();}
 }

@@ -33,6 +33,9 @@ export interface EventoResponse {
   local: EventoLocalInfo | null
   tipo: string | null
   responsavel: EventoPessoaResumo | null
+  /** Auditoria (mesmo padrão de movimentação financeira) — quem criou/editou por último. */
+  criadoPor: EventoPessoaResumo | null
+  atualizadoPor: EventoPessoaResumo | null
   fotoId: string | null
   createdAt: string
   vagas: number | null
@@ -103,4 +106,16 @@ export interface LocalEventoResponse {
   capacidade: number | null
   endereco: string | null
   enderecoHerdado: boolean
+}
+
+/**
+ * Payload de criação/edição de local (POST/PUT /locais-evento). Endereço em duas partes
+ * de texto livre — espelha `LocalEventoRequest` do back; ambas opcionais (local sem
+ * endereço próprio herda o da igreja).
+ */
+export interface LocalEventoRequest {
+  nome: string
+  capacidade?: number | null
+  cepLogradouroNumero?: string | null
+  complementoBairroCidadeUf?: string | null
 }

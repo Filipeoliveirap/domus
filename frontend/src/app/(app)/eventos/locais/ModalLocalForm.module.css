@@ -1,0 +1,118 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(19, 27, 46, 0.10);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-white);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.12);
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.btnClose {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.btnClose:hover { color: var(--color-text-primary); }
+
+.intro { margin-bottom: 20px; }
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+.subtitle {
+  margin-top: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.avisoComplemento {
+  margin-top: -10px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.alertError {
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  padding: 12px 16px;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+.btnCancel {
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+.btnCancel:hover { background: var(--color-bg-page); }
+
+/* ---- Mobile ---- */
+@media (max-width: 560px) {
+  .overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+  .modal {
+    padding: 22px 20px;
+    margin: auto 0;
+  }
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .btnCancel {
+    width: 100%;
+    text-align: center;
+  }
+}

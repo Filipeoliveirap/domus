@@ -68,10 +68,20 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
             <CalendarDays size={32} />
           </div>
         )}
-        <span className={`${styles.selo} ${styles[seloVariante]}`}>
-          <span className={styles.seloDot} />
-          {seloLabel}
-        </span>
+        <div className={styles.selos}>
+          <span className={`${styles.selo} ${styles[seloVariante]}`}>
+            <span className={styles.seloDot} />
+            {seloLabel}
+          </span>
+          {/* Só aparece quando o evento tem um recorte NOMEADO (Kids, Jovens…) — faixa
+              etária digitada à mão ou sem restrição nenhuma não geram selo (comportamento
+              correto, não é bug: o nome é o que dá sentido ao selo). */}
+          {evento.recorteEtario && (
+            <span className={`${styles.selo} ${styles.seloRecorte}`}>
+              {evento.recorteEtario}
+            </span>
+          )}
+        </div>
 
         {podeGerenciar && acoes.length > 0 && (
           <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>

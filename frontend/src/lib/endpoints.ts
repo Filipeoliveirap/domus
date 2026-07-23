@@ -16,6 +16,7 @@ export const Endpoints = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     REGISTER_IGREJA: '/igrejas/registrar',
+    CHANGE_PASSWORD: '/auth/change-password',
   },
   usuarios: {
     LISTAR_USUARIOS: '/usuarios',
@@ -32,6 +33,7 @@ export const Endpoints = {
     BY_ID: (id: string) => `/pessoas/${id}`,
     ARQUIVAR: (id: string) => `/pessoas/${id}`,
     BAIRROS: '/pessoas/bairros',
+    ME: '/pessoas/me',
   },
 
   eventos: {

@@ -30,6 +30,12 @@ export const pessoasService = {
   buscar: (id: string): Promise<PessoaResponse> =>
     api.get<PessoaResponse>(Endpoints.pessoas.BY_ID(id)).then(res => res.data),
 
+  buscarMe: (): Promise<PessoaResponse> =>
+    api.get<PessoaResponse>(Endpoints.pessoas.ME).then(res => res.data),
+
+  atualizarMe: (data: PessoaRequest): Promise<PessoaResponse> =>
+    api.put<PessoaResponse>(Endpoints.pessoas.ME, data).then(res => res.data),
+
   listarBairros: (): Promise<string[]> =>
     api.get<string[]>(Endpoints.pessoas.BAIRROS).then(res => res.data),
 

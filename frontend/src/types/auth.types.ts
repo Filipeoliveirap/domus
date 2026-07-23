@@ -40,6 +40,11 @@ export interface MensagemResponse {
     message: string;
 }
 
+export interface AlterarSenhaRequest {
+    senhaAtual: string;
+    novaSenha: string;
+}
+
 export interface RegistrarIgrejaRequest {
     nomeIgreja : string;
     emailContato : string;

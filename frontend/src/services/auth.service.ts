@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import { Endpoints } from "@/lib/endpoints";
-import { ForgotPasswordRequest, GoogleRegistrarRequest, LoginRequest, MensagemResponse, RegistrarIgrejaRequest, ResetPasswordRequest, Sessao} from "@/types/auth.types";
+import { AlterarSenhaRequest, ForgotPasswordRequest, GoogleRegistrarRequest, LoginRequest, MensagemResponse, RegistrarIgrejaRequest, ResetPasswordRequest, Sessao} from "@/types/auth.types";
 
 // Não há `refresh` aqui de propósito: o refresh é disparado só de dentro do interceptor do
 // api.ts, e importar este service lá criaria um ciclo (authService -> api -> authService).
@@ -24,4 +24,6 @@ export const authService = {
         api.post<MensagemResponse>(Endpoints.auth.RESET_PASSWORD, data).then(res => res.data),
     registrarIgreja: (data : RegistrarIgrejaRequest) : Promise<Sessao> =>
         api.post<Sessao>(Endpoints.auth.REGISTER_IGREJA, data).then(res => res.data),
+    alterarSenha: (data: AlterarSenhaRequest): Promise<{ message: string }> =>
+        api.put<{ message: string }>(Endpoints.auth.CHANGE_PASSWORD, data).then(res => res.data),
 }

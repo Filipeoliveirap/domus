@@ -248,6 +248,17 @@ export const redefinirSenhaSchema = z.object({
   path: ['confirmarSenha'],
 })
 
+export const alterarSenhaSchema = z.object({
+  senhaAtual: z.string().min(1, 'Senha atual é obrigatória'),
+  novaSenha: z.string().min(8, 'Mínimo 8 caracteres'),
+  confirmarNovaSenha: z.string().min(1, 'Confirme a nova senha'),
+}).refine(data => data.novaSenha === data.confirmarNovaSenha, {
+  message: 'As senhas não coincidem',
+  path: ['confirmarNovaSenha'],
+})
+
+export type AlterarSenhaFormData = z.infer<typeof alterarSenhaSchema>
+
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
 export type RegistrarIgrejaFormData2 = z.infer<typeof registrarIgrejaSchema2>

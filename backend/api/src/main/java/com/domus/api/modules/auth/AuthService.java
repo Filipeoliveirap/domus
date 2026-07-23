@@ -2,6 +2,7 @@ package com.domus.api.modules.auth;
 
 import com.domus.api.config.TokenService;
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
+import com.domus.api.modules.auth.DTO.ChangePasswordDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
@@ -133,5 +134,33 @@ public class AuthService {
                     return new SessaoExpiradaException("SESSAO_INVALIDA",
                             "Sessão expirada. Faça login novamente.");
                 });
+    }
+
+    /**
+     * Troca a própria senha (Meu Perfil), sabendo a atual — padrão de mercado, diferente do
+     * reset por token (que não exige senha atual porque é "esqueci a senha"). Revoga as OUTRAS
+     * sessões, mantendo a atual: quem acabou de provar a senha não devia ser derrubado.
+     */
+    public void alterarSenha(UUID usuarioId, String refreshTokenAtual, ChangePasswordDTO data) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new SessaoExpiradaException("SESSAO_INVALIDA",
+                        "Sessão expirada. Faça login novamente."));
+
+        if (usuario.getSenhaHash() == null) {
+            log.warn("Troca de senha em conta só-Google. usuario_id={}", usuarioId);
+            throw new BusinessException("CONTA_SEM_SENHA",
+                    "Esta conta usa login com Google e não tem senha para trocar.");
+        }
+
+        if (!passwordEncoder.matches(data.senhaAtual(), usuario.getSenhaHash())) {
+            log.warn("Troca de senha com senha atual incorreta. usuario_id={}", usuarioId);
+            throw new BusinessException("SENHA_ATUAL_INCORRETA", "A senha atual informada está incorreta.");
+        }
+
+        usuario.setSenhaHash(passwordEncoder.encode(data.novaSenha()));
+        usuarioRepository.save(usuario);
+
+        refreshTokenService.revogarTodasSessoesExceto(usuarioId, refreshTokenAtual);
+        log.info("Senha alterada pelo próprio usuário. usuario_id={}", usuarioId);
     }
 }

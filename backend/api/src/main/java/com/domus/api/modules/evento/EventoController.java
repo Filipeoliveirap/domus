@@ -28,11 +28,15 @@ public class EventoController {
     @GetMapping
     public ResponseEntity<PagedResponse<EventoResponse>> listar(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String recorteEtario,
             @PageableDefault(size = 12) Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         String termo = (q == null || q.isBlank()) ? null : q.trim();
+        String tipoFiltro = (tipo == null || tipo.isBlank()) ? null : tipo.trim();
+        String recorteFiltro = (recorteEtario == null || recorteEtario.isBlank()) ? null : recorteEtario.trim();
         Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, semSort));
+        return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, tipoFiltro, recorteFiltro, semSort));
     }
 
     /**

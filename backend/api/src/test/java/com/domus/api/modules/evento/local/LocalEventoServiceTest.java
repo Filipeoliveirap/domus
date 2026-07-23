@@ -141,7 +141,7 @@ class LocalEventoServiceTest {
         // Exercita o caminho REAL que quebrava: EventoService.listarEventos monta
         // EventoResponse, que chama getLocalExibicao() e resolveria o proxy LAZY de local.
         PagedResponse<EventoResponse> pagina =
-                eventoService.listarEventos(igrejaId, null, PageRequest.of(0, 20));
+                eventoService.listarEventos(igrejaId, null, null, null, PageRequest.of(0, 20));
         EventoResponse resposta = pagina.getContent().stream()
                 .filter(r -> r.id().equals(eventoId)).findFirst().orElseThrow();
 

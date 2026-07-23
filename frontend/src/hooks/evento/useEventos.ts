@@ -5,12 +5,14 @@ interface UseEventosParams {
   q: string
   page: number
   size?: number
+  tipo?: string
+  recorteEtario?: string
 }
 
-export function useEventos({ q, page, size = 12 }: UseEventosParams) {
+export function useEventos({ q, page, size = 12, tipo, recorteEtario }: UseEventosParams) {
   return useQuery({
-    queryKey: ['eventos', { q, page, size }],
-    queryFn: () => eventosService.listar({ q, page, size }),
+    queryKey: ['eventos', { q, page, size, tipo, recorteEtario }],
+    queryFn: () => eventosService.listar({ q, page, size, tipo, recorteEtario }),
     placeholderData: keepPreviousData,
   })
 }

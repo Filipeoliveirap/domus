@@ -82,6 +82,10 @@ export const pessoaSchema = z.object({
     ['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']
   ).or(z.literal('')).optional(),
 
+  // Nulável de propósito: pessoas já cadastradas não têm valor. Usado só pra
+  // restringir inscrição em evento, não pra descrever identidade.
+  sexo: z.enum(['HOMEM', 'MULHER']).or(z.literal('')).optional(),
+
   ministerio: opcional(
     z.string().max(255, 'O ministério deve ter no máximo 255 caracteres'),
   ),
@@ -129,7 +133,15 @@ const eventoSchemaBase = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.'),
   fimData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
   fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
-  local: opcional(z.string()),
+  // Local em duas formas mutuamente exclusivas: `localId` aponta um LocalEvento cadastrado;
+  // `localTexto` é o ad-hoc ("chácara do João"). O <SeletorLocal> garante que só uma esteja
+  // preenchida por vez, e o backend recusa as duas juntas (LOCAL_AMBIGUO).
+  localId: opcional(z.string()),
+  localTexto: opcional(z.string()),
+  // Texto livre com sugestões (GET /eventos/tipos). NÃO é a categoria financeira.
+  tipo: opcional(z.string()),
+  // Pessoa responsável pelo evento. Vazio = sem responsável definido.
+  responsavelPessoaId: opcional(z.string()),
 
   // Id da foto (capa do evento) já enviada via POST /fotos. null = sem foto.
   fotoId: z.string().nullable().default(null),
@@ -153,6 +165,16 @@ const eventoSchemaBase = z.object({
   // "Exclusivo para membros" é vocabulário de domínio (vínculo com a igreja), não do
   // cadastro — barra quem tem vínculo CONGREGANTE.
   exclusivoMembros: z.boolean().default(false),
+
+  // ─── "Para quem é" (elegibilidade, Task 9) ───
+  // recorteEtario é só o NOME do chip escolhido (Kids, Jovens...) — alimenta o selo no
+  // card e é reaplicado ao reidratar; não valida nada sozinho, quem restringe de fato
+  // são idadeMin/idadeMax.
+  recorteEtario: z.string().nullable().optional(),
+  idadeMin: opcionalNumero(z.coerce.number().int().min(0, 'A idade mínima não pode ser negativa.')),
+  idadeMax: opcionalNumero(z.coerce.number().int().min(0, 'A idade máxima não pode ser negativa.')),
+  restricaoEstadoCivil: z.enum(['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']).nullable().optional(),
+  restricaoSexo: z.enum(['HOMEM', 'MULHER']).nullable().optional(),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -164,6 +186,12 @@ export const eventoSchema = eventoSchemaBase.refine(
     return fim >= inicio
   },
   { message: 'O término não pode ser antes do início.', path: ['fimData'] }
+).refine(
+  (data) => {
+    if (data.idadeMin == null || data.idadeMax == null) return true
+    return data.idadeMin <= data.idadeMax
+  },
+  { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
 )
 
 export const categoriaSchema = z.object({
@@ -199,6 +227,15 @@ export const convidadoSchema = z.object({
   ),
 })
 
+export const localEventoSchema = z.object({
+  nome: z.string().trim().min(1, 'O nome do local é obrigatório.').max(150, 'Máximo 150 caracteres.'),
+  capacidade: opcionalNumero(z.coerce.number().int().positive('A capacidade deve ser maior que zero.')),
+  // Texto livre (não é ViaCEP estruturado) — mesmo par de campos do back
+  // (cepLogradouroNumero/complementoBairroCidadeUf). Vazio = local herda o endereço da igreja.
+  cepLogradouroNumero: opcional(z.string().max(255, 'Máximo 255 caracteres.')),
+  complementoBairroCidadeUf: opcional(z.string().max(255, 'Máximo 255 caracteres.')),
+})
+
 export const esqueciSenhaSchema = z.object({
   email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
 })
@@ -210,6 +247,17 @@ export const redefinirSenhaSchema = z.object({
   message: 'As senhas não coincidem',
   path: ['confirmarSenha'],
 })
+
+export const alterarSenhaSchema = z.object({
+  senhaAtual: z.string().min(1, 'Senha atual é obrigatória'),
+  novaSenha: z.string().min(8, 'Mínimo 8 caracteres'),
+  confirmarNovaSenha: z.string().min(1, 'Confirme a nova senha'),
+}).refine(data => data.novaSenha === data.confirmarNovaSenha, {
+  message: 'As senhas não coincidem',
+  path: ['confirmarNovaSenha'],
+})
+
+export type AlterarSenhaFormData = z.infer<typeof alterarSenhaSchema>
 
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegistrarIgrejaFormData1 = z.infer<typeof registrarIgrejaSchema1>
@@ -226,5 +274,7 @@ export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
 export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>
 export type ConvidadoFormData = z.infer<typeof convidadoSchema>
 export type ConvidadoFormInput = z.input<typeof convidadoSchema>
+export type LocalEventoFormData = z.infer<typeof localEventoSchema>
+export type LocalEventoFormInput = z.input<typeof localEventoSchema>
 export type EsqueciSenhaFormData = z.infer<typeof esqueciSenhaSchema>
 export type RedefinirSenhaFormData = z.infer<typeof redefinirSenhaSchema>

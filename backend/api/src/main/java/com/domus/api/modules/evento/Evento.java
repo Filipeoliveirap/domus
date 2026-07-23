@@ -1,6 +1,11 @@
 package com.domus.api.modules.evento;
 
+import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.pessoa.EstadoCivil;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.Sexo;
+import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -39,7 +44,75 @@ public class Evento {
     @Column(name = "fim_em")
     private LocalDateTime fimEm;
 
-    private String local;
+    /**
+     * Local cadastrado. Mutuamente exclusivo com {@link #localTexto} (CHECK no banco).
+     *
+     * <p>N+1 na listagem: {@code EventoRepository.buscarPorIgreja} é nativa (o ORDER BY por
+     * situação usa CASE WHEN + date_trunc que JPQL não tem), então não dá pra usar JOIN FETCH /
+     * @EntityGraph nela. Resolvido com {@code @BatchSize} na CLASSE {@link LocalEvento} (batch
+     * fetch é por tipo de entidade carregada, não pode ir no campo @ManyToOne) — uma página de
+     * 20 eventos com local vira 1 {@code SELECT ... WHERE id IN (...)} em vez de 20 SELECTs.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "local_id")
+    private LocalEvento local;
+
+    /** Local ad-hoc ("chácara do João"). Era a coluna `local` até a V3. */
+    @Column(name = "local_texto")
+    private String localTexto;
+
+    /** Texto normalizado por TextoUtil.capitalizar. NULL = sem tipo. */
+    @Column(name = "tipo", length = 80)
+    private String tipo;
+
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Pessoa}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsavel_pessoa_id")
+    private Pessoa responsavel;
+
+    /**
+     * Nome do responsável no momento em que a pessoa foi arquivada (V4). Mesmo raciocínio de
+     * {@link #localTexto}: como {@link Pessoa} usa soft delete, o {@code ON DELETE SET NULL}
+     * de {@code responsavel_pessoa_id} nunca dispara — {@code PessoaService.arquivarMembro}
+     * zera a FK via UPDATE nativo e copia o nome para cá, preservando a informação mesmo sem
+     * o vínculo. {@code null} enquanto o responsável ainda existe (o nome vem de {@link #responsavel}).
+     */
+    @Column(name = "responsavel_texto")
+    private String responsavelTexto;
+
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "criado_por_usuario_id")
+    private Usuario criadoPor;
+
+    /** Mesmo raciocínio do {@link #responsavelTexto}, para quando o USUÁRIO que criou é arquivado. */
+    @Column(name = "criado_por_texto")
+    private String criadoPorTexto;
+
+    /** Mesmo raciocínio de N+1 do {@link #local}: {@code @BatchSize} está na classe {@link Usuario}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "atualizado_por_usuario_id")
+    private Usuario atualizadoPor;
+
+    /** Mesmo raciocínio do {@link #responsavelTexto}, para quando o USUÁRIO que atualizou é arquivado. */
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
+
+    /** Nome do recorte (Kids, Jovens...). Alimenta selo e filtro; NÃO valida nada. */
+    @Column(name = "recorte_etario", length = 40)
+    private String recorteEtario;
+
+    /** Quem valida é este par. NULL = sem restrição daquele lado. */
+    @Column(name = "idade_min") private Integer idadeMin;
+    @Column(name = "idade_max") private Integer idadeMax;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "restricao_estado_civil", length = 20)
+    private EstadoCivil restricaoEstadoCivil;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "restricao_sexo", length = 10)
+    private Sexo restricaoSexo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "foto_id")
@@ -96,5 +169,11 @@ public class Evento {
             return SituacaoEvento.ENCERRADO;
         }
         return SituacaoEvento.EM_ANDAMENTO;
+    }
+
+    /** O local a exibir: o nome do cadastrado, ou o texto ad-hoc, ou null. */
+    public String getLocalExibicao() {
+        if (local != null) return local.getNome();
+        return localTexto;
     }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -19,6 +19,9 @@ import {
 } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
+import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
+import type { EventoLocalInfo } from '@/types/evento.type'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -43,6 +46,8 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
+  const [ampliada, setAmpliada] = useState(false)
+  const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
   const totalPessoas = useMemo(
     () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
@@ -66,6 +71,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const status = evento ? statusEvento(evento) : null
 
   return (
+    <>
     <div className={styles.overlay} onMouseDown={onClose}>
       <aside
         className={styles.drawer}
@@ -121,10 +127,49 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
 
               {evento.local && (
                 <div className={styles.infoItem}>
+                  {/*
+                    Local CADASTRADO (tem id) abre o detalhe do endereço ao clicar — é onde
+                    mora o endereço herdado da igreja, que não cabe inteiro aqui. O ícone entra
+                    DENTRO do botão (não como irmão), senão clicar nele não fazia nada — só o
+                    texto abria o modal. O ad-hoc de texto livre não tem o que detalhar, então
+                    continua sendo texto simples, com o ícone como irmão de novo.
+                  */}
+                  {evento.local.id ? (
+                    <button
+                      type="button"
+                      className={styles.localBotaoLinha}
+                      onClick={() => setLocalDetalhe(evento.local)}
+                    >
+                      <span className={styles.infoIcone}><MapPin size={20} /></span>
+                      <span className={styles.localBotaoTexto}>
+                        <p className={styles.infoLabel}>Local</p>
+                        <p className={styles.infoValor}>{evento.local.nome}</p>
+                        {evento.local.endereco && (
+                          <p className={styles.infoSecundario}>
+                            {evento.local.endereco}
+                            {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                          </p>
+                        )}
+                      </span>
+                    </button>
+                  ) : (
+                  <>
                   <span className={styles.infoIcone}><MapPin size={20} /></span>
                   <div>
                     <p className={styles.infoLabel}>Local</p>
-                    <p className={styles.infoValor}>{evento.local}</p>
+                    <p className={styles.infoValor}>{evento.local.nome}</p>
+                  </div>
+                  </>
+                  )}
+                </div>
+              )}
+
+              {evento.responsavel && (
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><UserCircle size={20} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>Responsável</p>
+                    <p className={styles.infoValor}>{evento.responsavel.nome}</p>
                   </div>
                 </div>
               )}
@@ -169,10 +214,31 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               </div>
             )}
 
+            {/* Auditoria — mesmo padrão de movimentação financeira. `id` null (pessoa/usuário
+                arquivado) ainda mostra o nome congelado, então não precisa de fallback aqui. */}
+            {(evento.criadoPor || evento.atualizadoPor) && (
+              <p className={styles.auditoria}>
+                {evento.criadoPor && <>Criado por {evento.criadoPor.nome}</>}
+                {evento.criadoPor && evento.atualizadoPor && ' · '}
+                {evento.atualizadoPor && <>Atualizado por {evento.atualizadoPor.nome}</>}
+              </p>
+            )}
+
             {/* Imagem */}
             <div className={styles.imagemBloco}>
-              {urlFoto(evento.fotoId, 'DISPLAY') ? (
-                <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagem} />
+              {evento.fotoId ? (
+                /*
+                  O banner aqui é `object-fit: cover` numa faixa de 200px — ele JÁ aparece
+                  cortado. Ampliar não é só ver maior: é ver a imagem inteira.
+                */
+                <button
+                  type="button"
+                  className={styles.imagemBotao}
+                  onClick={() => setAmpliada(true)}
+                  aria-label={`Ampliar imagem do evento ${evento.titulo}`}
+                >
+                  <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagem} />
+                </button>
               ) : (
                 <div className={styles.imagemPlaceholder}>
                   <CalendarDays size={40} />
@@ -249,5 +315,19 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
         )}
       </aside>
     </div>
+
+    {/* Irmão do overlay: dentro dele, o clique para fechar a foto fecharia o drawer junto. */}
+    {ampliada && evento?.fotoId && (
+      <VisualizadorFoto
+        fotoId={evento.fotoId}
+        descricao={`Imagem do evento ${evento.titulo}`}
+        onClose={() => setAmpliada(false)}
+      />
+    )}
+
+    {localDetalhe && (
+      <ModalDetalheLocal local={localDetalhe} onClose={() => setLocalDetalhe(null)} />
+    )}
+    </>
   )
 }

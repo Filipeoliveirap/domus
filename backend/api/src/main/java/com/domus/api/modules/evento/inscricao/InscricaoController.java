@@ -21,12 +21,20 @@ public class InscricaoController {
     /**
      * Auto-inscrição. NÃO recebe identidade alguma no corpo — o membro vem do JWT.
      * É o que torna esta rota impossível de usar errado: não há campo a adulterar.
+     *
+     * <p>{@code confirmado=true} deixa quem GERENCIA inscrições se inscrever num evento cujo
+     * recorte não atende (o gestor organiza e pode participar — equipe do retiro de jovens,
+     * café dos homens que ele coordena). De quem NÃO gerencia, o parâmetro é ignorado: a
+     * restrição continua valendo. {@code role} vai para o service decidir isso.
      */
     @PostMapping("/eventos/{eventoId}/inscricoes")
-    public ResponseEntity<MinhaInscricaoResponse> inscrever(@PathVariable UUID eventoId) {
+    public ResponseEntity<MinhaInscricaoResponse> inscrever(
+            @PathVariable UUID eventoId,
+            @RequestParam(defaultValue = "false") boolean confirmado) {
         var usuario = usuarioAutenticado.get();
         var response = inscricaoService.inscrever(
-                eventoId, usuario.getPessoa().getId(), null, usuario.getIgreja().getId());
+                eventoId, usuario.getPessoa().getId(), null, usuario.getPessoa().getId(),
+                usuario.getRole().getNome(), confirmado, usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -37,13 +45,23 @@ public class InscricaoController {
                 inscricaoService.minhaInscricao(eventoId, usuario.getPessoa().getId()));
     }
 
-    /** Inscrever outras pessoas: aqui os ids VÊM do cliente, então são validados um a um. */
+    /**
+     * Inscrever outras pessoas: aqui os ids VÊM do cliente, então são validados um a um.
+     *
+     * <p>{@code confirmado=true} só tem efeito para quem
+     * {@link com.domus.api.shared.security.Permissoes#podeGerenciarInscricoes(String)} — de
+     * quem não gerencia, o service ignora o parâmetro (não aceita "por engano"). Contorna só
+     * impedimentos contornáveis; vaga esgotada nunca é derrubada por aqui.
+     */
     @PostMapping("/eventos/{eventoId}/inscricoes/pessoas")
-    public ResponseEntity<Void> inscreverPessoas(@PathVariable UUID eventoId,
-                                                 @Valid @RequestBody InscreverPessoasRequest data) {
+    public ResponseEntity<Void> inscreverPessoas(
+            @PathVariable UUID eventoId,
+            @RequestParam(defaultValue = "false") boolean confirmado,
+            @Valid @RequestBody InscreverPessoasRequest data) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(),
-                usuario.getId(), usuario.getIgreja().getId());
+        inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(), usuario.getId(),
+                usuario.getPessoa().getId(), usuario.getRole().getNome(), confirmado,
+                usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

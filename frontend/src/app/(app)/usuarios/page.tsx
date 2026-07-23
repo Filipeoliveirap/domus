@@ -11,11 +11,11 @@ import { pessoasService } from "@/services/pessoa.service";
 import { useUsuarios } from "@/hooks/usuario/useUsuarios";
 import type { ApiError } from "@/types/api.types";
 import {
-  iniciais,
   rotuloRole,
   varianteRole,
   formatarUltimoAcesso,
 } from "@/lib/formats/usuarioFormat";
+import { Avatar } from "@/components/common/Avatar/Avatar";
 import { MenuAcoes, ItemAcao } from "@/components/common/menuacoes/MenuAcoes";
 import styles from "./usuarios.module.css";
 import { UsuarioResponse } from "@/types/usuario.types";
@@ -188,7 +188,7 @@ function UsuariosConteudo() {
                   <tr key={u.id} className={!u.ativo ? styles.linhaInativa : undefined}>
                     <td>
                       <div className={styles.celulaUsuario}>
-                        <span className={styles.avatar}>{iniciais(u.nome)}</span>
+                        <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
                         <span className={styles.nome}>{u.nome}</span>
                       </div>
                     </td>

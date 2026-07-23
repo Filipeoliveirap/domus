@@ -14,7 +14,11 @@ const csp = [
   "frame-src https://accounts.google.com",
   // A API é same-origin agora (via rewrite /api/*), então 'self' basta.
   "connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br",
-  "img-src 'self' data: https://*.googleusercontent.com https://accounts.google.com",
+  // `blob:` é a PRÉVIA LOCAL do upload: URL.createObjectURL() produz uma blob: URL para
+  // mostrar a foto escolhida antes de enviar. Sem isto o navegador bloqueia e a pessoa vê
+  // só o texto alternativo — a imagem "não aparece" sem erro visível na tela.
+  // Continua não havendo domínio externo: a foto salva é servida pelo próprio Domus.
+  "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com",
   "font-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",

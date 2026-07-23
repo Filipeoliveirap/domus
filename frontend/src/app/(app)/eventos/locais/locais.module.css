@@ -1,0 +1,181 @@
+/* ─── Página ─────────────────────────────────────────────── */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+.breadcrumbLink {
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.breadcrumbLink:hover { color: var(--color-text-primary); }
+.breadcrumbSep { color: var(--color-text-muted); opacity: 0.6; }
+.breadcrumbAtual {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Cabeçalho ──────────────────────────────────────────── */
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-dark);
+}
+.subtitulo {
+  margin-top: 4px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+.botaoPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-bg-white);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  box-shadow: var(--shadow-btn-primary);
+  transition: opacity var(--transition-normal);
+}
+.botaoPrimario:hover { opacity: 0.9; }
+
+/* ─── Tabela ─────────────────────────────────────────────── */
+.containerTabela {
+  background-color: var(--color-bg-table-header);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.tabela thead th {
+  padding: 16px 24px;
+  background-color: var(--color-bg-table-head);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+.tabela thead th:first-child { border-top-left-radius: var(--radius-lg); }
+.tabela thead th:last-child { border-top-right-radius: var(--radius-lg); }
+.tabela tbody td {
+  padding: 16px 24px;
+  font-size: var(--font-size-base);
+  border-top: 1px solid var(--color-border-subtle);
+  vertical-align: middle;
+}
+.tabela tbody tr {
+  transition: background-color var(--transition-fast);
+}
+.tabela tbody tr:hover {
+  background-color: var(--color-bg-table-head);
+}
+.nome {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.endereco {
+  color: var(--color-text-secondary);
+}
+.tagHerdado {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.colunaAcoes {
+  width: 1%;
+  text-align: right;
+}
+
+/* ─── Mobile: header empilha, tabela vira cards ─────────────
+   Mesma convenção usada em pessoas/usuários — nenhuma tabela do projeto rola
+   horizontalmente no celular. */
+@media (max-width: 767px) {
+  .pagina {
+    gap: 16px;
+  }
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .botaoPrimario {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .containerTabela {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+  .tabela thead {
+    display: none;
+  }
+  .tabela,
+  .tabela tbody {
+    display: block;
+  }
+  .tabela tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .tabela tbody td {
+    display: block;
+    min-width: 0;
+    border: none;
+    padding: 0;
+  }
+  /* Nome ocupa a linha inteira do card, ações vão para a direita dele. */
+  .tabela tbody td:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* Capacidade fica junto do endereço, como uma segunda linha do card. */
+  .tabela tbody td:nth-child(2)::before {
+    content: "Capacidade: ";
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .tabela tbody td:nth-child(3) {
+    flex-basis: 100%;
+  }
+  .colunaAcoes {
+    margin-left: auto;
+    width: auto;
+    text-align: left;
+  }
+}

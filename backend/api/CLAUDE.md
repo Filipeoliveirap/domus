@@ -111,7 +111,7 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V2**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V3**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -125,6 +125,7 @@ erDiagram
     IGREJA ||--o{ CATEGORIA_FINANCEIRA : tem
     IGREJA ||--o{ MOVIMENTACAO_FINANCEIRA : tem
     IGREJA ||--o{ INSCRICAO_EVENTO : tem
+    IGREJA ||--o{ LOCAL_EVENTO : tem
     PESSOA ||--o| USUARIO : "pode ter (1-1)"
     PESSOA ||--o{ INSCRICAO_EVENTO : "se inscreve em"
     ROLE   ||--o{ USUARIO : define
@@ -138,6 +139,9 @@ erDiagram
     PESSOA }o--o| FOTO : tem
     EVENTO }o--o| FOTO : tem
     IGREJA }o--o| FOTO : "tem (logo)"
+    LOCAL_EVENTO ||--o{ EVENTO : "V3 - local cadastrado (ou local_texto ad-hoc)"
+    PESSOA ||--o{ EVENTO : "V3 - responsável"
+    USUARIO ||--o{ EVENTO : "V3 - criou/atualizou"
 
     IGREJA {
         uuid      id PK
@@ -168,6 +172,7 @@ erDiagram
         date      data_nascimento
         varchar   vinculo "MEMBRO|CONGREGANTE - substitui status+batizado"
         varchar   estado_civil
+        varchar   sexo "V3 - HOMEM|MULHER, nulável (habilita restricao_sexo do evento)"
         varchar   ministerio
         uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         varchar   cep_logradouro_numero "V11 - endereço estruturado"
@@ -201,12 +206,32 @@ erDiagram
         text      descricao
         timestamp inicio_em
         timestamp fim_em "NULL = sem fim declarado"
-        varchar   local
+        uuid      local_id FK "V3 - local cadastrado; XOR com local_texto"
+        varchar   local_texto "V3 - era 'local' (RENAME); texto livre ad-hoc; XOR com local_id"
         uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         integer   vagas "V15 - NULL = sem limite"
         numeric   preco "V15 - NULL = gratuito"
         boolean   exclusivo_membros "cobre batizados - vinculo=MEMBRO é quem é batizado"
         boolean   requer_inscricao "V16"
+        varchar   tipo "V3 - texto livre que aprende (autocomplete); não é 'categoria'"
+        uuid      responsavel_pessoa_id FK "V3 - organizador, ON DELETE SET NULL"
+        uuid      criado_por_usuario_id FK "V3 - auditoria, padrão de movimentacao_financeira"
+        uuid      atualizado_por_usuario_id FK "V3"
+        varchar   recorte_etario "V3 - rótulo do recorte (ex.: KIDS, JOVENS, 3A_IDADE), informativo"
+        integer   idade_min "V3 - CHECK >= 0 e <= idade_max"
+        integer   idade_max "V3 - CHECK >= 0"
+        varchar   restricao_estado_civil "V3 - SOLTEIRO|CASADO|DIVORCIADO|VIUVO, nulável"
+        varchar   restricao_sexo "V3 - HOMEM|MULHER, nulável"
+        timestamp deleted_at "soft delete"
+    }
+
+    LOCAL_EVENTO {
+        uuid      id PK
+        uuid      igreja_id FK "V3 - isolamento multi-tenant"
+        varchar   nome "V3 - único por igreja, ignorando acento/caixa (unaccent)"
+        integer   capacidade "V3 - CHECK > 0; SUGERE vagas, não impõe limite"
+        varchar   cep_logradouro_numero "V3 - endereço próprio; se NULL, herda o da igreja"
+        varchar   complemento_bairro_cidade_uf "V3"
         timestamp deleted_at "soft delete"
     }
 
@@ -290,6 +315,20 @@ erDiagram
   graças ao `UNIQUE (evento_id, pessoa_id)`. O `requer_inscricao` é o master toggle
   que separa evento que se organiza de evento que só acontece.
 
+- **Cadastro de evento enriquecido (V3):** `local_texto` é o antigo `local` (RENAME, não
+  ADD, para preservar dado); `local_id` aponta para `LOCAL_EVENTO`, um local cadastrado
+  com endereço próprio ou, se `NULL`, o endereço é herdado do da própria igreja. O CHECK
+  `local_id IS NULL OR local_texto IS NULL` impede os dois ao mesmo tempo — um evento é ou
+  num local cadastrado, ou num texto livre ad-hoc, nunca ambos. `LOCAL_EVENTO.capacidade`
+  **sugere** o número de vagas do evento; não é limite imposto pelo banco nem pela regra de
+  negócio (fica pro backlog). `tipo` é texto livre com autocomplete que aprende com o uso —
+  deliberadamente não chamado de "categoria" (nome já ocupado por `categoria_financeira`).
+  `responsavel_pessoa_id`, `criado_por_usuario_id` e `atualizado_por_usuario_id` reusam o
+  padrão de auditoria de `movimentacao_financeira`. `recorte_etario` + `idade_min`/
+  `idade_max` + `restricao_estado_civil` + `restricao_sexo` são a elegibilidade de
+  inscrição: quatro regras independentes, avaliadas no momento de inscrever — não somam
+  automaticamente, cada uma bloqueia por conta própria quando o dado da pessoa falta
+  (idade sem `data_nascimento`, sexo sem `pessoa.sexo`).
 - **`FOTO`** (V2) é metadado apenas — os bytes vivem num bucket **privado** do Cloudflare
   R2, servido pela própria API (`GET /fotos/{id}`), nunca por URL pública. `pessoa.foto`,
   `evento.foto` e `igreja.logo_url` deixaram de ser `varchar` de URL e viraram

@@ -43,6 +43,11 @@ public record EventoRequest(
         java.math.BigDecimal preco,
         Boolean exclusivoMembros,
         Boolean requerInscricao,
+        /**
+         * Só pode ser {@code true} quando {@code requerInscricao} também é — ver
+         * {@link com.domus.api.modules.evento.EventoService#validarControlaPresenca}.
+         */
+        Boolean controlaPresenca,
 
         /** Id da foto já enviada via {@code POST /fotos}; {@code null} = sem foto. */
         UUID fotoId

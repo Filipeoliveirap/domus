@@ -1,13 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, Info, Ticket, AlertTriangle } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, AlertTriangle, UserCog } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { formatarHoraDigitada } from '@/lib/masks'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputComSugestoes'
+import { SeletorLocal } from './SeletorLocal'
+import { SeletorResponsavel } from './SeletorResponsavel'
+import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -17,6 +21,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
+  responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
 }
 
@@ -24,7 +29,7 @@ export function EventoForm(props: EventoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao,
+    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
   } = props
 
   const requerInscricao = watch('requerInscricao')
@@ -34,6 +39,13 @@ export function EventoForm(props: EventoFormProps) {
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
   const fotoIdAtual = watch('fotoId') as string | null | undefined
+  const localIdAtual = watch('localId') as string | undefined
+  const localTextoAtual = watch('localTexto') as string | undefined
+  const tipoAtual = (watch('tipo') as string) ?? ''
+  const responsavelAtual = watch('responsavelPessoaId') as string | undefined
+  const vagasAtual = watch('vagas') as number | undefined
+
+  const { data: tiposSugeridos = [] } = useTiposEvento()
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -53,6 +65,25 @@ export function EventoForm(props: EventoFormProps) {
                 error={errors.titulo?.message}
                 {...register('titulo')}
               />
+
+              {/*
+                Tipo: texto livre com sugestões (chips). As sugestões vêm do servidor já
+                ordenadas — o que a igreja mais usa primeiro, sementes depois — e o campo
+                aceita qualquer valor digitado. NÃO é "categoria" (esse nome é do financeiro).
+              */}
+              <div>
+                <InputComSugestoes
+                  id="tipo"
+                  label="TIPO DO EVENTO"
+                  placeholder="Ex: Culto, Retiro, Conferência…"
+                  sugestoes={tiposSugeridos}
+                  value={tipoAtual}
+                  error={errors.tipo?.message}
+                  registerProps={register('tipo')}
+                  onSelecionarSugestao={(v) => setValue('tipo', v, { shouldDirty: true })}
+                />
+              </div>
+
               <div className={styles.campoTextarea}>
                 <label className={styles.labelTextarea} htmlFor="descricao">DESCRIÇÃO</label>
                 <textarea
@@ -70,12 +101,31 @@ export function EventoForm(props: EventoFormProps) {
               <span className={styles.secaoIcone}><MapPin size={20} /></span>
               <h2 className={styles.secaoTitulo}>Local</h2>
             </div>
-            <Input
-              id="local"
-              label="LOCAL DO EVENTO"
-              placeholder="Ex: Auditório Principal - Sede"
-              error={errors.local?.message}
-              {...register('local')}
+            {/*
+              O SeletorLocal alterna entre local cadastrado (localId) e texto livre
+              (localTexto), mantendo os dois mutuamente exclusivos. A capacidade do local
+              escolhido SUGERE vagas — mas só quando o campo está vazio, nunca sobrescrevendo
+              o que a pessoa já digitou (cabem 300, mas o ônibus pode limitar em 80).
+            */}
+            <SeletorLocal
+              localId={localIdAtual}
+              localTexto={localTextoAtual}
+              error={errors.localId?.message ?? errors.localTexto?.message}
+              onChangeLocalId={(id) => {
+                setValue('localId', id, { shouldDirty: true })
+                if (id) setValue('localTexto', undefined, { shouldDirty: true })
+              }}
+              onChangeLocalTexto={(texto) => {
+                setValue('localTexto', texto, { shouldDirty: true })
+                if (texto) setValue('localId', undefined, { shouldDirty: true })
+              }}
+              onCapacidadeSugerida={(cap) => {
+                if (vagasAtual == null) {
+                  // Ligar requerInscricao para a vaga sugerida aparecer, e preencher só o vazio.
+                  setValue('requerInscricao', true, { shouldDirty: true })
+                  setValue('vagas', cap, { shouldDirty: true, shouldValidate: true })
+                }
+              }}
             />
           </section>
         </div>
@@ -176,6 +226,19 @@ export function EventoForm(props: EventoFormProps) {
                 O evento aparecerá na agenda da igreja assim que for salvo.
               </p>
             </div>
+          </section>
+
+          {/* ─── Organização ─── */}
+          <section className={styles.secao}>
+            <div className={styles.secaoHeader}>
+              <span className={styles.secaoIcone}><UserCog size={20} /></span>
+              <h2 className={styles.secaoTitulo}>Organização</h2>
+            </div>
+            <SeletorResponsavel
+              valor={responsavelAtual}
+              nomeInicial={responsavelNomeInicial}
+              onChange={(id) => setValue('responsavelPessoaId', id, { shouldDirty: true })}
+            />
           </section>
 
           {/* ─── Inscrições ─── */}

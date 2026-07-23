@@ -127,7 +127,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                   <span className={styles.infoIcone}><MapPin size={20} /></span>
                   <div>
                     <p className={styles.infoLabel}>Local</p>
-                    <p className={styles.infoValor}>{evento.local}</p>
+                    <p className={styles.infoValor}>{evento.local.nome}</p>
                   </div>
                 </div>
               )}

@@ -133,7 +133,15 @@ const eventoSchemaBase = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.'),
   fimData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
   fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
-  local: opcional(z.string()),
+  // Local em duas formas mutuamente exclusivas: `localId` aponta um LocalEvento cadastrado;
+  // `localTexto` é o ad-hoc ("chácara do João"). O <SeletorLocal> garante que só uma esteja
+  // preenchida por vez, e o backend recusa as duas juntas (LOCAL_AMBIGUO).
+  localId: opcional(z.string()),
+  localTexto: opcional(z.string()),
+  // Texto livre com sugestões (GET /eventos/tipos). NÃO é a categoria financeira.
+  tipo: opcional(z.string()),
+  // Pessoa responsável pelo evento. Vazio = sem responsável definido.
+  responsavelPessoaId: opcional(z.string()),
 
   // Id da foto (capa do evento) já enviada via POST /fotos. null = sem foto.
   fotoId: z.string().nullable().default(null),

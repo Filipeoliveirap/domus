@@ -29,7 +29,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       titulo: '', descricao: '',
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
-      local: '',
+      localId: undefined, localTexto: undefined,
+      tipo: '', responsavelPessoaId: undefined,
       requerInscricao: false,
       vagas: undefined,
       tipoInscricao: 'GRATUITO',
@@ -64,7 +65,15 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         inicioHora,
         fimData,
         fimHora,
-        local: eventoInicial.local ?? '',
+        // O backend devolve `local` já resolvido (objeto): se tem `id`, é um LocalEvento
+        // cadastrado e reidrata o select; se `id` é null, era texto ad-hoc e volta pro campo
+        // livre. Nunca os dois — espelha a mesma exclusividade do envio.
+        localId: eventoInicial.local?.id ?? undefined,
+        localTexto: eventoInicial.local && eventoInicial.local.id == null
+          ? eventoInicial.local.nome
+          : undefined,
+        tipo: eventoInicial.tipo ?? '',
+        responsavelPessoaId: eventoInicial.responsavel?.id ?? undefined,
         requerInscricao: eventoInicial.requerInscricao,
         vagas: eventoInicial.vagas ?? undefined,
         tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
@@ -99,7 +108,13 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         descricao: data.descricao || undefined,
         inicioEm,
         fimEm,
-        local: data.local || undefined,
+        // localId e localTexto são exclusivos — o <SeletorLocal> já garante que só um venha
+        // preenchido, mas normalizo aqui também: string vazia vira undefined pra não enviar
+        // "" e cair no CHECK do banco por engano.
+        localId: data.localId || undefined,
+        localTexto: data.localTexto || undefined,
+        tipo: data.tipo || undefined,
+        responsavelPessoaId: data.responsavelPessoaId || null,
         requerInscricao: data.requerInscricao,
         exclusivoMembros: data.exclusivoMembros,
         vagas: data.requerInscricao ? data.vagas : undefined,
@@ -136,5 +151,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     }
   }
 
-  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+  // O <SeletorResponsavel> só recebe o id; o nome inicial (edição) vem daqui para ele
+  // poder exibir quem já é o responsável sem uma busca extra.
+  const responsavelNomeInicial = eventoInicial?.responsavel?.nome
+  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsavelNomeInicial }
 }

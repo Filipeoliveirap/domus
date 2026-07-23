@@ -1,0 +1,123 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.opcional {
+  font-weight: var(--font-weight-regular);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Busca ── */
+.buscaWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.buscaIcone {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.buscaInput {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  background: var(--color-bg-white);
+}
+.buscaInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* ── Resultados ── */
+.resultados {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.opcao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-white);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.opcao:last-child { border-bottom: none; }
+.opcao:hover { background: var(--color-bg-page); }
+
+.opcaoCheck {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  opacity: 0;
+}
+.opcao:hover .opcaoCheck { opacity: 1; }
+
+.aviso {
+  padding: 10px 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Chip do escolhido ── */
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-igreja-card, var(--color-bg-page));
+  min-width: 0;
+}
+
+.chipNome {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chipRemover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.chipRemover:hover {
+  background: var(--color-bg-white);
+  color: var(--color-danger, #c0392b);
+}

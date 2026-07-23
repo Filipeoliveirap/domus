@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import {
   seloEvento,
-  dataExtenso,
+  periodoEvento,
   hora,
   vagasRestantesCalc,
   vagasAcabando as calcVagasAcabando,
@@ -98,7 +98,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                   {selo.label}
                 </span>
               )}
-              <span className={styles.dataTopo}>{dataExtenso(evento.inicioEm)}</span>
+              <span className={styles.dataTopo}>{periodoEvento(evento)}</span>
               <div className={styles.tituloLinha}>
                 <h2 className={styles.titulo}>{evento.titulo}</h2>
                 {/* A6/rodada 3: mesma affordance do modal do início — só quem gerencia, e só enquanto editável. */}

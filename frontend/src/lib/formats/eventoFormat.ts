@@ -29,6 +29,21 @@ export function dataExtenso(iso: string): string {
   return txt.charAt(0).toUpperCase() + txt.slice(1)
 }
 
+/**
+ * Data por extenso do evento — só o início quando cabe num dia só; início e fim quando o
+ * evento atravessa dias (ex.: "Semana de Oração"). Mostrar só a data de início nesse caso
+ * escondia por que o selo virava "Em andamento" dias depois do início (o fim, que é o que
+ * explica, nunca aparecia na tela).
+ */
+export function periodoEvento(evento: Pick<EventoResponse, 'inicioEm' | 'fimEm'>): string {
+  if (!evento.fimEm) return dataExtenso(evento.inicioEm)
+
+  const mesmoDia = new Date(evento.inicioEm).toDateString() === new Date(evento.fimEm).toDateString()
+  if (mesmoDia) return dataExtenso(evento.inicioEm)
+
+  return `${dataExtenso(evento.inicioEm)} — ${dataExtenso(evento.fimEm)}`
+}
+
 export type StatusEvento = 'EM_BREVE' | 'HOJE' | 'ENCERRADO'
 
 export function statusEvento(evento: EventoResponse): StatusEvento {

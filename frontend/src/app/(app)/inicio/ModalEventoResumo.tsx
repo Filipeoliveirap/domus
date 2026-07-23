@@ -16,6 +16,8 @@ import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirm
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
+import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
+import type { EventoLocalInfo } from '@/types/evento.type'
 import {
   vagasRestantesCalc,
   vagasAcabando as calcVagasAcabando,
@@ -49,6 +51,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [removendoId, setRemovendoId] = useState<string | null>(null)
   const [ampliada, setAmpliada] = useState(false)
+  const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
   const removerConvidado = useRemoverConvidado()
 
   // Vagas contam PESSOAS: cada inscrito mais os convidados que ele trouxe. Contar só os
@@ -135,11 +138,24 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   {formatarQuando(evento.inicioEm)}
                 </span>
                 {evento.local && (
-                  <span className={styles.local} title={evento.local.endereco ?? undefined}>
-                    <MapPin size={15} aria-hidden="true" />
-                    {evento.local.nome}
-                    {evento.local.enderecoHerdado && ' (endereço da igreja)'}
-                  </span>
+                  evento.local.id ? (
+                    // Local cadastrado: clicável, abre o detalhe do endereço (inclui o herdado
+                    // da igreja). Ad-hoc de texto livre não tem o que detalhar — fica estático.
+                    <button
+                      type="button"
+                      className={`${styles.local} ${styles.localClicavel}`}
+                      onClick={() => setLocalDetalhe(evento.local)}
+                    >
+                      <MapPin size={15} aria-hidden="true" />
+                      {evento.local.nome}
+                      {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                    </button>
+                  ) : (
+                    <span className={styles.local}>
+                      <MapPin size={15} aria-hidden="true" />
+                      {evento.local.nome}
+                    </span>
+                  )
                 )}
               </div>
             </header>
@@ -336,6 +352,10 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         descricao={`Imagem do evento${evento.titulo ? ` ${evento.titulo}` : ''}`}
         onClose={() => setAmpliada(false)}
       />
+    )}
+
+    {localDetalhe && (
+      <ModalDetalheLocal local={localDetalhe} onClose={() => setLocalDetalhe(null)} />
     )}
     </>
   )

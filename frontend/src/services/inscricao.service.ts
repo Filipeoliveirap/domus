@@ -11,8 +11,11 @@ import type {
 } from '@/types/inscricao.type'
 
 export const inscricoesService = {
-  inscrever: (eventoId: string): Promise<MinhaInscricaoResponse> =>
-    api.post<MinhaInscricaoResponse>(Endpoints.inscricoes.INSCREVER(eventoId)).then(res => res.data),
+  /** `confirmado=true` só tem efeito para quem gerencia inscrições — deixa o gestor se
+   *  inscrever num recorte fora do seu. De quem não gerencia, o backend ignora. */
+  inscrever: (eventoId: string, confirmado = false): Promise<MinhaInscricaoResponse> =>
+    api.post<MinhaInscricaoResponse>(Endpoints.inscricoes.INSCREVER(eventoId), null, { params: { confirmado } })
+      .then(res => res.data),
 
   minhaInscricao: (eventoId: string): Promise<MinhaInscricaoResponse> =>
     api.get<MinhaInscricaoResponse>(Endpoints.inscricoes.MINHA(eventoId)).then(res => res.data),

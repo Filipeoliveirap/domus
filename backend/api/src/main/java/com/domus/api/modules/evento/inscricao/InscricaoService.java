@@ -77,8 +77,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
-        boolean autoInscricao = pessoaId.equals(minhaPessoaId);
-        boolean porExcecao = validarElegibilidade(evento, membro, autoInscricao, role, confirmado);
+        boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado);
 
         InscricaoEvento inscricao = inscricaoRepository
                 .findByEventoIdAndPessoaId(eventoId, pessoaId)
@@ -273,14 +272,19 @@ public class InscricaoService {
      *         {@link InscricaoEvento#isInscritoPorExcecao()} (Task 6), que protege esta
      *         inscrição de ser cancelada em silêncio numa edição futura do evento.
      */
-    private boolean validarElegibilidade(Evento evento, Pessoa membro, boolean autoInscricao,
-                                         String role, boolean confirmado) {
+    private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
         if (elegibilidade.apto()) return false;
 
+        // Quem GERENCIA inscrições (admin/líder) pode contornar uma restrição contornável,
+        // inclusive na PRÓPRIA inscrição — decisão do autor: o gestor organiza os eventos e
+        // pode participar de um recorte fora do seu (equipe do retiro de jovens, café dos
+        // homens que ele coordena). Exige `confirmado` explícito por clique, então não é
+        // burla casual. Quem NÃO gerencia nunca contorna (podeGerenciar == false barra),
+        // então a restrição continua real para o membro comum — que era a proteção que
+        // importava. VAGAS_ESGOTADAS não é contornável (não entra em totalmenteContornavel).
         boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role);
-        boolean podeContornar = !autoInscricao
-                && podeGerenciar
+        boolean podeContornar = podeGerenciar
                 && confirmado
                 && elegibilidade.totalmenteContornavel();
 

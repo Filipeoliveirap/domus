@@ -22,16 +22,19 @@ public class InscricaoController {
      * Auto-inscrição. NÃO recebe identidade alguma no corpo — o membro vem do JWT.
      * É o que torna esta rota impossível de usar errado: não há campo a adulterar.
      *
-     * <p>{@code role}/{@code confirmado} são irrelevantes aqui — vão como {@code null}/{@code
-     * false} porque {@code inscritoPorOuNull == null} já basta pro service saber que é
-     * auto-inscrição, que NUNCA contorna elegibilidade (nem para quem gerencia).
+     * <p>{@code confirmado=true} deixa quem GERENCIA inscrições se inscrever num evento cujo
+     * recorte não atende (o gestor organiza e pode participar — equipe do retiro de jovens,
+     * café dos homens que ele coordena). De quem NÃO gerencia, o parâmetro é ignorado: a
+     * restrição continua valendo. {@code role} vai para o service decidir isso.
      */
     @PostMapping("/eventos/{eventoId}/inscricoes")
-    public ResponseEntity<MinhaInscricaoResponse> inscrever(@PathVariable UUID eventoId) {
+    public ResponseEntity<MinhaInscricaoResponse> inscrever(
+            @PathVariable UUID eventoId,
+            @RequestParam(defaultValue = "false") boolean confirmado) {
         var usuario = usuarioAutenticado.get();
         var response = inscricaoService.inscrever(
                 eventoId, usuario.getPessoa().getId(), null, usuario.getPessoa().getId(),
-                null, false, usuario.getIgreja().getId());
+                usuario.getRole().getNome(), confirmado, usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

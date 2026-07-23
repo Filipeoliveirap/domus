@@ -8,8 +8,12 @@ import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { ModalConfirmarPagamento } from './ModalConfirmarPagamento'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import type { SituacaoEvento } from '@/types/evento.type'
+import type { Impedimento } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
 
 interface Props {
@@ -44,24 +48,64 @@ interface Props {
 export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco }: Props) {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [mostrarModalPagamento, setMostrarModalPagamento] = useState(false)
+  // Quando um gestor tenta se inscrever num recorte fora do seu, o 422 contornável cai aqui
+  // e abre a confirmação "inscrever mesmo assim". Vazio = sem confirmação pendente.
+  const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
+
+  const role = useAuthStore((s) => s.role)
+  // Gestor (admin/líder) pode se inscrever num recorte fora do seu, com confirmação — o
+  // backend só aceita o "mesmo assim" de quem gerencia. Para os demais, a restrição é firme.
+  const ehGestor = podeGerenciarInscricoes(role)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   // No modo "Eu vou" (evento sem inscrição prévia) o feedback é o botão mudando, não um
-  // toast: a interação é do peso de uma curtida.
-  const inscrever = useInscrever(eventoId, !requerInscricao)
+  // toast: a interação é do peso de uma curtida. Para o gestor, um 422 contornável abre a
+  // confirmação em vez de um toast de erro.
+  const inscrever = useInscrever(eventoId, !requerInscricao, {
+    onContornavel: ehGestor ? (imps) => setImpedimentosParaConfirmar(imps) : undefined,
+  })
   const cancelar = useCancelarInscricao(!requerInscricao)
 
-  // Prévia de elegibilidade da PRÓPRIA PESSOA — conveniência de UX para desabilitar o
-  // botão com o motivo ao lado. NUNCA esconde: quem não é apto continua vendo o botão,
-  // só desabilitado — a defesa de verdade é o 422 do backend no POST.
+  // Prévia de elegibilidade da PRÓPRIA PESSOA — conveniência de UX.
   const { data: elegibilidade } = useElegibilidade(eventoId)
-  const impedimento = !elegibilidade?.apto ? elegibilidade?.impedimentos[0]?.mensagem : undefined
+  const impedimentoPreview = !elegibilidade?.apto ? elegibilidade?.impedimentos[0]?.mensagem : undefined
+  // Só DESABILITA o botão para quem NÃO é gestor: o membro comum vê o motivo e não avança.
+  // O gestor mantém o botão ativo — clicar tenta inscrever e, se barrado, abre a confirmação.
+  const impedimento = ehGestor ? undefined : impedimentoPreview
 
   const eventoEncerrado = new Date(inicioEm) < new Date()
   const semVagas = vagasRestantes !== null && vagasRestantes <= 0
   // F15: fora de AGENDADO o backend recusa inscrição — a CTA de registrar não aparece.
   // Quem já está inscrito continua vendo o próprio status (isso não é "se inscrever").
   const inscricaoBloqueadaPelaSituacao = situacao !== 'AGENDADO'
+
+  // "Inscrever mesmo assim" (gestor): reenvia com confirmado=true e fecha a confirmação.
+  function aoConfirmarMesmoAssim() {
+    inscrever.mutate({ confirmado: true }, {
+      onSuccess: () => setImpedimentosParaConfirmar(null),
+    })
+  }
+
+  // A confirmação sim/não — renderizada junto de cada fluxo que pode dispará-la.
+  const modalContorno = impedimentosParaConfirmar && (
+    <ModalConfirmacao
+      titulo="Inscrever mesmo assim?"
+      textoConfirmar="Inscrever mesmo assim"
+      isLoading={inscrever.isPending}
+      onConfirmar={aoConfirmarMesmoAssim}
+      onClose={() => setImpedimentosParaConfirmar(null)}
+      mensagem={
+        <>
+          <p>Você não atende a todos os requisitos deste evento:</p>
+          <ul>
+            {impedimentosParaConfirmar.map((imp) => (
+              <li key={imp.codigo}>{imp.mensagem}</li>
+            ))}
+          </ul>
+        </>
+      }
+    />
+  )
 
   if (isLoading) {
     return (
@@ -99,7 +143,7 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
         if (!minha?.id) return
         cancelar.mutate(minha.id)
       } else {
-        inscrever.mutate()
+        inscrever.mutate({})
       }
     }
 
@@ -121,6 +165,7 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
             {impedimento}
           </span>
         )}
+        {modalContorno}
       </span>
     )
   }
@@ -189,7 +234,7 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
         type="button"
         className={styles.botao}
         disabled={inscrever.isPending || !!impedimento}
-        onClick={() => (preco ? setMostrarModalPagamento(true) : inscrever.mutate())}
+        onClick={() => (preco ? setMostrarModalPagamento(true) : inscrever.mutate({}))}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
         {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
@@ -212,6 +257,8 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
           onClose={() => setMostrarModalPagamento(false)}
         />
       )}
+
+      {modalContorno}
     </>
   )
 }

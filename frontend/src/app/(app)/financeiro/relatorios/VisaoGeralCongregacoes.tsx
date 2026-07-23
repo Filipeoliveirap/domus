@@ -67,7 +67,7 @@ export function VisaoGeralCongregacoes({
   if (isError || !data) {
     return (
       <div className={styles.erro}>
-        <p>Não foi possível carregar os números das congregações.</p>
+        <p>Não foi possível carregar os números das unidades.</p>
         <button className={styles.botaoTentar} onClick={aoTentarNovamente}>
           Tentar novamente
         </button>

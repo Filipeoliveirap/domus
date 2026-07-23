@@ -16,7 +16,8 @@ public record UsuarioResponseDTO(
         // Convite ainda não aceito: usuário criado por convite que nunca fez login
         // (nem nativo nem Google). Derivado de ultimoLoginEm == null.
         boolean convitePendente,
-        LocalDateTime criadoEm
+        LocalDateTime criadoEm,
+        UUID fotoId
 ) {
     public static UsuarioResponseDTO from(Usuario u) {
         return new UsuarioResponseDTO(
@@ -27,7 +28,8 @@ public record UsuarioResponseDTO(
                 u.isAtivo(),
                 u.getUltimoLoginEm(),
                 u.getUltimoLoginEm() == null,
-                u.getCreatedAt()
+                u.getCreatedAt(),
+                u.getPessoa().getFoto() != null ? u.getPessoa().getFoto().getId() : null
         );
     }
 }

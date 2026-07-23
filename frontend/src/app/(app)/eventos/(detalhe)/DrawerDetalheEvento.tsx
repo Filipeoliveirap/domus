@@ -7,10 +7,8 @@ import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import {
-  statusEvento,
-  rotuloStatus,
-  varianteStatus,
-  dataExtenso,
+  seloEvento,
+  periodoEvento,
   hora,
   vagasRestantesCalc,
   vagasAcabando as calcVagasAcabando,
@@ -68,7 +66,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const status = evento ? statusEvento(evento) : null
+  const selo = evento ? seloEvento(evento) : null
 
   return (
     <>
@@ -95,12 +93,12 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
           <div className={styles.conteudo}>
             {/* Cabeçalho */}
             <header className={styles.header}>
-              {status && (
-                <span className={`${styles.selo} ${styles[varianteStatus(status)]}`}>
-                  {rotuloStatus(status)}
+              {selo && (
+                <span className={`${styles.selo} ${styles[selo.variante]}`}>
+                  {selo.label}
                 </span>
               )}
-              <span className={styles.dataTopo}>{dataExtenso(evento.inicioEm)}</span>
+              <span className={styles.dataTopo}>{periodoEvento(evento)}</span>
               <div className={styles.tituloLinha}>
                 <h2 className={styles.titulo}>{evento.titulo}</h2>
                 {/* A6/rodada 3: mesma affordance do modal do início — só quem gerencia, e só enquanto editável. */}

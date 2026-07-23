@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, ThumbsUp } from 'lucide-react'
+import { CheckCircle2, XCircle, ThumbsUp, AlertTriangle } from 'lucide-react'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
+import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { ModalConfirmarPagamento } from './ModalConfirmarPagamento'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
@@ -50,6 +51,12 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
   const inscrever = useInscrever(eventoId, !requerInscricao)
   const cancelar = useCancelarInscricao(!requerInscricao)
 
+  // Prévia de elegibilidade da PRÓPRIA PESSOA — conveniência de UX para desabilitar o
+  // botão com o motivo ao lado. NUNCA esconde: quem não é apto continua vendo o botão,
+  // só desabilitado — a defesa de verdade é o 422 do backend no POST.
+  const { data: elegibilidade } = useElegibilidade(eventoId)
+  const impedimento = !elegibilidade?.apto ? elegibilidade?.impedimentos[0]?.mensagem : undefined
+
   const eventoEncerrado = new Date(inicioEm) < new Date()
   const semVagas = vagasRestantes !== null && vagasRestantes <= 0
   // F15: fora de AGENDADO o backend recusa inscrição — a CTA de registrar não aparece.
@@ -83,6 +90,9 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
     }
 
     const pendente = inscrever.isPending || cancelar.isPending
+    // Só desabilita por impedimento quando ainda NÃO está marcado — desmarcar (cancelar)
+    // nunca esbarra em elegibilidade.
+    const bloqueadoPorImpedimento = !marcado && !!impedimento
 
     function aoClicar() {
       if (marcado) {
@@ -94,16 +104,24 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
     }
 
     return (
-      <button
-        type="button"
-        className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
-        onClick={aoClicar}
-        disabled={pendente}
-        aria-pressed={marcado}
-      >
-        <ThumbsUp size={15} className={styles.icone} aria-hidden="true" />
-        {marcado ? 'Você vai' : 'Eu vou'}
-      </button>
+      <span className={styles.euVouWrap}>
+        <button
+          type="button"
+          className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
+          onClick={aoClicar}
+          disabled={pendente || bloqueadoPorImpedimento}
+          aria-pressed={marcado}
+        >
+          <ThumbsUp size={15} className={styles.icone} aria-hidden="true" />
+          {marcado ? 'Você vai' : 'Eu vou'}
+        </button>
+        {bloqueadoPorImpedimento && (
+          <span className={styles.motivo}>
+            <AlertTriangle size={13} aria-hidden="true" />
+            {impedimento}
+          </span>
+        )}
+      </span>
     )
   }
 
@@ -170,12 +188,21 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
       <button
         type="button"
         className={styles.botao}
-        disabled={inscrever.isPending}
+        disabled={inscrever.isPending || !!impedimento}
         onClick={() => (preco ? setMostrarModalPagamento(true) : inscrever.mutate())}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
         {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
       </button>
+
+      {/* Botão desabilitado é CONVENIÊNCIA, nunca escondido: quem não é apto precisa ver
+          o motivo, não achar que o sistema quebrou. A defesa de verdade é o 422 do POST. */}
+      {impedimento && (
+        <span className={styles.motivo}>
+          <AlertTriangle size={14} aria-hidden="true" />
+          {impedimento}
+        </span>
+      )}
 
       {mostrarModalPagamento && preco && (
         <ModalConfirmarPagamento

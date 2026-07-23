@@ -71,6 +71,10 @@ const AFETADAS: Record<Entidade, string[][]> = {
     ['eventos'], // cards de evento mostram vagas restantes
     ['evento'], // tela de detalhe do evento
     ['inicio'], // próximos eventos também mostram vagas
+    // Task 10: `['elegibilidade', eventoId]` NÃO é coberto por `['inscricoes']` (prefixo
+    // diferente) — sem esta linha o botão de inscrição continuaria mostrando o impedimento
+    // velho (ex.: vagas esgotadas) depois de uma inscrição ou cancelamento.
+    ['elegibilidade'],
   ],
 }
 

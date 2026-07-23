@@ -154,6 +154,29 @@
   overflow-wrap: anywhere;
 }
 
+/* Quando o local é cadastrado, o <span> vira <button> clicável: zera o estilo nativo e
+   sublinha para indicar que abre o detalhe do endereço. */
+.localClicavel {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+}
+.localClicavel:hover {
+  color: var(--color-primary);
+  text-decoration-color: var(--color-primary);
+}
+.localClicavel:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .descricao {
   font-size: var(--font-size-md);
   line-height: 1.65;

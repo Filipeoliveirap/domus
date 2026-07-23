@@ -20,6 +20,8 @@ import {
 import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
+import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
+import type { EventoLocalInfo } from '@/types/evento.type'
 import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -45,6 +47,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: minha } = useMinhaInscricao(eventoId)
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
   const [ampliada, setAmpliada] = useState(false)
+  const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
   const totalPessoas = useMemo(
     () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
@@ -125,18 +128,32 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               {evento.local && (
                 <div className={styles.infoItem}>
                   <span className={styles.infoIcone}><MapPin size={20} /></span>
+                  {/*
+                    Local CADASTRADO (tem id) abre o detalhe do endereço ao clicar — é onde
+                    mora o endereço herdado da igreja, que não cabe inteiro aqui. O ad-hoc de
+                    texto livre não tem o que detalhar, então continua sendo texto simples.
+                  */}
+                  {evento.local.id ? (
+                    <button
+                      type="button"
+                      className={styles.localBotao}
+                      onClick={() => setLocalDetalhe(evento.local)}
+                    >
+                      <p className={styles.infoLabel}>Local</p>
+                      <p className={styles.infoValor}>{evento.local.nome}</p>
+                      {evento.local.endereco && (
+                        <p className={styles.infoSecundario}>
+                          {evento.local.endereco}
+                          {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                        </p>
+                      )}
+                    </button>
+                  ) : (
                   <div>
                     <p className={styles.infoLabel}>Local</p>
                     <p className={styles.infoValor}>{evento.local.nome}</p>
-                    {evento.local.endereco && (
-                      <p className={styles.infoSecundario}>
-                        {evento.local.endereco}
-                        {/* Local sem endereço próprio usa o da igreja — avisar evita
-                            confusão de quem visse o CEP e achasse que era do local. */}
-                        {evento.local.enderecoHerdado && ' (endereço da igreja)'}
-                      </p>
-                    )}
                   </div>
+                  )}
                 </div>
               )}
 
@@ -299,6 +316,10 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
         descricao={`Imagem do evento ${evento.titulo}`}
         onClose={() => setAmpliada(false)}
       />
+    )}
+
+    {localDetalhe && (
+      <ModalDetalheLocal local={localDetalhe} onClose={() => setLocalDetalhe(null)} />
     )}
     </>
   )

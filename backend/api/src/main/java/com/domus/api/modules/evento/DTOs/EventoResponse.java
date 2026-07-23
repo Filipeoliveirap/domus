@@ -46,10 +46,11 @@ public record EventoResponse(
         static LocalInfo from(Evento e) {
             LocalEvento local = e.getLocal();
             if (local != null) {
-                String endereco = local.temEnderecoProprio()
-                        ? local.getCepLogradouroNumero()
-                        : null;
-                return new LocalInfo(local.getId(), local.getNome(), endereco, !local.temEnderecoProprio());
+                // Reusa a resolução do LocalEventoResponse: endereço próprio, OU o da igreja
+                // quando herdado. Antes montava só o próprio (null no herdado), então os
+                // modais de evento mostravam o nome do local sem endereço nenhum embaixo.
+                var r = com.domus.api.modules.evento.local.DTOs.LocalEventoResponse.from(local);
+                return new LocalInfo(local.getId(), local.getNome(), r.endereco(), r.enderecoHerdado());
             }
             if (e.getLocalTexto() != null) {
                 return new LocalInfo(null, e.getLocalTexto(), null, false);

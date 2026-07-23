@@ -68,6 +68,13 @@ class InscricaoPresencaTest {
                 .status(StatusInscricao.CONFIRMADA).build();
     }
 
+    private InscricaoEvento inscricaoCancelada(Evento evento) {
+        Pessoa pessoa = Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("João").build();
+        return InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento).pessoa(pessoa)
+                .status(StatusInscricao.CANCELADA).build();
+    }
+
     @Test
     void marcarTodosPresentes_recusa409_quandoEventoNaoControlaPresenca() {
         Evento evento = evento(false);
@@ -132,6 +139,36 @@ class InscricaoPresencaTest {
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ACESSO_COMUM"))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void marcarPresencaInscricao_recusa409_quandoInscricaoCancelada() {
+        Evento evento = evento(true);
+        InscricaoEvento inscricao = inscricaoCancelada(evento);
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() ->
+                service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ConflitoNegocioException.class);
+
+        assertThat(inscricao.isCompareceu()).isFalse();
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void marcarPresencaAcompanhante_recusa409_quandoInscricaoCancelada() {
+        Evento evento = evento(true);
+        InscricaoEvento inscricao = inscricaoCancelada(evento);
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
+        when(acompanhanteRepository.findById(acompanhanteId)).thenReturn(Optional.of(acompanhante));
+
+        assertThatThrownBy(() ->
+                service.marcarPresencaAcompanhante(eventoId, acompanhanteId, true, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ConflitoNegocioException.class);
+
+        assertThat(acompanhante.isCompareceu()).isFalse();
+        verify(acompanhanteRepository, never()).save(any());
     }
 
     @Test

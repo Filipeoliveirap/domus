@@ -96,7 +96,7 @@ class EventoAuditoriaArquivamentoTest {
 
     private EventoResponse listarEIsolarEvento(UUID eventoId) {
         PagedResponse<EventoResponse> pagina =
-                eventoService.listarEventos(igrejaId, null, PageRequest.of(0, 20));
+                eventoService.listarEventos(igrejaId, null, null, null, PageRequest.of(0, 20));
         return pagina.getContent().stream()
                 .filter(r -> r.id().equals(eventoId)).findFirst().orElseThrow();
     }

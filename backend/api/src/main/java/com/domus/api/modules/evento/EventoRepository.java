@@ -149,6 +149,8 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         WHERE e.igreja_id = :igrejaId
           AND e.deleted_at IS NULL
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
         ORDER BY
           CASE
             WHEN CAST(:agora AS timestamp) >= e.inicio_em
@@ -168,10 +170,14 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         WHERE e.igreja_id = :igrejaId
           AND e.deleted_at IS NULL
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
         """,
         nativeQuery = true)
     Page<Evento> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
                                  @Param("q") String q,
+                                 @Param("tipo") String tipo,
+                                 @Param("recorteEtario") String recorteEtario,
                                  @Param("agora") LocalDateTime agora,
                                  Pageable pageable);
 

@@ -65,12 +65,13 @@ public class EventoService {
 
     @Cacheable(
             value = "eventos",
-            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #pageable)"
+            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #tipo, #recorteEtario, #pageable)"
     )
     @Transactional(readOnly = true)
-    public PagedResponse<EventoResponse> listarEventos(UUID igrejaId, String q, Pageable pageable) {
+    public PagedResponse<EventoResponse> listarEventos(
+            UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
         Page<EventoResponse> pagina = eventoRepository
-                .buscarPorIgreja(igrejaId, q, java.time.LocalDateTime.now(), pageable)
+                .buscarPorIgreja(igrejaId, q, tipo, recorteEtario, java.time.LocalDateTime.now(), pageable)
                 .map(EventoResponse::from);
         return PagedResponse.from(pagina);
     }

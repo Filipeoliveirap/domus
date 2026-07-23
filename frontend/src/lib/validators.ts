@@ -33,11 +33,25 @@ export const registrarIgrejaSchema2 = z.object({
   path: ['confirmarSenha'],
 })
 
+/**
+ * Campo opcional que aceita string vazia como "não preenchido" (comum em formulário HTML,
+ * onde um input sem valor manda `''`, não `undefined`).
+ *
+ * O `.optional()` de FORA (não só o de dentro do `preprocess`) é o que importa: sem ele, um
+ * campo cujo NOME nunca chega a existir no objeto validado (não `''`, literalmente ausente —
+ * o caso de um campo só controlado via `setValue`, nunca `register()`ado, que o usuário nunca
+ * chega a tocar, ex.: data de batismo quando o vínculo começa como CONGREGANTE) falha com
+ * "Invalid input: expected nonoptional, received undefined" pra TODO campo opcional do
+ * formulário de uma vez — o Zod v4 só reconhece a chave do objeto como opcional quando o tipo
+ * mais externo do campo é `ZodOptional`; `preprocess(fn, schema.optional())` tem `ZodPipe` por
+ * fora, não conta. Envolver o resultado inteiro em `.optional()` resolve os dois casos (chave
+ * ausente E valor vazio) sem reintroduzir o problema oposto (ver commit que corrigiu isto).
+ */
 const opcional = <T extends z.ZodType<string>>(schema: T) =>
   z.preprocess(
     (val) => (val === '' || val == null ? undefined : val),
     schema.optional(),
-  )
+  ).optional()
 
 export const pessoaSchema = z.object({
   nome: z

@@ -23,6 +23,8 @@ export interface Sessao {
     role: Role;
     igrejaId: string;
     igrejaNome: string;
+    /** Foto da PESSOA vinculada (Usuario não tem foto própria). null = sem foto. */
+    fotoId: string | null;
 }
 
 export interface ForgotPasswordRequest {
@@ -36,6 +38,11 @@ export interface ResetPasswordRequest {
 
 export interface MensagemResponse {
     message: string;
+}
+
+export interface AlterarSenhaRequest {
+    senhaAtual: string;
+    novaSenha: string;
 }
 
 export interface RegistrarIgrejaRequest {

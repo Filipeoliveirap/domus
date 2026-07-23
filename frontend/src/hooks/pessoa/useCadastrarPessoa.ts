@@ -30,7 +30,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
     defaultValues: {
       nome: '', email: '', telefone: '', dataNascimento: '',
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
-      vinculo: 'CONGREGANTE', estadoCivil: '',
+      vinculo: 'CONGREGANTE', estadoCivil: '', sexo: '',
       ministerio: '', observacoes: '',
       fotoId: null,
     },
@@ -58,6 +58,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         },
         vinculo: pessoaInicial.vinculo,
         estadoCivil: pessoaInicial.estadoCivil ?? '',
+        sexo: pessoaInicial.sexo ?? '',
         ministerio: pessoaInicial.ministerio ?? '',
         observacoes: pessoaInicial.observacoes ?? '',
         fotoId: pessoaInicial.fotoId ?? null,
@@ -73,6 +74,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         ...data,
         telefone: data.telefone?.replace(/\D/g, '') || undefined,
         estadoCivil: data.estadoCivil || undefined,
+        sexo: data.sexo || undefined,
       }
 
       if (ehEdicao) {

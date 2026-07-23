@@ -45,6 +45,20 @@ public class InscricaoEvento {
     @Builder.Default
     private StatusInscricao status = StatusInscricao.CONFIRMADA;
 
+    /**
+     * V5 — marca DURÁVEL de que esta inscrição só existe porque quem gerencia contornou
+     * deliberadamente um impedimento ("inscrever mesmo assim": o líder de 34 anos no retiro de
+     * jovens, o preletor, o motorista). Sem isto, qualquer edição futura do evento apagaria a
+     * exceção em silêncio (ver {@link InscricaoService#removerInscritosNaoElegiveis} e Task 6).
+     *
+     * <p>Gravada em {@link InscricaoService#inscrever} exatamente quando a elegibilidade foi
+     * contornada; {@code false} (default) para toda inscrição que era legítima sob a regra
+     * vigente no momento em que foi feita.
+     */
+    @Column(name = "inscrito_por_excecao", nullable = false)
+    @Builder.Default
+    private boolean inscritoPorExcecao = false;
+
     @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<AcompanhanteInscricao> acompanhantes = new ArrayList<>();

@@ -5,7 +5,13 @@ import styles from './StatusCards.module.css'
 interface StatusOption {
   value: string
   titulo: string
-  descricao: string
+  /**
+   * Subtítulo da opção. OPCIONAL: há escolhas que se explicam sozinhas ("Homem"/"Mulher")
+   * e forçá-las a inventar uma frase só para preencher o campo produziria ruído. Quando
+   * ausente, o elemento nem é renderizado — um span vazio continuaria contando como item
+   * de flex e somaria o `gap` do container.
+   */
+  descricao?: string
 }
 
 interface StatusCardsProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -38,7 +44,9 @@ export const StatusCards = forwardRef<HTMLInputElement, StatusCardsProps>(
                 />
                 <span className={styles.texto}>
                   <span className={styles.titulo}>{opt.titulo}</span>
-                  <span className={styles.descricao}>{opt.descricao}</span>
+                  {opt.descricao && (
+                    <span className={styles.descricao}>{opt.descricao}</span>
+                  )}
                 </span>
                 {ativo && (
                   <span className={styles.checkIcon}>

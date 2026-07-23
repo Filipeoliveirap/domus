@@ -1,0 +1,188 @@
+/* ─── Página ─────────────────────────────────────────────── */
+.pagina {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ─── Cabeçalho ──────────────────────────────────────────── */
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-dark);
+}
+.subtitulo {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ─── Card do formulário ─────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  min-width: 0;
+  box-shadow: 0 6px 8px -1px rgba(19, 27, 46, 0.10), 0 12px 30px -3px rgba(19, 27, 46, 0.08);
+}
+
+.fotoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+/* ─── Aviso (só a secretaria pode editar) ────────────────── */
+.aviso {
+  background-color: var(--color-warning-bg, #fef9c3);
+  color: var(--color-warning-text, #854d0e);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ─── Seções ─────────────────────────────────────────────── */
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.secaoHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.secaoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-table-header);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.secaoTitulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* ─── Grid de campos ─────────────────────────────────────── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  min-width: 0;
+}
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+/* ─── Textarea ───────────────────────────────────────────── */
+.campoTextarea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.labelTextarea {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background-color: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.textarea::placeholder {
+  color: var(--color-placeholder);
+}
+.textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.textarea:disabled {
+  background-color: var(--color-bg-table-header);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.erroCampo {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Ministério / Batismo ───────────────────────────────── */
+.ministerioWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.labelMinisterio {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.batismoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.campoHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Erro geral da API ──────────────────────────────────── */
+.erroGeral {
+  padding: 12px 16px;
+  background-color: var(--color-danger-bg);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+}
+
+/* ─── Responsivo ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .pagina {
+    padding: 16px;
+  }
+  .card {
+    padding: 20px;
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}

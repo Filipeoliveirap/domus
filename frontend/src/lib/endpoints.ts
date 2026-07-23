@@ -16,6 +16,7 @@ export const Endpoints = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     REGISTER_IGREJA: '/igrejas/registrar',
+    CHANGE_PASSWORD: '/auth/change-password',
   },
   usuarios: {
     LISTAR_USUARIOS: '/usuarios',
@@ -32,12 +33,22 @@ export const Endpoints = {
     BY_ID: (id: string) => `/pessoas/${id}`,
     ARQUIVAR: (id: string) => `/pessoas/${id}`,
     BAIRROS: '/pessoas/bairros',
+    ME: '/pessoas/me',
   },
 
   eventos: {
     LISTAR: '/eventos',
     CRIAR: '/eventos',
     BY_ID: (id: string) => `/eventos/${id}`,
+    TIPOS: '/eventos/tipos',
+    IMPACTO_RESTRICAO: (id: string) => `/eventos/${id}/impacto-restricao`,
+    ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
+  },
+
+  locaisEvento: {
+    LISTAR: '/locais-evento',
+    CRIAR: '/locais-evento',
+    BY_ID: (id: string) => `/locais-evento/${id}`,
   },
 
   inscricoes: {

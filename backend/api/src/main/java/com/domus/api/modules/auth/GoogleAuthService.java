@@ -72,6 +72,7 @@ public class GoogleAuthService {
                 usuario.getRole().getNome(),
                 usuario.getIgreja().getId(),
                 usuario.getIgreja().getNome(),
+                usuarioRepository.findFotoIdById(usuario.getId()),
                 token,
                 refreshToken
         );

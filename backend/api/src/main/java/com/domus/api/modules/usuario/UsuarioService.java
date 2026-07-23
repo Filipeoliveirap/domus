@@ -41,6 +41,7 @@ public class UsuarioService {
     private final OutboxRegistrador outboxRegistrador;
     private final PasswordResetService passwordResetService;
     private final EmailService emailService;
+    private final com.domus.api.modules.evento.EventoRepository eventoRepository;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -215,8 +216,7 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public PagedResponse<UsuarioResponseDTO> listar(UUID igrejaId, String q, Pageable pageable) {
-        Page<UsuarioResponseDTO> pagina = usuarioRepository.buscarPorIgreja(igrejaId, q, pageable)
-                .map(UsuarioResponseDTO::from);
+        Page<UsuarioResponseDTO> pagina = usuarioRepository.buscarPorIgreja(igrejaId, q, pageable);
         return PagedResponse.from(pagina);
     }
 
@@ -298,6 +298,14 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
         garantirNaoEhUltimoAdmin(usuario, igrejaId);
 
+        // Mesmo raciocínio do arquivamento de pessoa (ver PessoaService.arquivarMembro): o
+        // ON DELETE SET NULL de criado_por_usuario_id/atualizado_por_usuario_id nunca dispara
+        // (Usuario usa soft delete), e criado_por é preenchido em TODO evento (não é opcional
+        // como o responsável) — arquivar um usuário que já cadastrou UM evento derrubaria a
+        // listagem INTEIRA se este passo faltasse. Antes do delete, pois usa o nome da pessoa
+        // dele (ainda resolvível — a pessoa não foi tocada aqui).
+        eventoRepository.desvincularUsuario(usuario.getId(), usuario.getPessoa().getNome());
+
         usuarioRepository.delete(usuario);
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.USUARIO,
@@ -313,6 +321,11 @@ public class UsuarioService {
     public void arquivarPorMembro(UUID pessoaId, UUID igrejaId) {
         usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario -> {
             log.info("Arquivando usuário em cascata (membro arquivado). usuario_id={}, pessoa_id={}, igrejaId={}", usuario.getId(), pessoaId, igrejaId);
+            // Mesmo desvínculo do arquivamento direto (ver arquivarUsuario acima) — chamado
+            // aqui de novo porque este método é o caminho de cascata (PessoaService.arquivarMembro
+            // chama arquivarPorMembro ANTES do soft delete da pessoa, então usuario.getPessoa()
+            // ainda resolve o nome certo).
+            eventoRepository.desvincularUsuario(usuario.getId(), usuario.getPessoa().getNome());
             usuarioRepository.delete(usuario);
             outboxRegistrador.registrar(
                     TipoEntidadeOutbox.USUARIO,

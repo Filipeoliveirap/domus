@@ -3,6 +3,39 @@
  * mantida aqui de propósito — só o texto voltado ao usuário usa "convidado" (ver hooks).
  */
 
+/**
+ * Mesmos códigos de `CodigoImpedimento.java` (back) — união de tipos, não string crua,
+ * para o front nunca comparar por texto solto.
+ */
+export type CodigoImpedimento =
+  | 'FAIXA_ETARIA'
+  | 'SEM_DATA_NASCIMENTO'
+  | 'EXCLUSIVO_MEMBROS'
+  | 'ESTADO_CIVIL'
+  | 'SEM_ESTADO_CIVIL'
+  | 'SEXO'
+  | 'SEM_SEXO'
+  | 'VAGAS_ESGOTADAS'
+
+/**
+ * Espelha `Impedimento.java`. `contornavel`: quem gerencia pode inscrever assim mesmo
+ * (`confirmado=true`) — exceto `VAGAS_ESGOTADAS`, que nunca é contornável.
+ */
+export interface Impedimento {
+  codigo: CodigoImpedimento
+  mensagem: string
+  contornavel: boolean
+}
+
+/**
+ * Espelha `ElegibilidadeResponse.java`. É conveniência de UX (decidir o que mostrar ANTES
+ * do POST) — nunca defesa; quem chama o POST direto esbarra no mesmo 422.
+ */
+export interface ElegibilidadeResponse {
+  apto: boolean
+  impedimentos: Impedimento[]
+}
+
 export interface AcompanhanteResponse {
   id: string
   nome: string

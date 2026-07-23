@@ -38,7 +38,7 @@ public class EventoDocument {
         doc.setIgrejaId(evento.getIgreja().getId().toString());
         doc.setTitulo(evento.getTitulo());
         doc.setDescricao(evento.getDescricao());
-        doc.setLocal(evento.getLocal());
+        doc.setLocal(evento.getLocalExibicao());
         return doc;
     }
 }

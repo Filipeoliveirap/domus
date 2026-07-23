@@ -8,6 +8,6 @@ import java.util.UUID;
 /** Resumo de evento para as telas de início e dashboard. */
 public record EventoResumoDTO(UUID id, String titulo, LocalDateTime inicio, String local) {
     public static EventoResumoDTO from(Evento e) {
-        return new EventoResumoDTO(e.getId(), e.getTitulo(), e.getInicioEm(), e.getLocal());
+        return new EventoResumoDTO(e.getId(), e.getTitulo(), e.getInicioEm(), e.getLocalExibicao());
     }
 }

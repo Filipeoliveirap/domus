@@ -14,7 +14,8 @@ interface AuthState {
   id: string | null
   nome: string | null
   role: Role | null
-  foto: string | null
+  /** Id da foto (não a URL) — quem exibe monta a URL com `urlFoto()`, como em todo o app. */
+  fotoId: string | null
   igrejaId: string | null
   igrejaNome: string | null
   isAuthenticated: boolean
@@ -32,7 +33,7 @@ interface AuthState {
   logoutIntencional: boolean
   login: (data: Sessao) => void
   logout: () => void
-  atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role'>>) => void
+  atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role' | 'fotoId'>>) => void
   setHidratado: () => void
 }
 
@@ -40,7 +41,7 @@ const estadoDeslogado = {
   id: null,
   nome: null,
   role: null,
-  foto: null,
+  fotoId: null,
   igrejaId: null,
   igrejaNome: null,
   isAuthenticated: false,
@@ -50,9 +51,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
   ...estadoDeslogado,
   hidratado: false,
   logoutIntencional: false,
-  // foto fica null até a feature de upload da Fase 2 popular o campo.
+  // `data` já vem com `fotoId` do backend (GET /auth/me, /auth/login, /auth/google/*) —
+  // Sessao inclui o campo desde que o upload de foto passou a existir na Fase 2.
   login: (data) =>
-    set({ ...data, foto: null, isAuthenticated: true, hidratado: true, logoutIntencional: false }),
+    set({ ...data, isAuthenticated: true, hidratado: true, logoutIntencional: false }),
   logout: () => set({ ...estadoDeslogado, hidratado: true, logoutIntencional: true }),
   atualizarUsuarioLogado: (data) => set(data),
   setHidratado: () => set({ hidratado: true }),

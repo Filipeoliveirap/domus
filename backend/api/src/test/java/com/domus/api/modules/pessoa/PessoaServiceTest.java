@@ -9,6 +9,7 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.usuario.UsuarioService;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class PessoaServiceTest {
     OutboxRegistrador outboxRegistrador;
     ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
     FotoService fotoService;
+    com.domus.api.modules.evento.EventoRepository eventoRepository;
     PessoaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -52,9 +54,10 @@ class PessoaServiceTest {
         outboxRegistrador = mock(OutboxRegistrador.class);
         reindexacaoMovimentacaoService = mock(ReindexacaoMovimentacaoService.class);
         fotoService = mock(FotoService.class);
+        eventoRepository = mock(com.domus.api.modules.evento.EventoRepository.class);
         service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
                 inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService,
-                fotoService);
+                fotoService, eventoRepository);
 
         Igreja igreja = new Igreja();
         igreja.setId(igrejaId);
@@ -70,7 +73,7 @@ class PessoaServiceTest {
 
     private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo, UUID fotoId) {
         return new PessoaRequestDTO("Maria", null, null, null, null,
-                vinculo, null, null, null, dataBatismo, fotoId);
+                vinculo, null, null, null, null, dataBatismo, fotoId);
     }
 
     @Test
@@ -163,5 +166,34 @@ class PessoaServiceTest {
                 dto(Vinculo.MEMBRO, LocalDate.now().minusYears(1), fotoId), igrejaId);
 
         verify(fotoService, never()).remover(any());
+    }
+
+    @org.junit.jupiter.api.Test
+    void atualizarMinhaFoto_trocaSoAFoto_mantemRestoIntacto() {
+        Foto fotoAntiga = new Foto();
+        fotoAntiga.setId(UUID.randomUUID());
+        Pessoa existente = Pessoa.builder()
+                .id(pessoaId).nome("Ana").email("ana@ex.com")
+                .vinculo(Vinculo.CONGREGANTE).foto(fotoAntiga)
+                .build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        Foto fotoNova = new Foto();
+        fotoNova.setId(UUID.randomUUID());
+        when(fotoService.buscarParaVincular(fotoNova.getId(), igrejaId)).thenReturn(fotoNova);
+
+        PessoaResponse resposta = service.atualizarMinhaFoto(pessoaId, fotoNova.getId(), igrejaId);
+
+        assertThat(resposta.fotoId()).isEqualTo(fotoNova.getId());
+        assertThat(resposta.nome()).isEqualTo("Ana");
+        verify(fotoService).remover(fotoAntiga.getId());
+    }
+
+    @org.junit.jupiter.api.Test
+    void atualizarMinhaFoto_pessoaDeOutraIgreja_lancaNaoEncontrado() {
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.atualizarMinhaFoto(pessoaId, UUID.randomUUID(), igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
     }
 }

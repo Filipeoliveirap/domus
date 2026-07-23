@@ -2,6 +2,7 @@ package com.domus.api.modules.auth;
 
 
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
+import com.domus.api.modules.auth.DTO.ChangePasswordDTO;
 import com.domus.api.modules.auth.DTO.ForgotPasswordDTO;
 import com.domus.api.modules.auth.DTO.GoogleLoginDTO;
 import com.domus.api.modules.auth.DTO.GoogleRegistrarDTO;
@@ -21,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,8 +54,10 @@ public class AuthenticationController {
     @PostMapping("/google/registrar")
     public ResponseEntity<SessaoDTO> googleRegistrar(@RequestBody @Valid GoogleRegistrarDTO data) {
         RegistrarIgrejaResponse r = googleAuthService.registrar(data);
+        // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto — fotoId nulo é o
+        // dado real, não uma omissão.
         return comCookies(r.token(), r.refreshToken())
-                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome()));
+                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), null));
     }
 
     /**
@@ -71,6 +75,15 @@ public class AuthenticationController {
     @GetMapping("/me")
     public ResponseEntity<SessaoDTO> me(@AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(authService.sessaoDe(usuario.getId()));
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @AuthenticationPrincipal Usuario usuario,
+            @CookieValue(name = AuthCookieFactory.COOKIE_REFRESH, required = false) String refreshToken,
+            @RequestBody @Valid ChangePasswordDTO data) {
+        authService.alterarSenha(usuario.getId(), refreshToken, data);
+        return ResponseEntity.ok(Map.of("message", "Senha alterada com sucesso."));
     }
 
     @PostMapping("/refresh")
@@ -117,6 +130,6 @@ public class AuthenticationController {
     }
 
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
-        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome());
+        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), r.fotoId());
     }
 }

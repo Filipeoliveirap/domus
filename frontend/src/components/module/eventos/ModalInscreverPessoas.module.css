@@ -210,6 +210,24 @@
   color: var(--color-primary);
 }
 
+/* Selo de aviso — a pessoa continua selecionável, é sinal de "pode ser barrada no POST". */
+.avisoIcone {
+  flex-shrink: 0;
+  color: var(--color-warning, #d97706);
+}
+
+/* Lista dos impedimentos na confirmação "inscrever mesmo assim". */
+.listaImpedimentos {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.listaImpedimentos li {
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+}
+
 /* ---- Footer ---- */
 
 .footer {

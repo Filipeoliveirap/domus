@@ -1,0 +1,80 @@
+# Infra dedicada da apresentação do TCC.
+#
+# POR QUE EXISTE SEPARADA: o ambiente do TCC roda a branch `develop`, cujo schema é anterior
+# à renomeação membro→pessoa e à consolidação das migrations. Quando ele dividia Postgres,
+# Redis e Elasticsearch com o ambiente de trabalho, trocar de branch corrompia o banco do
+# outro lado — o Flyway aplicava as migrations da branch atual sobre o schema da outra, e a
+# suíte inteira parava de subir. Em 22/07/2026 isso aconteceu de verdade: o banco de dev
+# voltou ao schema antigo e 28 testes quebraram por carga de contexto.
+#
+# Cada serviço aqui tem NOME, PORTA e VOLUME próprios. Os dois ambientes podem até ficar de
+# pé ao mesmo tempo sem se enxergar.
+#
+# Uso:
+#   subir:   docker compose -f docker-compose.tcc.yml up -d
+#   descer:  docker compose -f docker-compose.tcc.yml down
+#   apagar:  docker compose -f docker-compose.tcc.yml down -v   (leva os dados junto!)
+#
+# A aplicação sobe apontada para cá com:  --env-file .env.tcc
+
+name: domus-tcc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: domus-db-tcc
+    environment:
+      POSTGRES_DB: domus
+      POSTGRES_USER: domus
+      POSTGRES_PASSWORD: domus123
+    ports:
+      # 5433 no host: o 5432 fica livre para o ambiente de trabalho.
+      - "5433:5432"
+    volumes:
+      - postgres-data-tcc:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domus -d domus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: domus-redis-tcc
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data-tcc:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: domus-es-tcc
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      # Metade da memória do ES de trabalho: numa apresentação o volume de dados é pequeno,
+      # e os dois podem estar de pé ao mesmo tempo na mesma máquina.
+      - "ES_JAVA_OPTS=-Xms512m -Xmx1g"
+    ports:
+      - "9201:9200"
+    volumes:
+      - elastic-data-tcc:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# Sem Kibana de propósito: é ferramenta de inspeção, não faz parte da demonstração, e
+# subir menos coisa é menos coisa para falhar na hora de apresentar.
+
+volumes:
+  postgres-data-tcc:
+  redis-data-tcc:
+  elastic-data-tcc:

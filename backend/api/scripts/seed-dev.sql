@@ -398,7 +398,7 @@ BEGIN
                 'Final de semana de retiro com a juventude.',
                 NOW() + interval '15 days', NOW() + interval '17 days',
                 loc_chacara, 30, 'Retiro', pessoa_resp, usuario_admin, usuario_admin,
-                'JOVENS', 15, 29, true, false);
+                'Jovens', 15, 29, true, false);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 30);
 
         -- 5) evento futuro pago, exclusivo para membros batizados
@@ -432,7 +432,7 @@ BEGIN
                 'Programação especial para as crianças da igreja.',
                 NOW() + interval '10 days', NOW() + interval '10 days' + interval '4 hours',
                 loc_kids, 25, 'Kids', pessoa_resp, usuario_admin, usuario_admin,
-                'KIDS', 4, 11, true, false);
+                'Kids', 4, 11, true, false);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 25);
 
         -- 8) recorte etário 3ª idade, com restrição de sexo (só mulheres) para variar
@@ -444,7 +444,7 @@ BEGIN
                 'Encontro mensal das mulheres da terceira idade da igreja.',
                 NOW() + interval '25 days', NOW() + interval '25 days' + interval '3 hours',
                 loc_salao, 40, '3ª Idade', usuario_admin, usuario_admin,
-                '3A_IDADE', 60, 'MULHER', true, false);
+                '3ª idade', 60, 'MULHER', true, false);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 40);
     END LOOP;
 END $$;

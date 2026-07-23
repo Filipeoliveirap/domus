@@ -60,4 +60,55 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     """)
     List<UUID> listarPessoaIdsJaInscritos(@Param("eventoId") UUID eventoId,
                                           @Param("pessoaIds") List<UUID> pessoaIds);
+
+    /** Quantas PESSOAS cadastradas (sem contar convidados) estão inscritas e confirmadas. */
+    @Query("""
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+    """)
+    long countPessoasInscritas(@Param("eventoId") UUID eventoId);
+
+    /** Quantos CONVIDADOS (acompanhantes) estão sob inscrições confirmadas do evento. */
+    @Query("""
+        SELECT COUNT(a) FROM AcompanhanteInscricao a
+        WHERE a.inscricao.evento.id = :eventoId
+          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+    """)
+    long countConvidadosInscritos(@Param("eventoId") UUID eventoId);
+
+    /**
+     * Quantas PESSOAS cadastradas de fato compareceram (marca de presença, não inscrição) —
+     * só faz sentido em evento com {@code controlaPresenca=true}, checagem que é
+     * responsabilidade do chamador ({@code EventoRelatorioService}).
+     */
+    @Query("""
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.compareceu = true
+    """)
+    long countPessoasCompareceram(@Param("eventoId") UUID eventoId);
+
+    /** Quantos CONVIDADOS de fato compareceram. */
+    @Query("""
+        SELECT COUNT(a) FROM AcompanhanteInscricao a
+        WHERE a.inscricao.evento.id = :eventoId
+          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND a.compareceu = true
+    """)
+    long countConvidadosCompareceram(@Param("eventoId") UUID eventoId);
+
+    /**
+     * Pessoas CADASTRADAS distintas que compareceram de fato em qualquer um dos eventos
+     * informados — usada pelo relatório geral ("participantes únicos"). Convidados não
+     * entram: sem cadastro, não há como saber se é "a mesma pessoa" entre dois eventos.
+     */
+    @Query("""
+        SELECT COUNT(DISTINCT i.pessoa.id) FROM InscricaoEvento i
+        WHERE i.evento.id IN :eventoIds
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.compareceu = true
+    """)
+    long contarParticipantesUnicos(@Param("eventoIds") List<UUID> eventoIds);
 }

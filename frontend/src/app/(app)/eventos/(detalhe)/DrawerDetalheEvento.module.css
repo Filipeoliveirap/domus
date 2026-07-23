@@ -147,8 +147,13 @@
 
 /* Local cadastrado é clicável (abre o detalhe do endereço). Zera o estilo nativo do
    <button> e alinha à esquerda como o bloco de texto que substitui. */
-.localBotao {
-  display: block;
+/* Ícone + texto do local, os dois clicáveis: reproduz o layout do .infoItem, mas como
+   <button> — o ícone precisa estar DENTRO para o clique nele também abrir o modal. */
+.localBotaoLinha {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
   text-align: left;
   padding: 0;
   border: none;
@@ -156,14 +161,19 @@
   cursor: pointer;
   min-width: 0;
 }
-.localBotao .infoValor {
+.localBotaoTexto {
+  display: block;
+  min-width: 0;
+}
+.localBotaoLinha .infoValor {
   text-decoration: underline;
   text-decoration-color: var(--color-border);
   text-underline-offset: 2px;
   transition: text-decoration-color var(--transition-fast);
 }
-.localBotao:hover .infoValor { text-decoration-color: var(--color-primary); }
-.localBotao:focus-visible {
+.localBotaoLinha:hover .infoValor,
+.localBotaoLinha:hover .infoIcone { text-decoration-color: var(--color-primary); color: var(--color-primary); }
+.localBotaoLinha:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
   border-radius: 4px;

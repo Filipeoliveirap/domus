@@ -134,9 +134,11 @@ export function EventoForm(props: EventoFormProps) {
                 if (texto) setValue('localId', undefined, { shouldDirty: true })
               }}
               onCapacidadeSugerida={(cap) => {
-                if (vagasAtual == null) {
-                  // Ligar requerInscricao para a vaga sugerida aparecer, e preencher só o vazio.
-                  setValue('requerInscricao', true, { shouldDirty: true })
+                // Sugere vagas SÓ se o evento já pede inscrição E o campo está vazio. NÃO
+                // liga requerInscricao: esse é o interruptor mestre do domínio ("evento que
+                // se organiza" vs. "evento que só acontece"), e escolher um local só para
+                // registrar ONDE o evento é não pode convertê-lo em evento com inscrição.
+                if (requerInscricao && vagasAtual == null) {
                   setValue('vagas', cap, { shouldDirty: true, shouldValidate: true })
                 }
               }}

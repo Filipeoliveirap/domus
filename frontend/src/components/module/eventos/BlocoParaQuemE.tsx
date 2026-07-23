@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Users, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import type { RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
@@ -58,9 +59,16 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
     onChangeEstadoCivil, onChangeSexo, onChangeExclusivoMembros,
   } = props
 
-  const modoFaixa = temRestricaoAtiva(props)
+  // "Faixa específica" aberta = há restrição nos dados OU a pessoa abriu a seção à mão.
+  // O estado local existe para o segundo caso: sem ele, o único jeito de abrir a seção
+  // seria já gravar uma restrição — e era isso que forçava um `idadeMin = 0` espúrio no
+  // payload de quem só queria restringir por sexo. Na edição, `temRestricaoAtiva` abre
+  // sozinho, então o reidratar continua funcionando.
+  const [abertoManual, setAbertoManual] = useState(false)
+  const modoFaixa = abertoManual || temRestricaoAtiva(props)
 
   function aoEscolherTodos() {
+    setAbertoManual(false)
     onChangeRecorteEtario(null)
     onChangeIdadeMin(undefined)
     onChangeIdadeMax(undefined)
@@ -92,7 +100,7 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
         <button
           type="button"
           className={`${styles.segmentoBtn} ${modoFaixa ? styles.segmentoAtivo : ''}`}
-          onClick={() => onChangeIdadeMin(idadeMin ?? 0)}
+          onClick={() => setAbertoManual(true)}
         >
           Faixa específica
         </button>

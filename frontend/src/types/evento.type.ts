@@ -1,7 +1,7 @@
 /** Situação derivada de inicioEm/fimEm no backend (com.domus.api.modules.evento.SituacaoEvento). */
 export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
 
-/** Espelha com.domus.api.modules.pessoa.EstadoCivil — só os dois usados na restrição de evento. */
+/** Espelha com.domus.api.modules.pessoa.EstadoCivil (os quatro valores). Na prática a restrição de evento usa SOLTEIRO e CASADO, mas o tipo cobre o enum inteiro. */
 export type RestricaoEstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO'
 
 /** Espelha com.domus.api.modules.pessoa.Sexo. */

@@ -216,8 +216,7 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public PagedResponse<UsuarioResponseDTO> listar(UUID igrejaId, String q, Pageable pageable) {
-        Page<UsuarioResponseDTO> pagina = usuarioRepository.buscarPorIgreja(igrejaId, q, pageable)
-                .map(UsuarioResponseDTO::from);
+        Page<UsuarioResponseDTO> pagina = usuarioRepository.buscarPorIgreja(igrejaId, q, pageable);
         return PagedResponse.from(pagina);
     }
 

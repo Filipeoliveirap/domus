@@ -39,6 +39,7 @@ public class PessoaService {
     private final OutboxRegistrador outboxRegistrador;
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
     private final FotoService fotoService;
+    private final com.domus.api.modules.evento.EventoRepository eventoRepository;
 
     @Transactional(readOnly = true)
     public java.util.List<String> listarBairros(UUID igrejaId) {
@@ -90,6 +91,7 @@ public class PessoaService {
                 .endereco(paraEndereco(data.endereco()))
                 .vinculo(data.vinculo())
                 .estadoCivil(data.estadoCivil())
+                .sexo(data.sexo())
                 .ministerio(normalizar(data.ministerio()))
                 .observacoes(data.observacoes())
                 .dataBatismo(data.dataBatismo())
@@ -164,6 +166,7 @@ public class PessoaService {
         membro.setEndereco(paraEndereco(data.endereco()));
         membro.setVinculo(data.vinculo());
         membro.setEstadoCivil(data.estadoCivil());
+        membro.setSexo(data.sexo());
         membro.setMinisterio(normalizar(data.ministerio()));
         membro.setObservacoes(data.observacoes());
         membro.setDataBatismo(data.dataBatismo());
@@ -210,10 +213,41 @@ public class PessoaService {
         }
 
         cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         log.info("Pessoa atualizado. id={}, IgrejaId={}", salvo.getId(), igrejaId);
 
         String aviso = avisoTelefoneDuplicado(salvo.getTelefone(), salvo.getId(), igrejaId);
         return PessoaResponse.from(salvo, aviso);
+    }
+
+    /**
+     * Update "self" de foto — usado por quem só pode trocar a própria foto
+     * (ACESSO_COMUM/LIDER em Meu Perfil). Mesma ordem de troca de `atualizarMembro`:
+     * vincula a nova antes de remover a antiga (o ON DELETE RESTRICT recusaria o contrário).
+     */
+    @Transactional
+    public PessoaResponse atualizarMinhaFoto(UUID id, UUID novoFotoId, UUID igrejaId) {
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        Foto fotoAntiga = membro.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(novoFotoId, igrejaId);
+        membro.setFoto(fotoNova);
+
+        Pessoa salvo = membroRepository.save(membro);
+
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        log.info("Foto de perfil atualizada (self-service). id={}, igreja_id={}", id, igrejaId);
+
+        return PessoaResponse.from(salvo, null, true);
     }
 
     /**
@@ -243,6 +277,15 @@ public class PessoaService {
     public void arquivarMembro(UUID id, UUID igrejaId) {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        // O ON DELETE SET NULL de evento.responsavel_pessoa_id NUNCA dispara: Pessoa usa
+        // soft delete (@SQLDelete/@SQLRestriction), não DELETE de verdade. Sem este passo, um
+        // evento com essa pessoa como responsável ficaria com a FK apontando para uma linha que
+        // o @SQLRestriction esconde — EventoResponse.PessoaResumo.dePessoa resolveria o proxy
+        // LAZY e estouraria EntityNotFoundException, derrubando a listagem INTEIRA de eventos
+        // (mesmo padrão já corrigido para LocalEvento em LocalEventoService.arquivar).
+        // Antes do soft delete da pessoa, porque copia o NOME atual dela.
+        eventoRepository.desvincularResponsavel(membro.getId(), membro.getNome());
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);

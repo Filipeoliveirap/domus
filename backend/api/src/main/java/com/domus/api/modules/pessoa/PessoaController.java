@@ -70,6 +70,58 @@ public class PessoaController {
         return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole());
     }
 
+    /**
+     * "Meu Perfil": sempre a pessoa vinculada a quem está logado, nunca um id do corpo/query.
+     * Dados sensíveis (endereço, observações) sempre inclusos aqui — são os PRÓPRIOS dados de
+     * quem pergunta, a restrição de `podeVerDadosSensiveis()` é sobre olhar o dado de OUTRA
+     * pessoa.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<PessoaResponse> buscarMe() {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID pessoaId = usuarioAutenticado.getPessoaId();
+        return ResponseEntity.ok(pessoaService.buscarPorId(pessoaId, igrejaId, true));
+    }
+
+    /**
+     * ADMIN_IGREJA edita qualquer campo do próprio cadastro, MENOS e-mail: o e-mail do
+     * payload é sempre substituído pelo e-mail já persistido antes de chamar o service, então
+     * mesmo que o corpo mande um valor diferente ele é ignorado — o backend força a
+     * imutabilidade, não confia em o front simplesmente não enviar o campo (email é a chave de
+     * login, nativo e Google). LIDER/ACESSO_COMUM só trocam a própria foto: a checagem de
+     * capacidade decide qual método do service roda, não um whitelist de campos dentro de
+     * `atualizarMembro` (mais simples de auditar).
+     */
+    @PutMapping("/me")
+    public ResponseEntity<PessoaResponse> atualizarMe(@Valid @RequestBody PessoaRequestDTO data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID pessoaId = usuarioAutenticado.getPessoaId();
+
+        PessoaResponse resposta;
+        if (Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole())) {
+            PessoaResponse pessoaAtual = pessoaService.buscarPorId(pessoaId, igrejaId, true);
+            PessoaRequestDTO dataComEmailImutavel = new PessoaRequestDTO(
+                    data.nome(),
+                    pessoaAtual.email(),
+                    data.telefone(),
+                    data.dataNascimento(),
+                    data.endereco(),
+                    data.vinculo(),
+                    data.estadoCivil(),
+                    data.sexo(),
+                    data.ministerio(),
+                    data.observacoes(),
+                    data.dataBatismo(),
+                    data.fotoId()
+            );
+            resposta = pessoaService.atualizarMembro(pessoaId, dataComEmailImutavel, igrejaId);
+        } else {
+            resposta = pessoaService.atualizarMinhaFoto(pessoaId, data.fotoId(), igrejaId);
+        }
+
+        return ResponseEntity.ok(resposta);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

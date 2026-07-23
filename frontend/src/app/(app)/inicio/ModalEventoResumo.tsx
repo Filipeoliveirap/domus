@@ -10,11 +10,14 @@ import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
+import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
+import type { EventoLocalInfo } from '@/types/evento.type'
 import {
   vagasRestantesCalc,
   vagasAcabando as calcVagasAcabando,
@@ -47,6 +50,8 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
 
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [removendoId, setRemovendoId] = useState<string | null>(null)
+  const [ampliada, setAmpliada] = useState(false)
+  const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
   const removerConvidado = useRemoverConvidado()
 
   // Vagas contam PESSOAS: cada inscrito mais os convidados que ele trouxe. Contar só os
@@ -71,6 +76,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   }, [aoFechar])
 
   return (
+    <>
     <div className={styles.overlay} onMouseDown={aoFechar}>
       <div
         className={styles.modal}
@@ -84,9 +90,22 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
             <X size={18} />
           </button>
 
-          {urlFoto(evento?.fotoId, 'DISPLAY') ? (
-            // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-            <img src={urlFoto(evento?.fotoId, 'DISPLAY')!} alt="" className={styles.capaFoto} />
+          {evento?.fotoId ? (
+            /*
+              Como nos drawers: a capa é `cover` numa faixa de 200px, então já aparece
+              cortada. Sem `z-index` nem `position` aqui de propósito — isso criaria um
+              contexto de empilhamento novo e o botão de fechar (que é filho da capa e
+              conta com `z-index: 1`) sumiria atrás da imagem.
+            */
+            <button
+              type="button"
+              className={styles.capaBotao}
+              onClick={() => setAmpliada(true)}
+              aria-label={`Ampliar imagem do evento${evento.titulo ? ` ${evento.titulo}` : ''}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+              <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt="" className={styles.capaFoto} />
+            </button>
           ) : (
             <div className={styles.capaVazia} aria-hidden="true">
               <CalendarDays size={56} />
@@ -119,10 +138,24 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   {formatarQuando(evento.inicioEm)}
                 </span>
                 {evento.local && (
-                  <span className={styles.local}>
-                    <MapPin size={15} aria-hidden="true" />
-                    {evento.local}
-                  </span>
+                  evento.local.id ? (
+                    // Local cadastrado: clicável, abre o detalhe do endereço (inclui o herdado
+                    // da igreja). Ad-hoc de texto livre não tem o que detalhar — fica estático.
+                    <button
+                      type="button"
+                      className={`${styles.local} ${styles.localClicavel}`}
+                      onClick={() => setLocalDetalhe(evento.local)}
+                    >
+                      <MapPin size={15} aria-hidden="true" />
+                      {evento.local.nome}
+                      {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                    </button>
+                  ) : (
+                    <span className={styles.local}>
+                      <MapPin size={15} aria-hidden="true" />
+                      {evento.local.nome}
+                    </span>
+                  )
                 )}
               </div>
             </header>
@@ -311,5 +344,19 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         <ModalQuemVai eventoId={eventoId} situacao={evento.situacao} aoFechar={() => setModalAberto(null)} />
       )}
     </div>
+
+    {/* Irmão do overlay: dentro dele, o clique para fechar a foto fecharia o modal junto. */}
+    {ampliada && evento?.fotoId && (
+      <VisualizadorFoto
+        fotoId={evento.fotoId}
+        descricao={`Imagem do evento${evento.titulo ? ` ${evento.titulo}` : ''}`}
+        onClose={() => setAmpliada(false)}
+      />
+    )}
+
+    {localDetalhe && (
+      <ModalDetalheLocal local={localDetalhe} onClose={() => setLocalDetalhe(null)} />
+    )}
+    </>
   )
 }

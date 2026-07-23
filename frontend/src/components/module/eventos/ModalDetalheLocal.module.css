@@ -1,0 +1,103 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(19, 27, 46, 0.30);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.18);
+  padding: 24px;
+  animation: zoomIn 0.2s ease-out;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal { animation: none; }
+}
+
+.fechar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.fechar:hover { color: var(--color-text-primary); }
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 32px;
+  margin-bottom: 16px;
+}
+
+.icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+}
+
+.titulo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.endereco {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.semEndereco {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.herdado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg-page);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+}
+.herdado svg { flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .modal { padding: 20px; }
+}

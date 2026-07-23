@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
@@ -15,6 +16,85 @@ import java.util.UUID;
 public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     Optional<Evento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
+
+    /**
+     * Eventos que apontam para um local cadastrado. Usado ao arquivar o local: como o
+     * {@code ON DELETE SET NULL} da FK nunca dispara (local usa soft delete via
+     * {@code @SQLDelete}, não DELETE de verdade), é este método que resolve o vínculo antes
+     * de arquivar — ver {@code LocalEventoService.arquivar}.
+     */
+    List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
+
+    /**
+     * Desvincula TODOS os eventos que apontam para o local — inclusive os ARQUIVADOS.
+     *
+     * <p>Nativa de propósito: {@code Evento} tem {@code @SQLRestriction("deleted_at IS NULL")},
+     * então qualquer busca via JPQL/derived query (inclusive {@link #findByLocalIdAndIgrejaId})
+     * simplesmente não enxerga eventos arquivados. Um evento arquivado com {@code local_id}
+     * apontando pra um local também arquivado ficaria órfão pra sempre — e ao ser restaurado
+     * (Fase 3 do roadmap), {@code EventoResponse.from} resolveria o proxy LAZY de local, o
+     * {@code @SQLRestriction} de {@code LocalEvento} filtraria a linha, e estouraria
+     * {@code EntityNotFoundException} — derrubando a listagem INTEIRA de eventos com HTTP 500.
+     * SQL nativo ignora esses filtros do Hibernate e enxerga a tabela como ela é de verdade.
+     *
+     * <p>Seta {@code local_texto} e zera {@code local_id} NA MESMA instrução: o
+     * {@code CHECK (local_id IS NULL OR local_texto IS NULL)} é avaliado por linha ao FIM da
+     * instrução (não a cada coluna), então isso é seguro — não separe em dois UPDATEs, ou o
+     * CHECK vai violar no meio do caminho (linha com as duas colunas preenchidas ao mesmo tempo).
+     *
+     * <p>Não filtra por {@code igreja_id}: o local já foi validado como pertencente à igreja
+     * ANTES de chegar aqui (ver {@code LocalEventoService.arquivar}), e um {@code local_id} só
+     * existe dentro de uma igreja — filtrar de novo seria redundante.
+     *
+     * <p>{@code clearAutomatically = true}: como o UPDATE roda direto no banco (sem passar
+     * pelo Hibernate), qualquer {@code Evento} já carregado na sessão ficaria com o estado
+     * ANTIGO em memória (local/localTexto desatualizados) até a transação acabar. Limpar a
+     * persistence context força a próxima leitura a ir buscar a linha de novo no banco.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET local_texto = :nomeLocal, local_id = NULL
+         WHERE local_id = :localId
+        """, nativeQuery = true)
+    int desvincularLocal(@Param("localId") UUID localId, @Param("nomeLocal") String nomeLocal);
+
+    /**
+     * Desvincula o RESPONSÁVEL de todos os eventos que apontam para essa pessoa — inclusive os
+     * ARQUIVADOS. Mesmo padrão de {@link #desvincularLocal}: {@code responsavel_pessoa_id}
+     * também tem {@code ON DELETE SET NULL} que nunca dispara ({@link Pessoa} usa soft delete),
+     * e {@code Evento} tem {@code @SQLRestriction}, então só SQL nativo enxerga arquivados.
+     * Chamado por {@code PessoaService.arquivarMembro} ANTES do soft delete da pessoa.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET responsavel_texto = :nome, responsavel_pessoa_id = NULL
+         WHERE responsavel_pessoa_id = :pessoaId
+        """, nativeQuery = true)
+    int desvincularResponsavel(@Param("pessoaId") UUID pessoaId, @Param("nome") String nome);
+
+    /**
+     * Desvincula um USUÁRIO de {@code criado_por_usuario_id} e/ou {@code atualizado_por_usuario_id}
+     * — o mesmo usuário pode aparecer nas duas colunas do mesmo evento (criou e depois editou),
+     * por isso o {@code CASE WHEN} trata as duas independentemente numa única instrução.
+     *
+     * <p>Diferente do responsável, aqui não existe "opcional": TODO evento tem
+     * {@code criado_por_usuario_id} preenchido — arquivar um usuário que já cadastrou qualquer
+     * evento do sistema, sem este desvínculo, derrubaria a listagem inteira (o pior dos dois
+     * casos encontrados na revisão). Chamado tanto por {@code UsuarioService.arquivarUsuario}
+     * quanto por {@code arquivarPorMembro} (cascata do arquivamento de pessoa).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+        UPDATE evento
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 
     /**
      * Trava a LINHA do evento para serializar a contagem de vagas.
@@ -69,6 +149,8 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         WHERE e.igreja_id = :igrejaId
           AND e.deleted_at IS NULL
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
         ORDER BY
           CASE
             WHEN CAST(:agora AS timestamp) >= e.inicio_em
@@ -88,10 +170,27 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         WHERE e.igreja_id = :igrejaId
           AND e.deleted_at IS NULL
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
         """,
         nativeQuery = true)
     Page<Evento> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
                                  @Param("q") String q,
+                                 @Param("tipo") String tipo,
+                                 @Param("recorteEtario") String recorteEtario,
                                  @Param("agora") LocalDateTime agora,
                                  Pageable pageable);
+
+    /**
+     * Tipos já usados pela igreja, do mais frequente para o menos frequente (empate por ordem
+     * alfabética). Alimenta {@code GET /eventos/tipos}: é isso que faz o campo "aprender" —
+     * o que a igreja mais digita sobe e passa na frente das sementes que ninguém usou.
+     */
+    @Query("""
+        SELECT e.tipo FROM Evento e
+         WHERE e.igreja.id = :igrejaId AND e.tipo IS NOT NULL
+         GROUP BY e.tipo
+         ORDER BY COUNT(e) DESC, e.tipo ASC
+        """)
+    List<String> tiposUsadosPorFrequencia(@Param("igrejaId") UUID igrejaId);
 }

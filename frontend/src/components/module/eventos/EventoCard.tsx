@@ -56,17 +56,32 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
       onClick={() => onAbrirDetalhe(evento)}
     >
       <div className={styles.imagem}>
-        {urlFoto(evento.fotoId, 'THUMB') ? (
-          <img src={urlFoto(evento.fotoId, 'THUMB')!} alt={evento.titulo} className={styles.imagemFoto} />
+        {/*
+          DISPLAY, não THUMB: o `thumb` tem 200px e foi dimensionado para AVATAR (40px na
+          tela, folga de sobra). Este banner ocupa a largura inteira do card — uns 350px —
+          e pedir a versão de 200px aqui obriga o navegador a ampliar, o que borra.
+        */}
+        {urlFoto(evento.fotoId, 'DISPLAY') ? (
+          <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagemFoto} />
         ) : (
           <div className={styles.imagemPlaceholder}>
             <CalendarDays size={32} />
           </div>
         )}
-        <span className={`${styles.selo} ${styles[seloVariante]}`}>
-          <span className={styles.seloDot} />
-          {seloLabel}
-        </span>
+        <div className={styles.selos}>
+          <span className={`${styles.selo} ${styles[seloVariante]}`}>
+            <span className={styles.seloDot} />
+            {seloLabel}
+          </span>
+          {/* Só aparece quando o evento tem um recorte NOMEADO (Kids, Jovens…) — faixa
+              etária digitada à mão ou sem restrição nenhuma não geram selo (comportamento
+              correto, não é bug: o nome é o que dá sentido ao selo). */}
+          {evento.recorteEtario && (
+            <span className={`${styles.selo} ${styles.seloRecorte}`}>
+              {evento.recorteEtario}
+            </span>
+          )}
+        </div>
 
         {podeGerenciar && acoes.length > 0 && (
           <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>
@@ -91,7 +106,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
           {evento.local && (
             <div className={styles.local}>
               <MapPin size={14} />
-              <span>{evento.local}</span>
+              <span>{evento.local.nome}</span>
             </div>
           )}
           {evento.preco != null && (

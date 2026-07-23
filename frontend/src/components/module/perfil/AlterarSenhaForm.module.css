@@ -1,0 +1,14 @@
+.secao {
+  background-color: var(--color-bg-white);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+}
+.header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.titulo { font-size: var(--font-size-lg, 1rem); font-weight: var(--font-weight-semibold); margin: 0; }
+.subtitulo { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin: 4px 0 0; }
+.form { display: flex; flex-direction: column; gap: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) {
+  .grid2 { grid-template-columns: 1fr; }
+}

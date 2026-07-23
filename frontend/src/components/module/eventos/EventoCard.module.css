@@ -37,11 +37,17 @@
   opacity: 0.4;
 }
 
-/* ─── Selo de status ─── */
-.selo {
+/* ─── Selos (status + recorte) ─── */
+.selos {
   position: absolute;
   top: 12px;
   left: 12px;
+  right: 40px; /* não invade o botão de ações (top:8/right:8) */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.selo {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -63,6 +69,10 @@
 .statusHoje .seloDot { background: var(--color-success-text); }
 .statusEncerrado { color: var(--color-text-muted); }
 .statusEncerrado .seloDot { background: var(--color-text-muted); }
+.seloRecorte {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.85);
+}
 
 /* ─── Ações (3 pontinhos) ─── */
 .acoes {

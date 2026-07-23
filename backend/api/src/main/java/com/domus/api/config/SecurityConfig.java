@@ -105,6 +105,11 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/pessoas/**")
                         .hasRole(ADMIN)
+                        //Meu Perfil (self-service) ANTES do curinga: editar a PRÓPRIA pessoa
+                        //(nome/foto conforme a capacidade, resolvida no controller/service) é
+                        //de todo perfil; editar a pessoa de OUTRO alguém continua só de ADMIN.
+                        .requestMatchers(HttpMethod.PUT, "/pessoas/me")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.PUT, "/pessoas/**")
                         .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
@@ -124,6 +129,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
 
+                        //Elegibilidade — DEVE vir ANTES dos curingas /eventos/** (mesma armadilha
+                        //de ordenação já mordida três vezes neste projeto: matcher específico
+                        //sempre antes do curinga, "/**" casa zero segmentos e o curinga também
+                        //casaria "/eventos/{id}/elegibilidade" se viesse antes).
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
+                        .authenticated()
+
+                        //Sugestões de tipo — DEVE vir ANTES do curinga /eventos/** (mesma
+                        //armadilha de ordenação já mordida três vezes neste projeto).
+                        .requestMatchers(HttpMethod.GET, "/eventos/tipos")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
+
                         //Eventos
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
@@ -133,6 +150,13 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.DELETE, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER)
+
+                        // Locais de evento — GET (só leitura) é aberto a todo autenticado
+                        // (a lista alimenta o formulário de evento, que qualquer perfil pode
+                        // ver); escrever exige gestor. O específico do GET vem ANTES do
+                        // curinga — regra que já mordeu este projeto três vezes.
+                        .requestMatchers(HttpMethod.GET, "/locais-evento").authenticated()
+                        .requestMatchers("/locais-evento/**").hasAnyRole(ADMIN, LIDER)
 
                         //Igrejas vinculadas (mãe/congregações) — expõe financeiro entre igrejas,
                         //então segue a mesma trava do financeiro: só ADMIN_IGREJA.
@@ -149,12 +173,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole(ADMIN)
 
-                        //Fotos: qualquer perfil VÊ (avatar aparece em toda tela);
-                        //ENVIAR é de quem gerencia o que a foto ilustra.
+                        //Fotos: qualquer perfil VÊ (avatar aparece em toda tela) e ENVIA —
+                        //quem gerencia o que a foto ilustra (pessoa/evento) E quem troca a
+                        //própria foto em Meu Perfil (todo perfil, inclusive ACESSO_COMUM).
+                        //A restrição de QUAL pessoa/evento a foto pode vincular continua no
+                        //backend (FotoService/PessoaService), isolada por igreja.
                         .requestMatchers(HttpMethod.GET, "/fotos/*")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/fotos")
-                        .hasAnyRole(ADMIN, LIDER)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers

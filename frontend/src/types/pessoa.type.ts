@@ -2,6 +2,9 @@ import type { Role } from './usuario.types'
 
 export type Vinculo = 'MEMBRO' | 'CONGREGANTE'
 export type EstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO'
+// Só dois valores: o uso é restringir inscrição em evento ("encontro de mulheres"),
+// não descrever identidade.
+export type Sexo = 'HOMEM' | 'MULHER'
 
 export interface Endereco {
   cep?: string
@@ -21,6 +24,7 @@ export interface PessoaRequest {
   endereco?: Endereco
   vinculo: Vinculo
   estadoCivil?: EstadoCivil
+  sexo?: Sexo
   ministerio?: string
   observacoes?: string
   dataBatismo?: string
@@ -36,6 +40,7 @@ export interface PessoaResponse {
   endereco: Endereco | null
   vinculo: Vinculo
   estadoCivil: EstadoCivil | null
+  sexo: Sexo | null
   ministerio: string | null
   fotoId: string | null
   observacoes: string | null

@@ -70,6 +70,37 @@ public class PessoaController {
         return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole());
     }
 
+    /**
+     * "Meu Perfil": sempre a pessoa vinculada a quem está logado, nunca um id do corpo/query.
+     * Dados sensíveis (endereço, observações) sempre inclusos aqui — são os PRÓPRIOS dados de
+     * quem pergunta, a restrição de `podeVerDadosSensiveis()` é sobre olhar o dado de OUTRA
+     * pessoa.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<PessoaResponse> buscarMe() {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID pessoaId = usuarioAutenticado.getPessoaId();
+        return ResponseEntity.ok(pessoaService.buscarPorId(pessoaId, igrejaId, true));
+    }
+
+    /**
+     * ADMIN_IGREJA edita qualquer campo do próprio cadastro (menos e-mail, que o front nem
+     * envia — email é sempre o do JWT/sessão, ignorado aqui). LIDER/ACESSO_COMUM só trocam a
+     * própria foto: a checagem de capacidade decide qual método do service roda, não um
+     * whitelist de campos dentro de `atualizarMembro` (mais simples de auditar).
+     */
+    @PutMapping("/me")
+    public ResponseEntity<PessoaResponse> atualizarMe(@Valid @RequestBody PessoaRequestDTO data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID pessoaId = usuarioAutenticado.getPessoaId();
+
+        PessoaResponse resposta = Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole())
+                ? pessoaService.atualizarMembro(pessoaId, data, igrejaId)
+                : pessoaService.atualizarMinhaFoto(pessoaId, data.fotoId(), igrejaId);
+
+        return ResponseEntity.ok(resposta);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

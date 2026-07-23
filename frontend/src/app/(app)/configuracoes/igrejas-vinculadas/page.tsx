@@ -45,7 +45,7 @@ export default function IgrejasVinculadasPage() {
   function copiarCodigo() {
     if (!status?.codigoVinculo) return
     navigator.clipboard.writeText(status.codigoVinculo)
-    notificar.sucesso('Código copiado', 'Envie para o responsável da congregação.')
+    notificar.sucesso('Código copiado', 'Envie para o responsável da unidade.')
   }
 
   function aoGerarCodigo() {
@@ -55,8 +55,8 @@ export default function IgrejasVinculadasPage() {
         notificar.sucesso(
           rotacionando ? 'Novo código gerado' : 'Código gerado',
           rotacionando
-            ? 'O código anterior deixou de funcionar. As congregações já vinculadas continuam na família.'
-            : 'Compartilhe com as congregações que devem entrar na sua família.',
+            ? 'O código anterior deixou de funcionar. As unidades já vinculadas continuam na família.'
+            : 'Compartilhe com as unidades que devem entrar na sua família.',
         )
       },
       onError: (e) => notificar.erro('Não foi possível gerar o código', mensagemDeErro(e, 'Tente novamente.')),
@@ -82,7 +82,7 @@ export default function IgrejasVinculadasPage() {
     desvincular.mutate(congregacao.id, {
       onSuccess: () => {
         setCongregacaoParaRemover(null)
-        notificar.sucesso('Congregação removida', `"${congregacao.nome}" saiu da família.`)
+        notificar.sucesso('Unidade removida', `"${congregacao.nome}" saiu da família.`)
       },
       onError: (e) => notificar.erro('Não foi possível remover', mensagemDeErro(e, 'Tente novamente.')),
     })
@@ -103,7 +103,7 @@ export default function IgrejasVinculadasPage() {
     return (
       <div className={styles.container}>
         <section className={styles.cartaoFilha}>
-          <span className={styles.codigoRotulo}>Sua igreja é uma congregação de</span>
+          <span className={styles.codigoRotulo}>Sua igreja é uma unidade de</span>
           <p className={styles.maeNome}>{status.mae?.nome}</p>
           <p className={styles.maeDetalhe}>
             Vinculada desde {formatarData(status.mae?.vinculadoEm ?? null)}
@@ -132,7 +132,7 @@ export default function IgrejasVinculadasPage() {
             titulo="Sair da família"
             mensagem={
               <>
-                Sua igreja deixará de ser congregação de{' '}
+                Sua igreja deixará de ser unidade de{' '}
                 <strong>{status.mae?.nome}</strong>.
               </>
             }
@@ -160,11 +160,11 @@ export default function IgrejasVinculadasPage() {
     <div className={styles.container}>
       <section className={styles.faixa}>
         <div className={styles.faixaTexto}>
-          <h2 className={styles.faixaTitulo}>Gerenciar congregações</h2>
+          <h2 className={styles.faixaTitulo}>Gerenciar unidades</h2>
           <p className={styles.faixaSubtitulo}>
             {ehMae
-              ? 'Congregações vinculadas compartilham os números delas com a sede.'
-              : 'Gere um código para suas congregações entrarem, ou entre na família de outra igreja usando o código dela.'}
+              ? 'Unidades vinculadas compartilham os números delas com a sede.'
+              : 'Gere um código para suas unidades entrarem, ou entre na família de outra igreja usando o código dela.'}
           </p>
         </div>
 
@@ -221,7 +221,7 @@ export default function IgrejasVinculadasPage() {
             <p className={styles.codigoValor}>{status.codigoVinculo}</p>
             <p className={styles.codigoAjuda}>
               Gerado em {formatarData(status.codigoGeradoEm)}. Pode ser usado por várias
-              congregações. Gerar um novo invalida este.
+              unidades. Gerar um novo invalida este.
             </p>
           </div>
 
@@ -245,7 +245,7 @@ export default function IgrejasVinculadasPage() {
               <table className={styles.tabela}>
                 <thead>
                   <tr>
-                    <th>Nome da congregação</th>
+                    <th>Nome da unidade</th>
                     <th>Cidade/Estado</th>
                     <th>Data de vínculo</th>
                     <th />
@@ -254,7 +254,7 @@ export default function IgrejasVinculadasPage() {
                 <tbody>
                   {status.congregacoes.map((c) => (
                     <tr key={c.id}>
-                      <td data-rotulo="Congregação">
+                      <td data-rotulo="Unidade">
                         <span className={styles.celulaNome}>
                           <span className={styles.avatarIgreja}>
                             <Church size={16} aria-hidden="true" />
@@ -298,7 +298,7 @@ export default function IgrejasVinculadasPage() {
 
       {congregacaoParaRemover && (
         <ModalConfirmacaoCritica
-          titulo="Desvincular congregação"
+          titulo="Desvincular unidade"
           mensagem={
             <>
               <strong>{congregacaoParaRemover.nome}</strong> deixará de fazer parte da sua
@@ -309,11 +309,11 @@ export default function IgrejasVinculadasPage() {
             { tipo: 'perde', texto: 'Os números dela somem dos seus relatórios consolidados.' },
             { tipo: 'perde', texto: 'Você deixa de ver os relatórios financeiros dela.' },
             { tipo: 'perde', texto: 'Para religar, ela precisará digitar o código de novo.' },
-            { tipo: 'mantem', texto: 'O cadastro da congregação continua intacto: membros, eventos e financeiro.' },
+            { tipo: 'mantem', texto: 'O cadastro da unidade continua intacto: membros, eventos e financeiro.' },
             { tipo: 'mantem', texto: 'Ninguém perde acesso ao sistema.' },
           ]}
           palavraConfirmacao={congregacaoParaRemover.nome}
-          textoConfirmar="Desvincular congregação"
+          textoConfirmar="Desvincular unidade"
           isLoading={desvincular.isPending}
           onConfirmar={confirmarDesvinculo}
           onClose={() => setCongregacaoParaRemover(null)}

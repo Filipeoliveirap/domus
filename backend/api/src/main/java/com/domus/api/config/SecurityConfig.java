@@ -105,6 +105,11 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/pessoas/**")
                         .hasRole(ADMIN)
+                        //Meu Perfil (self-service) ANTES do curinga: editar a PRÓPRIA pessoa
+                        //(nome/foto conforme a capacidade, resolvida no controller/service) é
+                        //de todo perfil; editar a pessoa de OUTRO alguém continua só de ADMIN.
+                        .requestMatchers(HttpMethod.PUT, "/pessoas/me")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.PUT, "/pessoas/**")
                         .hasRole(ADMIN)
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")

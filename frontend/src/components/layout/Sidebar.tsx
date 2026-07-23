@@ -11,7 +11,6 @@ import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
-import { podeVerConfiguracoes } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
 import styles from './Sidebar.module.css'
 
@@ -28,12 +27,14 @@ const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] 
  * Configurações não é uma tela só — é um grupo de abas. Por isso vira menu expansível:
  * o pai abre/fecha e cada aba tem link próprio (URL, voltar do navegador, link direto).
  *
- * Só ADMIN_IGREJA: as duas abas mexem em dado institucional e no vínculo entre igrejas,
- * que expõe financeiro. O backend trava igual — isto aqui é só a UI acompanhando.
+ * "Meu Perfil" é para todo mundo (é a própria conta). "Dados da Igreja" e "Igrejas
+ * Vinculadas" mexem em dado institucional e no vínculo entre igrejas, que expõe
+ * financeiro — só ADMIN_IGREJA. O backend trava igual — isto aqui é só a UI acompanhando.
  */
-const configuracoesSubItems: { href: string; label: string }[] = [
-  { href: '/configuracoes/igreja', label: 'Dados da Igreja' },
-  { href: '/configuracoes/igrejas-vinculadas', label: 'Igrejas Vinculadas' },
+const configuracoesSubItems: { href: string; label: string; roles: Role[] }[] = [
+  { href: '/perfil', label: 'Meu Perfil', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+  { href: '/configuracoes/igreja', label: 'Dados da Igreja', roles: ['ADMIN_IGREJA'] },
+  { href: '/configuracoes/igrejas-vinculadas', label: 'Igrejas Vinculadas', roles: ['ADMIN_IGREJA'] },
 ]
 
 const roleLabels: Record<string, string> = {
@@ -94,9 +95,13 @@ export function Sidebar() {
     router.replace('/login')
   }
 
-  const exibirConfiguracoes = podeVerConfiguracoes(role)
+  // Todo mundo tem pelo menos "Meu Perfil" — o grupo aparece para todos; o que muda por
+  // perfil é QUAIS abas aparecem dentro dele (ver configuracoesSubItems).
+  const subItensVisiveis = filtrar(configuracoesSubItems)
   // Começa aberto quando já estamos numa das abas — senão o item ativo ficaria escondido.
-  const [configAberto, setConfigAberto] = useState(() => pathname.startsWith('/configuracoes'))
+  const [configAberto, setConfigAberto] = useState(
+    () => pathname.startsWith('/configuracoes') || pathname === '/perfil',
+  )
 
   return (
     <>
@@ -116,14 +121,16 @@ export function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        {exibirConfiguracoes && (
+        {subItensVisiveis.length > 0 && (
           <div className={styles.grupo}>
             <button
               type="button"
               onClick={() => setConfigAberto((v) => !v)}
               aria-expanded={configAberto}
               className={`${styles.link} ${styles.grupoBotao} ${
-                pathname.startsWith('/configuracoes') ? styles.linkActive : styles.linkInactive
+                pathname.startsWith('/configuracoes') || pathname === '/perfil'
+                  ? styles.linkActive
+                  : styles.linkInactive
               }`}
             >
               <span className={styles.grupoBotaoConteudo}>
@@ -139,13 +146,15 @@ export function Sidebar() {
 
             {configAberto && (
               <div className={styles.submenu}>
-                {configuracoesSubItems.map((sub) => (
+                {subItensVisiveis.map((sub) => (
                   <Link
                     key={sub.href}
                     href={sub.href}
                     onClick={fecharNav}
                     className={`${styles.subLink} ${
-                      pathname.startsWith(sub.href) ? styles.subLinkAtivo : ''
+                      pathname === sub.href || (sub.href !== '/perfil' && pathname.startsWith(sub.href))
+                        ? styles.subLinkAtivo
+                        : ''
                     }`}
                   >
                     {sub.label}

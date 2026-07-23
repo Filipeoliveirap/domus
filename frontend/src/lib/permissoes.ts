@@ -26,11 +26,6 @@ export const podeGerenciarPessoas = (r: Role | null | undefined) => tem(r, SO_AD
 export const podeGerenciarEventos = (r: Role | null | undefined) => tem(r, GESTORES)
 export const podeVerFinanceiro = (r: Role | null | undefined) => tem(r, SO_ADMIN)
 
-// Sem equivalente no backend: a tela de Configurações é protegida só pelos
-// matchers de rota (não existe um endpoint próprio a autorizar). Existe aqui
-// apenas para a Sidebar decidir se mostra o item.
-export const podeVerConfiguracoes = (r: Role | null | undefined) => tem(r, SO_ADMIN)
-
 // Sem equivalente explícito no backend listado na Task 1: gestão de usuários
 // (conceder/alterar acesso) hoje é admin-only no front, na mesma régua de
 // `podeVerUsuariosEFinanceiroNaBuscaGlobal` do backend. Adicionada aqui porque

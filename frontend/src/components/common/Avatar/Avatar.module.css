@@ -1,0 +1,32 @@
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iniciais {
+  background: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary-dark, #004ac6);
+  font-weight: 600;
+}
+
+.sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.75rem;
+}
+
+.md {
+  width: 48px;
+  height: 48px;
+  font-size: 0.9rem;
+}
+
+.lg {
+  width: 96px;
+  height: 96px;
+  font-size: 1.5rem;
+}

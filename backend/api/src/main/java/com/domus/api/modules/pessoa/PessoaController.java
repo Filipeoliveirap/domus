@@ -84,19 +84,40 @@ public class PessoaController {
     }
 
     /**
-     * ADMIN_IGREJA edita qualquer campo do próprio cadastro (menos e-mail, que o front nem
-     * envia — email é sempre o do JWT/sessão, ignorado aqui). LIDER/ACESSO_COMUM só trocam a
-     * própria foto: a checagem de capacidade decide qual método do service roda, não um
-     * whitelist de campos dentro de `atualizarMembro` (mais simples de auditar).
+     * ADMIN_IGREJA edita qualquer campo do próprio cadastro, MENOS e-mail: o e-mail do
+     * payload é sempre substituído pelo e-mail já persistido antes de chamar o service, então
+     * mesmo que o corpo mande um valor diferente ele é ignorado — o backend força a
+     * imutabilidade, não confia em o front simplesmente não enviar o campo (email é a chave de
+     * login, nativo e Google). LIDER/ACESSO_COMUM só trocam a própria foto: a checagem de
+     * capacidade decide qual método do service roda, não um whitelist de campos dentro de
+     * `atualizarMembro` (mais simples de auditar).
      */
     @PutMapping("/me")
     public ResponseEntity<PessoaResponse> atualizarMe(@Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UUID pessoaId = usuarioAutenticado.getPessoaId();
 
-        PessoaResponse resposta = Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole())
-                ? pessoaService.atualizarMembro(pessoaId, data, igrejaId)
-                : pessoaService.atualizarMinhaFoto(pessoaId, data.fotoId(), igrejaId);
+        PessoaResponse resposta;
+        if (Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole())) {
+            PessoaResponse pessoaAtual = pessoaService.buscarPorId(pessoaId, igrejaId, true);
+            PessoaRequestDTO dataComEmailImutavel = new PessoaRequestDTO(
+                    data.nome(),
+                    pessoaAtual.email(),
+                    data.telefone(),
+                    data.dataNascimento(),
+                    data.endereco(),
+                    data.vinculo(),
+                    data.estadoCivil(),
+                    data.sexo(),
+                    data.ministerio(),
+                    data.observacoes(),
+                    data.dataBatismo(),
+                    data.fotoId()
+            );
+            resposta = pessoaService.atualizarMembro(pessoaId, dataComEmailImutavel, igrejaId);
+        } else {
+            resposta = pessoaService.atualizarMinhaFoto(pessoaId, data.fotoId(), igrejaId);
+        }
 
         return ResponseEntity.ok(resposta);
     }

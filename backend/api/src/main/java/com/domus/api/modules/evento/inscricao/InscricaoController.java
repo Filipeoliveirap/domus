@@ -109,4 +109,37 @@ public class InscricaoController {
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Botão "marcar todos vieram" — marca presente todo inscrito confirmado E seus
+     * acompanhantes. Corrige exceção depois com os PATCHs abaixo.
+     */
+    @PostMapping("/eventos/{eventoId}/presenca/marcar-todos")
+    public ResponseEntity<Void> marcarTodosPresentes(@PathVariable UUID eventoId) {
+        var usuario = usuarioAutenticado.get();
+        inscricaoService.marcarTodosPresentes(eventoId, usuario.getIgreja().getId(), usuario.getRole().getNome());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/eventos/{eventoId}/presenca/inscricoes/{inscricaoId}")
+    public ResponseEntity<Void> marcarPresencaInscricao(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID inscricaoId,
+            @Valid @RequestBody MarcarPresencaRequest data) {
+        var usuario = usuarioAutenticado.get();
+        inscricaoService.marcarPresencaInscricao(eventoId, inscricaoId, data.compareceu(),
+                usuario.getIgreja().getId(), usuario.getRole().getNome());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/eventos/{eventoId}/presenca/acompanhantes/{acompanhanteId}")
+    public ResponseEntity<Void> marcarPresencaAcompanhante(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID acompanhanteId,
+            @Valid @RequestBody MarcarPresencaRequest data) {
+        var usuario = usuarioAutenticado.get();
+        inscricaoService.marcarPresencaAcompanhante(eventoId, acompanhanteId, data.compareceu(),
+                usuario.getIgreja().getId(), usuario.getRole().getNome());
+        return ResponseEntity.noContent().build();
+    }
 }

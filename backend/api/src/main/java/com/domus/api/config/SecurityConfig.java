@@ -168,12 +168,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole(ADMIN)
 
-                        //Fotos: qualquer perfil VÊ (avatar aparece em toda tela);
-                        //ENVIAR é de quem gerencia o que a foto ilustra.
+                        //Fotos: qualquer perfil VÊ (avatar aparece em toda tela) e ENVIA —
+                        //quem gerencia o que a foto ilustra (pessoa/evento) E quem troca a
+                        //própria foto em Meu Perfil (todo perfil, inclusive ACESSO_COMUM).
+                        //A restrição de QUAL pessoa/evento a foto pode vincular continua no
+                        //backend (FotoService/PessoaService), isolada por igreja.
                         .requestMatchers(HttpMethod.GET, "/fotos/*")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/fotos")
-                        .hasAnyRole(ADMIN, LIDER)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers

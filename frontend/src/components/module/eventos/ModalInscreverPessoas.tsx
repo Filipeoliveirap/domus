@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { iniciais, rotuloVinculo } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
-import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import type { PessoaResponse } from '@/types/pessoa.type'
 import type { Impedimento } from '@/types/inscricao.type'
 import styles from './ModalInscreverPessoas.module.css'
@@ -244,24 +244,25 @@ export function ModalInscreverPessoas({
     </div>
 
     {impedimentosParaConfirmar && (
-      <ModalConfirmacaoCritica
+      <ModalConfirmacao
         titulo="Inscrever mesmo assim?"
+        textoConfirmar="Inscrever mesmo assim"
+        isLoading={inscreverPessoas.isPending}
+        onConfirmar={aoConfirmarMesmoAssim}
+        onClose={() => setImpedimentosParaConfirmar(null)}
         mensagem={
           <>
-            {selecionados.size === 1 ? 'Esta pessoa não atende' : 'Uma ou mais pessoas selecionadas não atendem'}
-            {' '}a todos os requisitos deste evento:
-            <ul className={styles.listaImpedimentos}>
+            <p>
+              {selecionados.size === 1 ? 'Esta pessoa não atende' : 'Uma ou mais pessoas selecionadas não atendem'}
+              {' '}a todos os requisitos deste evento:
+            </p>
+            <ul>
               {impedimentosParaConfirmar.map((imp) => (
                 <li key={imp.codigo}>{imp.mensagem}</li>
               ))}
             </ul>
           </>
         }
-        palavraConfirmacao="inscrever mesmo assim"
-        textoConfirmar="Inscrever mesmo assim"
-        isLoading={inscreverPessoas.isPending}
-        onConfirmar={aoConfirmarMesmoAssim}
-        onClose={() => setImpedimentosParaConfirmar(null)}
       />
     )}
     </>

@@ -9,5 +9,6 @@ export interface UsuarioResponse {
   ultimoLoginEm: string | null;
   convitePendente: boolean;
   criadoEm: string;
+  fotoId: string | null;
 }
 

@@ -7,9 +7,7 @@ import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import {
-  statusEvento,
-  rotuloStatus,
-  varianteStatus,
+  seloEvento,
   dataExtenso,
   hora,
   vagasRestantesCalc,
@@ -68,7 +66,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const status = evento ? statusEvento(evento) : null
+  const selo = evento ? seloEvento(evento) : null
 
   return (
     <>
@@ -95,9 +93,9 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
           <div className={styles.conteudo}>
             {/* Cabeçalho */}
             <header className={styles.header}>
-              {status && (
-                <span className={`${styles.selo} ${styles[varianteStatus(status)]}`}>
-                  {rotuloStatus(status)}
+              {selo && (
+                <span className={`${styles.selo} ${styles[selo.variante]}`}>
+                  {selo.label}
                 </span>
               )}
               <span className={styles.dataTopo}>{dataExtenso(evento.inicioEm)}</span>

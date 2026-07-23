@@ -6,11 +6,7 @@ import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { useAuthStore } from '@/store/authStore'
 import {
   dataAgenda,
-  statusEvento,
-  rotuloStatus,
-  varianteStatus,
-  rotuloSituacao,
-  varianteSituacao,
+  seloEvento,
   podeEditarEvento,
   podeArquivarEvento,
 } from '@/lib/formats/eventoFormat'
@@ -31,14 +27,8 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
   const role = useAuthStore((s) => s.role)
 
   const podeGerenciar = podeGerenciarEventos(role)
-  const status = statusEvento(evento)
   const { dia, mes, ano } = dataAgenda(evento.inicioEm)
-
-  // Fora de AGENDADO, o selo passa a mostrar a situação real do backend ("Em andamento" /
-  // "Encerrado") em vez do rótulo cosmético de data (EM_BREVE/HOJE) — é o que decide se a
-  // edição está travada, então é o que a pessoa precisa ver primeiro.
-  const seloLabel = evento.situacao === 'AGENDADO' ? rotuloStatus(status) : rotuloSituacao(evento.situacao)
-  const seloVariante = evento.situacao === 'AGENDADO' ? varianteStatus(status) : varianteSituacao(evento.situacao)
+  const { label: seloLabel, variante: seloVariante } = seloEvento(evento)
 
   // A situação real (backend) trava edição/arquivamento — o servidor recusa do mesmo jeito,
   // então a ação nem aparece no menu pra não gerar um erro evitável.
@@ -52,7 +42,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
 
   return (
     <article
-      className={`${styles.card} ${status === 'ENCERRADO' ? styles.cardEncerrado : ''}`}
+      className={`${styles.card} ${evento.situacao === 'ENCERRADO' ? styles.cardEncerrado : ''}`}
       onClick={() => onAbrirDetalhe(evento)}
     >
       <div className={styles.imagem}>

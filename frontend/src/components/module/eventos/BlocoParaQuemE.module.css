@@ -1,0 +1,125 @@
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-page);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+.headerIcone { flex-shrink: 0; }
+
+/* ─── Todos / Faixa específica ─── */
+.segmentado {
+  display: flex;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segmentoBtn {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-white);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.segmentoBtn:not(:last-child) {
+  border-right: 1px solid var(--color-border-input);
+}
+.segmentoAtivo {
+  background: var(--color-primary);
+  color: var(--color-bg-white);
+}
+
+.detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ─── Chips de recorte etário ─── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.chipAtivo {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg-white);
+}
+
+.linhaIdades {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.linhaSelects {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.campoSelect {
+  display: flex;
+  flex-direction: column;
+}
+
+.select {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 480px) {
+  .linhaIdades,
+  .linhaSelects {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, Info, Ticket, AlertTriangle, UserCog } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -11,10 +11,13 @@ import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputComSugestoes'
 import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
+import { BlocoParaQuemE } from './BlocoParaQuemE'
+import { ModalImpactoRestricao } from './ModalImpactoRestricao'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
+import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
   isFormIncomplete: boolean
@@ -23,6 +26,11 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   ehEdicao: boolean
   responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
+  // ─── Impacto retroativo (Task 9) ───
+  impactoAfetados: InscritoImpactado[] | null
+  isVerificandoImpacto: boolean
+  onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
+  onFecharImpacto: () => void
 }
 
 export function EventoForm(props: EventoFormProps) {
@@ -30,6 +38,7 @@ export function EventoForm(props: EventoFormProps) {
     register, handleSubmit, watch, setValue,
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
+    impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
   } = props
 
   const requerInscricao = watch('requerInscricao')
@@ -44,6 +53,11 @@ export function EventoForm(props: EventoFormProps) {
   const tipoAtual = (watch('tipo') as string) ?? ''
   const responsavelAtual = watch('responsavelPessoaId') as string | undefined
   const vagasAtual = watch('vagas') as number | undefined
+  const recorteEtarioAtual = watch('recorteEtario') as string | null | undefined
+  const idadeMinAtual = watch('idadeMin') as number | undefined
+  const idadeMaxAtual = watch('idadeMax') as number | undefined
+  const restricaoEstadoCivilAtual = watch('restricaoEstadoCivil') as RestricaoEstadoCivil | null | undefined
+  const restricaoSexoAtual = watch('restricaoSexo') as RestricaoSexo | null | undefined
 
   const { data: tiposSugeridos = [] } = useTiposEvento()
 
@@ -325,25 +339,26 @@ export function EventoForm(props: EventoFormProps) {
                   </div>
                 )}
 
-                <label className={styles.toggleRow}>
-                  <span className={styles.toggleTexto}>
-                    <span className={styles.toggleTitulo}>Somente membros da igreja</span>
-                  </span>
-                  <span className={styles.switch}>
-                    <input type="checkbox" className={styles.switchInput} {...register('exclusivoMembros')} />
-                    <span className={styles.switchTrilho} />
-                  </span>
-                </label>
-
-                {exclusivoMembros && (
-                  <div className={styles.infoBox}>
-                    <AlertTriangle size={18} className={styles.infoIcon} />
-                    <p className={styles.infoText}>
-                      Pessoas com vínculo Congregante não poderão se inscrever nem ser
-                      inscritas.
-                    </p>
-                  </div>
-                )}
+                {/*
+                  "Para quem é" (elegibilidade): recolhido em "Todos" por padrão. Só faz
+                  sentido dentro de "requer inscrição" — não há como restringir quem se
+                  inscreve num evento que não tem inscrição.
+                */}
+                <BlocoParaQuemE
+                  recorteEtario={recorteEtarioAtual}
+                  idadeMin={idadeMinAtual}
+                  idadeMax={idadeMaxAtual}
+                  restricaoEstadoCivil={restricaoEstadoCivilAtual}
+                  restricaoSexo={restricaoSexoAtual}
+                  exclusivoMembros={!!exclusivoMembros}
+                  erroIdadeMax={errors.idadeMax?.message}
+                  onChangeRecorteEtario={(v) => setValue('recorteEtario', v, { shouldDirty: true })}
+                  onChangeIdadeMin={(v) => setValue('idadeMin', v, { shouldDirty: true, shouldValidate: true })}
+                  onChangeIdadeMax={(v) => setValue('idadeMax', v, { shouldDirty: true, shouldValidate: true })}
+                  onChangeEstadoCivil={(v) => setValue('restricaoEstadoCivil', v, { shouldDirty: true })}
+                  onChangeSexo={(v) => setValue('restricaoSexo', v, { shouldDirty: true })}
+                  onChangeExclusivoMembros={(v) => setValue('exclusivoMembros', v, { shouldDirty: true })}
+                />
               </div>
             )}
           </section>
@@ -355,8 +370,8 @@ export function EventoForm(props: EventoFormProps) {
               type="submit"
               variant="primary"
               size="lg"
-              isLoading={isLoading}
-              disabled={isFormIncomplete || isLoading}
+              isLoading={isLoading || isVerificandoImpacto}
+              disabled={isFormIncomplete || isLoading || isVerificandoImpacto}
               style={{ width: '100%' }}
             >
               {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}
@@ -365,6 +380,20 @@ export function EventoForm(props: EventoFormProps) {
           </div>
         </div>
       </div>
+
+      {/*
+        Só aparece quando o backend devolveu gente afetada (POST /impacto-restricao) —
+        evento novo nunca tem inscritos, então este passo nem entra na jogada.
+      */}
+      {impactoAfetados && impactoAfetados.length > 0 && (
+        <ModalImpactoRestricao
+          afetados={impactoAfetados}
+          isLoading={isLoading}
+          onManterTodos={() => onConfirmarImpacto(false)}
+          onCancelarNaoElegiveis={() => onConfirmarImpacto(true)}
+          onClose={onFecharImpacto}
+        />
+      )}
     </form>
   )
 }

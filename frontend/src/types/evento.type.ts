@@ -1,13 +1,32 @@
 /** Situação derivada de inicioEm/fimEm no backend (com.domus.api.modules.evento.SituacaoEvento). */
 export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
 
+/**
+ * Local do evento na resposta: `id` null significa local ad-hoc (o nome veio de texto
+ * livre, não de um `LocalEvento` cadastrado) — espelha `EventoResponse.LocalInfo` do back.
+ */
+export interface EventoLocalInfo {
+  id: string | null
+  nome: string
+  endereco: string | null
+  enderecoHerdado: boolean
+}
+
+/** Resumo de pessoa/usuário: `id` null = registro arquivado, sobrou só o nome congelado. */
+export interface EventoPessoaResumo {
+  id: string | null
+  nome: string
+}
+
 export interface EventoResponse {
   id: string
   titulo: string
   descricao: string | null
   inicioEm: string
   fimEm: string | null
-  local: string | null
+  local: EventoLocalInfo | null
+  tipo: string | null
+  responsavel: EventoPessoaResumo | null
   fotoId: string | null
   createdAt: string
   vagas: number | null
@@ -29,10 +48,26 @@ export interface EventoRequest {
   descricao?: string
   inicioEm: string
   fimEm?: string
-  local?: string
+  /** Local cadastrado. Mutuamente exclusivo com `localTexto` — nunca envie os dois. */
+  localId?: string
+  /** Local ad-hoc ("chácara do João"). Mutuamente exclusivo com `localId`. */
+  localTexto?: string
+  /** Texto livre com sugestões (GET /eventos/tipos). Não é a categoria financeira. */
+  tipo?: string
+  /** Pessoa responsável pelo evento; ausente/null = sem responsável definido. */
+  responsavelPessoaId?: string | null
   fotoId?: string | null
   vagas?: number
   preco?: string
   exclusivoMembros?: boolean
   requerInscricao?: boolean
+}
+
+/** Local cadastrado que aparece no `<SeletorLocal>` (GET /locais-evento). */
+export interface LocalEventoResponse {
+  id: string
+  nome: string
+  capacidade: number | null
+  endereco: string | null
+  enderecoHerdado: boolean
 }

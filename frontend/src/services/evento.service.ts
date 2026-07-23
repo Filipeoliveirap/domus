@@ -30,4 +30,9 @@ export const eventosService = {
 
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.eventos.BY_ID(id)).then(() => undefined),
+
+  // Tipos já usados pela igreja (mais frequentes primeiro) seguidos das sementes — a ordem
+  // vem pronta do backend, o front só respeita.
+  tipos: (): Promise<string[]> =>
+    api.get<string[]>(Endpoints.eventos.TIPOS).then(res => res.data),
 }

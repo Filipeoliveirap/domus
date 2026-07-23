@@ -96,7 +96,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
           {evento.local && (
             <div className={styles.local}>
               <MapPin size={14} />
-              <span>{evento.local}</span>
+              <span>{evento.local.nome}</span>
             </div>
           )}
           {evento.preco != null && (

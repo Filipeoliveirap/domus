@@ -137,7 +137,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                 {evento.local && (
                   <span className={styles.local}>
                     <MapPin size={15} aria-hidden="true" />
-                    {evento.local}
+                    {evento.local.nome}
                   </span>
                 )}
               </div>

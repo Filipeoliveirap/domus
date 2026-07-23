@@ -1,0 +1,20 @@
+/* O SeletorLocal reusa <Select> e <InputComSugestoes>, que já trazem o próprio estilo.
+   Este wrapper existe só para o campo ocupar a largura e não vazar da coluna. */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Link discreto para sair do modo "outro local" e voltar à lista cadastrada. */
+.voltar {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.voltar:hover {
+  opacity: 0.8;
+}

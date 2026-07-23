@@ -1,14 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search, X, Check } from 'lucide-react'
+import { Search, X, Check, AlertTriangle } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
-import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
+import { useInscreverPessoas, ehNaoElegivelContornavel, impedimentosDe422 } from '@/hooks/inscricao/useInscreverPessoas'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { iniciais, rotuloVinculo } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
+import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 import type { PessoaResponse } from '@/types/pessoa.type'
+import type { Impedimento } from '@/types/inscricao.type'
 import styles from './ModalInscreverPessoas.module.css'
 
 interface Props {
@@ -20,16 +24,21 @@ interface Props {
 }
 
 /**
- * Motivo (se houver) para uma pessoa aparecer desabilitada na lista. Checado nesta
- * ordem: já inscrita é o motivo mais concreto (o clique falharia com "já inscrita"); só
- * depois vem a regra de elegibilidade do evento (vínculo).
+ * Já estar inscrita é o único bloqueio DE VERDADE na lista (o clique falharia sozinho) —
+ * por isso é o único que desabilita o checkbox.
  */
-function motivoBloqueio(
-  p: PessoaResponse,
-  jaInscritos: Set<string>,
-  exclusivoMembros: boolean,
-): string | null {
-  if (jaInscritos.has(p.id)) return 'Já inscrita neste evento'
+function jaInscrita(p: PessoaResponse, jaInscritos: Set<string>): boolean {
+  return jaInscritos.has(p.id)
+}
+
+/**
+ * Aviso (não bloqueio) de que a pessoa pode não ser elegível para o evento. Continua
+ * selecionável: `EXCLUSIVO_MEMBROS` é CONTORNÁVEL pelo backend para quem gerencia — quem
+ * bloqueasse aqui tiraria do gestor uma opção que o servidor permite. A verificação real
+ * (idade, sexo, estado civil…) só existe no 422 do POST — o front não a antecipa para
+ * terceiros (só a `GET /elegibilidade`, que avalia a PESSOA LOGADA).
+ */
+function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): string | null {
   if (exclusivoMembros && p.vinculo !== 'MEMBRO') {
     return 'Congregante — evento exclusivo para membros'
   }
@@ -45,7 +54,13 @@ export function ModalInscreverPessoas({
 }: Props) {
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  // Impedimentos contornáveis devolvidos pelo 422 — abre a confirmação "inscrever mesmo
+  // assim" só para quem gerencia. `null` = confirmação fechada.
+  const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const role = useAuthStore((s) => s.role)
+  const ehGestor = podeGerenciarInscricoes(role)
 
   const buscaDebounced = useDebounce(busca, 300)
   const { data, isLoading } = usePessoas({ q: buscaDebounced, page: 0, size: 30 })
@@ -84,12 +99,32 @@ export function ModalInscreverPessoas({
   }
 
   function aoConfirmar() {
-    inscreverPessoas.mutate(Array.from(selecionados), {
+    const pessoaIds = Array.from(selecionados)
+    inscreverPessoas.mutate({ pessoaIds }, {
       onSuccess: () => onClose(),
+      onError: (error) => {
+        // Só quem gerencia pode contornar — para os demais o hook já notificou o erro.
+        if (ehGestor && ehNaoElegivelContornavel(error)) {
+          setImpedimentosParaConfirmar(impedimentosDe422(error) ?? [])
+        }
+      },
+    })
+  }
+
+  /** "Inscrever mesmo assim": reenvia com `confirmado=true` (só surte efeito para gestor). */
+  function aoConfirmarMesmoAssim() {
+    const pessoaIds = Array.from(selecionados)
+    inscreverPessoas.mutate({ pessoaIds, confirmado: true }, {
+      onSuccess: () => {
+        setImpedimentosParaConfirmar(null)
+        onClose()
+      },
+      onError: () => setImpedimentosParaConfirmar(null),
     })
   }
 
   return (
+    <>
     <div className={styles.overlay} onMouseDown={() => !inscreverPessoas.isPending && onClose()}>
       <div
         className={styles.modal}
@@ -133,8 +168,8 @@ export function ModalInscreverPessoas({
             <p className={styles.estado}>Nenhuma pessoa encontrada.</p>
           ) : (
             pessoas.map((p) => {
-              const motivo = motivoBloqueio(p, jaInscritos, exclusivoMembros)
-              const bloqueado = !!motivo
+              const bloqueado = jaInscrita(p, jaInscritos)
+              const aviso = !bloqueado ? avisoElegibilidade(p, exclusivoMembros) : null
               const marcado = selecionados.has(p.id)
               return (
                 <label
@@ -163,9 +198,18 @@ export function ModalInscreverPessoas({
                   <span className={styles.info}>
                     <span className={styles.nome}>{p.nome}</span>
                     <span className={styles.detalhe}>
-                      {motivo ?? `${rotuloVinculo(p.vinculo)} · ${p.ministerio || 'sem ministério'}`}
+                      {bloqueado
+                        ? 'Já inscrita neste evento'
+                        : (aviso ?? `${rotuloVinculo(p.vinculo)} · ${p.ministerio || 'sem ministério'}`)}
                     </span>
                   </span>
+                  {aviso && !bloqueado && (
+                    <AlertTriangle
+                      size={15}
+                      className={styles.avisoIcone}
+                      aria-label="Pode não ser elegível para este evento"
+                    />
+                  )}
                   {marcado && <Check size={16} className={styles.checkIcone} aria-hidden="true" />}
                 </label>
               )
@@ -198,5 +242,28 @@ export function ModalInscreverPessoas({
         </div>
       </div>
     </div>
+
+    {impedimentosParaConfirmar && (
+      <ModalConfirmacaoCritica
+        titulo="Inscrever mesmo assim?"
+        mensagem={
+          <>
+            {selecionados.size === 1 ? 'Esta pessoa não atende' : 'Uma ou mais pessoas selecionadas não atendem'}
+            {' '}a todos os requisitos deste evento:
+            <ul className={styles.listaImpedimentos}>
+              {impedimentosParaConfirmar.map((imp) => (
+                <li key={imp.codigo}>{imp.mensagem}</li>
+              ))}
+            </ul>
+          </>
+        }
+        palavraConfirmacao="inscrever mesmo assim"
+        textoConfirmar="Inscrever mesmo assim"
+        isLoading={inscreverPessoas.isPending}
+        onConfirmar={aoConfirmarMesmoAssim}
+        onClose={() => setImpedimentosParaConfirmar(null)}
+      />
+    )}
+    </>
   )
 }

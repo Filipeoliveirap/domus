@@ -656,6 +656,7 @@ public class InscricaoService {
 
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
         validarControlaPresenca(inscricao.getEvento());
+        validarInscricaoConfirmada(inscricao);
 
         inscricao.setCompareceu(compareceu);
         inscricaoRepository.save(inscricao);
@@ -682,6 +683,7 @@ public class InscricaoService {
         }
 
         validarControlaPresenca(acompanhante.getInscricao().getEvento());
+        validarInscricaoConfirmada(acompanhante.getInscricao());
 
         acompanhante.setCompareceu(compareceu);
         acompanhanteRepository.save(acompanhante);
@@ -694,6 +696,17 @@ public class InscricaoService {
         if (!evento.isControlaPresenca()) {
             throw new ConflitoNegocioException("PRESENCA_NAO_HABILITADA",
                     "Este evento não controla presença.");
+        }
+    }
+
+    /**
+     * Só é editável se a inscrição estiver CONFIRMADA (spec do relatório de eventos,
+     * 2026-07-23): uma inscrição CANCELADA não deveria ter presença marcada/desmarcada.
+     */
+    private void validarInscricaoConfirmada(InscricaoEvento inscricao) {
+        if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
+            throw new ConflitoNegocioException("INSCRICAO_NAO_CONFIRMADA",
+                    "Esta inscrição está cancelada e não pode ter presença marcada.");
         }
     }
 }

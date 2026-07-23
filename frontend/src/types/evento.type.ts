@@ -104,8 +104,17 @@ export interface LocalEventoResponse {
   id: string
   nome: string
   capacidade: number | null
+  /** Endereço já resolvido para EXIBIÇÃO (lista/detalhe): o próprio, ou o da igreja se herdado. */
   endereco: string | null
   enderecoHerdado: boolean
+  /**
+   * Campos CRUS do endereço próprio, para o formulário de edição reidratar fielmente. null
+   * quando o local herda o endereço da igreja. Separados de `endereco` porque este colapsa os
+   * dois num texto só, do qual o form não reconstrói as partes — e sem eles, editar a
+   * capacidade apagava o complemento em silêncio.
+   */
+  cepLogradouroNumero: string | null
+  complementoBairroCidadeUf: string | null
 }
 
 /**

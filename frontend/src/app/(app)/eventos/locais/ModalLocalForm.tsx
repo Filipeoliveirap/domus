@@ -28,14 +28,11 @@ export function ModalLocalForm({ local, onClose }: Props) {
     defaultValues: {
       nome: local?.nome ?? '',
       capacidade: local?.capacidade ?? undefined,
-      // `LocalEventoResponse.endereco` só devolve o texto do CEP/logradouro/número quando o
-      // local tem endereço PRÓPRIO — herdado da igreja não deve ser reaproveitado (submeter
-      // sem editar viraria "endereço próprio" igual ao da igreja, quando a intenção era
-      // continuar herdando). O `complementoBairroCidadeUf` gravado não volta na resposta (o
-      // DTO não o expõe) — ao editar um local que já tinha complemento, o campo some da tela
-      // e precisa ser redigitado para não ser perdido no salvar.
-      cepLogradouroNumero: local && !local.enderecoHerdado ? local.endereco ?? '' : '',
-      complementoBairroCidadeUf: '',
+      // Reidrata dos campos CRUS (não do `endereco` formatado, que colapsa tudo num texto).
+      // Vêm null quando o local herda o endereço da igreja — nesse caso o form abre vazio, e
+      // deixá-lo vazio no submit mantém a herança (não vira endereço próprio igual ao da igreja).
+      cepLogradouroNumero: local?.cepLogradouroNumero ?? '',
+      complementoBairroCidadeUf: local?.complementoBairroCidadeUf ?? '',
     },
   })
 
@@ -102,9 +99,6 @@ export function ModalLocalForm({ local, onClose }: Props) {
             error={errors.complementoBairroCidadeUf?.message}
             {...register('complementoBairroCidadeUf')}
           />
-          {/* A API não devolve o complemento salvo (só o CEP/logradouro/número) — ao editar,
-              o campo sempre reabre vazio e precisa ser redigitado para não se perder. */}
-          {local && <p className={styles.avisoComplemento}>Se este local já tinha complemento, digite de novo — o campo não é reidratado ao editar.</p>}
 
           {erroGeral && <div className={styles.alertError}>{erroGeral}</div>}
 

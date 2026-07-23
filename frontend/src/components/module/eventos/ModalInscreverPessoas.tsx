@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, X, Check, AlertTriangle } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
-import { useInscreverPessoas, ehNaoElegivelContornavel, impedimentosDe422 } from '@/hooks/inscricao/useInscreverPessoas'
+import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
@@ -75,7 +75,13 @@ export function ModalInscreverPessoas({
     [participantes],
   )
 
-  const inscreverPessoas = useInscreverPessoas(eventoId)
+  // Só o gestor pode contornar, então só ele passa o callback. Para os demais, o hook
+  // notifica o 422 normalmente (era aqui que o erro sumia em silêncio antes).
+  const inscreverPessoas = useInscreverPessoas(eventoId, {
+    onContornavel: ehGestor
+      ? (impedimentos) => setImpedimentosParaConfirmar(impedimentos)
+      : undefined,
+  })
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -100,15 +106,9 @@ export function ModalInscreverPessoas({
 
   function aoConfirmar() {
     const pessoaIds = Array.from(selecionados)
-    inscreverPessoas.mutate({ pessoaIds }, {
-      onSuccess: () => onClose(),
-      onError: (error) => {
-        // Só quem gerencia pode contornar — para os demais o hook já notificou o erro.
-        if (ehGestor && ehNaoElegivelContornavel(error)) {
-          setImpedimentosParaConfirmar(impedimentosDe422(error) ?? [])
-        }
-      },
-    })
+    // O tratamento de erro vive no hook: contorno abre a confirmação (via onContornavel),
+    // o resto é notificado. Aqui só o caminho de sucesso.
+    inscreverPessoas.mutate({ pessoaIds }, { onSuccess: () => onClose() })
   }
 
   /** "Inscrever mesmo assim": reenvia com `confirmado=true` (só surte efeito para gestor). */

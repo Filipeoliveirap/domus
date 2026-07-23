@@ -14,7 +14,7 @@ import type { QueryClient } from '@tanstack/react-query'
  * <p><b>Ao criar uma tela nova que agrega dados de outras, adicione a chave dela aqui</b> —
  * é o único lugar que precisa saber.
  */
-type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao'
+type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao' | 'localEvento'
 
 /** Prefixos de queryKey. O TanStack invalida por prefixo, então `['relatorios']` pega todas. */
 const AFETADAS: Record<Entidade, string[][]> = {
@@ -75,6 +75,13 @@ const AFETADAS: Record<Entidade, string[][]> = {
     // diferente) — sem esta linha o botão de inscrição continuaria mostrando o impedimento
     // velho (ex.: vagas esgotadas) depois de uma inscrição ou cancelamento.
     ['elegibilidade'],
+  ],
+  // ['eventos', 'locais'] (useLocaisEvento/SeletorLocal) fica sob o prefixo ['eventos'],
+  // já invalidado — mas o CARD de evento mostra o nome/endereço do local, então também
+  // precisa recarregar a lista e o detalhe de eventos.
+  localEvento: [
+    ['eventos'],
+    ['evento'],
   ],
 }
 

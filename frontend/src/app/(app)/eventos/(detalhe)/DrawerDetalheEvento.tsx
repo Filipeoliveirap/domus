@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -128,6 +128,24 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                   <div>
                     <p className={styles.infoLabel}>Local</p>
                     <p className={styles.infoValor}>{evento.local.nome}</p>
+                    {evento.local.endereco && (
+                      <p className={styles.infoSecundario}>
+                        {evento.local.endereco}
+                        {/* Local sem endereço próprio usa o da igreja — avisar evita
+                            confusão de quem visse o CEP e achasse que era do local. */}
+                        {evento.local.enderecoHerdado && ' (endereço da igreja)'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {evento.responsavel && (
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><UserCircle size={20} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>Responsável</p>
+                    <p className={styles.infoValor}>{evento.responsavel.nome}</p>
                   </div>
                 </div>
               )}
@@ -170,6 +188,16 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 <p className={styles.infoLabel}>Descrição</p>
                 <p className={styles.descricaoTexto}>{evento.descricao}</p>
               </div>
+            )}
+
+            {/* Auditoria — mesmo padrão de movimentação financeira. `id` null (pessoa/usuário
+                arquivado) ainda mostra o nome congelado, então não precisa de fallback aqui. */}
+            {(evento.criadoPor || evento.atualizadoPor) && (
+              <p className={styles.auditoria}>
+                {evento.criadoPor && <>Criado por {evento.criadoPor.nome}</>}
+                {evento.criadoPor && evento.atualizadoPor && ' · '}
+                {evento.atualizadoPor && <>Atualizado por {evento.atualizadoPor.nome}</>}
+              </p>
             )}
 
             {/* Imagem */}

@@ -45,6 +45,8 @@ export const Endpoints = {
 
   locaisEvento: {
     LISTAR: '/locais-evento',
+    CRIAR: '/locais-evento',
+    BY_ID: (id: string) => `/locais-evento/${id}`,
   },
 
   inscricoes: {

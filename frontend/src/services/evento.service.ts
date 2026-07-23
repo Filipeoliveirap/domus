@@ -7,6 +7,8 @@ interface ListarEventosParams {
   q?: string
   page?: number
   size?: number
+  tipo?: string
+  recorteEtario?: string
 }
 
 export const eventosService = {
@@ -16,6 +18,8 @@ export const eventosService = {
         q: params.q || undefined,
         page: params.page ?? 0,
         size: params.size ?? 12,
+        tipo: params.tipo || undefined,
+        recorteEtario: params.recorteEtario || undefined,
       },
     }).then(res => res.data),
 

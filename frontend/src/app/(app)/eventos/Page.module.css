@@ -41,6 +41,11 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-muted);
 }
+.acoesCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .botaoPrimario {
   display: inline-flex;
   align-items: center;
@@ -55,6 +60,20 @@
   transition: opacity var(--transition-normal);
 }
 .botaoPrimario:hover { opacity: 0.9; }
+.botaoSecundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  transition: background var(--transition-fast);
+}
+.botaoSecundario:hover { background: var(--color-bg-page); }
 
 /* ─── Busca ─── */
 .barraBusca {
@@ -161,6 +180,14 @@
     gap: 12px;
   }
   .botaoPrimario {
+    width: 100%;
+    justify-content: center;
+  }
+  .acoesCabecalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .botaoSecundario {
     width: 100%;
     justify-content: center;
   }

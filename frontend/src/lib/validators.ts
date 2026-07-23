@@ -227,6 +227,15 @@ export const convidadoSchema = z.object({
   ),
 })
 
+export const localEventoSchema = z.object({
+  nome: z.string().trim().min(1, 'O nome do local é obrigatório.').max(150, 'Máximo 150 caracteres.'),
+  capacidade: opcionalNumero(z.coerce.number().int().positive('A capacidade deve ser maior que zero.')),
+  // Texto livre (não é ViaCEP estruturado) — mesmo par de campos do back
+  // (cepLogradouroNumero/complementoBairroCidadeUf). Vazio = local herda o endereço da igreja.
+  cepLogradouroNumero: opcional(z.string().max(255, 'Máximo 255 caracteres.')),
+  complementoBairroCidadeUf: opcional(z.string().max(255, 'Máximo 255 caracteres.')),
+})
+
 export const esqueciSenhaSchema = z.object({
   email: z.email('Digite um E-mail válido').min(1, 'E-mail é obrigatório').transform((v) => v.trim().toLowerCase()),
 })
@@ -254,5 +263,7 @@ export type MovimentacaoFormData = z.infer<typeof movimentacaoSchema>
 export type MovimentacaoFormInput = z.input<typeof movimentacaoSchema>
 export type ConvidadoFormData = z.infer<typeof convidadoSchema>
 export type ConvidadoFormInput = z.input<typeof convidadoSchema>
+export type LocalEventoFormData = z.infer<typeof localEventoSchema>
+export type LocalEventoFormInput = z.input<typeof localEventoSchema>
 export type EsqueciSenhaFormData = z.infer<typeof esqueciSenhaSchema>
 export type RedefinirSenhaFormData = z.infer<typeof redefinirSenhaSchema>

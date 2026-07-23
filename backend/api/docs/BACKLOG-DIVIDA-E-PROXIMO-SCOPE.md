@@ -482,3 +482,12 @@ Dois tokens distintos. Quando separar, lembrar que o backup usa os secrets do **
 
 Origem: em 2026-07-22 as credenciais foram rotacionadas porque vazaram numa conversa, e na
 recriação os dois usos ficaram com o mesmo token.
+
+### ⚠️ Limpeza de foto de arquivada pode falhar por FK RESTRICT (a verificar) — 2026-07-22
+
+`LimpezaFotosJob.limparDeArquivadas` chama `fotoService.remover`, que faz `DELETE FROM foto`.
+Mas `pessoa.foto_id` é `ON DELETE RESTRICT` (V2) e a pessoa arquivada **ainda referencia** a
+foto — o DELETE seria recusado pelo banco. O teste do job é Mockito e não exercita a FK, então
+não pega. Falta desvincular (`pessoa.foto_id = NULL`) antes de apagar a foto. Reproduzir contra
+Postgres real (arquivar pessoa com foto, avançar o corte, rodar o job) e corrigir.
+Regra de domínio associada: o REGISTRO da pessoa nunca é apagado pela rotina — só a foto.

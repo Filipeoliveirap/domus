@@ -154,7 +154,7 @@ export default function RelatoriosPage() {
             className={`${styles.aba} ${abaEfetiva === 'CONGREGACOES' ? styles.abaAtiva : ''}`}
             onClick={() => trocarAba('CONGREGACOES')}
           >
-            Congregações
+            Unidades
           </button>
         </div>
       )}

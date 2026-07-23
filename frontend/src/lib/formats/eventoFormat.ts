@@ -81,6 +81,25 @@ export function varianteSituacao(situacao: SituacaoEvento): string {
   return mapa[situacao]
 }
 
+/**
+ * Selo a exibir para um evento — usado no card da listagem E no modal/drawer de detalhe.
+ *
+ * Fora de AGENDADO, mostra a situação REAL do backend ("Em andamento"/"Encerrado") em vez
+ * do rótulo cosmético de data (`statusEvento`, EM_BREVE/HOJE/ENCERRADO). O motivo: essa
+ * heurística de data só sabe distinguir "hoje" (mesmo dia do início) de "em breve"/
+ * "encerrado" — um evento que começou em outro dia mas ainda não terminou (multi-dia, ou
+ * já em andamento há mais de 24h) cai no `else` e voltaria "Em breve", o que é errado e é
+ * exatamente o que a situação do backend corrige. As duas telas têm que concordar: é o que
+ * decide se a edição está travada, então é o que a pessoa precisa ver primeiro.
+ */
+export function seloEvento(evento: EventoResponse): { label: string; variante: string } {
+  if (evento.situacao !== 'AGENDADO') {
+    return { label: rotuloSituacao(evento.situacao), variante: varianteSituacao(evento.situacao) }
+  }
+  const status = statusEvento(evento)
+  return { label: rotuloStatus(status), variante: varianteStatus(status) }
+}
+
 /** Evento não pode ser editado (nem no front, nem no back) fora de AGENDADO. */
 export function podeEditarEvento(situacao: SituacaoEvento): boolean {
   return situacao === 'AGENDADO'

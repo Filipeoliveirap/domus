@@ -220,6 +220,35 @@ public class PessoaService {
     }
 
     /**
+     * Update "self" de foto — usado por quem só pode trocar a própria foto
+     * (ACESSO_COMUM/LIDER em Meu Perfil). Mesma ordem de troca de `atualizarMembro`:
+     * vincula a nova antes de remover a antiga (o ON DELETE RESTRICT recusaria o contrário).
+     */
+    @Transactional
+    public PessoaResponse atualizarMinhaFoto(UUID id, UUID novoFotoId, UUID igrejaId) {
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        Foto fotoAntiga = membro.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(novoFotoId, igrejaId);
+        membro.setFoto(fotoNova);
+
+        Pessoa salvo = membroRepository.save(membro);
+
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        log.info("Foto de perfil atualizada (self-service). id={}, igreja_id={}", id, igrejaId);
+
+        return PessoaResponse.from(salvo, null, true);
+    }
+
+    /**
      * B2: procura OUTRO membro da mesma igreja com o mesmo telefone (dígitos normalizados) e
      * devolve o NOME dele para o front avisar — nunca bloqueia. Telefone não é chave de login
      * como o e-mail; casal, família e idoso usando o número de um parente são casos legítimos,

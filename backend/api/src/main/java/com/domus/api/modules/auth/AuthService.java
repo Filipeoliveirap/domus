@@ -71,6 +71,7 @@ public class AuthService {
                     usuario.getRole().getNome(),
                     usuario.getIgreja().getId(),
                     usuario.getIgreja().getNome(),
+                    usuarioRepository.findFotoIdById(usuario.getId()),
                     token,
                     refreshToken
             );

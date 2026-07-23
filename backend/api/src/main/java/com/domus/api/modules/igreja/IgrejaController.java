@@ -32,9 +32,10 @@ public class IgrejaController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.access(response.token()).toString())
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(response.refreshToken()).toString())
+                // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto.
                 .body(new SessaoDTO(
                         response.id(), response.nome(), response.role(),
-                        response.igrejaId(), response.igrejaNome()));
+                        response.igrejaId(), response.igrejaNome(), null));
     }
 
     /*

@@ -52,8 +52,10 @@ public class AuthenticationController {
     @PostMapping("/google/registrar")
     public ResponseEntity<SessaoDTO> googleRegistrar(@RequestBody @Valid GoogleRegistrarDTO data) {
         RegistrarIgrejaResponse r = googleAuthService.registrar(data);
+        // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto — fotoId nulo é o
+        // dado real, não uma omissão.
         return comCookies(r.token(), r.refreshToken())
-                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome()));
+                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), null));
     }
 
     /**
@@ -117,6 +119,6 @@ public class AuthenticationController {
     }
 
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
-        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome());
+        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), r.fotoId());
     }
 }

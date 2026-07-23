@@ -36,11 +36,21 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
-        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome)
+        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome, u.pessoa.foto.id)
     FROM Usuario u
     WHERE u.id = :id
     """)
     Optional<SessaoDTO> findSessaoById(@Param("id") UUID id);
+
+    /**
+     * Id da foto da pessoa, direto pela FK — sem carregar a {@code Foto} (associação LAZY em
+     * {@code Pessoa}). Selecionar só o id de um {@code @ManyToOne} é o próprio valor da coluna
+     * FK: o Hibernate não precisa de JOIN nem de inicializar o proxy, e {@code null} (sem
+     * foto) sai natural. Existe para popular {@code LoginResponseDTO} sem repetir o risco já
+     * documentado de ler campo LAZY de entidade que pode estar desanexada.
+     */
+    @Query("SELECT u.pessoa.foto.id FROM Usuario u WHERE u.id = :id")
+    UUID findFotoIdById(@Param("id") UUID id);
     long countByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
     @Query("""

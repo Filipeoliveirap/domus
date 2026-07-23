@@ -41,6 +41,9 @@ BEGIN
     DELETE FROM movimentacao_financeira WHERE igreja_id = ANY(ids);
     DELETE FROM categoria_financeira WHERE igreja_id = ANY(ids);
     DELETE FROM evento               WHERE igreja_id = ANY(ids);
+    -- local_evento só pode ser apagado depois do evento (FK local_id ON DELETE SET NULL
+    -- não impede o DELETE, mas apagar evento primeiro evita ficar com referência solta).
+    DELETE FROM local_evento         WHERE igreja_id = ANY(ids);
     DELETE FROM usuario              WHERE igreja_id = ANY(ids);
     DELETE FROM pessoa                WHERE igreja_id = ANY(ids);
     DELETE FROM outbox               WHERE igreja_id = ANY(ids);
@@ -255,8 +258,61 @@ WHERE p.email IN ('josefilipe.dev@gmail.com','lider1@gmail.com','membro1@gmail.c
                    'lider2@gmail.com','membro2@gmail.com');
 
 -- ---------------------------------------------------------------------
+-- LOCAIS DE EVENTO (V3) — 4 por igreja. Dois com endereço próprio
+-- (cep_logradouro_numero/complemento_bairro_cidade_uf preenchidos), dois
+-- com endereço NULL (herdam o da igreja na tela de detalhe do evento).
+-- ---------------------------------------------------------------------
+CREATE TEMP TABLE tmp_locais (
+    igreja_id uuid,
+    local_id  uuid,
+    nome      varchar(150)
+) ON COMMIT DROP;
+
+DO $$
+DECLARE
+    igrejas uuid[] := ARRAY['a0000000-0000-0000-0000-000000000001'::uuid,
+                            'a0000000-0000-0000-0000-000000000002'::uuid,
+                            'a0000000-0000-0000-0000-000000000003'::uuid,
+                            'a0000000-0000-0000-0000-000000000004'::uuid];
+    ig uuid;
+    lid uuid;
+BEGIN
+    FOREACH ig IN ARRAY igrejas LOOP
+        -- endereço NULL: herda o da igreja na tela de detalhe do evento.
+        lid := gen_random_uuid();
+        INSERT INTO local_evento (id, igreja_id, nome, capacidade)
+        VALUES (lid, ig, 'Templo Principal', 250);
+        INSERT INTO tmp_locais VALUES (ig, lid, 'Templo Principal');
+
+        lid := gen_random_uuid();
+        INSERT INTO local_evento (id, igreja_id, nome, capacidade)
+        VALUES (lid, ig, 'Salão Social', 80);
+        INSERT INTO tmp_locais VALUES (ig, lid, 'Salão Social');
+
+        -- endereço próprio: espaço infantil fica num anexo, endereço diferente da igreja.
+        lid := gen_random_uuid();
+        INSERT INTO local_evento (id, igreja_id, nome, capacidade,
+                                    cep_logradouro_numero, complemento_bairro_cidade_uf)
+        VALUES (lid, ig, 'Sala Kids', 30,
+                '01311-000, Rua Augusta, 200', 'Anexo, Consolação, São Paulo, SP');
+        INSERT INTO tmp_locais VALUES (ig, lid, 'Sala Kids');
+
+        -- endereço próprio: sítio de retiro, fora da sede.
+        lid := gen_random_uuid();
+        INSERT INTO local_evento (id, igreja_id, nome, capacidade,
+                                    cep_logradouro_numero, complemento_bairro_cidade_uf)
+        VALUES (lid, ig, 'Chácara Monte Sião', 60,
+                '06700-000, Estrada do Sítio, s/n', 'Km 12, Zona Rural, Cotia, SP');
+        INSERT INTO tmp_locais VALUES (ig, lid, 'Chácara Monte Sião');
+    END LOOP;
+END $$;
+
+-- ---------------------------------------------------------------------
 -- EVENTOS — passados, em andamento e futuros, com combinações de
--- inscrição/preço/exclusividade, em cada igreja.
+-- inscrição/preço/exclusividade/tipo/local/responsável/elegibilidade,
+-- em cada igreja. Cobre os 3 recortes etários (Kids, Jovens, 3ª idade)
+-- e ao menos um exclusivo_membros, para a elegibilidade poder ser
+-- demonstrada na apresentação.
 -- ---------------------------------------------------------------------
 CREATE TEMP TABLE tmp_eventos (
     igreja_id uuid,
@@ -273,63 +329,123 @@ DECLARE
                             'a0000000-0000-0000-0000-000000000004'::uuid];
     ig uuid;
     eid uuid;
+    loc_templo uuid;
+    loc_salao  uuid;
+    loc_kids   uuid;
+    loc_chacara uuid;
+    usuario_admin uuid;
+    pessoa_resp uuid;
 BEGIN
     FOREACH ig IN ARRAY igrejas LOOP
-        -- 1) evento já finalizado, sem inscrição (culto especial)
+        SELECT local_id INTO loc_templo  FROM tmp_locais WHERE igreja_id = ig AND nome = 'Templo Principal';
+        SELECT local_id INTO loc_salao   FROM tmp_locais WHERE igreja_id = ig AND nome = 'Salão Social';
+        SELECT local_id INTO loc_kids    FROM tmp_locais WHERE igreja_id = ig AND nome = 'Sala Kids';
+        SELECT local_id INTO loc_chacara FROM tmp_locais WHERE igreja_id = ig AND nome = 'Chácara Monte Sião';
+
+        -- usuário admin da igreja, para auditoria (criado_por/atualizado_por) — mesmo
+        -- padrão já usado em movimentacao_financeira mais abaixo neste arquivo.
+        SELECT u.id INTO usuario_admin
+          FROM usuario u JOIN role r ON r.id = u.role_id
+         WHERE u.igreja_id = ig AND r.nome = 'ADMIN_IGREJA'
+         LIMIT 1;
+
+        -- pessoa qualquer da igreja como responsável, variando por evento.
+        SELECT pessoa_id INTO pessoa_resp FROM tmp_pessoas WHERE igreja_id = ig ORDER BY random() LIMIT 1;
+
+        -- 1) evento já finalizado, sem inscrição (culto especial), local cadastrado
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             tipo, criado_por_usuario_id, atualizado_por_usuario_id,
                              requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Culto de Ação de Graças',
                 'Culto especial de gratidão pelo semestre.',
                 NOW() - interval '45 days', NOW() - interval '45 days' + interval '2 hours',
-                'Templo principal', false, false);
+                loc_templo, 'Culto Especial', usuario_admin, usuario_admin, false, false);
 
-        -- 2) conferência já finalizada, COM inscrição e vagas esgotadas
+        -- 2) conferência já finalizada, COM inscrição e vagas esgotadas, restrita a casados
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
-                             vagas, preco, requer_inscricao, exclusivo_membros)
+        SELECT pessoa_id INTO pessoa_resp FROM tmp_pessoas WHERE igreja_id = ig ORDER BY random() LIMIT 1;
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             vagas, preco, tipo, responsavel_pessoa_id,
+                             criado_por_usuario_id, atualizado_por_usuario_id,
+                             restricao_estado_civil, requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Conferência de Casais 2026',
                 'Encontro anual para casais, com palestras e dinâmicas.',
                 NOW() - interval '20 days', NOW() - interval '20 days' + interval '6 hours',
-                'Salão social', 20, 45.00, true, false);
+                loc_salao, 20, 45.00, 'Conferência', pessoa_resp,
+                usuario_admin, usuario_admin, 'CASADO', true, false);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 20);
 
-        -- 3) evento em andamento agora (acontecendo hoje), gratuito
+        -- 3) evento em andamento agora (acontecendo hoje), gratuito, local ad-hoc (texto livre)
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_texto,
+                             tipo, criado_por_usuario_id, atualizado_por_usuario_id,
                              requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Semana de Oração',
                 'Programação diária de oração e jejum.',
                 NOW() - interval '1 day', NOW() + interval '4 days',
-                'Templo principal', false, false);
+                'Templo principal (mutirão de madrugada)', 'Oração', usuario_admin, usuario_admin,
+                false, false);
 
-        -- 4) evento futuro próximo, com inscrição e vagas, aberto a todos
+        -- 4) evento futuro próximo, com inscrição e vagas, recorte etário Jovens
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
-                             vagas, requer_inscricao, exclusivo_membros)
+        SELECT pessoa_id INTO pessoa_resp FROM tmp_pessoas WHERE igreja_id = ig ORDER BY random() LIMIT 1;
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             vagas, tipo, responsavel_pessoa_id,
+                             criado_por_usuario_id, atualizado_por_usuario_id,
+                             recorte_etario, idade_min, idade_max, requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Retiro de Jovens',
                 'Final de semana de retiro com a juventude.',
                 NOW() + interval '15 days', NOW() + interval '17 days',
-                'Chácara Monte Sião', 30, true, false);
+                loc_chacara, 30, 'Retiro', pessoa_resp, usuario_admin, usuario_admin,
+                'JOVENS', 15, 29, true, false);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 30);
 
         -- 5) evento futuro pago, exclusivo para membros batizados
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
-                             vagas, preco, requer_inscricao, exclusivo_membros)
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             vagas, preco, tipo, criado_por_usuario_id, atualizado_por_usuario_id,
+                             requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Jantar de Comunhão dos Membros',
                 'Jantar anual restrito aos membros batizados da igreja.',
                 NOW() + interval '30 days', NOW() + interval '30 days' + interval '3 hours',
-                'Salão social', 25, 30.00, true, true);
+                loc_salao, 25, 30.00, 'Jantar', usuario_admin, usuario_admin, true, true);
         INSERT INTO tmp_eventos VALUES (ig, eid, true, 25);
 
-        -- 6) evento futuro distante, sem inscrição (só divulgação)
+        -- 6) evento futuro distante, sem inscrição (só divulgação), local ad-hoc
         eid := gen_random_uuid();
-        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local,
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_texto,
+                             tipo, criado_por_usuario_id, atualizado_por_usuario_id,
                              requer_inscricao, exclusivo_membros)
         VALUES (eid, ig, 'Culto de Natal', 'Celebração de Natal da igreja.',
                 NOW() + interval '150 days', NOW() + interval '150 days' + interval '2 hours',
-                'Templo principal', false, false);
+                'Praça em frente ao templo', 'Culto', usuario_admin, usuario_admin, false, false);
+
+        -- 7) recorte etário Kids, no local com endereço próprio (Sala Kids)
+        eid := gen_random_uuid();
+        SELECT pessoa_id INTO pessoa_resp FROM tmp_pessoas WHERE igreja_id = ig ORDER BY random() LIMIT 1;
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             vagas, tipo, responsavel_pessoa_id,
+                             criado_por_usuario_id, atualizado_por_usuario_id,
+                             recorte_etario, idade_min, idade_max, requer_inscricao, exclusivo_membros)
+        VALUES (eid, ig, 'Colônia de Férias Kids',
+                'Programação especial para as crianças da igreja.',
+                NOW() + interval '10 days', NOW() + interval '10 days' + interval '4 hours',
+                loc_kids, 25, 'Kids', pessoa_resp, usuario_admin, usuario_admin,
+                'KIDS', 4, 11, true, false);
+        INSERT INTO tmp_eventos VALUES (ig, eid, true, 25);
+
+        -- 8) recorte etário 3ª idade, com restrição de sexo (só mulheres) para variar
+        eid := gen_random_uuid();
+        INSERT INTO evento (id, igreja_id, titulo, descricao, inicio_em, fim_em, local_id,
+                             vagas, tipo, criado_por_usuario_id, atualizado_por_usuario_id,
+                             recorte_etario, idade_min, restricao_sexo, requer_inscricao, exclusivo_membros)
+        VALUES (eid, ig, 'Chá da Melhor Idade',
+                'Encontro mensal das mulheres da terceira idade da igreja.',
+                NOW() + interval '25 days', NOW() + interval '25 days' + interval '3 hours',
+                loc_salao, 40, '3ª Idade', usuario_admin, usuario_admin,
+                '3A_IDADE', 60, 'MULHER', true, false);
+        INSERT INTO tmp_eventos VALUES (ig, eid, true, 40);
     END LOOP;
 END $$;
 

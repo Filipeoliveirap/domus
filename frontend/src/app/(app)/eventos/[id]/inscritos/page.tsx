@@ -3,17 +3,26 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
+import { useMarcarTodosPresentes } from '@/hooks/inscricao/useMarcarTodosPresentes'
+import { useMarcarPresencaInscricao } from '@/hooks/inscricao/useMarcarPresencaInscricao'
+import { useMarcarPresencaAcompanhante } from '@/hooks/inscricao/useMarcarPresencaAcompanhante'
+import { useMarcarPresencaSelecionados, type ItemSelecionado } from '@/hooks/inscricao/useMarcarPresencaSelecionados'
+import { useRelatorioEvento } from '@/hooks/evento/useRelatorioEvento'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
+import { CardsRelatorioEvento } from '@/components/module/eventos/CardsRelatorioEvento'
 import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { SkeletonInscritos } from './SkeletonInscritos'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import { iniciais } from '@/lib/formats/pessoaFormat'
@@ -32,7 +41,14 @@ export default function InscritosPage() {
   const autorizado = podeVerListaCompletaDeInscritos(role)
 
   const { data: evento } = useEvento(eventoId)
-  const { data: lista, isPending, isError, refetch } = useListaInscritos(eventoId, autorizado)
+
+  const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebounce(busca)
+  const [pagina, setPagina] = useState(0)
+
+  const { data: lista, isPending, isError, refetch } = useListaInscritos(
+    eventoId, autorizado, buscaDebounced, pagina,
+  )
 
   const [modalInscreverAberto, setModalInscreverAberto] = useState(false)
   const [inscritoCancelando, setInscritoCancelando] = useState<InscritoResponse | null>(null)
@@ -40,10 +56,73 @@ export default function InscritosPage() {
 
   const cancelarInscricao = useCancelarInscricao()
   const removerConvidado = useRemoverConvidado()
+  const marcarTodos = useMarcarTodosPresentes(eventoId)
+  const marcarPresencaInscricao = useMarcarPresencaInscricao(eventoId)
+  const marcarPresencaAcompanhante = useMarcarPresencaAcompanhante(eventoId)
+  const marcarPresencaSelecionados = useMarcarPresencaSelecionados(eventoId)
+  const [confirmarMarcarTodos, setConfirmarMarcarTodos] = useState(false)
+
+  // Modo seleção: liga checkboxes de escolha manual (em vez do clique instantâneo de
+  // presença) para marcar um SUBCONJUNTO — diferente de "marcar todos vieram". Chave
+  // composta (`tipo:id`) porque inscrito e convidado têm ids em espaços distintos.
+  const [modoSelecao, setModoSelecao] = useState(false)
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+
+  function chaveSelecao(item: ItemSelecionado) {
+    return `${item.tipo}:${item.id}`
+  }
+
+  function alternarSelecao(item: ItemSelecionado) {
+    const chave = chaveSelecao(item)
+    setSelecionados((atual) => {
+      const proximo = new Set(atual)
+      if (proximo.has(chave)) proximo.delete(chave)
+      else proximo.add(chave)
+      return proximo
+    })
+  }
+
+  function sairDoModoSelecao() {
+    setModoSelecao(false)
+    setSelecionados(new Set())
+  }
+
+  function aoMarcarSelecionados() {
+    const itens: ItemSelecionado[] = Array.from(selecionados).map((chave) => {
+      const [tipo, id] = chave.split(':') as [ItemSelecionado['tipo'], string]
+      return { tipo, id }
+    })
+    marcarPresencaSelecionados.mutate(itens, { onSuccess: sairDoModoSelecao })
+  }
+
+  function aoDigitarBusca(valor: string) {
+    setBusca(valor)
+    setPagina(0)
+    setSelecionados(new Set())
+  }
+
+  function irParaPagina(proxima: number) {
+    setPagina(proxima)
+    setSelecionados(new Set())
+  }
+
+  // Presença só faz sentido quando o evento já começou (ou já acabou) — ninguém
+  // "compareceu" a um evento que ainda não aconteceu. O backend já recusa o POST/PATCH
+  // (409 de ConflitoNegocioException), mas sumir com os controles no front também evita
+  // a tentação de marcar presença em evento futuro.
+  const mostraPresenca = autorizado && !!evento?.controlaPresenca && evento!.situacao !== 'AGENDADO'
+
+  // O relatório individual busca SEMPRE que há inscrição — o card "Inscritos" (pessoas da
+  // igreja vs. convidados) não depende de controle de presença. Só os cards de
+  // comparecimento dentro dele é que ficam condicionados (ver CardsRelatorioEvento).
+  const { data: relatorio } = useRelatorioEvento(eventoId, autorizado && !!evento?.requerInscricao)
 
   // A2/rodada 3: o backend recusa cancelar fora de AGENDADO, mesmo para ADMIN/LÍDER —
   // presença em evento em andamento/encerrado é histórico, não algo que se desfaz aqui.
   const podeCancelar = evento ? podeCancelarInscricao(evento.situacao) : true
+  // "Participou" (passado) só faz sentido depois que o evento de fato aconteceu — durante
+  // EM_ANDAMENTO ninguém "participou" ainda, só não dá pra cancelar porque já começou.
+  const textoBloqueado = evento?.situacao === 'ENCERRADO' ? 'Participou' : 'Em andamento'
 
   if (!hidratado) {
     return <div className={styles.pagina} />
@@ -94,6 +173,17 @@ export default function InscritosPage() {
           {evento && <span className={styles.eventoTitulo}>{evento.titulo}</span>}
           <h1 className={styles.titulo}>Lista de Inscritos</h1>
         </div>
+        {mostraPresenca && lista && lista.totalPessoas > 0 && (
+          <button
+            type="button"
+            className={styles.botaoMarcarTodos}
+            onClick={() => setConfirmarMarcarTodos(true)}
+            disabled={marcarTodos.isPending}
+          >
+            <CheckCircle2 size={16} aria-hidden="true" />
+            Marcar todos vieram
+          </button>
+        )}
         <button
           type="button"
           className={styles.botaoPrimario}
@@ -105,9 +195,7 @@ export default function InscritosPage() {
       </header>
 
       {isPending ? (
-        <div className={styles.painel}>
-          <p className={styles.estado}>Carregando inscritos…</p>
-        </div>
+        <SkeletonInscritos />
       ) : isError || !lista ? (
         <div className={styles.painel}>
           <EstadoErro
@@ -145,28 +233,54 @@ export default function InscritosPage() {
             )}
           </div>
 
+          {/* ─── Busca + modo seleção ─── */}
+          {lista.totalPessoas > 0 && (
+            <div className={styles.buscaLinha}>
+              <input
+                type="text"
+                className={styles.inputBusca}
+                placeholder="Buscar por nome…"
+                value={busca}
+                onChange={(e) => aoDigitarBusca(e.target.value)}
+                aria-label="Buscar inscrito por nome"
+              />
+              {mostraPresenca && (
+                <button
+                  type="button"
+                  className={styles.botaoSelecionar}
+                  onClick={() => (modoSelecao ? sairDoModoSelecao() : setModoSelecao(true))}
+                >
+                  {modoSelecao ? <X size={16} aria-hidden="true" /> : <ListChecks size={16} aria-hidden="true" />}
+                  {modoSelecao ? 'Cancelar seleção' : 'Selecionar'}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ─── Tabela ─── */}
           <div className={styles.painel}>
-            {lista.inscritos.length === 0 ? (
+            {lista.inscritos.content.length === 0 ? (
               <EstadoVazio
                 icone={Users}
-                titulo="Ninguém se inscreveu ainda"
-                acaoPrimaria={{ label: 'Nova Inscrição', onClick: () => setModalInscreverAberto(true) }}
+                titulo={busca ? 'Nenhum inscrito encontrado' : 'Ninguém se inscreveu ainda'}
+                mensagem={busca ? `Nenhum nome bate com "${busca}".` : undefined}
+                acaoPrimaria={busca ? undefined : { label: 'Nova Inscrição', onClick: () => setModalInscreverAberto(true) }}
               />
             ) : (
               <>
-                <div className={styles.tabelaHeader}>
+                <div className={`${styles.tabelaHeader} ${mostraPresenca ? styles.tabelaHeaderComPresenca : ''}`}>
                   <span className={styles.colParticipante}>PARTICIPANTE</span>
                   <span className={styles.colData}>DATA</span>
                   <span className={styles.colInscritoPor}>INSCRITO POR</span>
                   <span className={styles.colConvidados}>CONVIDADOS</span>
+                  {mostraPresenca && <span className={styles.colPresenca}>PRESENÇA</span>}
                   <span className={styles.colAcoes}>AÇÕES</span>
                 </div>
 
                 <div className={styles.linhas}>
-                  {lista.inscritos.map((inscrito) => (
+                  {lista.inscritos.content.map((inscrito) => (
                     <div key={inscrito.id} className={styles.grupo}>
-                      <div className={styles.linha}>
+                      <div className={`${styles.linha} ${mostraPresenca ? styles.linhaComPresenca : ''}`}>
                         <div className={styles.colParticipante}>
                           <span className={styles.avatar}>
                             {urlFoto(inscrito.fotoId, 'THUMB') ? (
@@ -201,6 +315,39 @@ export default function InscritosPage() {
                         <div className={styles.colConvidados}>
                           {inscrito.acompanhantes.length > 0 ? inscrito.acompanhantes.length : '—'}
                         </div>
+                        {mostraPresenca && (
+                          <div className={styles.colPresenca}>
+                            {modoSelecao ? (
+                              <input
+                                type="checkbox"
+                                className={styles.checkboxSelecao}
+                                checked={selecionados.has(chaveSelecao({ tipo: 'inscricao', id: inscrito.id }))}
+                                aria-label={`Selecionar ${inscrito.nome}`}
+                                onChange={() => alternarSelecao({ tipo: 'inscricao', id: inscrito.id })}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                className={`${styles.botaoPresenca} ${inscrito.compareceu ? styles.presente : ''}`}
+                                aria-pressed={inscrito.compareceu}
+                                disabled={
+                                  marcarPresencaInscricao.isPending
+                                  && marcarPresencaInscricao.variables?.inscricaoId === inscrito.id
+                                }
+                                onClick={() =>
+                                  marcarPresencaInscricao.mutate({
+                                    inscricaoId: inscrito.id,
+                                    compareceu: !inscrito.compareceu,
+                                  })
+                                }
+                              >
+                                {inscrito.compareceu
+                                  ? <><Check size={14} aria-hidden="true" /> Presente</>
+                                  : 'Marcar presença'}
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <div className={styles.colAcoes}>
                           {podeCancelar ? (
                             <button
@@ -211,13 +358,13 @@ export default function InscritosPage() {
                               Cancelar
                             </button>
                           ) : (
-                            <span className={styles.textoMuted}>Participou</span>
+                            <span className={styles.textoMuted}>{textoBloqueado}</span>
                           )}
                         </div>
                       </div>
 
                       {inscrito.acompanhantes.map((convidado) => (
-                        <div key={convidado.id} className={styles.linhaConvidado}>
+                        <div key={convidado.id} className={`${styles.linhaConvidado} ${mostraPresenca ? styles.linhaComPresenca : ''}`}>
                           <span className={styles.conector} aria-hidden="true" />
                           <div className={styles.colParticipante}>
                             <span className={styles.avatarConvidado}>{iniciais(convidado.nome)}</span>
@@ -227,6 +374,39 @@ export default function InscritosPage() {
                           <div className={styles.colData} />
                           <div className={styles.colInscritoPor} />
                           <div className={styles.colConvidados} />
+                          {mostraPresenca && (
+                            <div className={styles.colPresenca}>
+                              {modoSelecao ? (
+                                <input
+                                  type="checkbox"
+                                  className={styles.checkboxSelecao}
+                                  checked={selecionados.has(chaveSelecao({ tipo: 'acompanhante', id: convidado.id }))}
+                                  aria-label={`Selecionar ${convidado.nome}`}
+                                  onChange={() => alternarSelecao({ tipo: 'acompanhante', id: convidado.id })}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={`${styles.botaoPresenca} ${convidado.compareceu ? styles.presente : ''}`}
+                                  aria-pressed={convidado.compareceu}
+                                  disabled={
+                                    marcarPresencaAcompanhante.isPending
+                                    && marcarPresencaAcompanhante.variables?.acompanhanteId === convidado.id
+                                  }
+                                  onClick={() =>
+                                    marcarPresencaAcompanhante.mutate({
+                                      acompanhanteId: convidado.id,
+                                      compareceu: !convidado.compareceu,
+                                    })
+                                  }
+                                >
+                                  {convidado.compareceu
+                                    ? <><Check size={14} aria-hidden="true" /> Presente</>
+                                    : 'Marcar presença'}
+                                </button>
+                              )}
+                            </div>
+                          )}
                           <div className={styles.colAcoes}>
                             {podeCancelar ? (
                               <button
@@ -237,7 +417,7 @@ export default function InscritosPage() {
                                 Remover
                               </button>
                             ) : (
-                              <span className={styles.textoMuted}>Participou</span>
+                              <span className={styles.textoMuted}>{textoBloqueado}</span>
                             )}
                           </div>
                         </div>
@@ -245,11 +425,67 @@ export default function InscritosPage() {
                     </div>
                   ))}
                 </div>
+
+                {lista.inscritos.totalPages > 1 && (
+                  <footer className={styles.rodape}>
+                    <span className={styles.contagem}>
+                      Exibindo {lista.inscritos.content.length} de {lista.inscritos.totalElements} inscritos
+                    </span>
+                    <div className={styles.paginacao}>
+                      <button
+                        type="button"
+                        onClick={() => irParaPagina(Math.max(0, pagina - 1))}
+                        disabled={pagina === 0}
+                        className={styles.botaoPagina}
+                      >‹</button>
+                      <span className={styles.infoPagina}>
+                        Página {pagina + 1} de {lista.inscritos.totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => irParaPagina(pagina + 1)}
+                        disabled={pagina + 1 >= lista.inscritos.totalPages}
+                        className={styles.botaoPagina}
+                      >›</button>
+                    </div>
+                  </footer>
+                )}
               </>
             )}
           </div>
+
+          {modoSelecao && selecionados.size > 0 && (
+            <div className={styles.barraSelecao}>
+              <span className={styles.barraSelecaoTexto}>
+                {selecionados.size === 1 ? '1 selecionado' : `${selecionados.size} selecionados`}
+              </span>
+              <div className={styles.barraSelecaoAcoes}>
+                <button
+                  type="button"
+                  className={styles.btnCancelar}
+                  onClick={sairDoModoSelecao}
+                  disabled={marcarPresencaSelecionados.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles.botaoMarcarTodos}
+                  onClick={aoMarcarSelecionados}
+                  disabled={marcarPresencaSelecionados.isPending}
+                >
+                  <CheckCircle2 size={16} aria-hidden="true" />
+                  {marcarPresencaSelecionados.isPending
+                    ? 'Marcando…'
+                    : `Marcar presença (${selecionados.size})`}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
+
+      {relatorio && <CardsRelatorioEvento relatorio={relatorio} />}
 
       {modalInscreverAberto && evento && (
         <ModalInscreverPessoas
@@ -297,6 +533,17 @@ export default function InscritosPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmarMarcarTodos && (
+        <ModalConfirmacao
+          titulo="Marcar todos como presentes?"
+          mensagem="Todo inscrito confirmado e seus convidados serão marcados como presentes. Você pode corrigir exceções (quem não veio) depois, um por um."
+          textoConfirmar="Marcar todos"
+          isLoading={marcarTodos.isPending}
+          onConfirmar={() => marcarTodos.mutate(undefined, { onSuccess: () => setConfirmarMarcarTodos(false) })}
+          onClose={() => setConfirmarMarcarTodos(false)}
+        />
       )}
     </div>
   )

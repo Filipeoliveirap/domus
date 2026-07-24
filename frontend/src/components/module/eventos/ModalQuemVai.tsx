@@ -37,8 +37,11 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(
     eventoId, !ehGestor)
+  // Modal de conveniência ("quem vai") mostra TODO MUNDO de uma vez, não pagina — por
+  // isso pede um `size` grande (bem acima do que uma igreja pequena/média teria de
+  // inscritos num evento só), em vez do padrão de 20 da lista operacional de inscritos.
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(
-    eventoId, ehGestor)
+    eventoId, ehGestor, '', 0, 500)
   const cancelar = useCancelarInscricao()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
   const [cancelandoComConvidados, setCancelandoComConvidados] =
@@ -54,7 +57,7 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
 
   // Normaliza as duas formas numa só, para a marcação não se ramificar por papel.
   const linhas = ehGestor
-    ? (listaAdmin?.inscritos ?? []).map((i) => ({
+    ? (listaAdmin?.inscritos.content ?? []).map((i) => ({
         id: i.id,
         nome: i.nome,
         fotoId: i.fotoId,

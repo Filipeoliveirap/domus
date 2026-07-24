@@ -122,7 +122,7 @@ function PessoasConteudo() {
           type="text"
           value={busca}
           onChange={(e) => aoBuscar(e.target.value)}
-          placeholder="Buscar por nome ou e-mail..."
+          placeholder="Buscar por nome, cargo ou e-mail..."
           className={styles.inputBusca}
         />
         <PainelFiltros grupos={GRUPOS_FILTRO} valores={filtros} onAplicar={aoAplicarFiltros} />
@@ -192,7 +192,7 @@ function PessoasConteudo() {
                         </span>
                         <div className={styles.pessoaInfo}>
                           <span className={styles.nome}>{p.nome}</span>
-                          {p.email && <span className={styles.email}>{p.email}</span>}
+                          {p.cargo && <span className={styles.email}>{p.cargo}</span>}
                         </div>
                       </div>
                     </td>

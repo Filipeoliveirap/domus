@@ -18,12 +18,17 @@ import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -537,30 +542,40 @@ public class InscricaoService {
         return inscricoes.size();
     }
 
-    /** Lista de inscritos confirmados + contagem de vagas restantes. */
+    /**
+     * Lista PAGINADA de inscritos confirmados + contagem de vagas restantes. {@code busca}
+     * (nome do inscrito, opcional) e a paginação afetam só {@code inscritos} — total de
+     * pessoas/vagas restantes sempre contam TODAS as confirmadas do evento.
+     */
     @Transactional(readOnly = true)
-    public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId) {
+    public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId, String busca, Pageable pageable) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        // Paginar direto numa query com JOIN FETCH de coleção (acompanhantes) faz o Hibernate
+        // paginar EM MEMÓRIA — por isso os ids vêm paginados primeiro, e os detalhes completos
+        // depois, por IN (mesma ordem, createdAt ASC nas duas queries).
+        Page<UUID> idsPagina = inscricaoRepository.listarIdsPaginadoPorEvento(eventoId, busca, pageable);
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarComDetalhesPorIds(idsPagina.getContent());
 
-        // Resolve "quem inscreveu" em UMA query para a lista inteira (evita N+1): coleta os
+        // Resolve "quem inscreveu" em UMA query para a página inteira (evita N+1): coleta os
         // ids distintos e não-nulos e busca nome+foto em lote. Ids ausentes no mapa de volta
         // (conta ou membro arquivados depois da inscrição) viram null no DTO — tratados
         // explicitamente, não escondidos atrás de um texto genérico incorreto.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
 
-        List<InscritoResponse> inscritos = inscricoes.stream()
+        List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
                 .map(i -> InscritoResponse.from(i, registrantes.get(i.getInscritoPorUsuarioId())))
                 .toList();
+        PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
+                new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
 
         long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
         Integer restantes = evento.getVagas() == null
                 ? null
                 : Math.max(0, evento.getVagas() - (int) total);
 
-        return new ListaInscritosResponse(total, evento.getVagas(), restantes, inscritos);
+        return new ListaInscritosResponse(total, evento.getVagas(), restantes, paginaInscritos);
     }
 
     /**
@@ -606,5 +621,106 @@ public class InscricaoService {
     private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {
         return inscricaoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+    }
+
+    /**
+     * Marca presente TODO inscrito CONFIRMADO do evento e TODOS os seus acompanhantes —
+     * o fluxo real é "quase todo mundo veio", e cada linha ganha um checkbox individual
+     * para corrigir a exceção depois (ver {@link #marcarPresencaInscricao}/
+     * {@link #marcarPresencaAcompanhante}).
+     *
+     * @return quantas PESSOAS FÍSICAS (inscritos + acompanhantes) foram marcadas.
+     */
+    @Transactional
+    public int marcarTodosPresentes(UUID eventoId, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para marcar presença.");
+        }
+
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        validarControlaPresenca(evento);
+
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        int marcados = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            inscricao.setCompareceu(true);
+            marcados++;
+            for (AcompanhanteInscricao acompanhante : inscricao.getAcompanhantes()) {
+                acompanhante.setCompareceu(true);
+                marcados++;
+            }
+            inscricaoRepository.save(inscricao);
+        }
+
+        log.info("Presença marcada em lote. evento_id={}, pessoas_marcadas={}, igreja_id={}",
+                eventoId, marcados, igrejaId);
+        return marcados;
+    }
+
+    /** Corrige a exceção de um inscrito específico após o "marcar todos" (ou o contrário). */
+    @Transactional
+    public void marcarPresencaInscricao(UUID eventoId, UUID inscricaoId, boolean compareceu,
+                                        UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para marcar presença.");
+        }
+
+        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+        validarControlaPresenca(inscricao.getEvento());
+        validarInscricaoConfirmada(inscricao);
+
+        inscricao.setCompareceu(compareceu);
+        inscricaoRepository.save(inscricao);
+        log.info("Presença individual marcada. inscricao_id={}, compareceu={}, igreja_id={}",
+                inscricaoId, compareceu, igrejaId);
+    }
+
+    /** Corrige a exceção de UM convidado específico (o inscrito veio, o convidado não, ou vice-versa). */
+    @Transactional
+    public void marcarPresencaAcompanhante(UUID eventoId, UUID acompanhanteId, boolean compareceu,
+                                           UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para marcar presença.");
+        }
+
+        AcompanhanteInscricao acompanhante = acompanhanteRepository.findById(acompanhanteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
+
+        // Mesmo isolamento multi-tenant de removerAcompanhante(): id de outra igreja é
+        // tratado como inexistente, nunca vaza que existe fora da própria igreja.
+        if (!acompanhante.getInscricao().getIgreja().getId().equals(igrejaId)) {
+            throw new ResourceNotFoundException("Convidado não encontrado.");
+        }
+
+        validarControlaPresenca(acompanhante.getInscricao().getEvento());
+        validarInscricaoConfirmada(acompanhante.getInscricao());
+
+        acompanhante.setCompareceu(compareceu);
+        acompanhanteRepository.save(acompanhante);
+        log.info("Presença de convidado marcada. acompanhante_id={}, compareceu={}, igreja_id={}",
+                acompanhanteId, compareceu, igrejaId);
+    }
+
+    /** Espelha o CHECK do banco (V6): sem controlaPresenca não existe presença para marcar. */
+    private void validarControlaPresenca(Evento evento) {
+        if (!evento.isControlaPresenca()) {
+            throw new ConflitoNegocioException("PRESENCA_NAO_HABILITADA",
+                    "Este evento não controla presença.");
+        }
+    }
+
+    /**
+     * Só é editável se a inscrição estiver CONFIRMADA (spec do relatório de eventos,
+     * 2026-07-23): uma inscrição CANCELADA não deveria ter presença marcada/desmarcada.
+     */
+    private void validarInscricaoConfirmada(InscricaoEvento inscricao) {
+        if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
+            throw new ConflitoNegocioException("INSCRICAO_NAO_CONFIRMADA",
+                    "Esta inscrição está cancelada e não pode ter presença marcada.");
+        }
     }
 }

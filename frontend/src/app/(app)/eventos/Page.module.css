@@ -74,6 +74,17 @@
   transition: background var(--transition-fast);
 }
 .botaoSecundario:hover { background: var(--color-bg-page); }
+.linkRelatorio {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  transition: background var(--transition-fast);
+}
+.linkRelatorio:hover { background: var(--color-bg-page); }
 
 /* ─── Busca ─── */
 .barraBusca {

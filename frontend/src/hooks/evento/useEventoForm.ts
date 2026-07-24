@@ -39,6 +39,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       localId: undefined, localTexto: undefined,
       tipo: '', responsavelPessoaId: undefined,
       requerInscricao: false,
+      controlaPresenca: false,
       vagas: undefined,
       tipoInscricao: 'GRATUITO',
       preco: undefined,
@@ -87,6 +88,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: eventoInicial.tipo ?? '',
         responsavelPessoaId: eventoInicial.responsavel?.id ?? undefined,
         requerInscricao: eventoInicial.requerInscricao,
+        controlaPresenca: eventoInicial.controlaPresenca,
         vagas: eventoInicial.vagas ?? undefined,
         tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
         // String() na BORDA, como o formulário de movimentação já faz com `valor`: a API
@@ -168,6 +170,12 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: data.tipo || undefined,
         responsavelPessoaId: data.responsavelPessoaId || null,
         requerInscricao: data.requerInscricao,
+        // Mesmo raciocínio de vagas/preço: sempre enviado com o valor atual do form (nunca
+        // omitido condicionalmente), mesmo quando a seção está escondida — o PUT substitui a
+        // entidade inteira e um campo ausente vira false. Forçado a false quando
+        // requerInscricao=false: o toggle já fica desabilitado nesse estado, mas o
+        // valor no form pode ter sobrevivido de uma edição anterior.
+        controlaPresenca: data.requerInscricao ? data.controlaPresenca : false,
         exclusivoMembros: data.exclusivoMembros,
         vagas: data.requerInscricao ? data.vagas : undefined,
         preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)

@@ -193,4 +193,60 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
          ORDER BY COUNT(e) DESC, e.tipo ASC
         """)
     List<String> tiposUsadosPorFrequencia(@Param("igrejaId") UUID igrejaId);
+
+    /**
+     * Eventos filtrados para o relatório geral — mais recente primeiro. Todos os filtros são
+     * combináveis e opcionais (spec: Período, Recorte Etário, Tipo).
+     *
+     * <p>Nativa (não JPQL) porque JPQL com parâmetro nulável que o PostgreSQL vê primeiro como
+     * {@code IS NULL} não consegue inferir o tipo da coluna — dá "could not determine data type
+     * of parameter". {@code CAST} explícito resolve, mesmo padrão de {@link #buscarPorIgreja}.
+     */
+    @Query(value = """
+        SELECT * FROM evento e
+        WHERE e.igreja_id = :igrejaId
+          AND e.deleted_at IS NULL
+          AND (CAST(:inicio AS timestamp) IS NULL OR e.inicio_em >= CAST(:inicio AS timestamp))
+          AND (CAST(:fim AS timestamp) IS NULL OR e.inicio_em <= CAST(:fim AS timestamp))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+        ORDER BY e.inicio_em DESC
+        """, nativeQuery = true)
+    List<Evento> buscarParaRelatorio(@Param("igrejaId") UUID igrejaId,
+                                      @Param("inicio") LocalDateTime inicio,
+                                      @Param("fim") LocalDateTime fim,
+                                      @Param("recorteEtario") String recorteEtario,
+                                      @Param("tipo") String tipo);
+
+    /**
+     * Eventos que CONTROLAM presença, a partir de {@code desde} — alimenta o gráfico de
+     * tendência (Decisão 4: só quem ativou controle de presença entra na conta; mês sem
+     * nenhum evento assim vira {@code null}, nunca zero). Respeita recorte etário/tipo, mas
+     * NÃO o filtro de período do relatório geral — a tendência tem sua própria janela fixa
+     * de 6 meses.
+     *
+     * <p>Nativa pela mesma razão de {@link #buscarParaRelatorio}: parâmetros nuláveis com
+     * {@code IS NULL} precisam de {@code CAST} explícito para o PostgreSQL inferir o tipo.
+     */
+    @Query(value = """
+        SELECT * FROM evento e
+        WHERE e.igreja_id = :igrejaId
+          AND e.deleted_at IS NULL
+          AND e.controla_presenca = true
+          AND e.inicio_em >= :desde
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+        ORDER BY e.inicio_em ASC
+        """, nativeQuery = true)
+    List<Evento> buscarComControlaPresenca(@Param("igrejaId") UUID igrejaId,
+                                            @Param("desde") LocalDateTime desde,
+                                            @Param("recorteEtario") String recorteEtario,
+                                            @Param("tipo") String tipo);
+
+    /**
+     * "Evento anterior do mesmo tipo" (Decisão 4 do spec): o mais recente da mesma igreja,
+     * mesmo {@code tipo}, com {@code inicioEm} anterior ao evento atual.
+     */
+    Optional<Evento> findFirstByIgrejaIdAndTipoAndInicioEmLessThanOrderByInicioEmDesc(
+            UUID igrejaId, String tipo, LocalDateTime inicioEm);
 }

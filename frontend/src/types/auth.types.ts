@@ -25,6 +25,12 @@ export interface Sessao {
     igrejaNome: string;
     /** Foto da PESSOA vinculada (Usuario não tem foto própria). null = sem foto. */
     fotoId: string | null;
+    /** Cargo da pessoa (Pastor, Missionário…) — exibido na sidebar no lugar da role. */
+    cargo: string | null;
+    /** Sigla da igreja (IBC, SIBAPI…) — exibida no header. */
+    igrejaSigla: string | null;
+    /** Logo da igreja — exibida no ícone do TopBar no lugar do Church quando existe. */
+    igrejaLogoId: string | null;
 }
 
 export interface ForgotPasswordRequest {

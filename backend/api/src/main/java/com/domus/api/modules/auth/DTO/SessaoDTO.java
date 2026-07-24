@@ -15,6 +15,12 @@ public record SessaoDTO(
         UUID igrejaId,
         String igrejaNome,
         /** Foto da PESSOA vinculada (Usuario não tem foto própria). Null = sem foto. */
-        UUID fotoId
+        UUID fotoId,
+        /** Cargo da pessoa (Pastor, Missionário…) — exibido na sidebar no lugar da role. */
+        String cargo,
+        /** Sigla da igreja (IBC, SIBAPI…) — exibida no header do TopBar. */
+        String igrejaSigla,
+        /** Logo da igreja — exibida no ícone do TopBar no lugar do Church quando existe. */
+        UUID igrejaLogoId
 ) {
 }

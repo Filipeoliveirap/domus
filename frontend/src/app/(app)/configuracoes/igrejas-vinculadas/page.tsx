@@ -8,6 +8,7 @@ import {
 } from '@/hooks/igreja/useVinculo'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { SkeletonIgrejasVinculadas } from './SkeletonIgrejasVinculadas'
 import type { IgrejaResumo } from '@/types/igreja/vinculo.type'
 import styles from './vinculadas.module.css'
 
@@ -39,7 +40,7 @@ export default function IgrejasVinculadasPage() {
   const [confirmandoSaida, setConfirmandoSaida] = useState(false)
 
   if (isLoading || !status) {
-    return <div className={styles.skeleton} aria-label="Carregando igrejas vinculadas" />
+    return <SkeletonIgrejasVinculadas />
   }
 
   function copiarCodigo() {

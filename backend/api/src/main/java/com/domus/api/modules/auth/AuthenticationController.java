@@ -57,7 +57,8 @@ public class AuthenticationController {
         // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto — fotoId nulo é o
         // dado real, não uma omissão.
         return comCookies(r.token(), r.refreshToken())
-                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), null));
+                .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
+                        null, null, null, null));
     }
 
     /**
@@ -130,6 +131,7 @@ public class AuthenticationController {
     }
 
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
-        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(), r.fotoId());
+        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
+                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId());
     }
 }

@@ -50,6 +50,9 @@ public class Igreja {
     @Column(name = "denominacao", length = 255)
     private String denominacao;
 
+    @Column(name = "sigla", length = 20)
+    private String sigla;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "logo_foto_id")
     private com.domus.api.modules.foto.Foto logoFoto;

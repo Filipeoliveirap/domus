@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import { notificar } from '@/components/common/Notificacao/notificar'
+import { useAuthStore } from '@/store/authStore'
 import type { AtualizarIgrejaRequest, IgrejaDetalhe } from '@/types/igreja/igreja.type'
 
 const CHAVE = ['igreja', 'minha']
@@ -28,6 +29,10 @@ export function useAtualizarIgreja() {
     onSuccess: (igreja) => {
       // A resposta já traz o estado novo (inclusive a auditoria) — evita um GET extra.
       queryClient.setQueryData(CHAVE, igreja)
+      useAuthStore.getState().atualizarUsuarioLogado({
+        igrejaSigla: igreja.sigla || null,
+        igrejaLogoId: igreja.logoFotoId || null,
+      })
       notificar.sucesso('Configurações salvas', 'As informações da instituição foram atualizadas.')
     },
     onError: (erro: unknown) => {

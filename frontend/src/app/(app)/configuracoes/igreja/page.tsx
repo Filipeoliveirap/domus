@@ -8,6 +8,7 @@ import { Landmark, Info, ShieldCheck, Save, RotateCcw } from 'lucide-react'
 import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { SkeletonIgrejaConfig } from './SkeletonIgrejaConfig'
 import styles from '../configuracoes.module.css'
 
 const schema = z.object({
@@ -15,6 +16,7 @@ const schema = z.object({
   razaoSocial: z.string().max(255).optional(),
   cnpj: z.string().max(18).optional(),
   denominacao: z.string().max(255).optional(),
+  sigla: z.string().max(20).optional(),
   emailContato: z.string().min(1, 'O e-mail de contato é obrigatório.').email('E-mail inválido.'),
   telefoneContato: z.string().max(50).optional(),
   cep: z.string().max(9).optional(),
@@ -34,7 +36,7 @@ type FormData = z.infer<typeof schema>
  * inflariam o percentual sem dizer nada.
  */
 const CAMPOS_COMPLETUDE: (keyof FormData)[] = [
-  'razaoSocial', 'cnpj', 'denominacao', 'telefoneContato',
+  'razaoSocial', 'cnpj', 'denominacao', 'sigla', 'telefoneContato',
   'cep', 'logradouro', 'numero', 'bairro', 'cidade', 'uf',
 ]
 
@@ -70,6 +72,7 @@ export default function DadosDaIgrejaPage() {
       razaoSocial: igreja.razaoSocial ?? '',
       cnpj: igreja.cnpj ?? '',
       denominacao: igreja.denominacao ?? '',
+      sigla: igreja.sigla ?? '',
       emailContato: igreja.emailContato ?? '',
       telefoneContato: igreja.telefoneContato ?? '',
       cep: igreja.endereco?.cep ?? '',
@@ -104,6 +107,7 @@ export default function DadosDaIgrejaPage() {
       razaoSocial: data.razaoSocial || null,
       cnpj: data.cnpj || null,
       denominacao: data.denominacao || null,
+      sigla: data.sigla?.trim().toUpperCase() || null,
       emailContato: data.emailContato,
       telefoneContato: data.telefoneContato || null,
       logoFotoId,
@@ -120,7 +124,7 @@ export default function DadosDaIgrejaPage() {
   }
 
   if (isLoading || !igreja) {
-    return <div className={styles.skeleton} aria-label="Carregando dados da igreja" />
+    return <SkeletonIgrejaConfig />
   }
 
   return (
@@ -178,6 +182,11 @@ export default function DadosDaIgrejaPage() {
             <div className={styles.campo}>
               <label className={styles.rotulo} htmlFor="denominacao">Denominação</label>
               <input id="denominacao" className={styles.input} placeholder="Ex.: Assembleia de Deus" {...register('denominacao')} />
+            </div>
+
+            <div className={styles.campo}>
+              <label className={styles.rotulo} htmlFor="sigla">Sigla</label>
+              <input id="sigla" className={styles.input} placeholder="Ex.: IBC, SIBAPI" maxLength={20} {...register('sigla')} />
             </div>
 
             <div className={styles.campo}>

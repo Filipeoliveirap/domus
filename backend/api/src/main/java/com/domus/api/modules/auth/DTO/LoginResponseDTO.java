@@ -10,6 +10,9 @@ public record LoginResponseDTO(
         String igrejaNome,
         /** Foto da PESSOA (não do usuário — Usuario não tem foto própria). Null = sem foto. */
         UUID fotoId,
+        String cargo,
+        String igrejaSigla,
+        UUID igrejaLogoId,
         String token,
         String refreshToken
 

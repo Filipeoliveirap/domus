@@ -110,6 +110,7 @@ public class PessoaController {
                     data.estadoCivil(),
                     data.sexo(),
                     data.ministerio(),
+                    data.cargo(),
                     data.observacoes(),
                     data.dataBatismo(),
                     data.fotoId()

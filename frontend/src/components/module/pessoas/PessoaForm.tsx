@@ -60,6 +60,7 @@ export function PessoaForm(props: PessoaFormProps) {
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
   const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
+  const cargoAtual = (watch('cargo') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
@@ -208,6 +209,12 @@ export function PessoaForm(props: PessoaFormProps) {
               <MinisterioInput id="ministerio" value={ministerioAtual}
                 error={errors.ministerio?.message} registerProps={register('ministerio')}
                 onSelecionarSugestao={(valor) => setValue('ministerio', valor, { shouldValidate: true })} />
+            </div>
+
+            <div className={styles.ministerioWrap}>
+              <span className={styles.labelMinisterio}>CARGO</span>
+              <Input id="cargo" placeholder="Ex: Pastor, Missionário, Secretário…"
+                error={errors.cargo?.message} {...register('cargo')} />
             </div>
 
             <div className={styles.infoBox}>

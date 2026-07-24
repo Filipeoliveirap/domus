@@ -35,6 +35,9 @@ public class PessoaDocument {
     @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String ministerio;
 
+    @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
+    private String cargo;
+
     @Field(type = FieldType.Keyword)
     private String vinculo;
 
@@ -46,6 +49,7 @@ public class PessoaDocument {
         doc.setEmail(membro.getEmail());
         doc.setTelefone(membro.getTelefone());
         doc.setMinisterio(membro.getMinisterio());
+        doc.setCargo(membro.getCargo());
         doc.setVinculo(membro.getVinculo() != null ? membro.getVinculo().name() : null);
         return doc;
     }

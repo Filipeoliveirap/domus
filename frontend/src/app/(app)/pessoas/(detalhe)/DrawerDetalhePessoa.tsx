@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet } from 'lucide-react'
+import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData,
@@ -121,6 +121,16 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
                     <div>
                       <p className={styles.infoLabel}>Ministério</p>
                       <p className={styles.infoValor}>{pessoa.ministerio}</p>
+                    </div>
+                  </div>
+                )}
+
+                {pessoa.cargo && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoIcone}><Briefcase size={18} /></span>
+                    <div>
+                      <p className={styles.infoLabel}>Cargo</p>
+                      <p className={styles.infoValor}>{pessoa.cargo}</p>
                     </div>
                   </div>
                 )}

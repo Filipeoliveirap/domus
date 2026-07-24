@@ -140,6 +140,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
                         .authenticated()
 
+                        //Relatório individual — mesma sensibilidade de podeVerListaCompletaDeInscritos
+                        //(expõe percentualIgreja que revela tamanho da base de pessoas ativas).
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/relatorio")
+                        .hasAnyRole(ADMIN, LIDER)
+
                         //Sugestões de tipo — DEVE vir ANTES do curinga /eventos/** (mesma
                         //armadilha de ordenação já mordida três vezes neste projeto).
                         .requestMatchers(HttpMethod.GET, "/eventos/tipos")

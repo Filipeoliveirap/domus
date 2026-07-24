@@ -36,7 +36,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
-        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome, u.pessoa.foto.id)
+        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome,
+        u.pessoa.foto.id, u.pessoa.cargo, u.igreja.sigla, u.igreja.logoFoto.id)
     FROM Usuario u
     WHERE u.id = :id
     """)

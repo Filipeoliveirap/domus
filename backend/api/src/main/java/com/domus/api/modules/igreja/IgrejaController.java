@@ -35,7 +35,8 @@ public class IgrejaController {
                 // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto.
                 .body(new SessaoDTO(
                         response.id(), response.nome(), response.role(),
-                        response.igrejaId(), response.igrejaNome(), null));
+                        response.igrejaId(), response.igrejaNome(), null,
+                        null, null, null));
     }
 
     /*

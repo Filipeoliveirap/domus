@@ -20,6 +20,8 @@ public record AtualizarIgrejaRequest(
         @Size(max = 18) String cnpj,
         @Size(max = 255) String denominacao,
 
+        @Size(max = 20) String sigla,
+
         @NotBlank(message = "O e-mail de contato é obrigatório.")
         @Email(message = "E-mail de contato inválido.")
         @Size(max = 255) String emailContato,

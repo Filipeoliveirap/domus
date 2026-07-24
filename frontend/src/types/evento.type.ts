@@ -1,3 +1,5 @@
+import type { PagedResponse } from './pagedResponse.type'
+
 /** Situação derivada de inicioEm/fimEm no backend (com.domus.api.modules.evento.SituacaoEvento). */
 export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
 
@@ -47,6 +49,7 @@ export interface EventoResponse {
   preco: number | null
   exclusivoMembros: boolean
   requerInscricao: boolean
+  controlaPresenca: boolean
   situacao: SituacaoEvento
   /** Só populado na resposta de `atualizarEvento`; null nas demais. */
   inscricoesRemovidas: number | null
@@ -76,6 +79,8 @@ export interface EventoRequest {
   preco?: string
   exclusivoMembros?: boolean
   requerInscricao?: boolean
+  /** Só pode ser true quando `requerInscricao` também é — backend recusa a combinação inversa. */
+  controlaPresenca?: boolean
   /** Nome do recorte etário (Kids, Jovens…); só decorativo/filtro, não valida. */
   recorteEtario?: string | null
   idadeMin?: number | null
@@ -127,4 +132,71 @@ export interface LocalEventoRequest {
   capacidade?: number | null
   cepLogradouroNumero?: string | null
   complementoBairroCidadeUf?: string | null
+}
+
+/** Mesmos dois valores de `com.domus.api.modules.evento.BaseComparacao` (back) — união de
+ *  tipos, nunca string crua, para o front nunca comparar por texto solto. */
+export type BaseComparacao = 'COMPARECIMENTO' | 'INSCRITOS'
+
+/** Espelha `RelatorioEventoResponse` (relatório individual, modal/página de inscritos). */
+export interface RelatorioEventoResponse {
+  inscritos: { pessoas: number; convidados: number }
+  /** SEMPRE calculado (não depende de controlaPresenca) — % de pessoas da igreja inscritas. */
+  percentualIgrejaInscritos: number
+  /** null quando o evento não controla presença — a seção de comparecimento some inteira. */
+  compareceram: { pessoas: number; convidados: number } | null
+  /** null pela mesma razão de `compareceram`. */
+  percentualIgreja: number | null
+}
+
+/** Uma variação (evento anterior do mesmo tipo, ou média geral do filtro) com a base explícita. */
+export interface VariacaoRelatorio {
+  percentual: number
+  base: BaseComparacao
+}
+
+export interface EventoMaisPopular {
+  eventoId: string
+  titulo: string
+  totalInscritos: number
+}
+
+/** Um ponto do gráfico de tendência. `comparecimentoMedio` null = mês sem evento controlado. */
+export interface PontoTendencia {
+  /** Formato ISO "aaaa-mm", ex.: "2026-07". */
+  mes: string
+  comparecimentoMedio: number | null
+}
+
+export interface UltimoEventoRelatorio {
+  eventoId: string
+  titulo: string
+  data: string
+  totalParticipantes: number
+  /** null quando não existe evento anterior do mesmo tipo. */
+  variacaoEventoAnterior: VariacaoRelatorio | null
+  variacaoMediaGeral: VariacaoRelatorio
+}
+
+/** Espelha `RelatorioGeralResponse` (página `/eventos/relatorio`). */
+export interface RelatorioGeralResponse {
+  resumo: {
+    totalEventos: number
+    /** null quando nenhum evento do filtro controla presença — nunca 0 (não mentir "ninguém foi"). */
+    comparecimentoMedio: number | null
+    participantesUnicos: number | null
+  }
+  eventoMaisPopular: EventoMaisPopular | null
+  tendencia: PontoTendencia[]
+  /** Paginado — resumo/eventoMaisPopular/tendencia usam o filtro inteiro, só esta lista pagina. */
+  ultimosEventos: PagedResponse<UltimoEventoRelatorio>
+}
+
+/** Filtros combináveis e opcionais do relatório geral. */
+export interface RelatorioGeralFiltros {
+  inicio?: string
+  fim?: string
+  recorteEtario?: string
+  tipo?: string
+  page?: number
 }

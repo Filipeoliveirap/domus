@@ -120,6 +120,10 @@ public class SecurityConfig {
                         //senão o POST curinga (ADMIN+LÍDER) barra o ACESSO_COMUM, que é justamente
                         //quem se inscreve, e o GET curinga (todos) vaza a lista de inscritos.
                         //Mesma armadilha de ordenação já corrigida em /igrejas/*.
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/presenca/marcar-todos")
+                        .hasAnyRole(ADMIN, LIDER)
+                        .requestMatchers(HttpMethod.PATCH, "/eventos/*/presenca/**")
+                        .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/eventos/*/inscricoes/**")
@@ -135,6 +139,18 @@ public class SecurityConfig {
                         //casaria "/eventos/{id}/elegibilidade" se viesse antes).
                         .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
                         .authenticated()
+
+                        //Relatório individual — mesma sensibilidade de podeVerListaCompletaDeInscritos
+                        //(expõe percentualIgreja que revela tamanho da base de pessoas ativas).
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/relatorio")
+                        .hasAnyRole(ADMIN, LIDER)
+
+                        //Relatório geral — mesma sensibilidade de podeVerListaCompletaDeInscritos
+                        //(expõe dados agregados entre eventos como comparecimento médio e
+                        //participantes únicos). Vem ANTES do curinga /eventos/** (mesma armadilha
+                        //de ordenação de sempre).
+                        .requestMatchers(HttpMethod.GET, "/eventos/relatorio-geral")
+                        .hasAnyRole(ADMIN, LIDER)
 
                         //Sugestões de tipo — DEVE vir ANTES do curinga /eventos/** (mesma
                         //armadilha de ordenação já mordida três vezes neste projeto).

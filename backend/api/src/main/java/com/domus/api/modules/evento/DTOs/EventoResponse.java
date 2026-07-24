@@ -28,6 +28,7 @@ public record EventoResponse(
         java.math.BigDecimal preco,
         boolean exclusivoMembros,
         boolean requerInscricao,
+        boolean controlaPresenca,
         SituacaoEvento situacao,
         /**
          * Só populado pela edição que ligou {@code exclusivoMembros} e removeu automaticamente
@@ -91,7 +92,7 @@ public record EventoResponse(
                 PessoaResumo.deUsuario(e.getAtualizadoPor(), e.getAtualizadoPorTexto()),
                 e.getFoto() != null ? e.getFoto().getId() : null, e.getCreatedAt(),
                 e.getVagas(), e.getPreco(), e.isExclusivoMembros(),
-                e.isRequerInscricao(), e.getSituacao(), inscricoesRemovidas,
+                e.isRequerInscricao(), e.isControlaPresenca(), e.getSituacao(), inscricoesRemovidas,
                 e.getRecorteEtario(), e.getIdadeMin(), e.getIdadeMax(),
                 e.getRestricaoEstadoCivil(), e.getRestricaoSexo()
         );

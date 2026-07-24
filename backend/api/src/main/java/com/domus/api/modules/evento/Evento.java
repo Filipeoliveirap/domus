@@ -135,6 +135,16 @@ public class Evento {
     @Builder.Default
     private boolean requerInscricao = false;
 
+    /**
+     * Presença é opt-in por evento (Fase relatório de presença): só pode ser {@code true}
+     * quando {@link #requerInscricao} também é {@code true} — CHECK do banco (V6) garante
+     * isso na origem; {@link com.domus.api.modules.evento.EventoService} repete a checagem
+     * para devolver mensagem decente em vez de 500 genérico.
+     */
+    @Column(name = "controla_presenca", nullable = false)
+    @Builder.Default
+    private boolean controlaPresenca = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

@@ -60,7 +60,7 @@ export function BuscaGlobal() {
         <input
           type="text"
           className={styles.input}
-          placeholder="Buscar membros, eventos, finanças..."
+          placeholder="Buscar pessoas, eventos, finanças..."
           value={termo}
           onChange={(e) => { setTermo(e.target.value); setAberto(true) }}
           onFocus={() => setAberto(true)}

@@ -26,6 +26,7 @@ export interface PessoaRequest {
   estadoCivil?: EstadoCivil
   sexo?: Sexo
   ministerio?: string
+  cargo?: string
   observacoes?: string
   dataBatismo?: string
   fotoId?: string | null
@@ -42,6 +43,7 @@ export interface PessoaResponse {
   estadoCivil: EstadoCivil | null
   sexo: Sexo | null
   ministerio: string | null
+  cargo: string | null
   fotoId: string | null
   observacoes: string | null
   createdAt: string

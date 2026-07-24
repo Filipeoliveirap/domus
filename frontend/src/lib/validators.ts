@@ -104,6 +104,10 @@ export const pessoaSchema = z.object({
     z.string().max(255, 'O ministério deve ter no máximo 255 caracteres'),
   ),
 
+  cargo: opcional(
+    z.string().max(255, 'O cargo deve ter no máximo 255 caracteres'),
+  ),
+
   observacoes: opcional(z.string()),
 
   // Só faz sentido quando vinculo === 'MEMBRO' — a UI esconde o campo para CONGREGANTE.
@@ -165,6 +169,11 @@ const eventoSchemaBase = z.object({
   // ficam ocultos na UI, mas continuam registrados no RHF (não são desmontados/unregister —
   // o form não usa shouldUnregister), então o valor atual sempre viaja no payload do PUT.
   requerInscricao: z.boolean().default(false),
+  /**
+   * Só pode ser true quando `requerInscricao` também é — o toggle no form fica desabilitado
+   * (e forçado a false) enquanto `requerInscricao=false`, espelhando o CHECK do banco.
+   */
+  controlaPresenca: z.boolean().default(false),
   vagas: opcionalNumero(
     z.coerce.number().int().positive('Vagas deve ser um número inteiro positivo.'),
   ),

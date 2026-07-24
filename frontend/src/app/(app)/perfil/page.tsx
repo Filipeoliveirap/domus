@@ -209,6 +209,13 @@ export default function PerfilPage() {
                 setValue('ministerio', valor, { shouldValidate: true })
               }} />
           </div>
+
+          <div className={styles.ministerioWrap}>
+            <span className={styles.labelMinisterio}>CARGO</span>
+            <Input id="cargo" placeholder="Ex: Pastor, Missionário, Secretário…"
+              error={errors.cargo?.message} disabled={!podeEditarTudo}
+              {...register('cargo')} />
+          </div>
         </section>
 
         {/* ─── Observações ──────────────────────────────────── */}

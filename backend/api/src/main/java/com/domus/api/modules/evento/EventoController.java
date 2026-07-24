@@ -23,6 +23,7 @@ import java.util.UUID;
 public class EventoController {
 
     private final EventoService eventoService;
+    private final EventoRelatorioService eventoRelatorioService;
     private final UsuarioAutenticado usuarioAutenticado;
 
     @GetMapping
@@ -47,6 +48,12 @@ public class EventoController {
     public ResponseEntity<List<String>> tipos() {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(eventoService.tiposSugeridos(igrejaId));
+    }
+
+    @GetMapping("/{id}/relatorio")
+    public ResponseEntity<com.domus.api.modules.evento.DTOs.RelatorioEventoResponse> relatorio(@PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(eventoRelatorioService.relatorioIndividual(id, igrejaId));
     }
 
     @GetMapping("/{id}")

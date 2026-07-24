@@ -128,8 +128,12 @@ detalhe) só para decidir o que mostrar, nunca pra decidir o que é permitido de
 ## Frontend
 
 - Página `/ministerios`: lista em cards (responsivo — mobile já entra ajustado, ver
-  `mobile-responsivo-obrigatorio`). `ADMIN_IGREJA` vê botão "novo ministério"; demais
-  perfis só veem a lista.
+  `mobile-responsivo-obrigatorio`). Cada card mostra nome, líder(es) e total de membros
+  ativos (resumo visual validado com mockup do Stitch em 2026-07-24) — **sem** descrição
+  nem métrica de frequência, que não existem no cadastro (decisão de escopo mantida).
+  `GET /ministerios` passa a incluir `lideres`/`totalMembros` por ministério para
+  alimentar o card sem uma chamada por item. `ADMIN_IGREJA` vê botão "novo ministério";
+  demais perfis só veem a lista.
 - Detalhe do ministério (drawer ou página, a definir no plano): membros com badge
   `LIDER`/`MEMBRO`; seção "pedidos pendentes" visível só se `souLiderDesteMinisterio` ou
   admin; botão "pedir pra entrar" visível só se a pessoa logada ainda não tem linha

@@ -92,7 +92,6 @@ public class PessoaService {
                 .vinculo(data.vinculo())
                 .estadoCivil(data.estadoCivil())
                 .sexo(data.sexo())
-                .ministerio(normalizar(data.ministerio()))
                 .cargo(data.cargo())
                 .observacoes(data.observacoes())
                 .dataBatismo(data.dataBatismo())
@@ -168,7 +167,6 @@ public class PessoaService {
         membro.setVinculo(data.vinculo());
         membro.setEstadoCivil(data.estadoCivil());
         membro.setSexo(data.sexo());
-        membro.setMinisterio(normalizar(data.ministerio()));
         membro.setCargo(data.cargo());
         membro.setObservacoes(data.observacoes());
         membro.setDataBatismo(data.dataBatismo());

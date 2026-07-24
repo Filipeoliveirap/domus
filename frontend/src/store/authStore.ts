@@ -18,6 +18,9 @@ interface AuthState {
   fotoId: string | null
   igrejaId: string | null
   igrejaNome: string | null
+  cargo: string | null
+  igrejaSigla: string | null
+  igrejaLogoId: string | null
   isAuthenticated: boolean
   /** true = já perguntamos ao servidor quem somos (não "o localStorage foi lido"). */
   hidratado: boolean
@@ -33,7 +36,7 @@ interface AuthState {
   logoutIntencional: boolean
   login: (data: Sessao) => void
   logout: () => void
-  atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role' | 'fotoId'>>) => void
+  atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role' | 'fotoId' | 'cargo' | 'igrejaSigla' | 'igrejaLogoId'>>) => void
   setHidratado: () => void
 }
 
@@ -44,6 +47,9 @@ const estadoDeslogado = {
   fotoId: null,
   igrejaId: null,
   igrejaNome: null,
+  cargo: null,
+  igrejaSigla: null,
+  igrejaLogoId: null,
   isAuthenticated: false,
 } as const
 

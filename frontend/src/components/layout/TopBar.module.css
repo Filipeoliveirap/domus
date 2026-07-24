@@ -48,6 +48,13 @@
   border-radius: 8px;
   background: #2563eb;
   color: #ffffff;
+  overflow: hidden;
+}
+
+.igrejaLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .igrejaNome {

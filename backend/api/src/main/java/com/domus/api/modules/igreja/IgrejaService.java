@@ -170,6 +170,7 @@ public class IgrejaService {
         igreja.setRazaoSocial(data.razaoSocial());
         igreja.setCnpj(vazioViraNulo(data.cnpj()));
         igreja.setDenominacao(TextoUtil.capitalizar(data.denominacao()));
+        igreja.setSigla(data.sigla() != null ? data.sigla().trim().toUpperCase() : null);
         igreja.setEmailContato(data.emailContato());
         igreja.setTelefoneContato(data.telefoneContato());
         igreja.setEndereco(paraEndereco(data.endereco()));

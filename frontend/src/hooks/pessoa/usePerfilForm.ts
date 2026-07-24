@@ -6,6 +6,7 @@ import { useAppForm } from '../forms/useAppForm'
 import { pessoaSchema, type PessoaFormInput, type PessoaFormData } from '@/lib/validators'
 import { useAtualizarMinhaPessoa } from './useMinhaPessoa'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
+import { useAuthStore } from '@/store/authStore'
 import type { PessoaRequest, PessoaResponse } from '@/types/pessoa.type'
 import type { ApiError } from '@/types/api.types'
 
@@ -75,6 +76,7 @@ export function usePerfilForm(pessoaInicial: PessoaResponse | undefined) {
         dataBatismo: data.vinculo === 'MEMBRO' ? (data.dataBatismo || undefined) : undefined,
       }
       await mutateAsync(payload)
+      useAuthStore.getState().atualizarUsuarioLogado({ cargo: data.cargo || null })
       notificar.sucesso('Perfil atualizado!')
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

@@ -7,6 +7,7 @@ export interface IgrejaDetalhe {
   razaoSocial: string | null
   cnpj: string | null
   denominacao: string | null
+  sigla: string | null
   emailContato: string
   telefoneContato: string | null
   logoFotoId: string | null
@@ -21,6 +22,7 @@ export interface AtualizarIgrejaRequest {
   razaoSocial?: string | null
   cnpj?: string | null
   denominacao?: string | null
+  sigla?: string | null
   emailContato: string
   telefoneContato?: string | null
   logoFotoId?: string | null

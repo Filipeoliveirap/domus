@@ -42,7 +42,7 @@ class PessoaControllerAtualizarMeTest {
 
         PessoaResponse pessoaAtual = new PessoaResponse(
                 pessoaId, "Fulano", "email.real@igreja.com", "11999999999",
-                null, null, Vinculo.MEMBRO, null, null, null, null, null, null, null, null
+                null, null, Vinculo.MEMBRO, null, null, null, null, null, null, null, null, null
         );
         when(pessoaService.buscarPorId(eq(pessoaId), eq(igrejaId), eq(true))).thenReturn(pessoaAtual);
 
@@ -54,7 +54,7 @@ class PessoaControllerAtualizarMeTest {
 
         PessoaRequestDTO payloadComEmailMalicioso = new PessoaRequestDTO(
                 "Fulano", "email.trocado@fora.com", "11999999999", null, null,
-                Vinculo.MEMBRO, null, null, null, null, null, null
+                Vinculo.MEMBRO, null, null, null, null, null, null, null
         );
 
         controller.atualizarMe(payloadComEmailMalicioso);

@@ -1,0 +1,2 @@
+ALTER TABLE igreja
+    ADD COLUMN sigla VARCHAR(20);

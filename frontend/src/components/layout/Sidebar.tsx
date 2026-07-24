@@ -55,6 +55,7 @@ export function Sidebar() {
   const role = useAuthStore((state) => state.role)
   const nome = useAuthStore((state) => state.nome)
   const fotoId = useAuthStore((state) => state.fotoId)
+  const cargo = useAuthStore((state) => state.cargo)
   const logout = useAuthStore((state) => state.logout)
   const navAberta = useUiStore((state) => state.navAberta)
   const fecharNav = useUiStore((state) => state.fecharNav)
@@ -180,15 +181,21 @@ export function Sidebar() {
           </div>
         )}
         <div className={styles.profileInfo}>
-          <p className={styles.profileName}>{nome ?? 'Usuário'}</p>
-          {role && (
-            <span className={`${styles.profileRole} ${roleStyles[role] ?? styles.roleComum}`}>
-              {roleLabels[role] ?? role}
-            </span>
-          )}
+          <p className={styles.profileName}>{primeirosDoisNomes(nome)}</p>
+          <span className={`${styles.profileRole} ${role ? roleStyles[role] : styles.roleComum}`}>
+            {cargo ?? (role ? roleLabels[role] : '')}
+          </span>
         </div>
       </Link>
     </aside>
     </>
   )
+}
+
+/** Mostra só os dois primeiros nomes da pessoa para caber na sidebar. */
+function primeirosDoisNomes(nome: string | null): string {
+  if (!nome) return 'Usuário'
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length <= 2) return nome
+  return partes.slice(0, 2).join(' ')
 }

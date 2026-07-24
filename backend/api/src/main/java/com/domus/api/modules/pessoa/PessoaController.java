@@ -21,6 +21,7 @@ public class PessoaController {
 
     private final PessoaService pessoaService;
     private final UsuarioAutenticado usuarioAutenticado;
+    private final com.domus.api.modules.ministerio.MinisterioService ministerioService;
 
     @GetMapping
     public ResponseEntity<PagedResponse<PessoaResponse>> listar(
@@ -127,5 +128,12 @@ public class PessoaController {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         pessoaService.arquivarMembro(id, igrejaId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/ministerios")
+    public ResponseEntity<java.util.List<com.domus.api.modules.ministerio.DTOs.MinisterioResponse>> ministerios(
+            @PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(ministerioService.listarMinisteriosDaPessoa(id, igrejaId));
     }
 }

@@ -1190,9 +1190,33 @@ git commit -m "refactor(pessoa): remove campo livre ministerio (substituído pel
 - Modify: `src/lib/endpoints.ts`
 - Create: `src/services/ministerio.service.ts`
 - Modify: `src/types/pessoa.type.ts`
+- Create: `src/lib/rotulosMinisterio.ts`
 
 **Interfaces:**
-- Produces: `Papel = 'LIDER' | 'MEMBRO'`, `MinisterioResponse{id,nome}`, `MembroResponse{pessoaId,nome,fotoId,papel}`, `MinisterioDetalheResponse{id,nome,membros,pedidosPendentes,souLiderDesteMinisterio}`, `MinisterioRequest{nome}`, `ministerioService.{listar,criar,atualizar,arquivar,detalhe,adicionarMembro,removerMembro,atualizarPapel,pedirEntrada,aceitarPedido,recusarPedido}`.
+- Produces: `Papel = 'LIDER' | 'MEMBRO'`, `MinisterioResponse{id,nome}`, `MembroResponse{pessoaId,nome,fotoId,papel}`, `MinisterioDetalheResponse{id,nome,membros,pedidosPendentes,souLiderDesteMinisterio}`, `MinisterioRequest{nome}`, `ministerioService.{listar,criar,atualizar,arquivar,detalhe,adicionarMembro,removerMembro,atualizarPapel,pedirEntrada,aceitarPedido,recusarPedido}`, `ROTULO_MINISTERIO`/`ROTULO_MINISTERIO_PLURAL` (`@/lib/rotulosMinisterio`).
+
+- [ ] **Step 0: Criar o ponto único de rótulo visível (`src/lib/rotulosMinisterio.ts`)**
+
+Decisão de 2026-07-24: nem toda igreja chama isso de "ministério" (departamento, rede...).
+O **código** (tabelas, tipos, hooks, rotas — tudo que já foi definido nas Tasks 1-9) continua
+`ministerio`, mesmo tratamento que `congregacao` recebeu quando o rótulo virou "Unidade" (ver
+memória `congregacao-virou-unidade-no-front`). Só o **texto visível** muda, e vem de um
+arquivo só — assim, quando a Fase 5 tornar isso self-service por igreja (ver
+`BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`), o texto some de um lugar só, não de uma dúzia de
+componentes.
+
+```ts
+// src/lib/rotulosMinisterio.ts
+
+/**
+ * Rótulo visível para o módulo de ministério/departamento/rede. Hardcoded pro piloto (esta
+ * igreja usa "rede") — quando abrir para outras igrejas (Fase 5), isto vira uma config por
+ * igreja (`igreja.rotuloMinisterio` ou similar) em vez de constante. Até lá, mudar aqui é
+ * a ÚNICA coisa que muda para trocar o termo em toda a aplicação.
+ */
+export const ROTULO_MINISTERIO = 'Rede'
+export const ROTULO_MINISTERIO_PLURAL = 'Redes'
+```
 
 - [ ] **Step 1: Criar `src/types/ministerio.type.ts`**
 
@@ -1304,7 +1328,7 @@ Expected: sem erros novos relacionados a `ministerio`/`pessoa.type.ts` (erros pr
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/types/ministerio.type.ts src/types/pessoa.type.ts src/lib/endpoints.ts src/services/ministerio.service.ts
+git add src/types/ministerio.type.ts src/types/pessoa.type.ts src/lib/endpoints.ts src/services/ministerio.service.ts src/lib/rotulosMinisterio.ts
 git commit -m "feat(ministerio): tipos, endpoints e service do módulo de ministérios"
 ```
 
@@ -1615,6 +1639,7 @@ git commit -m "feat(ministerio): podeGerenciarCadastroMinisterios no front"
 
 import { useState } from 'react'
 import { useCriarMinisterio, useAtualizarMinisterio } from '@/hooks/ministerio/useMinisterioForm'
+import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ModalMinisterioForm.module.css'
 
@@ -1647,7 +1672,7 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 className={styles.titulo}>{ministerio ? 'Editar ministério' : 'Novo ministério'}</h2>
+        <h2 className={styles.titulo}>{ministerio ? `Editar ${ROTULO_MINISTERIO.toLowerCase()}` : `Nova ${ROTULO_MINISTERIO.toLowerCase()}`}</h2>
         <label className={styles.label} htmlFor="nome-ministerio">Nome</label>
         <input
           id="nome-ministerio"
@@ -1738,6 +1763,7 @@ export function useArquivarMinisterioConfirmacao(ministerio: MinisterioResponse,
 
 import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 import { useArquivarMinisterioConfirmacao } from '@/hooks/ministerio/useArquivarMinisterioConfirmacao'
+import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 
 /**
@@ -1747,22 +1773,23 @@ import type { MinisterioResponse } from '@/types/ministerio.type'
  */
 export function ModalArquivarMinisterio({ ministerio, onClose }: { ministerio: MinisterioResponse; onClose: () => void }) {
   const { confirmar, isLoading, erroGeral } = useArquivarMinisterioConfirmacao(ministerio, onClose)
+  const rotulo = ROTULO_MINISTERIO.toLowerCase()
 
   return (
     <ModalConfirmacaoCritica
-      titulo="Arquivar ministério?"
+      titulo={`Arquivar ${rotulo}?`}
       mensagem={
         <>
-          Ao arquivar <strong>{ministerio.nome}</strong>, ele deixará de aparecer na lista de
-          ministérios e ninguém mais poderá ver ou pedir para entrar nele.
+          Ao arquivar <strong>{ministerio.nome}</strong>, ela deixará de aparecer na lista de
+          {' '}{ROTULO_MINISTERIO_PLURAL.toLowerCase()} e ninguém mais poderá ver ou pedir para entrar nela.
         </>
       }
       consequencias={[
-        { tipo: 'perde', texto: 'Some da lista de ministérios da igreja' },
+        { tipo: 'perde', texto: `Some da lista de ${ROTULO_MINISTERIO_PLURAL.toLowerCase()} da igreja` },
         { tipo: 'mantem', texto: 'O histórico de quem foi membro não é apagado do banco' },
       ]}
       palavraConfirmacao={ministerio.nome}
-      textoConfirmar="Arquivar ministério"
+      textoConfirmar={`Arquivar ${rotulo}`}
       isLoading={isLoading}
       erro={erroGeral}
       onConfirmar={confirmar}
@@ -1790,9 +1817,14 @@ import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ModalMinisterioForm } from './ModalMinisterioForm'
 import { ModalArquivarMinisterio } from './ModalArquivarMinisterio'
+import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ministerios.module.css'
 
+// NOTA: "Nova {ROTULO_MINISTERIO}" assume gênero feminino ("rede"), que é o que esta igreja
+// usa. Se ROTULO_MINISTERIO virar "Ministério" (masculino) sem ajustar o artigo, o texto
+// erra a concordância — aceitável para hardcode de piloto de 1 igreja; a versão self-service
+// da Fase 5 precisa carregar o gênero junto com o rótulo (não é problema de agora).
 // Rótulo de líder(es) do card — segue o mockup do Stitch (nome do líder + contagem de
 // membros no próprio card, sem precisar abrir o detalhe). Sem líder ainda = "Sem líder".
 function rotuloLideres(lideres: string[]): string {
@@ -1818,12 +1850,12 @@ export default function MinisteriosPage() {
     <div className={styles.pagina}>
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>Ministérios</h1>
-          <p className={styles.subtitulo}>Ministérios da igreja e quem participa de cada um</p>
+          <h1 className={styles.titulo}>{ROTULO_MINISTERIO_PLURAL}</h1>
+          <p className={styles.subtitulo}>{ROTULO_MINISTERIO_PLURAL} da igreja e quem participa de cada uma</p>
         </div>
         {podeGerenciar && (
           <button type="button" className={styles.botaoPrimario} onClick={() => setFormAberto('novo')}>
-            Novo ministério
+            Nova {ROTULO_MINISTERIO.toLowerCase()}
           </button>
         )}
       </header>
@@ -1831,9 +1863,11 @@ export default function MinisteriosPage() {
       {ministerios.length === 0 ? (
         <EstadoVazio
           icone={Users}
-          titulo="Nenhum ministério cadastrado"
-          mensagem={podeGerenciar ? 'Cadastre o primeiro ministério da igreja.' : 'Nenhum ministério foi cadastrado ainda.'}
-          acaoPrimaria={podeGerenciar ? { label: 'Novo ministério', onClick: () => setFormAberto('novo') } : undefined}
+          titulo={`Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} cadastrada`}
+          mensagem={podeGerenciar
+            ? `Cadastre a primeira ${ROTULO_MINISTERIO.toLowerCase()} da igreja.`
+            : `Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} foi cadastrada ainda.`}
+          acaoPrimaria={podeGerenciar ? { label: `Nova ${ROTULO_MINISTERIO.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined}
         />
       ) : (
         <div className={styles.grade}>
@@ -2028,6 +2062,7 @@ import { usePedirEntrada, useAceitarPedido, useRecusarPedido } from '@/hooks/min
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import styles from './detalhe.module.css'
 
@@ -2104,7 +2139,7 @@ export default function MinisterioDetalhePage() {
       <section className={styles.secao}>
         <h2 className={styles.subtitulo}>Membros</h2>
         {ministerio.membros.length === 0 ? (
-          <EstadoVazio titulo="Nenhum membro ainda" mensagem="Adicione pessoas a este ministério." />
+          <EstadoVazio titulo="Nenhum membro ainda" mensagem={`Adicione pessoas a esta ${ROTULO_MINISTERIO.toLowerCase()}.`} />
         ) : (
           <ul className={styles.lista}>
             {ministerio.membros.map((membro) => (
@@ -2236,7 +2271,7 @@ git rm frontend/src/components/module/pessoas/MinisterioInput.tsx frontend/src/c
 
 Aplicar a mesma remoção (linhas 203-210 mencionadas no relatório de exploração) — o campo de ministério não é mais editável ali; a Task 4 abaixo adiciona a exibição somente-leitura via `usePessoaMinisterios`.
 
-- [ ] **Step 4: Adicionar seção "Ministérios" no drawer/perfil de detalhe da pessoa**
+- [ ] **Step 4: Adicionar seção de rótulo (`ROTULO_MINISTERIO_PLURAL`) no drawer/perfil de detalhe da pessoa**
 
 Localizar o arquivo exato com:
 ```bash
@@ -2246,13 +2281,14 @@ No componente encontrado, adicionar (próximo de onde hoje mostrava `pessoa.mini
 
 ```tsx
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
+import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 
 // dentro do componente, após obter `pessoa`:
 const { data: ministerios = [] } = usePessoaMinisterios(pessoa.id)
 
 // no JSX, substituindo o texto cru antigo de "Ministério":
 <div className={styles.campo}>
-  <span className={styles.rotulo}>Ministérios</span>
+  <span className={styles.rotulo}>{ROTULO_MINISTERIO_PLURAL}</span>
   {ministerios.length === 0 ? (
     <span className={styles.valorVazio}>Nenhum</span>
   ) : (

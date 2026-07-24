@@ -64,16 +64,6 @@ public class Pessoa {
     @Column(name = "sexo", length = 10)
     private Sexo sexo;
 
-    /**
-     * V9__ministerio.sql derrubou a coluna {@code ministerio} (texto livre) sem migrar dado —
-     * decisão explícita do spec, substituída pelo módulo de ministério (tabela {@code ministerio}
-     * + {@code ministerio_membro}). O campo virou {@code @Transient} (em vez de removido de vez
-     * dos DTOs/service) para não espalhar a mudança por call sites fora do escopo desta task;
-     * fica sempre {@code null}. Ver task-4-report.md (2026-07-24) para o cleanup completo pendente.
-     */
-    @Transient
-    private String ministerio;
-
     @Column(name = "cargo", length = 255)
     private String cargo;
 

@@ -320,7 +320,7 @@ git commit -m "feat(ministerio): entidades Ministerio/MinisterioMembro e reposit
 
 **Interfaces:**
 - Consumes: `Ministerio`, `MinisterioMembro`, `Papel`, `StatusMembro` (Task 2).
-- Produces: `MinisterioRequest(String nome)`, `MinisterioResponse(UUID id, String nome)` com `from(Ministerio)`, `MembroResponse(UUID pessoaId, String nome, UUID fotoId, Papel papel)` com `from(MinisterioMembro)`, `MinisterioDetalheResponse(UUID id, String nome, List<MembroResponse> membros, List<MembroResponse> pedidosPendentes, boolean souLiderDesteMinisterio, boolean souMembroAtivo, boolean tenhoPedidoPendente)`, `AdicionarMembroRequest(UUID pessoaId)`, `AtualizarPapelRequest(Papel papel)`.
+- Produces: `MinisterioRequest(String nome)`, `MinisterioResponse(UUID id, String nome, List<String> lideres, int totalMembros)` com `from(Ministerio)` (básico, sem membros) e `comResumo(Ministerio, List<MinisterioMembro>)` (usado na listagem — nomes dos líderes e contagem de membros ativos, estilo do mockup do Stitch), `MembroResponse(UUID pessoaId, String nome, UUID fotoId, Papel papel)` com `from(MinisterioMembro)`, `MinisterioDetalheResponse(UUID id, String nome, List<MembroResponse> membros, List<MembroResponse> pedidosPendentes, boolean souLiderDesteMinisterio, boolean souMembroAtivo, boolean tenhoPedidoPendente)`, `AdicionarMembroRequest(UUID pessoaId)`, `AtualizarPapelRequest(Papel papel)`.
   > `souMembroAtivo`/`tenhoPedidoPendente` são calculados no backend a partir da pessoa logada — o front (`authStore`) não guarda `pessoaId`, só `id` (usuarioId) e `role` (ver `src/store/authStore.ts`), então esses dois flags evitam qualquer necessidade de o front conhecer o próprio `pessoaId` para decidir se mostra "pedir para entrar".
 
 - [ ] **Step 1: `MinisterioRequest`**
@@ -344,11 +344,27 @@ public record MinisterioRequest(
 package com.domus.api.modules.ministerio.DTOs;
 
 import com.domus.api.modules.ministerio.Ministerio;
+import com.domus.api.modules.ministerio.MinisterioMembro;
+import com.domus.api.modules.ministerio.Papel;
+import java.util.List;
 import java.util.UUID;
 
-public record MinisterioResponse(UUID id, String nome) {
+public record MinisterioResponse(UUID id, String nome, List<String> lideres, int totalMembros) {
+    /** Usado onde só o cadastro básico importa (ex.: `GET /pessoas/{id}/ministerios`) — sem
+     * consultar membros, então líderes/contagem vêm zerados. */
     public static MinisterioResponse from(Ministerio ministerio) {
-        return new MinisterioResponse(ministerio.getId(), ministerio.getNome());
+        return new MinisterioResponse(ministerio.getId(), ministerio.getNome(), List.of(), 0);
+    }
+
+    /** Usado na listagem (`GET /ministerios`), onde o card mostra líder(es) e quantidade de
+     * membros — resumo visual pedido no mockup do Stitch (sem descrição nem frequência: fora
+     * do escopo do cadastro, que é só nome). */
+    public static MinisterioResponse comResumo(Ministerio ministerio, List<MinisterioMembro> membrosAtivos) {
+        List<String> lideres = membrosAtivos.stream()
+                .filter(m -> m.getPapel() == Papel.LIDER)
+                .map(m -> m.getPessoa().getNome())
+                .toList();
+        return new MinisterioResponse(ministerio.getId(), ministerio.getNome(), lideres, membrosAtivos.size());
     }
 }
 ```
@@ -566,8 +582,17 @@ public class MinisterioService {
 
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listar(UUID igrejaId) {
+        // N+1 deliberado: uma igreja tem dezenas de ministérios, não milhares — uma query de
+        // membros por ministério na tela de listagem é aceitável (YAGNI evita otimizar cedo
+        // demais). Se a lista crescer muito, trocar por uma query agregada única.
         return ministerioRepository.findByIgrejaIdOrderByNomeAsc(igrejaId).stream()
-                .map(MinisterioResponse::from)
+                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId())))
+                .toList();
+    }
+
+    private List<MinisterioMembro> membrosAtivosDe(UUID ministerioId) {
+        return membroRepository.findByMinisterioIdOrderByPapelAsc(ministerioId).stream()
+                .filter(m -> m.getStatus() == StatusMembro.ATIVO)
                 .toList();
     }
 
@@ -1181,6 +1206,9 @@ export interface MinisterioRequest {
 export interface MinisterioResponse {
   id: string
   nome: string
+  /** Vazio em respostas que não consultam membros (ex.: GET /pessoas/{id}/ministerios). */
+  lideres: string[]
+  totalMembros: number
 }
 
 export interface MembroResponse {
@@ -1754,7 +1782,7 @@ export function ModalArquivarMinisterio({ ministerio, onClose }: { ministerio: M
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Pencil, Archive, Users } from 'lucide-react'
+import { Pencil, Archive, Users, Crown } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
@@ -1764,6 +1792,14 @@ import { ModalMinisterioForm } from './ModalMinisterioForm'
 import { ModalArquivarMinisterio } from './ModalArquivarMinisterio'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ministerios.module.css'
+
+// Rótulo de líder(es) do card — segue o mockup do Stitch (nome do líder + contagem de
+// membros no próprio card, sem precisar abrir o detalhe). Sem líder ainda = "Sem líder".
+function rotuloLideres(lideres: string[]): string {
+  if (lideres.length === 0) return 'Sem líder'
+  if (lideres.length === 1) return lideres[0]
+  return `${lideres[0]} +${lideres.length - 1}`
+}
 
 export default function MinisteriosPage() {
   const role = useAuthStore((s) => s.role)
@@ -1808,10 +1844,19 @@ export default function MinisteriosPage() {
             ]
             return (
               <div key={ministerio.id} className={styles.card}>
-                <Link href={`/ministerios/${ministerio.id}`} className={styles.cardLink}>
-                  {ministerio.nome}
-                </Link>
-                {podeGerenciar && <MenuAcoes itens={acoes} />}
+                <div className={styles.cardTopo}>
+                  <Link href={`/ministerios/${ministerio.id}`} className={styles.cardTitulo}>
+                    {ministerio.nome}
+                  </Link>
+                  {podeGerenciar && <MenuAcoes itens={acoes} />}
+                </div>
+                <div className={styles.cardLider}>
+                  <Crown size={14} />
+                  <span>{rotuloLideres(ministerio.lideres)}</span>
+                </div>
+                <div className={styles.cardMembros}>
+                  {ministerio.totalMembros} {ministerio.totalMembros === 1 ? 'membro' : 'membros'}
+                </div>
               </div>
             )
           })}
@@ -1841,14 +1886,20 @@ export default function MinisteriosPage() {
 .subtitulo { color: #6b7280; font-size: 0.875rem; }
 .botaoPrimario { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--cor-primaria, #2563eb); color: #fff; border: none; }
 .grade {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1rem; min-width: 0;
 }
 .card {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-direction: column; gap: 0.5rem;
   padding: 1rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; min-width: 0;
 }
-.cardLink { font-weight: 600; text-decoration: none; color: inherit; min-width: 0; }
+.cardTopo { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+.cardTitulo { font-weight: 600; text-decoration: none; color: inherit; min-width: 0; }
+.cardLider {
+  display: flex; align-items: center; gap: 0.375rem;
+  font-size: 0.8125rem; color: #6b7280; min-width: 0;
+}
+.cardMembros { font-size: 0.8125rem; color: #6b7280; }
 
 @media (max-width: 640px) {
   .cabecalho { flex-direction: column; align-items: stretch; }

@@ -1,0 +1,201 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+}
+.breadcrumbLink { color: var(--color-text-muted); }
+.breadcrumbSep { color: var(--color-text-muted); }
+.breadcrumbAtual { color: var(--color-text-primary); font-weight: var(--font-weight-medium); }
+
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.titulo {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+}
+
+.filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filtroData {
+  width: 160px;
+}
+
+.resumoGrade {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.resumoCard {
+  padding: 20px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.resumoValor {
+  font-size: 26px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+}
+.resumoLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+.resumoSemDado {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+.resumoPopularTitulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+.secaoTitulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.listaEventos {
+  display: flex;
+  flex-direction: column;
+}
+/*
+ * Grid de colunas fixas (não flex + space-between): título de evento tem tamanho
+ * variável, e com space-between isso empurrava participantes/variações pra posições
+ * diferentes em cada linha. Colunas fixas mantêm tudo alinhado verticalmente.
+ */
+.linhaEvento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 240px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.linhaEvento:first-child { border-top: none; }
+.linhaEventoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.linhaEventoTitulo {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.linhaEventoData {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.linhaEventoParticipantes {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  white-space: nowrap;
+  text-align: right;
+}
+.linhaEventoVariacoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.contagem {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+.paginacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.botaoPagina {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: background-color var(--transition-fast);
+}
+.botaoPagina:hover:not(:disabled) { background-color: var(--color-bg-page); }
+.botaoPagina:disabled { opacity: 0.4; cursor: not-allowed; }
+.infoPagina {
+  padding: 0 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .resumoGrade {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .pagina { padding: 16px; }
+  .cabecalho { flex-direction: column; align-items: stretch; }
+  .filtros { flex-direction: column; align-items: stretch; }
+  .filtroData { width: 100%; }
+  .resumoGrade { grid-template-columns: 1fr; }
+  .linhaEvento {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 6px;
+  }
+  .linhaEventoParticipantes { text-align: left; }
+  .linhaEventoVariacoes { justify-content: flex-start; }
+}

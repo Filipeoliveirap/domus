@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -257,6 +257,30 @@ export function EventoForm(props: EventoFormProps) {
             />
           </section>
 
+          {/* ─── Para quem é ─── */}
+          <section className={styles.secao}>
+            <div className={styles.secaoHeader}>
+              <span className={styles.secaoIcone}><Users size={20} /></span>
+              <h2 className={styles.secaoTitulo}>Para quem é</h2>
+            </div>
+            <BlocoParaQuemE
+              recorteEtario={recorteEtarioAtual}
+              idadeMin={idadeMinAtual}
+              idadeMax={idadeMaxAtual}
+              restricaoEstadoCivil={restricaoEstadoCivilAtual}
+              restricaoSexo={restricaoSexoAtual}
+              exclusivoMembros={!!exclusivoMembros}
+              mostrarExclusivoMembros={requerInscricao}
+              erroIdadeMax={errors.idadeMax?.message}
+              onChangeRecorteEtario={(v) => setValue('recorteEtario', v, { shouldDirty: true })}
+              onChangeIdadeMin={(v) => setValue('idadeMin', v, { shouldDirty: true, shouldValidate: true })}
+              onChangeIdadeMax={(v) => setValue('idadeMax', v, { shouldDirty: true, shouldValidate: true })}
+              onChangeEstadoCivil={(v) => setValue('restricaoEstadoCivil', v, { shouldDirty: true })}
+              onChangeSexo={(v) => setValue('restricaoSexo', v, { shouldDirty: true })}
+              onChangeExclusivoMembros={(v) => setValue('exclusivoMembros', v, { shouldDirty: true })}
+            />
+          </section>
+
           {/* ─── Inscrições ─── */}
           <section className={styles.secao}>
             <div className={styles.secaoHeader}>
@@ -315,6 +339,22 @@ export function EventoForm(props: EventoFormProps) {
                   </div>
                 </div>
 
+                <label className={styles.toggleRow}>
+                  <span className={styles.toggleTexto}>
+                    <span className={styles.toggleTitulo}>
+                      <ClipboardCheck size={16} aria-hidden="true" style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                      Controlar presença
+                    </span>
+                    <span className={styles.toggleDescricao}>
+                      Ative para marcar quem realmente compareceu e ver o relatório de presença deste evento.
+                    </span>
+                  </span>
+                  <span className={styles.switch}>
+                    <input type="checkbox" className={styles.switchInput} {...register('controlaPresenca')} />
+                    <span className={styles.switchTrilho} />
+                  </span>
+                </label>
+
                 {tipoInscricao === 'PAGO' && (
                   <div>
                     <Input
@@ -342,25 +382,11 @@ export function EventoForm(props: EventoFormProps) {
                 )}
 
                 {/*
-                  "Para quem é" (elegibilidade): recolhido em "Todos" por padrão. Só faz
-                  sentido dentro de "requer inscrição" — não há como restringir quem se
-                  inscreve num evento que não tem inscrição.
+                  "Para quem é" (elegibilidade): recolhido em "Todos" por padrão. Agora
+                  sempre visível — o recorte etário/sexo classifica o evento para filtros e
+                  relatórios mesmo sem inscrição formal. Só o toggle "Somente membros" some
+                  fora de requerInscricao (sem inscrição não há quem restringir).
                 */}
-                <BlocoParaQuemE
-                  recorteEtario={recorteEtarioAtual}
-                  idadeMin={idadeMinAtual}
-                  idadeMax={idadeMaxAtual}
-                  restricaoEstadoCivil={restricaoEstadoCivilAtual}
-                  restricaoSexo={restricaoSexoAtual}
-                  exclusivoMembros={!!exclusivoMembros}
-                  erroIdadeMax={errors.idadeMax?.message}
-                  onChangeRecorteEtario={(v) => setValue('recorteEtario', v, { shouldDirty: true })}
-                  onChangeIdadeMin={(v) => setValue('idadeMin', v, { shouldDirty: true, shouldValidate: true })}
-                  onChangeIdadeMax={(v) => setValue('idadeMax', v, { shouldDirty: true, shouldValidate: true })}
-                  onChangeEstadoCivil={(v) => setValue('restricaoEstadoCivil', v, { shouldDirty: true })}
-                  onChangeSexo={(v) => setValue('restricaoSexo', v, { shouldDirty: true })}
-                  onChangeExclusivoMembros={(v) => setValue('exclusivoMembros', v, { shouldDirty: true })}
-                />
               </div>
             )}
           </section>

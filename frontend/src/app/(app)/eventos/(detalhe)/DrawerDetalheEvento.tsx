@@ -188,18 +188,22 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
             {vagas != null && (
               <div className={styles.vagasBloco}>
                 <p className={styles.vagasContador}>
-                  {esgotado ? 'Esgotado' : `${totalPessoas} de ${vagas} vagas preenchidas`}
+                  {esgotado && evento.situacao !== 'ENCERRADO'
+                    ? 'Esgotado'
+                    : `${totalPessoas} de ${vagas} vagas preenchidas`}
                 </p>
-                {esgotado ? (
-                  <p className={styles.vagasAcabando}>
-                    <Flame size={14} aria-hidden="true" />
-                    Esgotado
-                  </p>
-                ) : mostrarVagasAcabando && (
-                  <p className={styles.vagasAcabando}>
-                    <Flame size={14} aria-hidden="true" />
-                    {vagasRestantes === 1 ? 'Última vaga!' : `Últimas ${vagasRestantes} vagas`}
-                  </p>
+                {evento.situacao !== 'ENCERRADO' && (
+                  esgotado ? (
+                    <p className={styles.vagasAcabando}>
+                      <Flame size={14} aria-hidden="true" />
+                      Esgotado
+                    </p>
+                  ) : mostrarVagasAcabando && (
+                    <p className={styles.vagasAcabando}>
+                      <Flame size={14} aria-hidden="true" />
+                      {vagasRestantes === 1 ? 'Última vaga!' : `Últimas ${vagasRestantes} vagas`}
+                    </p>
+                  )
                 )}
               </div>
             )}

@@ -50,6 +50,20 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.tiposSugeridos(igrejaId));
     }
 
+    @GetMapping("/relatorio-geral")
+    public ResponseEntity<com.domus.api.modules.evento.DTOs.RelatorioGeralResponse> relatorioGeral(
+            @RequestParam(required = false) java.time.LocalDateTime inicio,
+            @RequestParam(required = false) java.time.LocalDateTime fim,
+            @RequestParam(required = false) String recorteEtario,
+            @RequestParam(required = false) String tipo,
+            @PageableDefault(size = 8) Pageable pageable) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String recorteFiltro = (recorteEtario == null || recorteEtario.isBlank()) ? null : recorteEtario.trim();
+        String tipoFiltro = (tipo == null || tipo.isBlank()) ? null : tipo.trim();
+        Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        return ResponseEntity.ok(eventoRelatorioService.relatorioGeral(igrejaId, inicio, fim, recorteFiltro, tipoFiltro, semSort));
+    }
+
     @GetMapping("/{id}/relatorio")
     public ResponseEntity<com.domus.api.modules.evento.DTOs.RelatorioEventoResponse> relatorio(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

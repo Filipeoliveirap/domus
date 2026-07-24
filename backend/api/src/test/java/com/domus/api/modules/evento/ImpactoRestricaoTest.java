@@ -109,7 +109,7 @@ class ImpactoRestricaoTest {
     private EventoRequest requestDe(Evento e, Integer idadeMin, Integer idadeMax, Boolean exclusivoMembros) {
         return new EventoRequest(e.getTitulo(), null, e.getInicioEm(), null,
                 null, null, null, null, null, idadeMin, idadeMax, null, null,
-                null, null, exclusivoMembros, true, null);
+                null, null, exclusivoMembros, true, null, null);
     }
 
     private long confirmados(UUID eventoId) {

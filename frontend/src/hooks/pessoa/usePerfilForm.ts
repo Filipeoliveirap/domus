@@ -26,7 +26,7 @@ export function usePerfilForm(pessoaInicial: PessoaResponse | undefined) {
       nome: '', email: '', telefone: '', dataNascimento: '',
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
       vinculo: 'CONGREGANTE', estadoCivil: '', sexo: '',
-      ministerio: '', observacoes: '', dataBatismo: '', fotoId: null,
+      ministerio: '', cargo: '', observacoes: '', dataBatismo: '', fotoId: null,
     },
     requiredFields: ['nome'],
   })
@@ -53,6 +53,7 @@ export function usePerfilForm(pessoaInicial: PessoaResponse | undefined) {
         estadoCivil: pessoaInicial.estadoCivil ?? '',
         sexo: pessoaInicial.sexo ?? '',
         ministerio: pessoaInicial.ministerio ?? '',
+        cargo: pessoaInicial.cargo ?? '',
         observacoes: pessoaInicial.observacoes ?? '',
         dataBatismo: pessoaInicial.dataBatismo ?? '',
         fotoId: pessoaInicial.fotoId ?? null,

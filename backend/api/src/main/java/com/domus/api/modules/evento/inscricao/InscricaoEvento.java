@@ -59,6 +59,15 @@ public class InscricaoEvento {
     @Builder.Default
     private boolean inscritoPorExcecao = false;
 
+    /**
+     * Presença marcada nesta inscrição (a PESSOA cadastrada, não seus acompanhantes — ver
+     * {@link AcompanhanteInscricao#isCompareceu()}). Só tem sentido quando
+     * {@code evento.controlaPresenca=true}; ver {@code InscricaoService.marcarPresencaInscricao}.
+     */
+    @Column(name = "compareceu", nullable = false)
+    @Builder.Default
+    private boolean compareceu = false;
+
     @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<AcompanhanteInscricao> acompanhantes = new ArrayList<>();

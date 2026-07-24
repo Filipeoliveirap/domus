@@ -93,6 +93,7 @@ public class PessoaService {
                 .estadoCivil(data.estadoCivil())
                 .sexo(data.sexo())
                 .ministerio(normalizar(data.ministerio()))
+                .cargo(data.cargo())
                 .observacoes(data.observacoes())
                 .dataBatismo(data.dataBatismo())
                 .foto(foto)
@@ -168,6 +169,7 @@ public class PessoaService {
         membro.setEstadoCivil(data.estadoCivil());
         membro.setSexo(data.sexo());
         membro.setMinisterio(normalizar(data.ministerio()));
+        membro.setCargo(data.cargo());
         membro.setObservacoes(data.observacoes());
         membro.setDataBatismo(data.dataBatismo());
         membro.setFoto(fotoNova);

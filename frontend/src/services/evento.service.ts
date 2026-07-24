@@ -1,6 +1,9 @@
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
-import type { EventoRequest, EventoResponse, ImpactoRestricaoResponse } from '@/types/evento.type'
+import type {
+  EventoRequest, EventoResponse, ImpactoRestricaoResponse,
+  RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros,
+} from '@/types/evento.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
 
 interface ListarEventosParams {
@@ -47,4 +50,18 @@ export const eventosService = {
   // vem pronta do backend, o front só respeita.
   tipos: (): Promise<string[]> =>
     api.get<string[]>(Endpoints.eventos.TIPOS).then(res => res.data),
+
+  relatorio: (id: string): Promise<RelatorioEventoResponse> =>
+    api.get<RelatorioEventoResponse>(Endpoints.eventos.RELATORIO(id)).then(res => res.data),
+
+  relatorioGeral: (filtros: RelatorioGeralFiltros): Promise<RelatorioGeralResponse> =>
+    api.get<RelatorioGeralResponse>(Endpoints.eventos.RELATORIO_GERAL, {
+      params: {
+        inicio: filtros.inicio || undefined,
+        fim: filtros.fim || undefined,
+        recorteEtario: filtros.recorteEtario || undefined,
+        tipo: filtros.tipo || undefined,
+        page: filtros.page ?? undefined,
+      },
+    }).then(res => res.data),
 }

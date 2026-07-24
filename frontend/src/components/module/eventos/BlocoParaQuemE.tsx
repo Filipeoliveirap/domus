@@ -31,6 +31,8 @@ interface ValoresParaQuemE {
 
 interface BlocoParaQuemEProps extends ValoresParaQuemE {
   erroIdadeMax?: string
+  /** Esconde o toggle "Somente membros da igreja" quando false — sem inscrição não há quem restringir. */
+  mostrarExclusivoMembros?: boolean
   onChangeRecorteEtario: (nome: string | null) => void
   onChangeIdadeMin: (idade: number | undefined) => void
   onChangeIdadeMax: (idade: number | undefined) => void
@@ -54,7 +56,7 @@ function temRestricaoAtiva(v: ValoresParaQuemE): boolean {
 export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
   const {
     recorteEtario, idadeMin, idadeMax, restricaoEstadoCivil, restricaoSexo, exclusivoMembros,
-    erroIdadeMax,
+    erroIdadeMax, mostrarExclusivoMembros = true,
     onChangeRecorteEtario, onChangeIdadeMin, onChangeIdadeMax,
     onChangeEstadoCivil, onChangeSexo, onChangeExclusivoMembros,
   } = props
@@ -178,28 +180,32 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
         </div>
       )}
 
-      <label className={formStyles.toggleRow}>
-        <span className={formStyles.toggleTexto}>
-          <span className={formStyles.toggleTitulo}>Somente membros da igreja</span>
-        </span>
-        <span className={formStyles.switch}>
-          <input
-            type="checkbox"
-            className={formStyles.switchInput}
-            checked={exclusivoMembros}
-            onChange={(e) => onChangeExclusivoMembros(e.target.checked)}
-          />
-          <span className={formStyles.switchTrilho} />
-        </span>
-      </label>
+      {mostrarExclusivoMembros && (
+        <>
+          <label className={formStyles.toggleRow}>
+            <span className={formStyles.toggleTexto}>
+              <span className={formStyles.toggleTitulo}>Somente membros da igreja</span>
+            </span>
+            <span className={formStyles.switch}>
+              <input
+                type="checkbox"
+                className={formStyles.switchInput}
+                checked={exclusivoMembros}
+                onChange={(e) => onChangeExclusivoMembros(e.target.checked)}
+              />
+              <span className={formStyles.switchTrilho} />
+            </span>
+          </label>
 
-      {exclusivoMembros && (
-        <div className={formStyles.infoBox}>
-          <AlertTriangle size={18} className={formStyles.infoIcon} />
-          <p className={formStyles.infoText}>
-            Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
-          </p>
-        </div>
+          {exclusivoMembros && (
+            <div className={formStyles.infoBox}>
+              <AlertTriangle size={18} className={formStyles.infoIcon} />
+              <p className={formStyles.infoText}>
+                Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

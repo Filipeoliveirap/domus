@@ -111,6 +111,9 @@ function EventosConteudo() {
         </div>
         {podeGerenciar && (
           <div className={styles.acoesCabecalho}>
+            <Link href="/eventos/relatorio" className={styles.linkRelatorio}>
+              Relatório de engajamento
+            </Link>
             <Link href="/eventos/locais" className={styles.botaoSecundario}>
               Locais
             </Link>

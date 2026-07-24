@@ -88,6 +88,7 @@ public class EventoService {
         log.info("Cadastrando evento. titulo={}, igreja_id={}", data.titulo(), igrejaId);
         validarDatas(data);
         validarIdades(data);
+        validarControlaPresenca(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -119,6 +120,7 @@ public class EventoService {
                 .preco(data.preco())
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
+                .controlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -154,6 +156,7 @@ public class EventoService {
         log.info("Atualizando evento. id={}, igreja_id={}", id, igrejaId);
         validarDatas(data);
         validarIdades(data);
+        validarControlaPresenca(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -209,6 +212,7 @@ public class EventoService {
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
+        evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
 
         // Foto: resolve a NOVA antes de tocar no evento (valida que é da mesma igreja) e só
         // grava a ANTIGA como candidata a remoção — nunca apaga antes de o evento apontar
@@ -330,6 +334,20 @@ public class EventoService {
             log.warn("Data de término anterior ao início. inicio={}, fim={}", data.inicioEm(), data.fimEm());
             throw new BusinessException("DATA_INVALIDA",
                     "A data de término não pode ser anterior à data de início.");
+        }
+    }
+
+    /**
+     * Espelha o CHECK do banco (V6) do lado de cá, para devolver mensagem decente em vez de
+     * 500 genérico vindo da constraint. Controlar presença sem organizar inscrição não faz
+     * sentido — não há lista prévia de quem "chamar".
+     */
+    private void validarControlaPresenca(EventoRequest data) {
+        boolean controlaPresenca = Boolean.TRUE.equals(data.controlaPresenca());
+        boolean requerInscricao = Boolean.TRUE.equals(data.requerInscricao());
+        if (controlaPresenca && !requerInscricao) {
+            throw new BusinessException("CONTROLA_PRESENCA_SEM_INSCRICAO",
+                    "Só é possível controlar presença em eventos que também exigem inscrição.");
         }
     }
 

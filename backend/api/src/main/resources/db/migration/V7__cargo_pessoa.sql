@@ -1,0 +1,2 @@
+ALTER TABLE pessoa
+    ADD COLUMN cargo VARCHAR(255);

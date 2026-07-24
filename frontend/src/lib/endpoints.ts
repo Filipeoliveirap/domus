@@ -43,6 +43,8 @@ export const Endpoints = {
     TIPOS: '/eventos/tipos',
     IMPACTO_RESTRICAO: (id: string) => `/eventos/${id}/impacto-restricao`,
     ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
+    RELATORIO: (id: string) => `/eventos/${id}/relatorio`,
+    RELATORIO_GERAL: '/eventos/relatorio-geral',
   },
 
   locaisEvento: {
@@ -61,6 +63,14 @@ export const Endpoints = {
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
     REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
+  },
+
+  presenca: {
+    MARCAR_TODOS: (eventoId: string) => `/eventos/${eventoId}/presenca/marcar-todos`,
+    INSCRICAO: (eventoId: string, inscricaoId: string) =>
+      `/eventos/${eventoId}/presenca/inscricoes/${inscricaoId}`,
+    ACOMPANHANTE: (eventoId: string, acompanhanteId: string) =>
+      `/eventos/${eventoId}/presenca/acompanhantes/${acompanhanteId}`,
   },
 
   categorias: {

@@ -91,7 +91,7 @@ class EventoServiceCamposInscricaoTest {
     private EventoRequest request(Integer vagas, BigDecimal preco, Boolean exclusivoMembros) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                vagas, preco, exclusivoMembros, true, null);
+                vagas, preco, exclusivoMembros, true, null, null);
     }
 
     @Test
@@ -355,5 +355,44 @@ class EventoServiceCamposInscricaoTest {
         service.arquivarEvento(eventoId, igrejaId);
 
         verify(eventoRepository).delete(existente);
+    }
+
+    @Test
+    void cadastrarEvento_recusaControlaPresencaSemRequerInscricao() {
+        // controlaPresenca sem requerInscricao não faz sentido: não há lista de quem
+        // "chamar" para confirmar presença se a inscrição é opcional.
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
+
+        EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
+                "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
+                null, "Templo", null, null, null, null, null, null, null,
+                50, new BigDecimal("120.00"), true, false, true, null);
+
+        assertThatThrownBy(() -> service.cadastrarEvento(
+                requestComControlaPresencaSemInscricao, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "CONTROLA_PRESENCA_SEM_INSCRICAO");
+    }
+
+    @Test
+    void atualizarEvento_recusaControlaPresencaSemRequerInscricao() {
+        // Espelha cadastrarEvento_recusaControlaPresencaSemRequerInscricao: a validação
+        // deve rodar nos dois caminhos (create e update).
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(igreja()).titulo("Retiro")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
+                "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
+                null, "Templo", null, null, null, null, null, null, null,
+                50, new BigDecimal("120.00"), true, false, true, null);
+
+        assertThatThrownBy(() -> service.atualizarEvento(
+                eventoId, requestComControlaPresencaSemInscricao, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "CONTROLA_PRESENCA_SEM_INSCRICAO");
     }
 }

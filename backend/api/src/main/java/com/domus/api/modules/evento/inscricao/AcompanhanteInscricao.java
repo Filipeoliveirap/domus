@@ -28,6 +28,14 @@ public class AcompanhanteInscricao {
     @Column(name = "telefone", length = 20)
     private String telefone;
 
+    /**
+     * Presença marcada para ESTE convidado especificamente — acompanhante ocupa vaga e
+     * esteve lá igual ao inscrito, por isso a presença é granular por pessoa física.
+     */
+    @Column(name = "compareceu", nullable = false)
+    @Builder.Default
+    private boolean compareceu = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

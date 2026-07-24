@@ -37,6 +37,9 @@ public record PessoaRequestDTO(
         @Size(max = 255)
         String ministerio,
 
+        @Size(max = 255)
+        String cargo,
+
         String observacoes,
 
         @Past(message = "A data de batismo deve ser uma data no passado.")

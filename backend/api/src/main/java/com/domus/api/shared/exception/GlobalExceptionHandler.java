@@ -119,6 +119,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(403, "ACESSO_NEGADO", ex.getMessage()));
     }
 
+    @ExceptionHandler(ConflitoNegocioException.class)
+    public ResponseEntity<ErrorResponse> handleConflitoNegocio(ConflitoNegocioException ex, HttpServletRequest request) {
+        log.warn("Conflito de negócio. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, ex.getCodigo(), ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
 

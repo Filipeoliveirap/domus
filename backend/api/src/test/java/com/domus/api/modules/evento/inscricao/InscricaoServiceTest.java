@@ -538,10 +538,12 @@ class InscricaoServiceTest {
     void listaTrazTotalDePessoasEVagasRestantes() {
         Evento e = evento(10);
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+        when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of()));
+        when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of());
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(4L);
 
-        ListaInscritosResponse r = service.listarInscritos(eventoId, igrejaId);
+        ListaInscritosResponse r = service.listarInscritos(eventoId, igrejaId, null, org.springframework.data.domain.PageRequest.of(0, 20));
 
         assertThat(r.totalPessoas()).isEqualTo(4);
         assertThat(r.vagas()).isEqualTo(10);
@@ -552,10 +554,12 @@ class InscricaoServiceTest {
     void vagasRestantesEhNuloQuandoNaoHaLimite() {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(evento(null)));
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+        when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of()));
+        when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of());
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(50L);
 
-        assertThat(service.listarInscritos(eventoId, igrejaId).vagasRestantes()).isNull();
+        assertThat(service.listarInscritos(eventoId, igrejaId, null, org.springframework.data.domain.PageRequest.of(0, 20)).vagasRestantes()).isNull();
     }
 
     @Test
@@ -567,12 +571,14 @@ class InscricaoServiceTest {
                 .inscritoPorUsuarioId(usuarioId)
                 .status(StatusInscricao.CONFIRMADA).build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
+        when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
         when(usuarioRepository.buscarRegistrantes(java.util.List.of(usuarioId)))
                 .thenReturn(java.util.List.of(new RegistranteResumo(usuarioId, "João Líder", null)));
 
-        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+        var inscritos = service.listarInscritos(eventoId, igrejaId, null, org.springframework.data.domain.PageRequest.of(0, 20)).inscritos().getContent();
 
         assertThat(inscritos).hasSize(1);
         assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);
@@ -589,10 +595,12 @@ class InscricaoServiceTest {
                 .inscritoPorUsuarioId(null) // auto-inscrição
                 .status(StatusInscricao.CONFIRMADA).build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
+        when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
 
-        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+        var inscritos = service.listarInscritos(eventoId, igrejaId, null, org.springframework.data.domain.PageRequest.of(0, 20)).inscritos().getContent();
 
         assertThat(inscritos.get(0).inscritoPorUsuarioId()).isNull();
         assertThat(inscritos.get(0).inscritoPorNome()).isNull();
@@ -612,12 +620,14 @@ class InscricaoServiceTest {
                 .inscritoPorUsuarioId(usuarioId)
                 .status(StatusInscricao.CONFIRMADA).build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
+        when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
+        when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
         when(usuarioRepository.buscarRegistrantes(java.util.List.of(usuarioId)))
                 .thenReturn(java.util.List.of()); // arquivado: não volta na busca
 
-        var inscritos = service.listarInscritos(eventoId, igrejaId).inscritos();
+        var inscritos = service.listarInscritos(eventoId, igrejaId, null, org.springframework.data.domain.PageRequest.of(0, 20)).inscritos().getContent();
 
         assertThat(inscritos).hasSize(1);
         assertThat(inscritos.get(0).inscritoPorUsuarioId()).isEqualTo(usuarioId);

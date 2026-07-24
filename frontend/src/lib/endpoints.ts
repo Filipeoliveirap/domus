@@ -34,6 +34,7 @@ export const Endpoints = {
     ARQUIVAR: (id: string) => `/pessoas/${id}`,
     BAIRROS: '/pessoas/bairros',
     ME: '/pessoas/me',
+    PESSOA_MINISTERIOS: (pessoaId: string) => `/pessoas/${pessoaId}/ministerios`,
   },
 
   eventos: {
@@ -51,6 +52,18 @@ export const Endpoints = {
     LISTAR: '/locais-evento',
     CRIAR: '/locais-evento',
     BY_ID: (id: string) => `/locais-evento/${id}`,
+  },
+
+  ministerios: {
+    LISTAR: '/ministerios',
+    CRIAR: '/ministerios',
+    BY_ID: (id: string) => `/ministerios/${id}`,
+    MEMBROS: (id: string) => `/ministerios/${id}/membros`,
+    MEMBRO: (id: string, pessoaId: string) => `/ministerios/${id}/membros/${pessoaId}`,
+    PAPEL: (id: string, pessoaId: string) => `/ministerios/${id}/membros/${pessoaId}/papel`,
+    PEDIDOS: (id: string) => `/ministerios/${id}/pedidos`,
+    ACEITAR_PEDIDO: (id: string, pessoaId: string) => `/ministerios/${id}/pedidos/${pessoaId}/aceitar`,
+    RECUSAR_PEDIDO: (id: string, pessoaId: string) => `/ministerios/${id}/pedidos/${pessoaId}`,
   },
 
   inscricoes: {

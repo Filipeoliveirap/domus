@@ -491,3 +491,24 @@ foto — o DELETE seria recusado pelo banco. O teste do job é Mockito e não ex
 não pega. Falta desvincular (`pessoa.foto_id = NULL`) antes de apagar a foto. Reproduzir contra
 Postgres real (arquivar pessoa com foto, avançar o corte, rodar o job) e corrigir.
 Regra de domínio associada: o REGISTRO da pessoa nunca é apagado pela rotina — só a foto.
+
+### Rótulo do módulo "Ministério" deveria ser self-service por igreja (Fase 5) — 2026-07-24
+
+Nem toda igreja chama esse módulo de "ministério" — tem quem use "departamento", "rede"
+(caso da igreja piloto). Não existe um substantivo neutro que sirva pros três ao mesmo
+tempo, e construir self-service (a igreja escolhe o próprio rótulo, tipo Slack renomeando
+"canais") só compensa quando houver mais de uma igreja usando o sistema.
+
+Solução por ora (piloto de 1 igreja): rótulo hardcoded em `frontend/src/lib/rotulosMinisterio.ts`
+(`ROTULO_MINISTERIO`/`ROTULO_MINISTERIO_PLURAL`, hoje "Rede"/"Redes"), usado em toda cópia
+visível das telas de ministério — o domínio/código/rotas continuam `ministerio` (mesmo
+tratamento que `congregacao` recebeu quando o rótulo virou "Unidade", ver memória
+`congregacao-virou-unidade-no-front`). Além do rótulo, os textos que usam artigo/gênero
+(ex.: "Nova {rótulo}", "arquivar essa {rótulo}") assumem gênero feminino ("rede") — se o
+rótulo mudar pra uma palavra masculina sem ajustar a concordância, o texto erra o gênero.
+
+Quando abrir para outras igrejas (Fase 5): trocar a constante hardcoded por uma config por
+igreja (ex.: `igreja.rotuloMinisterio` + gênero), com um passo de onboarding perguntando
+"como sua igreja chama isso: Ministério, Departamento, Rede...?". Provável que o mesmo
+padrão sirva pra "congregação/unidade/campus" (ver `igrejas-vinculadas`), então vale
+desenhar as duas configs juntas nessa hora, não uma de cada vez.

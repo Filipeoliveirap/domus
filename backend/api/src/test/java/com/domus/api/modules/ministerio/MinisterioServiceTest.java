@@ -119,6 +119,24 @@ class MinisterioServiceTest {
     }
 
     @Test
+    void lider_do_ministerio_nao_pode_promover_ou_rebaixar_papel() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor"), igrejaId, null).id();
+        UUID liderId = novaPessoa("Fabio", igrejaId).getId();
+        UUID membroId = novaPessoa("Gabi", igrejaId).getId();
+
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioId, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(membroId),
+                igrejaId, liderId, false, null);
+
+        assertThatThrownBy(() -> service.atualizarPapel(ministerioId, membroId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, false))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
     void lider_do_ministerio_aceita_pedido_de_entrada() {
         UUID ministerioId = service.criar(new MinisterioRequest("Recepção"), igrejaId, null).id();
         UUID liderId = novaPessoa("Duda", igrejaId).getId();
@@ -127,7 +145,7 @@ class MinisterioServiceTest {
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
                 igrejaId, null, true, null);
         service.atualizarPapel(ministerioId, liderId,
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId);
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
 
         service.pedirEntrada(ministerioId, candidataId, igrejaId);
         assertThat(service.detalhe(ministerioId, igrejaId, liderId, false).pedidosPendentes())

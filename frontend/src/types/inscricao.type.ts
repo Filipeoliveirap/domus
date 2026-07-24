@@ -2,6 +2,7 @@
  * Tipos da inscrição em evento. Nomenclatura de backend (tabela/campo `acompanhante*`) é
  * mantida aqui de propósito — só o texto voltado ao usuário usa "convidado" (ver hooks).
  */
+import type { PagedResponse } from './pagedResponse.type'
 
 /**
  * Mesmos códigos de `CodigoImpedimento.java` (back) — união de tipos, não string crua,
@@ -40,6 +41,8 @@ export interface AcompanhanteResponse {
   id: string
   nome: string
   telefone: string | null
+  /** Só significativo quando o evento controla presença — ver `EventoResponse.controlaPresenca`. */
+  compareceu: boolean
 }
 
 /** O que o próprio usuário vê sobre a sua inscrição no evento. */
@@ -74,6 +77,8 @@ export interface InscritoResponse {
   inscritoPorNome: string | null
   inscritoPorFotoId: string | null
   inscritoEm: string
+  /** Só significativo quando o evento controla presença. */
+  compareceu: boolean
   acompanhantes: AcompanhanteResponse[]
 }
 
@@ -81,7 +86,8 @@ export interface ListaInscritosResponse {
   totalPessoas: number
   vagas: number | null
   vagasRestantes: number | null
-  inscritos: InscritoResponse[]
+  /** Paginado e afetado por `busca` — totalPessoas/vagas/vagasRestantes acima não são. */
+  inscritos: PagedResponse<InscritoResponse>
 }
 
 export interface InscreverPessoasRequest {

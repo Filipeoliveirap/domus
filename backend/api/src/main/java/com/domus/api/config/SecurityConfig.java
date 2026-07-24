@@ -145,6 +145,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/eventos/*/relatorio")
                         .hasAnyRole(ADMIN, LIDER)
 
+                        //Relatório geral — mesma sensibilidade de podeVerListaCompletaDeInscritos
+                        //(expõe dados agregados entre eventos como comparecimento médio e
+                        //participantes únicos). Vem ANTES do curinga /eventos/** (mesma armadilha
+                        //de ordenação de sempre).
+                        .requestMatchers(HttpMethod.GET, "/eventos/relatorio-geral")
+                        .hasAnyRole(ADMIN, LIDER)
+
                         //Sugestões de tipo — DEVE vir ANTES do curinga /eventos/** (mesma
                         //armadilha de ordenação já mordida três vezes neste projeto).
                         .requestMatchers(HttpMethod.GET, "/eventos/tipos")

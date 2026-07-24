@@ -1,5 +1,7 @@
 package com.domus.api.modules.evento.inscricao;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,6 +39,50 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         ORDER BY i.createdAt ASC
     """)
     List<InscricaoEvento> listarPorEvento(@Param("eventoId") UUID eventoId);
+
+    /**
+     * Ids paginados de inscrições confirmadas do evento, com busca opcional por nome do
+     * inscrito. Separado de {@link #listarComDetalhesPorIds} porque paginar uma query com
+     * {@code JOIN FETCH} de coleção (acompanhantes) faz o Hibernate paginar EM MEMÓRIA — a
+     * saída é buscar só os ids paginados aqui e os detalhes completos por {@code IN} depois.
+     *
+     * <p>{@code CAST(:busca AS string)} é necessário mesmo em JPQL: com {@code busca=null},
+     * o PostgreSQL infere o tipo do parâmetro pelo primeiro uso ({@code ? IS NULL}, sem
+     * pista nenhuma) e escolhe {@code bytea} — {@code lower(bytea)} não existe. O CAST fixa
+     * o tipo antes disso (mesmo padrão já usado nas queries nativas de {@code EventoRepository}).
+     */
+    @Query(value = """
+        SELECT i.id FROM InscricaoEvento i
+        JOIN i.pessoa p
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
+        ORDER BY i.createdAt ASC
+        """,
+        countQuery = """
+        SELECT COUNT(i) FROM InscricaoEvento i
+        JOIN i.pessoa p
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
+        """)
+    Page<UUID> listarIdsPaginadoPorEvento(@Param("eventoId") UUID eventoId,
+                                           @Param("busca") String busca,
+                                           Pageable pageable);
+
+    /**
+     * Mesmas linhas de {@link #listarPaginadoPorEvento} (mesmos ids), mas com pessoa e
+     * acompanhantes já carregados — evita N+1 ao montar {@code InscritoResponse} para a
+     * página. A ordem é a mesma ({@code createdAt ASC}), então bate 1:1 com a página de ids.
+     */
+    @Query("""
+        SELECT DISTINCT i FROM InscricaoEvento i
+        LEFT JOIN FETCH i.acompanhantes
+        JOIN FETCH i.pessoa
+        WHERE i.id IN :ids
+        ORDER BY i.createdAt ASC
+        """)
+    List<InscricaoEvento> listarComDetalhesPorIds(@Param("ids") List<UUID> ids);
 
     List<InscricaoEvento> findByPessoaIdAndStatus(UUID pessoaId, StatusInscricao status);
 

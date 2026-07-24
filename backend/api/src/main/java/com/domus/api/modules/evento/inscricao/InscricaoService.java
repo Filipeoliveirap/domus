@@ -18,6 +18,7 @@ import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -25,6 +26,9 @@ import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -538,30 +542,40 @@ public class InscricaoService {
         return inscricoes.size();
     }
 
-    /** Lista de inscritos confirmados + contagem de vagas restantes. */
+    /**
+     * Lista PAGINADA de inscritos confirmados + contagem de vagas restantes. {@code busca}
+     * (nome do inscrito, opcional) e a paginação afetam só {@code inscritos} — total de
+     * pessoas/vagas restantes sempre contam TODAS as confirmadas do evento.
+     */
     @Transactional(readOnly = true)
-    public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId) {
+    public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId, String busca, Pageable pageable) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        // Paginar direto numa query com JOIN FETCH de coleção (acompanhantes) faz o Hibernate
+        // paginar EM MEMÓRIA — por isso os ids vêm paginados primeiro, e os detalhes completos
+        // depois, por IN (mesma ordem, createdAt ASC nas duas queries).
+        Page<UUID> idsPagina = inscricaoRepository.listarIdsPaginadoPorEvento(eventoId, busca, pageable);
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarComDetalhesPorIds(idsPagina.getContent());
 
-        // Resolve "quem inscreveu" em UMA query para a lista inteira (evita N+1): coleta os
+        // Resolve "quem inscreveu" em UMA query para a página inteira (evita N+1): coleta os
         // ids distintos e não-nulos e busca nome+foto em lote. Ids ausentes no mapa de volta
         // (conta ou membro arquivados depois da inscrição) viram null no DTO — tratados
         // explicitamente, não escondidos atrás de um texto genérico incorreto.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
 
-        List<InscritoResponse> inscritos = inscricoes.stream()
+        List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
                 .map(i -> InscritoResponse.from(i, registrantes.get(i.getInscritoPorUsuarioId())))
                 .toList();
+        PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
+                new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
 
         long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
         Integer restantes = evento.getVagas() == null
                 ? null
                 : Math.max(0, evento.getVagas() - (int) total);
 
-        return new ListaInscritosResponse(total, evento.getVagas(), restantes, inscritos);
+        return new ListaInscritosResponse(total, evento.getVagas(), restantes, paginaInscritos);
     }
 
     /**

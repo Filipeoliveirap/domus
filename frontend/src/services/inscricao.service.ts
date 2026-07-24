@@ -43,12 +43,25 @@ export const inscricoesService = {
   participantes: (eventoId: string): Promise<ParticipanteResponse[]> =>
     api.get<ParticipanteResponse[]>(Endpoints.inscricoes.PARTICIPANTES(eventoId)).then(res => res.data),
 
-  listarInscritos: (eventoId: string): Promise<ListaInscritosResponse> =>
-    api.get<ListaInscritosResponse>(Endpoints.inscricoes.LISTAR(eventoId)).then(res => res.data),
+  listarInscritos: (eventoId: string, busca?: string, page = 0, size?: number): Promise<ListaInscritosResponse> =>
+    api.get<ListaInscritosResponse>(Endpoints.inscricoes.LISTAR(eventoId), {
+      params: { busca: busca || undefined, page, size },
+    }).then(res => res.data),
 
   cancelar: (inscricaoId: string): Promise<void> =>
     api.delete(Endpoints.inscricoes.CANCELAR(inscricaoId)).then(() => undefined),
 
   removerAcompanhante: (acompanhanteId: string): Promise<void> =>
     api.delete(Endpoints.inscricoes.REMOVER_ACOMPANHANTE(acompanhanteId)).then(() => undefined),
+
+  marcarTodosPresentes: (eventoId: string): Promise<void> =>
+    api.post(Endpoints.presenca.MARCAR_TODOS(eventoId)).then(() => undefined),
+
+  marcarPresencaInscricao: (eventoId: string, inscricaoId: string, compareceu: boolean): Promise<void> =>
+    api.patch(Endpoints.presenca.INSCRICAO(eventoId, inscricaoId), { compareceu })
+      .then(() => undefined),
+
+  marcarPresencaAcompanhante: (eventoId: string, acompanhanteId: string, compareceu: boolean): Promise<void> =>
+    api.patch(Endpoints.presenca.ACOMPANHANTE(eventoId, acompanhanteId), { compareceu })
+      .then(() => undefined),
 }

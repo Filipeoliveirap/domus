@@ -7,6 +7,7 @@ import { useMinhaPessoa } from '@/hooks/pessoa/useMinhaPessoa'
 import { usePerfilForm } from '@/hooks/pessoa/usePerfilForm'
 import { podeGerenciarPessoas } from '@/lib/permissoes'
 import { AlterarSenhaForm } from '@/components/module/perfil/AlterarSenhaForm'
+import { SkeletonPerfil } from './SkeletonPerfil'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
@@ -80,7 +81,7 @@ export default function PerfilPage() {
     if (achado.uf) setValue('endereco.uf', achado.uf)
   }
 
-  if (carregando) return <div className={styles.pagina}>Carregando…</div>
+  if (carregando) return <SkeletonPerfil />
 
   return (
     <div className={styles.pagina}>

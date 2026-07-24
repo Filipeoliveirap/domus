@@ -54,4 +54,7 @@ public final class Permissoes {
      * cobre os dois — nomear só por um dos dois enganaria quem lê.
      */
     public static boolean podeVerUsuariosEFinanceiroNaBuscaGlobal(String role) { return tem(role, SO_ADMIN); }
+
+    /** Criar, renomear, arquivar ministério e promover/rebaixar líder. */
+    public static boolean podeGerenciarCadastroMinisterios(String role) { return tem(role, SO_ADMIN); }
 }

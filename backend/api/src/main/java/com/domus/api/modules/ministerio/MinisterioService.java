@@ -180,8 +180,12 @@ public class MinisterioService {
     }
 
     @Transactional
-    public void atualizarPapel(UUID ministerioId, UUID pessoaId, AtualizarPapelRequest data, UUID igrejaId) {
+    public void atualizarPapel(UUID ministerioId, UUID pessoaId, AtualizarPapelRequest data, UUID igrejaId,
+                                boolean isAdmin) {
         buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
+        if (!isAdmin) {
+            throw new AccessDeniedException("Só um administrador pode promover ou rebaixar líder de ministério.");
+        }
 
         MinisterioMembro membro = membroRepository.findByMinisterioIdAndPessoaId(ministerioId, pessoaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vínculo não encontrado."));

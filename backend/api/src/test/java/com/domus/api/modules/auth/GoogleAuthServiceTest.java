@@ -7,6 +7,7 @@ import com.domus.api.modules.igreja.IgrejaService;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.security.RefreshTokenService;
@@ -31,6 +32,7 @@ class GoogleAuthServiceTest {
     TokenService tokenService;
     RefreshTokenService refreshTokenService;
     IgrejaService igrejaService;
+    UsuarioCapacidadeRepository capacidadeRepository;
     GoogleAuthService service;
 
     @BeforeEach
@@ -40,7 +42,8 @@ class GoogleAuthServiceTest {
         tokenService = mock(TokenService.class);
         refreshTokenService = mock(RefreshTokenService.class);
         igrejaService = mock(IgrejaService.class);
-        service = new GoogleAuthService(verifier, usuarioRepository, tokenService, refreshTokenService, igrejaService);
+        capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        service = new GoogleAuthService(verifier, usuarioRepository, tokenService, refreshTokenService, igrejaService, capacidadeRepository);
     }
 
     // Constrói um GoogleIdToken REAL (não mock) — getPayload() é final e não pode ser stubado.

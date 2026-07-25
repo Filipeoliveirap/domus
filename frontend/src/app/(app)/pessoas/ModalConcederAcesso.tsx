@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { KeyRound, X, Mail, ShieldCheck, Users, User, Info, RotateCcw } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -41,13 +42,19 @@ export function ModalConcederAcesso({
 
   const roleSelecionada = watch('role')
 
+  const [secretario, setSecretario] = useState(false)
+  const [tesoureiro, setTesoureiro] = useState(false)
+
+  const capacidades: string[] = []
+  if (secretario) capacidades.push('SECRETARIO')
+  if (tesoureiro) capacidades.push('TESOUREIRO')
+
   const onSubmit = (data: ConcederAcessoFormData) => {
-    // Quando a pessoa não tem e-mail, o campo é obrigatório (é por ele que o convite vai).
     if (semEmail && !data.email) {
       setError('email', { message: 'Informe um e-mail para enviar o convite' })
       return
     }
-    confirmar(data)
+    confirmar({ ...data, capacidades })
   }
 
   if (precisaReativar) {
@@ -148,6 +155,19 @@ export function ModalConcederAcesso({
               })}
             </div>
             {errors.role && <span className={styles.erroCampo}>{errors.role.message}</span>}
+          </div>
+
+          {/* Capacidades extras */}
+          <div className={styles.capacidadesSection}>
+            <span className={styles.roleLabel}>CAPACIDADES EXTRAS</span>
+            <label className={styles.checkbox}>
+              <input type="checkbox" checked={secretario} onChange={e => setSecretario(e.target.checked)} />
+              <span>Secretário — gerencia pessoas e visitantes</span>
+            </label>
+            <label className={styles.checkbox}>
+              <input type="checkbox" checked={tesoureiro} onChange={e => setTesoureiro(e.target.checked)} />
+              <span>Tesoureiro — acesso ao financeiro</span>
+            </label>
           </div>
 
           {/* Aviso */}

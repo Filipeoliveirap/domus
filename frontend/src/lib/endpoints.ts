@@ -26,6 +26,8 @@ export const Endpoints = {
     CONCEDER_ACESSO: '/usuarios/conceder-acesso',
     REATIVAR_ACESSO: '/usuarios/reativar-acesso',
     REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
+    CAPACIDADE: (id: string) => `/usuarios/${id}/capacidades`,
+    CAPACIDADE_ESPECIFICA: (id: string, cap: string) => `/usuarios/${id}/capacidades/${cap}`,
   },
   pessoas: {
     LISTAR: '/pessoas',
@@ -118,8 +120,28 @@ export const Endpoints = {
     SAIR: '/igrejas-vinculadas/sair',
   },
 
+  visitantes: {
+    LISTAR: '/visitantes',
+    CRIAR: '/visitantes',
+    BY_ID: (id: string) => `/visitantes/${id}`,
+    TOGGLE_CONTATO: (id: string) => `/visitantes/${id}/contato`,
+    TOGGLE_VISITA: (id: string) => `/visitantes/${id}/visita`,
+    TOGGLE_ACOMPANHAMENTO: (id: string) => `/visitantes/${id}/acompanhamento`,
+    TOGGLE_CELULA: (id: string) => `/visitantes/${id}/celula`,
+  },
+
   fotos: {
     UPLOAD: '/fotos',
     BY_ID: (id: string) => `/fotos/${id}`,
+  },
+
+  celulas: {
+    LISTAR: '/celulas',
+    CRIAR: '/celulas',
+    BY_ID: (id: string) => `/celulas/${id}`,
+    MEMBROS: (id: string) => `/celulas/${id}/membros`,
+    MEMBRO: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}`,
+    PAPEL: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}/papel`,
+    CONVERTER: (id: string, visitanteId: string) => `/celulas/${id}/converter/${visitanteId}`,
   },
 }

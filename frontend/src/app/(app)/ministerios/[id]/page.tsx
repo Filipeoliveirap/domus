@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Check, X as XIcon, UserPlus, UserMinus, Crown } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
@@ -11,8 +12,10 @@ import { usePedirEntrada, useAceitarPedido, useRecusarPedido } from '@/hooks/min
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
-import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
+import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(detalhe)/DrawerDetalhePessoa'
+import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import styles from './detalhe.module.css'
 
 // Todas as mutations usadas aqui (useRemoverMembro, useAtualizarPapel, usePedirEntrada,
@@ -31,9 +34,23 @@ export default function MinisterioDetalhePage() {
   const recusarPedido = useRecusarPedido(id)
 
   const [adicionarAberto, setAdicionarAberto] = useState(false)
+  const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
 
   if (isLoading || !ministerio) {
-    return <div className={styles.pagina} />
+    return (
+      <div className={styles.pagina}>
+        <Skeleton width="250px" height="32px" />
+        <Skeleton width="180px" height="16px" />
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1,2,3,4,5].map(i => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+              <Skeleton width="40px" height="40px" circle />
+              <Skeleton width="150px" height="16px" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   // souMembroAtivo/tenhoPedidoPendente vêm prontos do backend (GET /ministerios/{id}) —
@@ -45,6 +62,14 @@ export default function MinisterioDetalhePage() {
 
   return (
     <div className={styles.pagina}>
+      <nav className={styles.breadcrumb} aria-label="breadcrumb">
+        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
+        <ChevronRight size={16} className={styles.breadcrumbSep} />
+        <Link href="/ministerios" className={styles.breadcrumbLink}>{ROTULO_MINISTERIO_PLURAL}</Link>
+        <ChevronRight size={16} className={styles.breadcrumbSep} />
+        <span className={styles.breadcrumbAtual}>{ministerio.nome}</span>
+      </nav>
+
       <header className={styles.cabecalho}>
         <h1 className={styles.titulo}>{ministerio.nome}</h1>
         {podeGerenciarMembros && (
@@ -92,14 +117,19 @@ export default function MinisterioDetalhePage() {
         ) : (
           <ul className={styles.lista}>
             {ministerio.membros.map((membro) => (
-              <li key={membro.pessoaId} className={styles.itemMembro}>
+              <li key={membro.pessoaId} className={styles.itemMembro}
+                onClick={() => setPessoaDetalheId(membro.pessoaId)}
+              >
                 {urlFoto(membro.fotoId, 'THUMB') ? (
                   // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
                   <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar} />
                 ) : (
                   <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
                 )}
-                <span className={styles.nomeMembro}>{membro.nome}</span>
+                <span className={styles.nomeMembro}>
+                  {membro.nome}
+                  {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
+                </span>
                 {membro.papel === 'LIDER' && (
                   <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
                 )}
@@ -130,6 +160,9 @@ export default function MinisterioDetalhePage() {
           membrosAtuaisIds={new Set(ministerio.membros.map((m) => m.pessoaId))}
           onClose={() => setAdicionarAberto(false)}
         />
+      )}
+      {pessoaDetalheId && (
+        <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
       )}
     </div>
   )

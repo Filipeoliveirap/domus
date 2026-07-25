@@ -43,12 +43,13 @@ const UF_OPTIONS = [
 
 export default function PerfilPage() {
   const role = useAuthStore((s) => s.role)
-  const podeEditarTudo = podeGerenciarPessoas(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const podeEditarTudo = podeGerenciarPessoas(role, capacidadesExtras)
 
   const { data: pessoa, isLoading: carregando } = useMinhaPessoa()
   const {
     register, handleSubmit, setValue, watch,
-    formState: { errors },
+    formState: { errors, dirtyFields },
     erroGeral, isLoading, onSubmit,
   } = usePerfilForm(pessoa)
 
@@ -221,12 +222,10 @@ export default function PerfilPage() {
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
-        {/* O botão vale para todos: quem não edita os campos ainda precisa dele para
-            persistir a troca de FOTO (o UploadFoto só devolve o id; quem grava o
-            fotoId na pessoa é o submit). O backend é quem aceita só a foto de quem
-            não pode editar o resto. */}
-        <Button type="submit" variant="primary" isLoading={isLoading} disabled={isLoading}>
-          Salvar alterações
+        {/* Só habilita quando pode editar tudo OU a foto foi alterada. */}
+        <Button type="submit" variant="primary" isLoading={isLoading}
+          disabled={isLoading || (!podeEditarTudo && !dirtyFields.fotoId)}>
+          {podeEditarTudo ? 'Salvar alterações' : 'Salvar foto'}
         </Button>
       </form>
 

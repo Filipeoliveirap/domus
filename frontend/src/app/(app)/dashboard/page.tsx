@@ -29,7 +29,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
   const { data, isLoading, isError, refetch } = useDashboard(autorizado)
 
   if (!hidratado) return <div className={styles.pagina} />

@@ -363,3 +363,26 @@
   width: 100%;
   margin-top: 8px;
 }
+
+.capacidadesSection {
+  margin-top: 8px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}

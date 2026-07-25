@@ -52,7 +52,8 @@ function CategoriasConteudo() {
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
   const { data, isLoading, isError, refetch } = useCategorias({
     q: buscaDebounced,

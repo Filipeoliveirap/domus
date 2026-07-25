@@ -1,5 +1,6 @@
 package com.domus.api.modules.auth.DTO;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,12 @@ public record SessaoDTO(
         /** Sigla da igreja (IBC, SIBAPI…) — exibida no header do TopBar. */
         String igrejaSigla,
         /** Logo da igreja — exibida no ícone do TopBar no lugar do Church quando existe. */
-        UUID igrejaLogoId
+        UUID igrejaLogoId,
+        /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
+        List<String> capacidadesExtras
 ) {
+    public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
+        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId, List.of());
+    }
 }

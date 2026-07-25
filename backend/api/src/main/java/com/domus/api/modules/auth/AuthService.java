@@ -7,6 +7,8 @@ import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
 import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.modules.usuario.UsuarioCapacidade;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.SessaoExpiradaException;
@@ -32,6 +34,7 @@ public class AuthService {
     private final LoginAttemptService loginAttemptService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UsuarioCapacidadeRepository capacidadeRepository;
 
     public LoginResponseDTO login(AuthenticationDTO data) {
         log.info("Tentativa de login. email={}", data.email());
@@ -78,7 +81,9 @@ public class AuthService {
                     usuario.getIgreja().getLogoFoto() != null
                             ? usuario.getIgreja().getLogoFoto().getId() : null,
                     token,
-                    refreshToken
+                    refreshToken,
+                    capacidadeRepository.findByUsuarioId(usuario.getId()).stream()
+                            .map(UsuarioCapacidade::getCapacidade).toList()
             );
 
         } catch (BadCredentialsException | InternalAuthenticationServiceException e) {
@@ -132,12 +137,17 @@ public class AuthService {
      * {@code igreja} — explodiriam ao serem lidos aqui. Ver {@code findSessaoById}.
      */
     public SessaoDTO sessaoDe(UUID usuarioId) {
-        return usuarioRepository.findSessaoById(usuarioId)
+        SessaoDTO sessao = usuarioRepository.findSessaoById(usuarioId)
                 .orElseThrow(() -> {
                     log.warn("Sessão pedida para usuário inexistente. usuario_id={}", usuarioId);
                     return new SessaoExpiradaException("SESSAO_INVALIDA",
                             "Sessão expirada. Faça login novamente.");
                 });
+        return new SessaoDTO(sessao.id(), sessao.nome(), sessao.role(),
+                sessao.igrejaId(), sessao.igrejaNome(), sessao.fotoId(),
+                sessao.cargo(), sessao.igrejaSigla(), sessao.igrejaLogoId(),
+                capacidadeRepository.findByUsuarioId(usuarioId).stream()
+                        .map(UsuarioCapacidade::getCapacidade).toList());
     }
 
     /**

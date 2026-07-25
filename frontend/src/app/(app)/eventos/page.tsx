@@ -104,9 +104,10 @@ function EventosConteudo() {
 
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>
-            {totalElementos > 0 ? `${totalElementos} eventos` : 'Eventos'}
-          </h1>
+          <div className={styles.tituloLinha}>
+            <h1 className={styles.titulo}>Eventos</h1>
+            {totalElementos > 0 && <span className={styles.contador}>{totalElementos}</span>}
+          </div>
           <p className={styles.subtitulo}>Agenda da igreja</p>
         </div>
         {podeGerenciar && (

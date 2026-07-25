@@ -14,7 +14,7 @@ import type { QueryClient } from '@tanstack/react-query'
  * <p><b>Ao criar uma tela nova que agrega dados de outras, adicione a chave dela aqui</b> —
  * é o único lugar que precisa saber.
  */
-type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao' | 'localEvento'
+type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' | 'igreja' | 'inscricao' | 'localEvento' | 'ministerio'
 
 /** Prefixos de queryKey. O TanStack invalida por prefixo, então `['relatorios']` pega todas. */
 const AFETADAS: Record<Entidade, string[][]> = {
@@ -82,6 +82,13 @@ const AFETADAS: Record<Entidade, string[][]> = {
   localEvento: [
     ['eventos'],
     ['evento'],
+  ],
+  ministerio: [
+    ['ministerios'],
+    // ATENÇÃO (mesma armadilha do evento/pessoa acima): `['ministerios']` (lista) NÃO cobre
+    // `['ministerios', id]` (detalhe) — invalidação é por prefixo, e o id não é prefixo da
+    // lista. As duas entradas são necessárias.
+    ['pessoas'], // a seção "Ministérios" do perfil de pessoa também fica velha
   ],
 }
 

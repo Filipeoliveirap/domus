@@ -35,9 +35,6 @@ public record PessoaRequestDTO(
         Sexo sexo,
 
         @Size(max = 255)
-        String ministerio,
-
-        @Size(max = 255)
         String cargo,
 
         String observacoes,

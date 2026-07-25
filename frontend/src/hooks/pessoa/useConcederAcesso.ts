@@ -4,6 +4,7 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { pessoasService } from '@/services/pessoa.service'
+import { usuarioService } from '@/services/usuarios.service'
 import type { PessoaResponse, ConcederAcessoRequest } from '@/types/pessoa.type'
 import type { ApiError } from '@/types/api.types'
 
@@ -13,25 +14,34 @@ export function useConcederAcesso(pessoa: PessoaResponse, onClose: () => void) {
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [precisaReativar, setPrecisaReativar] = useState(false)
-  const [dadosPendentes, setDadosPendentes] = useState<DadosAcesso | null>(null)
+  const [dadosPendentes, setDadosPendentes] = useState<(DadosAcesso & { capacidades?: string[] }) | null>(null)
   const queryClient = useQueryClient()
 
   function invalidar() {
     invalidarCache(queryClient, 'usuario', 'pessoa')
   }
 
-  const confirmar = async (dados: DadosAcesso) => {
+  async function salvarCapacidades(usuarioId: string, capacidades: string[]) {
+    for (const cap of capacidades) {
+      try { await usuarioService.concederCapacidade(usuarioId, cap) } catch { /* silencioso */ }
+    }
+  }
+
+  const confirmar = async (dados: DadosAcesso & { capacidades?: string[] }) => {
     setErroGeral(null)
     setIsLoading(true)
     try {
-      await pessoasService.concederAcesso({ pessoaId: pessoa.id, ...dados })
+      const { capacidades, ...dadosLimpos } = dados
+      const criado = await pessoasService.concederAcesso({ pessoaId: pessoa.id, ...dadosLimpos })
+      if (capacidades?.length) {
+        await salvarCapacidades(criado.id, capacidades)
+      }
       invalidar()
       notificar.sucesso(`Convite enviado para ${pessoa.nome}.`)
       onClose()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const data = error.response?.data
-        // Código de erro herdado do backend (`UsuarioService`), não renomeado por lá.
         if (data?.error === 'MEMBRO_TEM_USUARIO_ARQUIVADO') {
           setDadosPendentes(dados)
           setPrecisaReativar(true)
@@ -51,7 +61,11 @@ export function useConcederAcesso(pessoa: PessoaResponse, onClose: () => void) {
     setErroGeral(null)
     setIsLoading(true)
     try {
-      await pessoasService.reativarAcesso({ pessoaId: pessoa.id, ...dadosPendentes })
+      const { capacidades: caps, ...dadosLimpos } = dadosPendentes
+      const criado = await pessoasService.reativarAcesso({ pessoaId: pessoa.id, ...dadosLimpos })
+      if (caps?.length) {
+        await salvarCapacidades(criado.id, caps)
+      }
       invalidar()
       notificar.sucesso(`Convite reenviado para ${pessoa.nome}.`)
       onClose()
@@ -72,12 +86,5 @@ export function useConcederAcesso(pessoa: PessoaResponse, onClose: () => void) {
     setErroGeral(null)
   }
 
-  return {
-    confirmar,
-    reativar,
-    cancelarReativacao,
-    precisaReativar,
-    isLoading,
-    erroGeral,
-  }
+  return { confirmar, reativar, cancelarReativacao, precisaReativar, isLoading, erroGeral }
 }

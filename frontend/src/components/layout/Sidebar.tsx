@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
-  Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut, ChevronDown,
+  Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut, ChevronDown, UsersRound, Grid3x3,
 } from 'lucide-react'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
@@ -12,15 +12,30 @@ import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import { urlFoto } from '@/lib/urlFoto'
+import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { podeGerenciarVisitantes, podeVerFinanceiro } from '@/lib/permissoes'
 import styles from './Sidebar.module.css'
 
-const navItems: { href: string; label: string; icon: typeof Home; roles: Role[] }[] = [
+type NavItem = { href: string; label: string; icon: typeof Home; roles: Role[]; visivel?: (role: Role | null, caps: string[]) => boolean }
+
+const navItems: NavItem[] = [
   { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
-  { href: '/pessoas',    label: 'Pessoas',   icon: Users,           roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-  { href: '/financeiro/movimentacoes', label: 'Finanças',  icon: Wallet,          roles: ['ADMIN_IGREJA'] },
+  { href: '/ministerios', label: ROTULO_MINISTERIO_PLURAL, icon: UsersRound, roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+  { href: '/celulas',    label: 'Células',  icon: Grid3x3,          roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+  { href: '/financeiro/movimentacoes', label: 'Financeiro',  icon: Wallet,          roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeVerFinanceiro(r, c) },
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
+]
+
+/**
+ * Agrupa "Pessoas" e "Visitantes" sob o guarda-chuva "Pessoas" — mesmo padrão do
+ * grupo "Configurações". "Visitantes" só aparece para ADMIN_IGREJA — o backend trava
+ * igual, a UI só não oferece o link pra quem não tem permissão.
+ */
+const pessoasSubItems: { href: string; label: string; roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }[] = [
+  { href: '/pessoas', label: 'Pessoas', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+  { href: '/pessoas/visitantes', label: 'Visitantes', roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeGerenciarVisitantes(r, c) },
 ]
 
 /**
@@ -53,6 +68,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const role = useAuthStore((state) => state.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const nome = useAuthStore((state) => state.nome)
   const fotoId = useAuthStore((state) => state.fotoId)
   const cargo = useAuthStore((state) => state.cargo)
@@ -60,8 +76,11 @@ export function Sidebar() {
   const navAberta = useUiStore((state) => state.navAberta)
   const fecharNav = useUiStore((state) => state.fecharNav)
 
-  const filtrar = <T extends { roles: Role[] }>(items: T[]) =>
-    items.filter((item) => (role ? item.roles.includes(role) : false))
+  const filtrar = <T extends { roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }>(items: T[]) =>
+    items.filter((item) => {
+      if (item.visivel) return item.visivel(role, capacidadesExtras)
+      return role ? item.roles.includes(role) : false
+    })
 
   const renderLink = (item: { href: string; label: string; icon: typeof Home }) => {
     const ativo = pathname === item.href
@@ -99,9 +118,13 @@ export function Sidebar() {
   // Todo mundo tem pelo menos "Meu Perfil" — o grupo aparece para todos; o que muda por
   // perfil é QUAIS abas aparecem dentro dele (ver configuracoesSubItems).
   const subItensVisiveis = filtrar(configuracoesSubItems)
+  const pessoasSubItensVisiveis = filtrar(pessoasSubItems)
   // Começa aberto quando já estamos numa das abas — senão o item ativo ficaria escondido.
   const [configAberto, setConfigAberto] = useState(
     () => pathname.startsWith('/configuracoes') || pathname === '/perfil',
+  )
+  const [pessoasAberto, setPessoasAberto] = useState(
+    () => pathname.startsWith('/pessoas'),
   )
 
   return (
@@ -119,6 +142,49 @@ export function Sidebar() {
 
       <nav className={styles.nav}>
         {filtrar(navItems).map(renderLink)}
+        {pessoasSubItensVisiveis.length > 0 && (
+          <div className={styles.grupo}>
+            <button
+              type="button"
+              onClick={() => setPessoasAberto((v) => !v)}
+              aria-expanded={pessoasAberto}
+              className={`${styles.link} ${styles.grupoBotao} ${
+                pathname.startsWith('/pessoas')
+                  ? styles.linkActive
+                  : styles.linkInactive
+              }`}
+            >
+              <span className={styles.grupoBotaoConteudo}>
+                <Users size={20} />
+                <span className={styles.label}>Pessoas</span>
+              </span>
+              <ChevronDown
+                size={16}
+                className={`${styles.seta} ${pessoasAberto ? styles.setaAberta : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {pessoasAberto && (
+              <div className={styles.submenu}>
+                {pessoasSubItensVisiveis.map((sub) => (
+                  <Link
+                    key={sub.href}
+                    href={sub.href}
+                    onClick={fecharNav}
+                    className={`${styles.subLink} ${
+                      pathname === sub.href || (sub.href !== '/pessoas' && pathname.startsWith(sub.href))
+                        ? styles.subLinkAtivo
+                        : ''
+                    }`}
+                  >
+                    {sub.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <div className={styles.footer}>

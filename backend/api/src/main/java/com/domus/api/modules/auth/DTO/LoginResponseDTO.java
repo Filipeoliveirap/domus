@@ -1,5 +1,6 @@
 package com.domus.api.modules.auth.DTO;
 
+import java.util.List;
 import java.util.UUID;
 
 public record LoginResponseDTO(
@@ -14,7 +15,8 @@ public record LoginResponseDTO(
         String igrejaSigla,
         UUID igrejaLogoId,
         String token,
-        String refreshToken
+        String refreshToken,
+        List<String> capacidadesExtras
 
 ) {
 

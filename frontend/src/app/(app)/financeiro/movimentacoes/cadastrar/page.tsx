@@ -12,7 +12,8 @@ import { podeVerFinanceiro } from '@/lib/permissoes'
 export default function CadastrarMovimentacaoPage() {
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
   const form = useMovimentacaoForm({
     onSuccess: () => {},

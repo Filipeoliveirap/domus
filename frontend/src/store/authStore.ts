@@ -21,6 +21,8 @@ interface AuthState {
   cargo: string | null
   igrejaSigla: string | null
   igrejaLogoId: string | null
+  /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
+  capacidadesExtras: string[]
   isAuthenticated: boolean
   /** true = já perguntamos ao servidor quem somos (não "o localStorage foi lido"). */
   hidratado: boolean
@@ -50,6 +52,7 @@ const estadoDeslogado = {
   cargo: null,
   igrejaSigla: null,
   igrejaLogoId: null,
+  capacidadesExtras: [] as string[],
   isAuthenticated: false,
 } as const
 

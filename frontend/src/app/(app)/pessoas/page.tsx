@@ -46,7 +46,8 @@ function PessoasConteudo() {
   const [pagina, setPagina] = useState(0)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const podeGerenciar = podeGerenciarPessoas(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const podeGerenciar = podeGerenciarPessoas(role, capacidadesExtras)
 
   const [pessoaConcedendo, setPessoaConcedendo] = useState<PessoaResponse | null>(null)
   const [pessoaArquivando, setPessoaArquivando] = useState<PessoaResponse | null>(null)
@@ -105,9 +106,10 @@ function PessoasConteudo() {
 
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>
-            {totalElementos > 0 ? `${totalElementos} pessoas` : 'Pessoas'}
-          </h1>
+          <div className={styles.tituloLinha}>
+            <h1 className={styles.titulo}>Pessoas</h1>
+            {totalElementos > 0 && <span className={styles.contador}>{totalElementos}</span>}
+          </div>
           <p className={styles.subtitulo}>Pessoas registradas na igreja</p>
         </div>
         {podeGerenciar && (

@@ -108,6 +108,139 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 
 ---
 
+## Convenções de teste
+
+> **Regra de ouro:** o teste reflete a feature. Se a feature é "só mulheres podem se
+> inscrever", o teste prova exatamente isso — aprova mulher, recusa homem, recusa quando
+> `sexo` é nulo. Se a feature é "admin pode cancelar inscrição de qualquer um", o teste
+> cobre admin cancelando, líder cancelando, comum sendo recusado. Toda regra de negócio
+> nova vem acompanhada do teste que a prova.
+
+### Workflow de desenvolvimento de teste
+
+1. **Criar o teste antes ou junto com o código** (TDD ou pareado)
+2. **Rodar e ver passar** (`mvn -q test -Dtest=NomeDaClasse`)
+3. **Revisar** — pode ser você mesmo relendo ou delegando a um agente para revisão cruzada
+4. **Só commitar depois do teste passar** — commit único e coerente por feature/correção
+
+### Qual tipo de teste usar (decisão por camada)
+
+| Camada | Ferramenta | Quando usar |
+|---|---|---|
+| **Service (regra de negócio)** | Mockito puro, sem contexto Spring | **Regra padrão.** 90% dos testes do projeto. |
+| **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra o Neon de testes. |
+| **Integração JPA complexa** | `@SpringBootTest` + `@Transactional` | FK constraints, triggers, concorrência com lock, migration. **Exceção, não regra.** |
+| **Controller (HTTP + Security)** | `@WebMvcTest` ou `@SpringBootTest` + `MockMvc` | **Não existe no projeto ainda.** Dívida técnica. Hoje a validação de rotas e matchers do Spring Security é manual (curl/navegador). |
+
+> **Por que Mockito puro é a regra?** Serviços com Mockito rodam em milissegundos, não
+> precisam de banco, não precisam de `.env`, e testam a lógica de negócio isolada. Mas
+> **não pegam** bugs de lazy loading, ordem de `requestMatchers` do Spring Security, ou FK
+> constraints — esses precisam de `@SpringBootTest`.
+
+### Padrão de mock
+
+O projeto tem **dois estilos** que coexistem. Use o que o arquivo já usa:
+
+**Estilo A — `mock()` manual no `@BeforeEach`** (dominante, ~15 arquivos):
+```java
+class MeuServiceTest {
+    MeuRepository repo;
+    OutroService outro;
+    MeuService service;
+
+    @BeforeEach
+    void setup() {
+        repo = mock(MeuRepository.class);
+        outro = mock(OutroService.class);
+        service = new MeuService(repo, outro);
+    }
+}
+```
+
+**Estilo B — `@ExtendWith(MockitoExtension.class)` + `@Mock`/`@InjectMocks`** (3 arquivos):
+```java
+@ExtendWith(MockitoExtension.class)
+class SecurityFilterTest {
+    @Mock TokenService tokenService;
+    @Mock UsuarioRepository usuarioRepository;
+    @InjectMocks SecurityFilter filter;
+}
+```
+
+### Nomenclatura
+
+- **Classe:** `{ClasseAlvo}Test.java`
+- **Método:** `snake_case` em português descrevendo o cenário esperado
+  - `inscreveQuandoHaVaga()`
+  - `eventoExclusivoDeMembrosRecusaCongregante()`
+  - `adminPodeCancelarInscricaoDeQualquerUm()`
+  - `recusaInscricaoDuplicada()`
+
+### Assertions
+
+- **AssertJ é primário** (usado em ~80% dos testes):
+  ```java
+  import static org.assertj.core.api.Assertions.assertThat;
+  import static org.assertj.core.api.Assertions.assertThatThrownBy;
+  ```
+- **JUnit Jupiter é aceito** (usado em ~20%, especialmente testes de cookie/segurança):
+  ```java
+  import static org.junit.jupiter.api.Assertions.*;
+  ```
+- Use `assertThatThrownBy(...).isInstanceOf(BusinessException.class).hasMessageContaining(...)` para exceções de negócio.
+- Use `verify(repo, never()).save(any())` para provar que algo **não** aconteceu.
+
+### Estrutura do arquivo de teste
+
+- **Helpers privados** por classe (não existem base classes nem fixtures compartilhados):
+  ```java
+  private Igreja igreja() { ... }
+  private Evento evento(Integer vagas) { ... }
+  private Pessoa pessoa(Vinculo vinculo) { ... }
+  private void dado(Evento e, Pessoa p, long ocupadas) { ... }  // setup de mocks
+  ```
+- Geralmente a classe define campos `UUID igrejaId`, `eventoId`, etc. com `UUID.randomUUID()` no topo.
+- Testes de `@DataJpaTest` usam `entityManager.flush()` + `entityManager.clear()` para forçar reload do banco e evitar o cache de 1º nível do Hibernate.
+
+### Rodando os testes
+
+```bash
+# Todos os testes (precisa do .env exportado — o Neon é usado por @DataJpaTest/@SpringBootTest)
+set -a; source .env >/dev/null 2>&1; set +a; mvn -q test
+
+# Um teste específico (não precisa do .env se for Mockito puro)
+mvn -q test -Dtest=NomeDaClasse
+
+# Offline (dependências já cacheadas)
+mvn -q -o test -Dtest=NomeDaClasse
+```
+
+### Testes de segurança
+
+- **Filtros (SecurityFilter, RateLimitFilter):** Mockito puro com mocks de Servlet (`MockHttpServletRequest`/`Response`).
+- **Permissões:** `PermissoesTest` cobre `podeGerenciarInscricoes(role)` etc. sem Spring.
+- **Ordem de `requestMatchers` do Spring Security:** **não é coberta por teste unitário.** Se mexer no `SecurityConfig`, valide manualmente com curl nos endpoints protegidos.
+- **Cookies de sessão:** `AuthCookieFactoryTest` testa atributos (`httpOnly`, `Secure`, `SameSite`, `Path`) sem contexto Spring.
+
+### Dívidas técnicas de teste (conhecidas, não repetir o erro)
+
+| Dívida | Impacto |
+|---|---|
+| **Sem Testcontainers / H2** — `@DataJpaTest` roda contra o Neon de testes compartilhado | Exige `.env` exportado; testes concorrentes podem se atropelar |
+| **Sem harness de autorização por endpoint** — não existe `@WebMvcTest` com `SecurityConfig` real | Bugs de ordem de `requestMatchers` só são pegos manualmente |
+| **Mockito self-attaching agent** — warning nos logs | Em JDKs futuros vai quebrar; precisa configurar byte-buddy como Java agent no surefire |
+| **Sem testes de frontend** — não há Jest, Vitest, Cypress ou Playwright configurados | Validação de front é manual no navegador |
+
+### Regras práticas
+
+- **Teste comprova a feature, não o contrário.** Se o teste passa mas não prova a regra de negócio, ele não serve.
+- **Mock só o que é externo ao SUT.** Dependências (repositories, outros services) são mockadas. Regras de negócio internas (`ElegibilidadeService` com `RegraFaixaEtaria`, etc.) são **instanciadas de verdade** para o teste fazer sentido.
+- **Não mockar tipos de domínio** (`Igreja`, `Evento`, `Pessoa`). Use builders ou `new`.
+- **Cada teste prova uma coisa só.** Um cenário de sucesso e um de falha por teste.
+- **Arquivo de teste cresce com a classe.** `InscricaoServiceTest` tem 850+ linhas e 47 testes — é o esperado para um service central. Não quebre em arquivos menores artificialmente.
+
+---
+
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este

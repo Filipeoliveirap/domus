@@ -10,5 +10,6 @@ export interface UsuarioResponse {
   convitePendente: boolean;
   criadoEm: string;
   fotoId: string | null;
+  capacidadesExtras?: string[];
 }
 

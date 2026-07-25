@@ -491,3 +491,53 @@ foto — o DELETE seria recusado pelo banco. O teste do job é Mockito e não ex
 não pega. Falta desvincular (`pessoa.foto_id = NULL`) antes de apagar a foto. Reproduzir contra
 Postgres real (arquivar pessoa com foto, avançar o corte, rodar o job) e corrigir.
 Regra de domínio associada: o REGISTRO da pessoa nunca é apagado pela rotina — só a foto.
+
+### Rótulo do módulo "Ministério" deveria ser self-service por igreja (Fase 5) — 2026-07-24
+
+Nem toda igreja chama esse módulo de "ministério" — tem quem use "departamento", "rede"
+(caso da igreja piloto). Não existe um substantivo neutro que sirva pros três ao mesmo
+tempo, e construir self-service (a igreja escolhe o próprio rótulo, tipo Slack renomeando
+"canais") só compensa quando houver mais de uma igreja usando o sistema.
+
+Solução por ora (piloto de 1 igreja): rótulo hardcoded em `frontend/src/lib/rotulosMinisterio.ts`
+(`ROTULO_MINISTERIO`/`ROTULO_MINISTERIO_PLURAL`, hoje "Rede"/"Redes"), usado em toda cópia
+visível das telas de ministério — o domínio/código/rotas continuam `ministerio` (mesmo
+tratamento que `congregacao` recebeu quando o rótulo virou "Unidade", ver memória
+`congregacao-virou-unidade-no-front`). Além do rótulo, os textos que usam artigo/gênero
+(ex.: "Nova {rótulo}", "arquivar essa {rótulo}") assumem gênero feminino ("rede") — se o
+rótulo mudar pra uma palavra masculina sem ajustar a concordância, o texto erra o gênero.
+
+Quando abrir para outras igrejas (Fase 5): trocar a constante hardcoded por uma config por
+igreja (ex.: `igreja.rotuloMinisterio` + gênero), com um passo de onboarding perguntando
+"como sua igreja chama isso: Ministério, Departamento, Rede...?". Provável que o mesmo
+padrão sirva pra "congregação/unidade/campus" (ver `igrejas-vinculadas`), então vale
+desenhar as duas configs juntas nessa hora, não uma de cada vez. O mesmo raciocínio vale
+pra "Célula" (spec `2026-07-25-celulas-design.md`) quando esse módulo existir.
+
+### Endereço do encontro da célula (2026-07-25)
+
+Spec de Células (`2026-07-25-celulas-design.md`) deixou de fora um campo de endereço de
+onde a célula se reúne, porque na prática varia semana a semana (ex.: "essa semana é na
+casa do Fulano"). Se o uso real pedir, vale pensar num histórico de local por encontro
+(não um endereço fixo na célula), talvez até junto de uma feature de registro de
+encontros/presença — não construir um campo fixo simples, já sabendo que não reflete a
+realidade.
+
+### Busca global (Elasticsearch) precisa acompanhar Visitantes/Células (2026-07-25)
+
+Os specs `2026-07-25-visitantes-design.md` e `2026-07-25-celulas-design.md` não
+mencionam a busca global unificada (Elasticsearch, `busca/` — o mesmo mecanismo que já
+indexa pessoa/evento/movimentação via *transactional outbox*). Pendência a resolver
+depois que os dois módulos estiverem implementados:
+
+- **Visitante**: provavelmente precisa entrar no índice (buscar visitante pelo nome na
+  busca global), com o mesmo cuidado de permissão que já existe pra financeiro/usuários
+  (`podeVerUsuariosEFinanceiroNaBuscaGlobal`) — decidir quem pode ver visitante na busca
+  (`ADMIN_IGREJA` e `SECRETARIO`, pelo spec de capacidades extra).
+- **Célula**: decidir se célula em si é uma entidade buscável (como `ministerio` deveria
+  ser, verificar se já está) ou só aparece indiretamente via pessoa/visitante.
+- Conferir se `ministerio` (Redes) já está indexado na busca global — se não estiver,
+  é a mesma pendência, só que já existente antes destes três specs.
+- Lembrar do outbox: toda entidade nova que entra na busca precisa emitir evento pro
+  outbox nas operações de criar/atualizar/arquivar (mesmo padrão de pessoa/evento),
+  senão o índice fica desatualizado silenciosamente.

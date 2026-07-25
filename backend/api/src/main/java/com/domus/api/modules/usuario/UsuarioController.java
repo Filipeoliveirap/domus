@@ -85,4 +85,19 @@ public class UsuarioController {
         usuarioService.arquivarUsuario(id, igrejaId);
         return ResponseEntity.noContent().build();
     }
- }
+
+    @PostMapping("/{id}/capacidades")
+    public ResponseEntity<Void> concederCapacidade(@PathVariable UUID id,
+                                                    @Valid @RequestBody CapacidadeRequest data) {
+        usuarioService.concederCapacidade(id, data.capacidade(),
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{id}/capacidades/{capacidade}")
+    public ResponseEntity<Void> revogarCapacidade(@PathVariable UUID id,
+                                                   @PathVariable String capacidade) {
+        usuarioService.revogarCapacidade(id, capacidade, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+}

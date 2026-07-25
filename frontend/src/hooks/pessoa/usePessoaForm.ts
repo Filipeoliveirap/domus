@@ -8,6 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { pessoaSchema, type PessoaFormInput, type PessoaFormData } from '@/lib/validators'
 import { pessoasService } from '@/services/pessoa.service'
+import { ministerioService } from '@/services/ministerio.service'
+import { usePessoaMinisterios } from './usePessoaMinisterios'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import type { PessoaRequest, PessoaResponse } from '@/types/pessoa.type'
 import type { ApiError } from '@/types/api.types'
@@ -30,13 +32,24 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
       nome: '', email: '', telefone: '', dataNascimento: '',
       endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' },
       vinculo: 'CONGREGANTE', estadoCivil: '', sexo: '',
-      ministerio: '', cargo: '', observacoes: '',
+      cargo: '', observacoes: '',
       dataBatismo: '', fotoId: null,
     },
     requiredFields: ['nome'],
   })
 
   const { reset } = form
+
+  // Redes atuais da pessoa (edição) — semente do seletor. Cadastro novo começa vazio: sem
+  // pessoaId ainda, não tem como vincular a rede até a pessoa existir de verdade.
+  const { data: redesAtuais } = usePessoaMinisterios(pessoaId ?? '')
+  const [redesSelecionadas, setRedesSelecionadas] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (redesAtuais) {
+      setRedesSelecionadas(new Set(redesAtuais.map((r) => r.id)))
+    }
+  }, [redesAtuais])
 
   useEffect(() => {
     if (pessoaInicial) {
@@ -57,7 +70,6 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
         vinculo: pessoaInicial.vinculo,
         estadoCivil: pessoaInicial.estadoCivil ?? '',
         sexo: pessoaInicial.sexo ?? '',
-        ministerio: pessoaInicial.ministerio ?? '',
         cargo: pessoaInicial.cargo ?? '',
         observacoes: pessoaInicial.observacoes ?? '',
         dataBatismo: pessoaInicial.dataBatismo ?? '',
@@ -85,16 +97,29 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
         dataBatismo: data.vinculo === 'MEMBRO' ? (data.dataBatismo || undefined) : undefined,
       }
 
+      let pessoaSalvaId: string
       if (ehEdicao) {
         await pessoasService.atualizar(pessoaId!, payload)
+        pessoaSalvaId = pessoaId!
         invalidarCache(queryClient, 'pessoa')
         queryClient.invalidateQueries({ queryKey: ['pessoa', pessoaId] })
         notificar.sucesso('Pessoa atualizada com sucesso!')
       } else {
-        await pessoasService.criar(payload)
+        const criada = await pessoasService.criar(payload)
+        pessoaSalvaId = criada.id
         invalidarCache(queryClient, 'pessoa')
         notificar.sucesso('Pessoa cadastrada com sucesso!')
       }
+
+      // Falha ao sincronizar rede não desfaz o cadastro/edição da pessoa (já salvos com
+      // sucesso) — só avisa separadamente, sem travar a navegação.
+      try {
+        await sincronizarRedes(pessoaSalvaId, redesAtuais?.map((r) => r.id) ?? [], [...redesSelecionadas])
+        invalidarCache(queryClient, 'ministerio')
+      } catch {
+        notificar.erro('Pessoa salva, mas não foi possível atualizar as redes dela.')
+      }
+
       router.push('/pessoas')
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
@@ -112,5 +137,24 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
     }
   }
 
-  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+  return {
+    ...form, onSubmit, erroGeral, isLoading, ehEdicao,
+    redesSelecionadas, setRedesSelecionadas,
+  }
+}
+
+/** Diferença entre o que a pessoa já tinha e o que foi selecionado no formulário — só
+ * chama a API para as redes que realmente mudaram (entrar/sair), nunca para as que
+ * permaneceram como estavam. */
+async function sincronizarRedes(pessoaId: string, idsAntes: string[], idsDepois: string[]) {
+  const antesSet = new Set(idsAntes)
+  const depoisSet = new Set(idsDepois)
+
+  const paraAdicionar = idsDepois.filter((id) => !antesSet.has(id))
+  const paraRemover = idsAntes.filter((id) => !depoisSet.has(id))
+
+  await Promise.all([
+    ...paraAdicionar.map((ministerioId) => ministerioService.adicionarMembro(ministerioId, pessoaId)),
+    ...paraRemover.map((ministerioId) => ministerioService.removerMembro(ministerioId, pessoaId)),
+  ])
 }

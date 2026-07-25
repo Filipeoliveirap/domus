@@ -200,7 +200,7 @@ export function ModalInscreverPessoas({
                     <span className={styles.detalhe}>
                       {bloqueado
                         ? 'Já inscrita neste evento'
-                        : (aviso ?? `${rotuloVinculo(p.vinculo)} · ${p.ministerio || 'sem ministério'}`)}
+                        : (aviso ?? rotuloVinculo(p.vinculo))}
                     </span>
                   </span>
                   {aviso && !bloqueado && (

@@ -10,7 +10,6 @@ import { useBairros } from '@/hooks/pessoa/useBairros'
 import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
-import { MinisterioInput } from '@/components/module/pessoas/MinisterioInput'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import styles from './PessoaForm.module.css'
@@ -59,7 +58,6 @@ export function PessoaForm(props: PessoaFormProps) {
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
-  const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const cargoAtual = (watch('cargo') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
@@ -203,13 +201,6 @@ export function PessoaForm(props: PessoaFormProps) {
                 <span className={styles.campoHint}>Opcional</span>
               </div>
             )}
-
-            <div className={styles.ministerioWrap}>
-              <span className={styles.labelMinisterio}>MINISTÉRIO</span>
-              <MinisterioInput id="ministerio" value={ministerioAtual}
-                error={errors.ministerio?.message} registerProps={register('ministerio')}
-                onSelecionarSugestao={(valor) => setValue('ministerio', valor, { shouldValidate: true })} />
-            </div>
 
             <div className={styles.ministerioWrap}>
               <span className={styles.labelMinisterio}>CARGO</span>

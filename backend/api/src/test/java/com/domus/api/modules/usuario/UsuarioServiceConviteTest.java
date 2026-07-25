@@ -38,6 +38,7 @@ class UsuarioServiceConviteTest {
     PasswordResetService passwordResetService;
     EmailService emailService;
     com.domus.api.modules.evento.EventoRepository eventoRepository;
+    UsuarioCapacidadeRepository capacidadeRepository;
     UsuarioService service;
 
     final UUID igrejaId = UUID.randomUUID();
@@ -54,9 +55,10 @@ class UsuarioServiceConviteTest {
         passwordResetService = mock(PasswordResetService.class);
         emailService = mock(EmailService.class);
         eventoRepository = mock(com.domus.api.modules.evento.EventoRepository.class);
+        capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
         service = new UsuarioService(usuarioRepository, igrejaRepository, roleRepository,
                 membroRepository, cacheEvictor, outboxRegistrador, passwordResetService, emailService,
-                eventoRepository);
+                eventoRepository, capacidadeRepository);
 
         Role role = new Role();
         role.setNome("ACESSO_COMUM");

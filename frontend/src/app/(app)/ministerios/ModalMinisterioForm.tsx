@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useCriarMinisterio, useAtualizarMinisterio } from '@/hooks/ministerio/useMinisterioForm'
 import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
+import { Input } from '@/components/common/input/Input'
+import { Button } from '@/components/common/button/Button'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ModalMinisterioForm.module.css'
 
@@ -15,6 +17,7 @@ interface Props {
 // sozinhas (ver Task 9) — este componente só decide fechar o modal em caso de sucesso.
 export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const [nome, setNome] = useState(ministerio?.nome ?? '')
+  const [erro, setErro] = useState<string | undefined>(undefined)
   const criar = useCriarMinisterio()
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
   const salvando = criar.isPending || atualizar.isPending
@@ -38,22 +41,22 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
         <h2 className={styles.titulo}>
           {ministerio ? `Editar ${ROTULO_MINISTERIO.toLowerCase()}` : `Nova ${ROTULO_MINISTERIO.toLowerCase()}`}
         </h2>
-        <label className={styles.label} htmlFor="nome-ministerio">Nome</label>
-        <input
+        <Input
           id="nome-ministerio"
-          className={styles.input}
+          label="Nome"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          error={erro}
           placeholder="Ex.: Louvor"
           autoFocus
         />
         <div className={styles.acoes}>
-          <button type="button" className={styles.botaoSecundario} onClick={onClose} disabled={salvando}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={salvando}>
             Cancelar
-          </button>
-          <button type="button" className={styles.botaoPrimario} disabled={!nome.trim() || salvando} onClick={salvar}>
-            {salvando ? 'Salvando…' : 'Salvar'}
-          </button>
+          </Button>
+          <Button type="button" variant="primary" disabled={!nome.trim() || salvando} isLoading={salvando} loadingText="Salvando…" onClick={salvar}>
+            Salvar
+          </Button>
         </div>
       </div>
     </div>

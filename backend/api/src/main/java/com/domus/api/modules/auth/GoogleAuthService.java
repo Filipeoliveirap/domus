@@ -7,6 +7,8 @@ import com.domus.api.modules.igreja.DadosNovaIgreja;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.igreja.IgrejaService;
 import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.modules.usuario.UsuarioCapacidade;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.security.RefreshTokenService;
@@ -32,6 +34,7 @@ public class GoogleAuthService {
     private final TokenService tokenService;
     private final RefreshTokenService refreshTokenService;
     private final IgrejaService igrejaService;
+    private final UsuarioCapacidadeRepository capacidadeRepository;
 
     public LoginResponseDTO login(String idToken) {
         GoogleIdToken.Payload payload = verificar(idToken);
@@ -78,7 +81,9 @@ public class GoogleAuthService {
                 usuario.getIgreja().getLogoFoto() != null
                         ? usuario.getIgreja().getLogoFoto().getId() : null,
                 token,
-                refreshToken
+                refreshToken,
+                capacidadeRepository.findByUsuarioId(usuario.getId()).stream()
+                        .map(UsuarioCapacidade::getCapacidade).toList()
         );
     }
 

@@ -31,6 +31,8 @@ export interface Sessao {
     igrejaSigla: string | null;
     /** Logo da igreja — exibida no ícone do TopBar no lugar do Church quando existe. */
     igrejaLogoId: string | null;
+    /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
+    capacidadesExtras?: string[];
 }
 
 export interface ForgotPasswordRequest {

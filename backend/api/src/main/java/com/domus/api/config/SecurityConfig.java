@@ -96,24 +96,26 @@ public class SecurityConfig {
                         .hasRole(ADMIN)
 
                         //Pessoas
-                        //Bairros ANTES do curinga: a lista de bairros é derivada do ENDEREÇO
-                        //das pessoas, que é dado só de ADMIN. Deixá-la aberta entregaria pela
-                        //porta lateral exatamente o que o DTO reduzido esconde.
+                        //Bairros: relaxado para qualquer perfil — o endpoint é usado por
+                        //SECRETARIO (formulário de pessoa), não expõe dados sensíveis.
                         .requestMatchers(HttpMethod.GET, "/pessoas/bairros")
-                        .hasRole(ADMIN)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/pessoas/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
+                        // POST/PUT/DELETE: relaxados para qualquer perfil — o controller
+                        // faz a verificação fina com Permissoes + capacidadesExtras
                         .requestMatchers(HttpMethod.POST, "/pessoas/**")
-                        .hasRole(ADMIN)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         //Meu Perfil (self-service) ANTES do curinga: editar a PRÓPRIA pessoa
                         //(nome/foto conforme a capacidade, resolvida no controller/service) é
-                        //de todo perfil; editar a pessoa de OUTRO alguém continua só de ADMIN.
+                        //de todo perfil; editar a pessoa de OUTRO alguém também tem guarda no
+                        //controller (Permissoes.podeGerenciarPessoas).
                         .requestMatchers(HttpMethod.PUT, "/pessoas/me")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.PUT, "/pessoas/**")
-                        .hasRole(ADMIN)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
-                        .hasRole(ADMIN)
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
 
                         //Inscrição em evento — DEVE vir ANTES dos curingas /eventos/**,
@@ -178,16 +180,17 @@ public class SecurityConfig {
                         //então segue a mesma trava do financeiro: só ADMIN_IGREJA.
                         .requestMatchers("/igrejas-vinculadas/**").hasRole(ADMIN)
 
-                        //Financeiro + Dashboard + Admin (somente ADMIN IGREJA)
+                        //Financeiro + Dashboard + Admin — relaxado para qualquer perfil,
+                        //o controller faz a verificação fina com Permissoes + capacidadesExtras.
                         .requestMatchers(
                                 "/movimentacoes/**",
                                 "/categorias/**",
                                 "/relatorios/**",
                                 "/dashboard",
                                 "/admin/**"
-                        ).hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/busca/categorias").hasRole(ADMIN)
+                        ).hasAnyRole(ADMIN, LIDER, COMUM)
+                        .requestMatchers(HttpMethod.GET, "/busca/movimentacoes").hasAnyRole(ADMIN, LIDER, COMUM)
+                        .requestMatchers(HttpMethod.GET, "/busca/categorias").hasAnyRole(ADMIN, LIDER, COMUM)
 
                         //Fotos: qualquer perfil VÊ (avatar aparece em toda tela) e ENVIA —
                         //quem gerencia o que a foto ilustra (pessoa/evento) E quem troca a

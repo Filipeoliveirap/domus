@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
@@ -41,6 +42,7 @@ public class PessoaController {
     @PostMapping
     public ResponseEntity<PessoaResponse> cadastrar(
             @Valid @RequestBody PessoaRequestDTO data) {
+        exigirGestaoPessoas();
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         PessoaResponse response = pessoaService.cadastrarMembro(data, igrejaId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -50,6 +52,7 @@ public class PessoaController {
     public ResponseEntity<PessoaResponse> atualizar(
             @PathVariable UUID id,
             @Valid @RequestBody PessoaRequestDTO data) {
+        exigirGestaoPessoas();
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         return ResponseEntity.ok(pessoaService.atualizarMembro(id, data, igrejaId));
     }
@@ -68,7 +71,16 @@ public class PessoaController {
      * adiantaria: o JSON está a um DevTools de distância.
      */
     private boolean podeVerDadosSensiveis() {
-        return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole());
+        return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras());
+    }
+
+    private void exigirGestaoPessoas() {
+        if (!Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras())) {
+            throw new AccessDeniedException(
+                    "Só um administrador ou secretário pode gerenciar pessoas.");
+        }
     }
 
     /**
@@ -99,7 +111,8 @@ public class PessoaController {
         UUID pessoaId = usuarioAutenticado.getPessoaId();
 
         PessoaResponse resposta;
-        if (Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole())) {
+        if (Permissoes.podeGerenciarPessoas(usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras())) {
             PessoaResponse pessoaAtual = pessoaService.buscarPorId(pessoaId, igrejaId, true);
             PessoaRequestDTO dataComEmailImutavel = new PessoaRequestDTO(
                     data.nome(),
@@ -125,6 +138,7 @@ public class PessoaController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
+        exigirGestaoPessoas();
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         pessoaService.arquivarMembro(id, igrejaId);
         return ResponseEntity.noContent().build();

@@ -18,7 +18,8 @@ export default function EditarPessoaPage() {
   const id = params.id as string
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeGerenciarPessoas(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeGerenciarPessoas(role, capacidadesExtras)
 
   const { data: pessoa, isLoading: carregando, isError, refetch } = usePessoa(id)
   const form = usePessoaForm({ pessoaId: id, pessoaInicial: pessoa })

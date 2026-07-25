@@ -132,6 +132,6 @@ public class AuthenticationController {
 
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
         return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
-                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId());
+                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId(), r.capacidadesExtras());
     }
 }

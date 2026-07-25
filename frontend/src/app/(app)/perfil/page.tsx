@@ -13,7 +13,6 @@ import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
-import { MinisterioInput } from '@/components/module/pessoas/MinisterioInput'
 import { Button } from '@/components/common/button/Button'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { useBairros } from '@/hooks/pessoa/useBairros'
@@ -55,7 +54,6 @@ export default function PerfilPage() {
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
-  const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
@@ -199,17 +197,6 @@ export default function PerfilPage() {
               <span className={styles.campoHint}>Opcional</span>
             </div>
           )}
-
-          <div className={styles.ministerioWrap}>
-            <span className={styles.labelMinisterio}>MINISTÉRIO</span>
-            <MinisterioInput id="ministerio" value={ministerioAtual}
-              error={errors.ministerio?.message}
-              registerProps={{ ...register('ministerio'), disabled: !podeEditarTudo }}
-              onSelecionarSugestao={(valor) => {
-                if (!podeEditarTudo) return
-                setValue('ministerio', valor, { shouldValidate: true })
-              }} />
-          </div>
 
           <div className={styles.ministerioWrap}>
             <span className={styles.labelMinisterio}>CARGO</span>

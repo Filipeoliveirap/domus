@@ -153,6 +153,19 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
+.chipsMinisterio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+  border-radius: var(--radius-full, 999px);
+  padding: 4px 10px;
+}
 
 /* Bloco de destaque (endereço, observações) */
 .bloco {

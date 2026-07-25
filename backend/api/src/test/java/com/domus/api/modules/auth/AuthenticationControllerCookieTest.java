@@ -46,7 +46,7 @@ class AuthenticationControllerCookieTest {
 
         when(authService.login(entrada)).thenReturn(new LoginResponseDTO(
                 id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", null, null, null, null,
-                "jwt-abc", "refresh-xyz"));
+                "jwt-abc", "refresh-xyz", List.of()));
 
         ResponseEntity<SessaoDTO> resposta = controller().login(entrada);
 
@@ -70,7 +70,7 @@ class AuthenticationControllerCookieTest {
         UUID id = UUID.randomUUID();
         when(googleAuthService.login("id-token-do-google")).thenReturn(new LoginResponseDTO(
                 id, "Bia", "ACESSO_COMUM", UUID.randomUUID(), "Igreja Central", null, null, null, null,
-                "jwt-g", "refresh-g"));
+                "jwt-g", "refresh-g", List.of()));
 
         ResponseEntity<SessaoDTO> resposta =
                 controller().googleLogin(new GoogleLoginDTO("id-token-do-google"));

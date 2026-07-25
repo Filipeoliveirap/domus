@@ -3,6 +3,7 @@ package com.domus.api.modules.auth;
 import com.domus.api.config.TokenService;
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.usuario.Usuario;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.security.LoginAttemptService;
@@ -24,6 +25,7 @@ class AuthServiceContaSemSenhaTest {
     RefreshTokenService refreshTokenService;
     LoginAttemptService loginAttemptService;
     UsuarioRepository usuarioRepository;
+    UsuarioCapacidadeRepository capacidadeRepository;
     PasswordEncoder passwordEncoder;
     AuthService service;
 
@@ -35,8 +37,9 @@ class AuthServiceContaSemSenhaTest {
         loginAttemptService = mock(LoginAttemptService.class);
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
+        capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
         service = new AuthService(authenticationManager, tokenService, refreshTokenService,
-                loginAttemptService, usuarioRepository, passwordEncoder);
+                loginAttemptService, usuarioRepository, passwordEncoder, capacidadeRepository);
     }
 
     @Test

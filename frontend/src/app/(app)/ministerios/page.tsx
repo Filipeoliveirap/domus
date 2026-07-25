@@ -1,0 +1,98 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { Pencil, Archive, Users, Crown } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
+import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
+import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { ModalMinisterioForm } from './ModalMinisterioForm'
+import { ModalArquivarMinisterio } from './ModalArquivarMinisterio'
+import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import type { MinisterioResponse } from '@/types/ministerio.type'
+import styles from './ministerios.module.css'
+
+// Rótulo de líder(es) do card — nome do líder + contagem de membros no próprio card,
+// sem precisar abrir o detalhe. Sem líder ainda = "Sem líder".
+function rotuloLideres(lideres: string[]): string {
+  if (lideres.length === 0) return 'Sem líder'
+  if (lideres.length === 1) return lideres[0]
+  return `${lideres[0]} +${lideres.length - 1}`
+}
+
+export default function MinisteriosPage() {
+  const role = useAuthStore((s) => s.role)
+  const hidratado = useAuthStore((s) => s.hidratado)
+  const podeGerenciar = podeGerenciarCadastroMinisterios(role)
+
+  const { data: ministerios = [], isLoading } = useMinisterios()
+  // `null` = fechado; `'novo'` = criar; objeto = editar (mesma convenção de /eventos/locais).
+  const [formAberto, setFormAberto] = useState<'novo' | MinisterioResponse | null>(null)
+  const [arquivando, setArquivando] = useState<MinisterioResponse | null>(null)
+
+  if (!hidratado || isLoading) {
+    return <div className={styles.pagina} />
+  }
+
+  return (
+    <div className={styles.pagina}>
+      <header className={styles.cabecalho}>
+        <div>
+          <h1 className={styles.titulo}>{ROTULO_MINISTERIO_PLURAL}</h1>
+          <p className={styles.subtitulo}>{ROTULO_MINISTERIO_PLURAL} da igreja e quem participa de cada uma</p>
+        </div>
+        {podeGerenciar && (
+          <button type="button" className={styles.botaoPrimario} onClick={() => setFormAberto('novo')}>
+            Nova {ROTULO_MINISTERIO.toLowerCase()}
+          </button>
+        )}
+      </header>
+
+      {ministerios.length === 0 ? (
+        <EstadoVazio
+          icone={Users}
+          titulo={`Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} cadastrada`}
+          mensagem={podeGerenciar
+            ? `Cadastre a primeira ${ROTULO_MINISTERIO.toLowerCase()} da igreja.`
+            : `Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} foi cadastrada ainda.`}
+          acaoPrimaria={podeGerenciar ? { label: `Nova ${ROTULO_MINISTERIO.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined}
+        />
+      ) : (
+        <div className={styles.grade}>
+          {ministerios.map((ministerio) => {
+            const acoes: ItemAcao[] = [
+              { label: 'Editar', icone: Pencil, onClick: () => setFormAberto(ministerio) },
+              { label: 'Arquivar', icone: Archive, onClick: () => setArquivando(ministerio), perigo: true, separadorAntes: true },
+            ]
+            return (
+              <div key={ministerio.id} className={styles.card}>
+                <div className={styles.cardTopo}>
+                  <Link href={`/ministerios/${ministerio.id}`} className={styles.cardTitulo}>
+                    {ministerio.nome}
+                  </Link>
+                  {podeGerenciar && <MenuAcoes itens={acoes} />}
+                </div>
+                <div className={styles.cardLider}>
+                  <Crown size={14} />
+                  <span>{rotuloLideres(ministerio.lideres)}</span>
+                </div>
+                <div className={styles.cardMembros}>
+                  {ministerio.totalMembros} {ministerio.totalMembros === 1 ? 'membro' : 'membros'}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {formAberto && (
+        <ModalMinisterioForm ministerio={formAberto === 'novo' ? null : formAberto} onClose={() => setFormAberto(null)} />
+      )}
+      {arquivando && (
+        <ModalArquivarMinisterio ministerio={arquivando} onClose={() => setArquivando(null)} />
+      )}
+    </div>
+  )
+}

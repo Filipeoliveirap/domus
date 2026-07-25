@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { ministerioService } from '@/services/ministerio.service'
+import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
 import type { ApiError } from '@/types/api.types'
 
 function mensagemErro(error: unknown, fallback: string): string {
@@ -15,7 +16,7 @@ export function useAdicionarMembro(ministerioId: string) {
     mutationFn: (pessoaId: string) => ministerioService.adicionarMembro(ministerioId, pessoaId),
     onSuccess: () => {
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Pessoa adicionada ao ministério.')
+      notificar.sucesso(`Pessoa adicionada à ${ROTULO_MINISTERIO.toLowerCase()}.`)
     },
     onError: (error: unknown) => notificar.erro('Não foi possível adicionar a pessoa', mensagemErro(error, 'Tente novamente.')),
   })

@@ -511,4 +511,14 @@ Quando abrir para outras igrejas (Fase 5): trocar a constante hardcoded por uma 
 igreja (ex.: `igreja.rotuloMinisterio` + gênero), com um passo de onboarding perguntando
 "como sua igreja chama isso: Ministério, Departamento, Rede...?". Provável que o mesmo
 padrão sirva pra "congregação/unidade/campus" (ver `igrejas-vinculadas`), então vale
-desenhar as duas configs juntas nessa hora, não uma de cada vez.
+desenhar as duas configs juntas nessa hora, não uma de cada vez. O mesmo raciocínio vale
+pra "Célula" (spec `2026-07-25-celulas-design.md`) quando esse módulo existir.
+
+### Endereço do encontro da célula (2026-07-25)
+
+Spec de Células (`2026-07-25-celulas-design.md`) deixou de fora um campo de endereço de
+onde a célula se reúne, porque na prática varia semana a semana (ex.: "essa semana é na
+casa do Fulano"). Se o uso real pedir, vale pensar num histórico de local por encontro
+(não um endereço fixo na célula), talvez até junto de uma feature de registro de
+encontros/presença — não construir um campo fixo simples, já sabendo que não reflete a
+realidade.

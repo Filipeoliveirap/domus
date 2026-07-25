@@ -32,3 +32,4 @@ export const podeVerFinanceiro = (r: Role | null | undefined) => tem(r, SO_ADMIN
 // a página `/usuarios` fazia a comparação direta — sem capacidade nomeada ela
 // ficaria escondida do grep de auditoria.
 export const podeGerenciarUsuarios = (r: Role | null | undefined) => tem(r, SO_ADMIN)
+export const podeGerenciarCadastroMinisterios = (r: Role | null | undefined) => tem(r, SO_ADMIN)

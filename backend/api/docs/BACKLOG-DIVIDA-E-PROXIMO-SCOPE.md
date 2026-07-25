@@ -522,3 +522,22 @@ casa do Fulano"). Se o uso real pedir, vale pensar num histórico de local por e
 (não um endereço fixo na célula), talvez até junto de uma feature de registro de
 encontros/presença — não construir um campo fixo simples, já sabendo que não reflete a
 realidade.
+
+### Busca global (Elasticsearch) precisa acompanhar Visitantes/Células (2026-07-25)
+
+Os specs `2026-07-25-visitantes-design.md` e `2026-07-25-celulas-design.md` não
+mencionam a busca global unificada (Elasticsearch, `busca/` — o mesmo mecanismo que já
+indexa pessoa/evento/movimentação via *transactional outbox*). Pendência a resolver
+depois que os dois módulos estiverem implementados:
+
+- **Visitante**: provavelmente precisa entrar no índice (buscar visitante pelo nome na
+  busca global), com o mesmo cuidado de permissão que já existe pra financeiro/usuários
+  (`podeVerUsuariosEFinanceiroNaBuscaGlobal`) — decidir quem pode ver visitante na busca
+  (`ADMIN_IGREJA` e `SECRETARIO`, pelo spec de capacidades extra).
+- **Célula**: decidir se célula em si é uma entidade buscável (como `ministerio` deveria
+  ser, verificar se já está) ou só aparece indiretamente via pessoa/visitante.
+- Conferir se `ministerio` (Redes) já está indexado na busca global — se não estiver,
+  é a mesma pendência, só que já existente antes destes três specs.
+- Lembrar do outbox: toda entidade nova que entra na busca precisa emitir evento pro
+  outbox nas operações de criar/atualizar/arquivar (mesmo padrão de pessoa/evento),
+  senão o índice fica desatualizado silenciosamente.

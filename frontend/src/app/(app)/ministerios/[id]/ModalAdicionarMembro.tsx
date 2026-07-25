@@ -7,6 +7,8 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useAdicionarMembro } from '@/hooks/ministerio/useMembroMinisterio'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
+import { Input } from '@/components/common/input/Input'
+import { Button } from '@/components/common/button/Button'
 import styles from './detalhe.module.css'
 
 interface Props {
@@ -45,16 +47,27 @@ export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.buscaWrap}>
-          <Search size={18} />
-          <input
+          <Input
             ref={inputRef}
+            id="busca-membro-ministerio"
             autoFocus
-            className={styles.buscaInput}
             placeholder="Buscar pessoa por nome"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
+            leftIcon={<Search size={18} />}
+            rightElement={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                aria-label="Fechar"
+                className={styles.botaoFechar}
+              >
+                <X size={18} />
+              </Button>
+            }
           />
-          <button type="button" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
         </div>
         <ul className={styles.listaResultados}>
           {resultados.map((pessoa) => (

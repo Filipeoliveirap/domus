@@ -6,8 +6,10 @@ import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoServ
 import com.domus.api.modules.pessoa.busca.BuscaPessoaService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
+import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +26,14 @@ public class BuscaController {
     private final BuscaMovimentacaoService buscaMovimentacaoService;
     private final BuscaCategoriaService buscaCategoriaService;
     private final BuscaGlobalService buscaGlobalService;
+
+    private void exigirFinanceiro() {
+        if (!Permissoes.podeVerFinanceiro(usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras())) {
+            throw new AccessDeniedException(
+                    "Só um administrador ou tesoureiro pode acessar o financeiro.");
+        }
+    }
 
     @GetMapping("/pessoas")
     public List<ResultadoBusca> buscarMembros(@RequestParam String q) {
@@ -51,6 +61,7 @@ public class BuscaController {
 
     @GetMapping("/movimentacoes")
     public List<ResultadoBusca> buscarMovimentacoes(@RequestParam String q) {
+        exigirFinanceiro();
         if (q == null || q.isBlank()) {
             return List.of();
         }
@@ -59,6 +70,7 @@ public class BuscaController {
 
     @GetMapping("/categorias")
     public List<ResultadoBusca> buscarCategorias(@RequestParam String q) {
+        exigirFinanceiro();
         if (q == null || q.isBlank()) {
             return List.of();
         }
@@ -73,7 +85,8 @@ public class BuscaController {
         return buscaGlobalService.buscar(
                 q.trim(),
                 usuarioAutenticado.getIgrejaId(),
-                usuarioAutenticado.getRole()
+                usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras()
         );
     }
 }

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Perfil;
@@ -42,6 +43,7 @@ public class UsuarioService {
     private final PasswordResetService passwordResetService;
     private final EmailService emailService;
     private final com.domus.api.modules.evento.EventoRepository eventoRepository;
+    private final UsuarioCapacidadeRepository capacidadeRepository;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -217,7 +219,10 @@ public class UsuarioService {
     @Transactional(readOnly = true)
     public PagedResponse<UsuarioResponseDTO> listar(UUID igrejaId, String q, Pageable pageable) {
         Page<UsuarioResponseDTO> pagina = usuarioRepository.buscarPorIgreja(igrejaId, q, pageable);
-        return PagedResponse.from(pagina);
+        List<UsuarioResponseDTO> enriquecido = pagina.getContent().stream()
+                .map(this::enriquecerComCapacidades).toList();
+        return new PagedResponse<>(enriquecido, pagina.getNumber(), pagina.getSize(),
+                pagina.getTotalElements(), pagina.getTotalPages(), pagina.isLast());
     }
 
 
@@ -288,7 +293,15 @@ public class UsuarioService {
     public UsuarioResponseDTO buscarPorId(UUID id, UUID igrejaId) {
         Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
-        return UsuarioResponseDTO.from(usuario);
+        return enriquecerComCapacidades(UsuarioResponseDTO.from(usuario));
+    }
+
+    private UsuarioResponseDTO enriquecerComCapacidades(UsuarioResponseDTO dto) {
+        List<String> capacidades = capacidadeRepository.findByUsuarioId(dto.id())
+                .stream().map(UsuarioCapacidade::getCapacidade).toList();
+        return new UsuarioResponseDTO(dto.id(), dto.nome(), dto.email(), dto.role(),
+                dto.ativo(), dto.ultimoLoginEm(), dto.convitePendente(), dto.criadoEm(),
+                dto.fotoId(), capacidades);
     }
 
     @Transactional
@@ -350,5 +363,26 @@ public class UsuarioService {
         });
     }
 
+    @Transactional
+    public void concederCapacidade(UUID id, String capacidade, UUID igrejaId, UUID concedidoPorId) {
+        usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
+        if (capacidadeRepository.existsByUsuarioIdAndCapacidade(id, capacidade)) return;
+
+        capacidadeRepository.save(UsuarioCapacidade.builder()
+                .usuarioId(id).capacidade(capacidade).concedidoPorUsuarioId(concedidoPorId).build());
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        log.info("Capacidade concedida. usuario_id={}, capacidade={}", id, capacidade);
+    }
+
+    @Transactional
+    public void revogarCapacidade(UUID id, String capacidade, UUID igrejaId) {
+        usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        capacidadeRepository.deleteByUsuarioIdAndCapacidade(id, capacidade);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        log.info("Capacidade revogada. usuario_id={}, capacidade={}", id, capacidade);
+    }
 }

@@ -19,7 +19,8 @@ export default function EditarMovimentacaoPage() {
   const id = params.id as string
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
   const { data: movimentacao, isPending, isError, refetch } = useMovimentacao(id)
   const form = useMovimentacaoForm({

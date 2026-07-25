@@ -38,7 +38,7 @@ public class BuscaPessoaService {
         Query fuzzyOutros = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("email^2", "ministerio", "cargo")
+                        .fields("email^2", "cargo")
                         .fuzziness("AUTO")
                 )
         );
@@ -46,7 +46,7 @@ public class BuscaPessoaService {
         Query prefixo = Query.of(q -> q
                 .multiMatch(m -> m
                         .query(termo)
-                        .fields("nome^3", "email^2", "telefone", "ministerio", "cargo")
+                        .fields("nome^3", "email^2", "telefone", "cargo")
                         .type(co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BoolPrefix)
                         .boost(2.0f)
                 )
@@ -76,7 +76,7 @@ public class BuscaPessoaService {
                             doc.getId(),
                             TipoEntidadeOutbox.PESSOA,
                             doc.getNome(),
-                            doc.getEmail() != null ? doc.getEmail() : doc.getMinisterio()
+                            doc.getEmail() != null ? doc.getEmail() : doc.getCargo()
                     );
                 })
                 .toList();

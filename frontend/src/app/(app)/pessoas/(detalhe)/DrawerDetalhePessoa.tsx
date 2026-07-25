@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
+import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
+import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData,
   formatarTelefoneExibicao, rotuloEstadoCivil, formatarDataNascimento, formatarEndereco,
@@ -20,6 +22,7 @@ interface DrawerDetalhePessoaProps {
 
 export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaProps) {
   const { data: pessoa, isPending, isError, refetch } = usePessoa(pessoaId)
+  const { data: ministerios = [] } = usePessoaMinisterios(pessoaId)
   const [ampliada, setAmpliada] = useState(false)
 
   useEffect(() => {
@@ -115,15 +118,21 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
                   </div>
                 )}
 
-                {pessoa.ministerio && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoIcone}><Church size={18} /></span>
-                    <div>
-                      <p className={styles.infoLabel}>Ministério</p>
-                      <p className={styles.infoValor}>{pessoa.ministerio}</p>
-                    </div>
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><Church size={18} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>{ROTULO_MINISTERIO_PLURAL}</p>
+                    {ministerios.length === 0 ? (
+                      <p className={styles.infoValor}>Nenhuma</p>
+                    ) : (
+                      <div className={styles.chipsMinisterio}>
+                        {ministerios.map((m) => (
+                          <span key={m.id} className={styles.chip}>{m.nome}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {pessoa.cargo && (
                   <div className={styles.infoItem}>

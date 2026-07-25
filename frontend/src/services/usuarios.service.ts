@@ -32,5 +32,11 @@ export const usuarioService = {
 
     arquivarUsuario: (id: string): Promise<void> =>
         api.delete(Endpoints.usuarios.BY_ID(id)).then(() => undefined),
+
+    concederCapacidade: (id: string, capacidade: string): Promise<void> =>
+        api.post(Endpoints.usuarios.CAPACIDADE(id), { capacidade }).then(() => undefined),
+
+    revogarCapacidade: (id: string, capacidade: string): Promise<void> =>
+        api.delete(Endpoints.usuarios.CAPACIDADE_ESPECIFICA(id, capacidade)).then(() => undefined),
 }   
 

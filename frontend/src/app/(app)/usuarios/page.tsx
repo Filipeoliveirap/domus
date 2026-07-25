@@ -124,7 +124,10 @@ function UsuariosConteudo() {
 
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>Usuários</h1>
+          <div className={styles.tituloLinha}>
+            <h1 className={styles.titulo}>Usuários</h1>
+            {totalElementos > 0 && <span className={styles.contador}>{totalElementos}</span>}
+          </div>
           <p className={styles.subtitulo}>Pessoas com acesso ao sistema</p>
         </div>
       </header>
@@ -197,6 +200,11 @@ function UsuariosConteudo() {
                       <span className={`${styles.badgeRole} ${styles[varianteRole(u.role)]}`}>
                         {rotuloRole(u.role)}
                       </span>
+                      {u.capacidadesExtras?.map(c => (
+                        <span key={c} className={styles.badgeCapacidade}>
+                          {c === 'SECRETARIO' ? 'Secretário' : 'Tesoureiro'}
+                        </span>
+                      ))}
                     </td>
                     <td>
                       {u.convitePendente ? (

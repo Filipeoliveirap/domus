@@ -13,7 +13,6 @@ import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
-import { MinisterioInput } from '@/components/module/pessoas/MinisterioInput'
 import { Button } from '@/components/common/button/Button'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { useBairros } from '@/hooks/pessoa/useBairros'
@@ -44,18 +43,18 @@ const UF_OPTIONS = [
 
 export default function PerfilPage() {
   const role = useAuthStore((s) => s.role)
-  const podeEditarTudo = podeGerenciarPessoas(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const podeEditarTudo = podeGerenciarPessoas(role, capacidadesExtras)
 
   const { data: pessoa, isLoading: carregando } = useMinhaPessoa()
   const {
     register, handleSubmit, setValue, watch,
-    formState: { errors },
+    formState: { errors, dirtyFields },
     erroGeral, isLoading, onSubmit,
   } = usePerfilForm(pessoa)
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
-  const ministerioAtual = (watch('ministerio') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
@@ -201,17 +200,6 @@ export default function PerfilPage() {
           )}
 
           <div className={styles.ministerioWrap}>
-            <span className={styles.labelMinisterio}>MINISTÉRIO</span>
-            <MinisterioInput id="ministerio" value={ministerioAtual}
-              error={errors.ministerio?.message}
-              registerProps={{ ...register('ministerio'), disabled: !podeEditarTudo }}
-              onSelecionarSugestao={(valor) => {
-                if (!podeEditarTudo) return
-                setValue('ministerio', valor, { shouldValidate: true })
-              }} />
-          </div>
-
-          <div className={styles.ministerioWrap}>
             <span className={styles.labelMinisterio}>CARGO</span>
             <Input id="cargo" placeholder="Ex: Pastor, Missionário, Secretário…"
               error={errors.cargo?.message} disabled={!podeEditarTudo}
@@ -234,12 +222,10 @@ export default function PerfilPage() {
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
-        {/* O botão vale para todos: quem não edita os campos ainda precisa dele para
-            persistir a troca de FOTO (o UploadFoto só devolve o id; quem grava o
-            fotoId na pessoa é o submit). O backend é quem aceita só a foto de quem
-            não pode editar o resto. */}
-        <Button type="submit" variant="primary" isLoading={isLoading} disabled={isLoading}>
-          Salvar alterações
+        {/* Só habilita quando pode editar tudo OU a foto foi alterada. */}
+        <Button type="submit" variant="primary" isLoading={isLoading}
+          disabled={isLoading || (!podeEditarTudo && !dirtyFields.fotoId)}>
+          {podeEditarTudo ? 'Salvar alterações' : 'Salvar foto'}
         </Button>
       </form>
 

@@ -71,7 +71,8 @@ export default function RelatoriosPage() {
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
   const periodo: PeriodoRelatorio =
     custom && dataInicio && dataFim

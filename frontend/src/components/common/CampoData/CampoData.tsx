@@ -122,7 +122,7 @@ export function CampoData({
           min={min}
           max={max}
           onChange={(e) => {
-            setTextoLocal(null)
+            setTextoLocal(isoParaBR(e.target.value))
             onChange(e.target.value)
           }}
         />

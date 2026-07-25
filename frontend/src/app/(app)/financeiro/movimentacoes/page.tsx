@@ -54,7 +54,8 @@ function MovimentacoesConteudo() {
   const detalheId = searchParams.get('detalhe')
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeVerFinanceiro(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
   const { filtros, setFiltro, setFiltros } = useFiltrosUrl({
     tipo: '',

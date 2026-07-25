@@ -1,0 +1,40 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+.breadcrumbLink {
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+}
+.breadcrumbSep {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+.breadcrumbAtual {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-dark);
+}
+
+.subtitulo {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  max-width: 600px;
+}

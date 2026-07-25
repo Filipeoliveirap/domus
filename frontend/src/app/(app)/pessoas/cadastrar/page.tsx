@@ -12,7 +12,8 @@ import { podeGerenciarPessoas } from '@/lib/permissoes'
 export default function CadastrarPessoaPage() {
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
-  const autorizado = podeGerenciarPessoas(role)
+  const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const autorizado = podeGerenciarPessoas(role, capacidadesExtras)
 
   const form = useCadastrarPessoa()
 

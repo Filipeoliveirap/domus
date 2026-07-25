@@ -189,6 +189,86 @@
   color: var(--color-text-secondary);
 }
 
+/* ─── Redes ──────────────────────────────────────────────── */
+.redesWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.labelRedes {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.redesVazio {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+.redesLink {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+.redesChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.redeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-table-head);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+.redeChipRemover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.redeChipRemover:hover {
+  background: var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+.redesResultados {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+.redeResultado {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.redeResultado:hover,
+.redeResultado:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
 /* ─── Batismo ─────────────────────────────────────────────── */
 .batismoWrap {
   display: flex;

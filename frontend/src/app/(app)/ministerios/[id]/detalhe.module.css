@@ -1,4 +1,12 @@
 .pagina { padding: 1.5rem; min-width: 0; }
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--font-size-sm); margin-bottom: 1rem; flex-wrap: wrap;
+}
+.breadcrumbLink { color: var(--color-text-muted); transition: color var(--transition-fast); }
+.breadcrumbLink:hover { color: var(--color-text-primary); }
+.breadcrumbSep { color: var(--color-text-muted); opacity: 0.6; }
+.breadcrumbAtual { color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
 .cabecalho {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
@@ -10,8 +18,12 @@
 .itemMembro {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem;
   border: 1px solid #e5e7eb; border-radius: 0.5rem; min-width: 0; flex-wrap: wrap;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
-.nomeMembro { flex: 1; min-width: 0; }
+.itemMembro:hover { background-color: var(--color-bg-table-head); }
+.nomeMembro { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.estrela { color: var(--color-primary); fill: var(--color-primary); flex-shrink: 0; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 .avatarIniciais {
   width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb;

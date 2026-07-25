@@ -4,6 +4,7 @@ package com.domus.api.modules.usuario.DTO;
 import com.domus.api.modules.usuario.Usuario;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record UsuarioResponseDTO(
@@ -17,17 +18,19 @@ public record UsuarioResponseDTO(
         // (nem nativo nem Google). Derivado de ultimoLoginEm == null.
         boolean convitePendente,
         LocalDateTime criadoEm,
-        UUID fotoId
+        UUID fotoId,
+        /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
+        List<String> capacidadesExtras
 ) {
     /**
      * Construtor "de projeção", usado pela query JPQL de {@code UsuarioRepository.buscarPorIgreja}
      * (constructor expression) — recebe o {@code fotoId} já resolvido pela FK, sem passar pela
      * associação LAZY {@code Pessoa.foto}. {@code convitePendente} continua derivado aqui, não
-     * na query, pra não duplicar a regra.
+     * na query, pra não duplicar a regra. Capacidades extras são carregadas separadamente.
      */
     public UsuarioResponseDTO(UUID id, String nome, String email, String role, boolean ativo,
                               LocalDateTime ultimoLoginEm, LocalDateTime criadoEm, UUID fotoId) {
-        this(id, nome, email, role, ativo, ultimoLoginEm, ultimoLoginEm == null, criadoEm, fotoId);
+        this(id, nome, email, role, ativo, ultimoLoginEm, ultimoLoginEm == null, criadoEm, fotoId, List.of());
     }
 
     /**
@@ -47,7 +50,8 @@ public record UsuarioResponseDTO(
                 u.getUltimoLoginEm(),
                 u.getUltimoLoginEm() == null,
                 u.getCreatedAt(),
-                u.getPessoa().getFoto() != null ? u.getPessoa().getFoto().getId() : null
+                u.getPessoa().getFoto() != null ? u.getPessoa().getFoto().getId() : null,
+                List.of()
         );
     }
 }

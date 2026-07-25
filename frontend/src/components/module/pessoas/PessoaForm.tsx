@@ -11,6 +11,7 @@ import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { SeletorRedes } from './SeletorRedes'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import styles from './PessoaForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -47,6 +48,8 @@ type PessoaFormProps = UseFormReturn<PessoaFormInput, unknown, PessoaFormData> &
   isLoading: boolean
   ehEdicao: boolean
   onSubmit: (data: PessoaFormData) => void
+  redesSelecionadas: Set<string>
+  setRedesSelecionadas: (redes: Set<string>) => void
 }
 
 export function PessoaForm(props: PessoaFormProps) {
@@ -54,6 +57,7 @@ export function PessoaForm(props: PessoaFormProps) {
     register, handleSubmit, setValue, watch,
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao,
+    redesSelecionadas, setRedesSelecionadas,
   } = props
 
   const vinculoAtual = watch('vinculo')
@@ -207,6 +211,8 @@ export function PessoaForm(props: PessoaFormProps) {
               <Input id="cargo" placeholder="Ex: Pastor, Missionário, Secretário…"
                 error={errors.cargo?.message} {...register('cargo')} />
             </div>
+
+            <SeletorRedes selecionadas={redesSelecionadas} onChange={setRedesSelecionadas} />
 
             <div className={styles.infoBox}>
               <Info size={18} className={styles.infoIcon} />

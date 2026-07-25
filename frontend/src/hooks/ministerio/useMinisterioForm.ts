@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { ministerioService } from '@/services/ministerio.service'
+import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
 import type { MinisterioRequest } from '@/types/ministerio.type'
 import type { ApiError } from '@/types/api.types'
 
@@ -16,9 +17,9 @@ export function useCriarMinisterio() {
     mutationFn: (data: MinisterioRequest) => ministerioService.criar(data),
     onSuccess: () => {
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Ministério criado.')
+      notificar.sucesso(`${ROTULO_MINISTERIO} criada.`)
     },
-    onError: (error: unknown) => notificar.erro('Não foi possível criar o ministério', mensagemErro(error, 'Tente novamente.')),
+    onError: (error: unknown) => notificar.erro(`Não foi possível criar a ${ROTULO_MINISTERIO.toLowerCase()}`, mensagemErro(error, 'Tente novamente.')),
   })
 }
 
@@ -28,9 +29,9 @@ export function useAtualizarMinisterio(id: string) {
     mutationFn: (data: MinisterioRequest) => ministerioService.atualizar(id, data),
     onSuccess: () => {
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Ministério atualizado.')
+      notificar.sucesso(`${ROTULO_MINISTERIO} atualizada.`)
     },
-    onError: (error: unknown) => notificar.erro('Não foi possível atualizar o ministério', mensagemErro(error, 'Tente novamente.')),
+    onError: (error: unknown) => notificar.erro(`Não foi possível atualizar a ${ROTULO_MINISTERIO.toLowerCase()}`, mensagemErro(error, 'Tente novamente.')),
   })
 }
 
@@ -40,8 +41,8 @@ export function useArquivarMinisterio() {
     mutationFn: (id: string) => ministerioService.arquivar(id),
     onSuccess: () => {
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Ministério arquivado.')
+      notificar.sucesso(`${ROTULO_MINISTERIO} arquivada.`)
     },
-    onError: (error: unknown) => notificar.erro('Não foi possível arquivar o ministério', mensagemErro(error, 'Tente novamente.')),
+    onError: (error: unknown) => notificar.erro(`Não foi possível arquivar a ${ROTULO_MINISTERIO.toLowerCase()}`, mensagemErro(error, 'Tente novamente.')),
   })
 }

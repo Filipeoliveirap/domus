@@ -1,5 +1,6 @@
 package com.domus.api.modules.pessoa;
 
+import com.domus.api.modules.ministerio.MinisterioService;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;
@@ -31,6 +32,9 @@ class PessoaControllerAtualizarMeTest {
     @Mock
     private UsuarioAutenticado usuarioAutenticado;
 
+    @Mock
+    private MinisterioService ministerioService;
+
     @Test
     void atualizarMe_admin_ignoraEmailDoPayloadEMantemOJaPersistido() {
         UUID igrejaId = UUID.randomUUID();
@@ -50,7 +54,7 @@ class PessoaControllerAtualizarMeTest {
         when(pessoaService.atualizarMembro(eq(pessoaId), any(PessoaRequestDTO.class), eq(igrejaId)))
                 .thenReturn(respostaEsperada);
 
-        PessoaController controller = new PessoaController(pessoaService, usuarioAutenticado);
+        PessoaController controller = new PessoaController(pessoaService, usuarioAutenticado, ministerioService);
 
         PessoaRequestDTO payloadComEmailMalicioso = new PessoaRequestDTO(
                 "Fulano", "email.trocado@fora.com", "11999999999", null, null,

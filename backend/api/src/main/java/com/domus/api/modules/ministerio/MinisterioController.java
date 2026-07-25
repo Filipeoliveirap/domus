@@ -72,7 +72,7 @@ public class MinisterioController {
     public ResponseEntity<Void> atualizarPapel(@PathVariable UUID id, @PathVariable UUID pessoaId,
                                                 @Valid @RequestBody AtualizarPapelRequest data) {
         exigirAdmin();
-        ministerioService.atualizarPapel(id, pessoaId, data, usuarioAutenticado.getIgrejaId(), true);
+        ministerioService.atualizarPapel(id, pessoaId, data, usuarioAutenticado.getIgrejaId(), souAdmin());
         return ResponseEntity.noContent().build();
     }
 
@@ -97,7 +97,7 @@ public class MinisterioController {
     }
 
     private boolean souAdmin() {
-        return "ADMIN_IGREJA".equals(usuarioAutenticado.getRole());
+        return Permissoes.podeGerenciarCadastroMinisterios(usuarioAutenticado.getRole());
     }
 
     private void exigirAdmin() {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star } from 'lucide-react'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
@@ -35,6 +35,7 @@ export default function MinisterioDetalhePage() {
 
   const [adicionarAberto, setAdicionarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
   if (isLoading || !ministerio) {
     return (
@@ -71,7 +72,19 @@ export default function MinisterioDetalhePage() {
       </nav>
 
       <header className={styles.cabecalho}>
-        <h1 className={styles.titulo}>{ministerio.nome}</h1>
+        <div className={styles.fotoDetalhe}>
+          {ministerio.fotoId ? (
+            <img src={urlFoto(ministerio.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg}
+              onClick={() => setFotoVisualizando(ministerio.fotoId)} />
+          ) : (
+            <div className={styles.fotoDetalheFallback}>
+              <Users size={32} />
+            </div>
+          )}
+        </div>
+        <div>
+          <h1 className={styles.titulo}>{ministerio.nome}</h1>
+        </div>
         {podeGerenciarMembros && (
           <button type="button" className={styles.botaoPrimario} onClick={() => setAdicionarAberto(true)}>
             <UserPlus size={16} /> Adicionar pessoa
@@ -122,7 +135,8 @@ export default function MinisterioDetalhePage() {
               >
                 {urlFoto(membro.fotoId, 'THUMB') ? (
                   // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                  <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar} />
+                  <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
+                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
                 ) : (
                   <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
                 )}
@@ -163,6 +177,16 @@ export default function MinisterioDetalhePage() {
       )}
       {pessoaDetalheId && (
         <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
+      )}
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <XIcon size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
+          </div>
+        </div>
       )}
     </div>
   )

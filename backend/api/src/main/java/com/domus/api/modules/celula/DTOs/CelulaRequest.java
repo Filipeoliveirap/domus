@@ -5,9 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 public record CelulaRequest(
         @NotBlank @Size(max = 150) String nome,
         DiaSemana diaSemana,
-        String horario
+        String horario,
+        UUID fotoId
 ) {}

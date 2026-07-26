@@ -15,11 +15,13 @@ public record CelulaResponse(
         DiaSemana diaSemana,
         LocalTime horario,
         List<String> lideres,
-        int totalMembros
+        int totalMembros,
+        UUID fotoId
 ) {
     public static CelulaResponse from(Celula celula) {
         return new CelulaResponse(celula.getId(), celula.getNome(),
-                celula.getDiaSemana(), celula.getHorario(), List.of(), 0);
+                celula.getDiaSemana(), celula.getHorario(), List.of(), 0,
+                celula.getFoto() != null ? celula.getFoto().getId() : null);
     }
 
     public static CelulaResponse comResumo(Celula celula, List<CelulaMembro> membros) {
@@ -28,6 +30,7 @@ public record CelulaResponse(
                 .map(m -> m.getPessoa() != null ? m.getPessoa().getNome() : m.getVisitante().getNome())
                 .toList();
         return new CelulaResponse(celula.getId(), celula.getNome(),
-                celula.getDiaSemana(), celula.getHorario(), lideres, membros.size());
+                celula.getDiaSemana(), celula.getHorario(), lideres, membros.size(),
+                celula.getFoto() != null ? celula.getFoto().getId() : null);
     }
 }

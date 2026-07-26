@@ -2,11 +2,13 @@ export type Papel = 'LIDER' | 'MEMBRO'
 
 export interface MinisterioRequest {
   nome: string
+  fotoId?: string | null
 }
 
 export interface MinisterioResponse {
   id: string
   nome: string
+  fotoId: string | null
   /** Vazio em respostas que não consultam membros (ex.: GET /pessoas/{id}/ministerios). */
   lideres: string[]
   totalMembros: number
@@ -22,6 +24,7 @@ export interface MembroResponse {
 export interface MinisterioDetalheResponse {
   id: string
   nome: string
+  fotoId: string | null
   membros: MembroResponse[]
   pedidosPendentes: MembroResponse[]
   souLiderDesteMinisterio: boolean

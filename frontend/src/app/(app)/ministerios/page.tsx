@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Pencil, Archive, Users, Crown } from 'lucide-react'
+import { ChevronRight, Pencil, Archive, Users, Crown, X } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ModalMinisterioForm } from './ModalMinisterioForm'
@@ -34,6 +35,7 @@ export default function MinisteriosPage() {
   // `null` = fechado; `'novo'` = criar; objeto = editar (mesma convenção de /eventos/locais).
   const [formAberto, setFormAberto] = useState<'novo' | MinisterioResponse | null>(null)
   const [arquivando, setArquivando] = useState<MinisterioResponse | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
   if (!hidratado || isLoading) {
     return (
@@ -104,13 +106,24 @@ export default function MinisteriosPage() {
                   if (e.key === 'Enter' || e.key === ' ') router.push(`/ministerios/${ministerio.id}`)
                 }}
               >
+                {podeGerenciar && (
+                  <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
+                    <MenuAcoes itens={acoes} />
+                  </div>
+                )}
+                {ministerio.fotoId ? (
+                  <img
+                    src={urlFoto(ministerio.fotoId, 'THUMB')!} alt=""
+                    className={styles.cardFoto}
+                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(ministerio.fotoId) }}
+                  />
+                ) : (
+                  <div className={styles.cardIcon}>
+                    <Users size={24} />
+                  </div>
+                )}
                 <div className={styles.cardTopo}>
                   <span className={styles.cardTitulo}>{ministerio.nome}</span>
-                  {podeGerenciar && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <MenuAcoes itens={acoes} />
-                    </div>
-                  )}
                 </div>
                 <div className={styles.cardLider}>
                   <Crown size={14} />
@@ -130,6 +143,16 @@ export default function MinisteriosPage() {
       )}
       {arquivando && (
         <ModalArquivarMinisterio ministerio={arquivando} onClose={() => setArquivando(null)} />
+      )}
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <X size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
+          </div>
+        </div>
       )}
     </div>
   )

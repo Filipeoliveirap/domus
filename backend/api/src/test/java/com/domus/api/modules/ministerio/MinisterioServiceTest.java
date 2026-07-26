@@ -49,7 +49,7 @@ class MinisterioServiceTest {
 
     @Test
     void cria_ministerio_e_retorna_id_e_nome() {
-        MinisterioResponse response = service.criar(new MinisterioRequest("Louvor"), igrejaId, null);
+        MinisterioResponse response = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null);
 
         assertThat(response.nome()).isEqualTo("Louvor");
         assertThat(repository.findByIdAndIgrejaId(response.id(), igrejaId)).isPresent();
@@ -57,23 +57,23 @@ class MinisterioServiceTest {
 
     @Test
     void nao_permite_dois_ministerios_com_mesmo_nome_ignorando_acento_e_caixa() {
-        service.criar(new MinisterioRequest("Recepção"), igrejaId, null);
+        service.criar(new MinisterioRequest("Recepção", null), igrejaId, null);
 
-        assertThatThrownBy(() -> service.criar(new MinisterioRequest("recepcao"), igrejaId, null))
+        assertThatThrownBy(() -> service.criar(new MinisterioRequest("recepcao", null), igrejaId, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Já existe um ministério");
     }
 
     @Test
     void ministerio_de_outra_igreja_nao_e_encontrado() {
-        UUID id = service.criar(new MinisterioRequest("Infantil"), igrejaId, null).id();
+        UUID id = service.criar(new MinisterioRequest("Infantil", null), igrejaId, null).id();
 
         assertThat(repository.findByIdAndIgrejaId(id, outraIgrejaId)).isEmpty();
     }
 
     @Test
     void arquivar_some_da_listagem() {
-        UUID id = service.criar(new MinisterioRequest("Diaconato"), igrejaId, null).id();
+        UUID id = service.criar(new MinisterioRequest("Diaconato", null), igrejaId, null).id();
 
         service.arquivar(id, igrejaId);
 
@@ -96,7 +96,7 @@ class MinisterioServiceTest {
 
     @Test
     void admin_adiciona_membro_direto_como_ativo() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Louvor"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
         UUID pessoaId = novaPessoa("Ana", igrejaId).getId();
 
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoaId),
@@ -108,7 +108,7 @@ class MinisterioServiceTest {
 
     @Test
     void pessoa_comum_nao_pode_adicionar_membro_sem_ser_lider() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Louvor"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
         UUID pessoaAlvo = novaPessoa("Bia", igrejaId).getId();
         UUID pessoaComum = novaPessoa("Carlos", igrejaId).getId();
 
@@ -120,7 +120,7 @@ class MinisterioServiceTest {
 
     @Test
     void lider_do_ministerio_nao_pode_promover_ou_rebaixar_papel() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Louvor"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
         UUID liderId = novaPessoa("Fabio", igrejaId).getId();
         UUID membroId = novaPessoa("Gabi", igrejaId).getId();
 
@@ -138,7 +138,7 @@ class MinisterioServiceTest {
 
     @Test
     void lider_do_ministerio_aceita_pedido_de_entrada() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Recepção"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Recepção", null), igrejaId, null).id();
         UUID liderId = novaPessoa("Duda", igrejaId).getId();
         UUID candidataId = novaPessoa("Elis", igrejaId).getId();
 
@@ -160,7 +160,7 @@ class MinisterioServiceTest {
 
     @Test
     void nao_permite_pedir_entrada_duas_vezes() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Missões"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Missões", null), igrejaId, null).id();
         UUID pessoaId = novaPessoa("Fábio", igrejaId).getId();
 
         service.pedirEntrada(ministerioId, pessoaId, igrejaId);
@@ -171,7 +171,7 @@ class MinisterioServiceTest {
 
     @Test
     void recusar_pedido_remove_a_linha_permitindo_pedir_de_novo() {
-        UUID ministerioId = service.criar(new MinisterioRequest("Jovens"), igrejaId, null).id();
+        UUID ministerioId = service.criar(new MinisterioRequest("Jovens", null), igrejaId, null).id();
         UUID pessoaId = novaPessoa("Gustavo", igrejaId).getId();
 
         service.pedirEntrada(ministerioId, pessoaId, igrejaId);

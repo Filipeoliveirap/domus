@@ -6,17 +6,17 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 .modal {
   width: 100%;
-  max-width: 420px;
+  max-width: 560px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px;
+  padding: 24px;
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 40px rgba(19, 27, 46, 0.2);
@@ -30,7 +30,7 @@
 }
 
 .titulo {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-dark);
 }
@@ -42,46 +42,101 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
+  border: none;
+  background: none;
   color: var(--color-text-muted);
+  cursor: pointer;
   transition: background-color var(--transition-fast);
 }
-
 .fechar:hover { background: var(--color-bg-page); }
 
-/* Área de recorte: overflow hidden é o que faz o "viewport" — a imagem por dentro pode
-   ser bem maior, só o que cai nesta caixa entra no arquivo final. touch-action:none
-   evita que o navegador role a página enquanto a pessoa arrasta a foto no celular. */
-.viewport {
-  position: relative;
-  width: 100%;
-  margin: 0 auto;
-  overflow: hidden;
-  background: var(--color-bg-sidebar);
-  touch-action: none;
-  cursor: grab;
+.corpo {
+  display: flex;
+  gap: 16px;
   min-width: 0;
 }
 
-.viewport:active { cursor: grabbing; }
-
-.viewportCirculo {
-  max-width: 280px;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius-full);
-}
-
-.viewportBanner {
-  aspect-ratio: 3 / 1;
+.viewportWrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+  height: 360px;
+  background: #1e293b;
   border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-.imagem {
+.loadingOverlay {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.7);
+  z-index: 5;
+  border-radius: inherit;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loadingText {
+  font-size: var(--font-size-sm);
+  color: rgba(255,255,255,0.8);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cropperContainer {
+  position: absolute;
+  inset: 0;
+}
+
+.cropperMedia {
   max-width: none;
-  user-select: none;
-  pointer-events: none;
+}
+
+.cropperArea {
+  border: 2px solid rgba(255,255,255,0.6) !important;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5) !important;
+}
+
+.previewCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.previewLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.previewCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+}
+
+.previewImg {
+  max-width: none;
 }
 
 .controles {
@@ -89,6 +144,22 @@
   align-items: center;
   gap: 10px;
 }
+
+.btnReset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.btnReset:hover { background: var(--color-bg-page); }
 
 .zoomIcone {
   flex-shrink: 0;
@@ -99,6 +170,15 @@
   flex: 1;
   min-width: 0;
   accent-color: var(--color-primary);
+}
+
+.zoomValor {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  min-width: 40px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .rodape {
@@ -115,9 +195,9 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  cursor: pointer;
   transition: background-color var(--transition-fast);
 }
-
 .btnCancelar:hover:not(:disabled) { background: var(--color-bg-page); }
 .btnCancelar:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -127,20 +207,21 @@
   gap: 6px;
   padding: 10px 16px;
   border-radius: var(--radius-md);
+  border: none;
   background: var(--color-primary);
   color: #fff;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+  cursor: pointer;
   transition: opacity var(--transition-fast);
 }
-
-.btnConfirmar:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btnConfirmar:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 767px) {
-  .modal { padding: 16px; }
+  .modal { padding: 16px; max-width: 100vw; }
+  .corpo { flex-direction: column; }
+  .viewportWrap { height: 280px; }
+  .previewCol { flex-direction: row; }
   .rodape { flex-direction: column-reverse; }
   .btnCancelar, .btnConfirmar { width: 100%; justify-content: center; }
 }

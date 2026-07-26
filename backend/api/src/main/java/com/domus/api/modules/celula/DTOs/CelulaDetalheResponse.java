@@ -10,6 +10,7 @@ import java.util.UUID;
 public record CelulaDetalheResponse(
         UUID id,
         String nome,
+        UUID fotoId,
         DiaSemana diaSemana,
         LocalTime horario,
         List<MembroCelulaResponse> membros,
@@ -18,6 +19,7 @@ public record CelulaDetalheResponse(
     public static CelulaDetalheResponse from(Celula celula, List<MembroCelulaResponse> membros,
                                               boolean souLider) {
         return new CelulaDetalheResponse(celula.getId(), celula.getNome(),
+                celula.getFoto() != null ? celula.getFoto().getId() : null,
                 celula.getDiaSemana(), celula.getHorario(), membros, souLider);
     }
 }

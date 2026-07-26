@@ -7,6 +7,7 @@ import java.util.UUID;
 public record MinisterioDetalheResponse(
         UUID id,
         String nome,
+        UUID fotoId,
         List<MembroResponse> membros,
         List<MembroResponse> pedidosPendentes,
         boolean souLiderDesteMinisterio,
@@ -18,7 +19,9 @@ public record MinisterioDetalheResponse(
             List<MembroResponse> pedidosPendentes, boolean souLiderDesteMinisterio,
             boolean souMembroAtivo, boolean tenhoPedidoPendente) {
         return new MinisterioDetalheResponse(
-                ministerio.getId(), ministerio.getNome(), membros, pedidosPendentes,
+                ministerio.getId(), ministerio.getNome(),
+                ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
+                membros, pedidosPendentes,
                 souLiderDesteMinisterio, souMembroAtivo, tenhoPedidoPendente);
     }
 }

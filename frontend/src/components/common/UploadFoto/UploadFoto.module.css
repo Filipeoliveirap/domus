@@ -1,6 +1,7 @@
 .raiz {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
@@ -117,6 +118,7 @@
 
 .botaoPrimario,
 .botaoSecundario,
+.botaoEditar,
 .botaoRemover {
   display: flex;
   align-items: center;
@@ -149,11 +151,67 @@
   color: var(--color-danger);
 }
 
+.botaoEditar {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-secondary);
+}
+.botaoEditar:hover:not(:disabled) { background: var(--color-bg-page); color: var(--color-text-primary); }
+.botaoEditar:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .botaoRemover:hover:not(:disabled) { background: var(--color-danger-bg); }
 .botaoRemover:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.viewerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.viewerModal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.viewerClose {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.viewerClose:hover { background: rgba(255,255,255,0.2); }
+
+.viewerImg {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+}
+
+.viewerAcoes {
+  display: flex;
+  gap: 10px;
+}
 
 @media (max-width: 767px) {
   .areaBanner { max-width: 100%; }
   .acoes { flex-direction: column; }
-  .botaoPrimario, .botaoSecundario, .botaoRemover { width: 100%; justify-content: center; }
+  .botaoPrimario, .botaoSecundario, .botaoEditar, .botaoRemover { width: 100%; justify-content: center; }
 }

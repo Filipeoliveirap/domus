@@ -1,6 +1,7 @@
 package com.domus.api.modules.celula;
 
 import com.domus.api.modules.celula.DTOs.*;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.pessoa.Pessoa;
@@ -32,6 +33,7 @@ class CelulaServiceTest {
     UsuarioRepository usuarioRepository;
     PessoaRepository pessoaRepository;
     VisitanteRepository visitanteRepository;
+    FotoService fotoService;
     CelulaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -45,8 +47,9 @@ class CelulaServiceTest {
         usuarioRepository = mock(UsuarioRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
+        fotoService = mock(FotoService.class);
         service = new CelulaService(celulaRepository, membroRepository, igrejaRepository,
-                usuarioRepository, pessoaRepository, visitanteRepository);
+                usuarioRepository, pessoaRepository, visitanteRepository, fotoService);
 
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
         when(celulaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -64,7 +67,7 @@ class CelulaServiceTest {
     }
 
     private CelulaRequest request(String nome) {
-        return new CelulaRequest(nome, null, null);
+        return new CelulaRequest(nome, null, null, null);
     }
 
     private void dadoQueExiste() {
@@ -82,7 +85,7 @@ class CelulaServiceTest {
     @Test
     void criarCelulaComDiaEHorario() {
         CelulaResponse response = service.criar(
-                new CelulaRequest("Célula Sião", DiaSemana.SEXTA, "19:00"), igrejaId, null);
+                new CelulaRequest("Célula Sião", DiaSemana.SEXTA, "19:00", null), igrejaId, null);
         assertThat(response.diaSemana()).isEqualTo(DiaSemana.SEXTA);
         assertThat(response.horario()).isEqualTo(LocalTime.of(19, 0));
     }

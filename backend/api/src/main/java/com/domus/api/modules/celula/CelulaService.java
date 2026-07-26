@@ -1,6 +1,8 @@
 package com.domus.api.modules.celula;
 
 import com.domus.api.modules.celula.DTOs.*;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.pessoa.Pessoa;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -33,6 +36,7 @@ public class CelulaService {
     private final UsuarioRepository usuarioRepository;
     private final PessoaRepository pessoaRepository;
     private final VisitanteRepository visitanteRepository;
+    private final FotoService fotoService;
 
     @Transactional(readOnly = true)
     public List<CelulaResponse> listar(UUID igrejaId) {
@@ -53,12 +57,14 @@ public class CelulaService {
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
         Usuario usuario = usuarioId != null ? usuarioRepository.findById(usuarioId).orElse(null) : null;
+        Foto foto = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
 
         Celula celula = Celula.builder()
                 .igreja(igreja).nome(nome)
                 .diaSemana(data.diaSemana())
                 .horario(data.horario() != null && !data.horario().isBlank()
                         ? LocalTime.parse(data.horario()) : null)
+                .foto(foto)
                 .criadoPor(usuario).atualizadoPor(usuario)
                 .build();
 
@@ -80,7 +86,18 @@ public class CelulaService {
             usuarioRepository.findById(usuarioId).ifPresent(celula::setAtualizadoPor);
         }
 
-        return CelulaResponse.from(celulaRepository.save(celula));
+        Foto fotoAntiga = celula.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+        celula.setFoto(fotoNova);
+
+        CelulaResponse response = CelulaResponse.from(celulaRepository.save(celula));
+
+        if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null,
+                fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+
+        return response;
     }
 
     @Transactional

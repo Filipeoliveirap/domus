@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Crop, Trash2, Loader2 } from 'lucide-react'
+import { Camera, Crop, Trash2, Loader2, Pencil, Eye, X } from 'lucide-react'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useUploadFoto } from '@/hooks/foto/useUploadFoto'
 import { urlFoto } from '@/lib/urlFoto'
@@ -37,6 +37,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
   const [arquivoBruto, setArquivoBruto] = useState<File | null>(null)
   const [recortando, setRecortando] = useState(false)
   const [arrastandoSobre, setArrastandoSobre] = useState(false)
+  const [visualizando, setVisualizando] = useState(false)
 
   // Prévia local antes de qualquer round-trip de rede — a pessoa vê o que escolheu na
   // hora. O object URL é recriado a cada seleção e revogado assim que deixa de ser usado
@@ -105,6 +106,18 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
     setArquivoBruto(null)
   }
 
+  async function editarFotoExistente() {
+    if (!urlAtual) return
+    try {
+      const res = await fetch(urlAtual)
+      const blob = await res.blob()
+      const file = new File([blob], 'foto-atual.jpg', { type: blob.type || 'image/jpeg' })
+      selecionarArquivo(file)
+    } catch {
+      notificar.erro('Erro ao carregar a foto para edição.')
+    }
+  }
+
   const enviando = upload.isPending
   const urlAtual = urlFoto(valor, 'THUMB')
   const temAlgumaImagem = Boolean(previaLocal || urlAtual)
@@ -115,7 +128,11 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
         className={`${styles.area} ${formato === 'circulo' ? styles.areaCirculo : styles.areaBanner} ${
           arrastandoSobre ? styles.arrastando : ''
         }`}
-        onClick={() => !disabled && !enviando && inputRef.current?.click()}
+        onClick={() => {
+          if (disabled || enviando) return
+          if (urlAtual && !arquivoBruto) setVisualizando(true)
+          else inputRef.current?.click()
+        }}
         onDragOver={(e) => {
           e.preventDefault()
           if (!disabled) setArrastandoSobre(true)
@@ -150,7 +167,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
 
         {!enviando && temAlgumaImagem && (
           <div className={styles.badgeCamera} aria-hidden="true">
-            <Camera size={14} />
+            {urlAtual && !arquivoBruto ? <Eye size={14} /> : <Camera size={14} />}
           </div>
         )}
       </div>
@@ -179,10 +196,16 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
           )}
 
           {!arquivoBruto && (valor || urlAtual) && (
-            <button type="button" className={styles.botaoRemover} onClick={remover} disabled={disabled}>
-              <Trash2 size={14} aria-hidden="true" />
-              Remover foto
-            </button>
+            <>
+              <button type="button" className={styles.botaoEditar} onClick={editarFotoExistente} disabled={disabled || !urlAtual}>
+                <Pencil size={14} aria-hidden="true" />
+                Editar foto
+              </button>
+              <button type="button" className={styles.botaoRemover} onClick={remover} disabled={disabled}>
+                <Trash2 size={14} aria-hidden="true" />
+                Remover foto
+              </button>
+            </>
           )}
         </div>
       )}
@@ -194,6 +217,29 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
           onCancelar={cancelarSelecao}
           onConfirmar={enviar}
         />
+      )}
+
+      {visualizando && urlAtual && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setVisualizando(false)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setVisualizando(false)}>
+              <X size={20} />
+            </button>
+            <img
+              src={urlFoto(valor, 'DISPLAY')!}
+              alt="Foto"
+              className={styles.viewerImg}
+            />
+            <div className={styles.viewerAcoes}>
+              <button className={styles.botaoEditar} onClick={() => { setVisualizando(false); editarFotoExistente() }}>
+                <Pencil size={14} /> Editar
+              </button>
+              <button className={styles.botaoRemover} onClick={() => { setVisualizando(false); remover() }}>
+                <Trash2 size={14} /> Remover
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -3,7 +3,7 @@
 import { useState, Suspense} from "react";
 import Link from "next/link";
 import axios from "axios";
-import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-react";
+import { ChevronRight, Shield, Ban, Archive, UserCheck, Send, X } from "lucide-react";
 import { notificar } from "@/components/common/Notificacao/notificar";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidarCache } from "@/lib/cacheInvalidacao";
@@ -30,6 +30,7 @@ import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonUsuarios } from "./SkeletonUsuarios";
 import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
 import { podeGerenciarUsuarios } from "@/lib/permissoes";
+import { urlFoto } from "@/lib/urlFoto";
 
 const TAMANHO_PAGINA = 10;
 
@@ -54,6 +55,7 @@ function UsuariosConteudo() {
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   async function reenviarConvite(u: UsuarioResponse) {
@@ -191,7 +193,13 @@ function UsuariosConteudo() {
                   <tr key={u.id} className={!u.ativo ? styles.linhaInativa : undefined}>
                     <td>
                       <div className={styles.celulaUsuario}>
-                        <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
+                        {u.fotoId ? (
+                          <span onClick={() => setFotoVisualizando(u.fotoId!)} style={{ cursor: 'pointer' }}>
+                            <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
+                          </span>
+                        ) : (
+                          <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
+                        )}
                         <span className={styles.nome}>{u.nome}</span>
                       </div>
                     </td>
@@ -267,6 +275,17 @@ function UsuariosConteudo() {
 
       {usuarioArquivando && (
         <ModalArquivarUsuario usuario={usuarioArquivando} onClose={() => setUsuarioArquivando(null)} />
+      )}
+
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <X size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
+          </div>
+        </div>
       )}
 
     </div>

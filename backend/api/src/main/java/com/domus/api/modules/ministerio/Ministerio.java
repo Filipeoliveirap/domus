@@ -1,5 +1,6 @@
 package com.domus.api.modules.ministerio;
 
+import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
@@ -28,6 +29,10 @@ public class Ministerio {
 
     @Column(nullable = false, length = 150)
     private String nome;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "foto_id")
+    private Foto foto;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "criado_por_usuario_id")

@@ -1,5 +1,7 @@
 package com.domus.api.modules.ministerio;
 
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -32,6 +35,7 @@ public class MinisterioService {
     private final IgrejaRepository igrejaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PessoaRepository pessoaRepository;
+    private final FotoService fotoService;
 
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listar(UUID igrejaId) {
@@ -58,9 +62,12 @@ public class MinisterioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
         Usuario usuario = usuarioId != null ? usuarioRepository.findById(usuarioId).orElse(null) : null;
 
+        Foto foto = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+
         Ministerio ministerio = Ministerio.builder()
                 .igreja(igreja)
                 .nome(nome)
+                .foto(foto)
                 .criadoPor(usuario)
                 .atualizadoPor(usuario)
                 .build();
@@ -80,7 +87,14 @@ public class MinisterioService {
             usuarioRepository.findById(usuarioId).ifPresent(ministerio::setAtualizadoPor);
         }
 
-        return MinisterioResponse.from(ministerioRepository.save(ministerio));
+        Foto fotoAntiga = ministerio.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
+        ministerio.setFoto(fotoNova);
+        MinisterioResponse response = MinisterioResponse.from(ministerioRepository.save(ministerio));
+        if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null, fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+        return response;
     }
 
     @Transactional

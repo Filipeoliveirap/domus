@@ -19,7 +19,7 @@ import { ModalConcederAcesso } from './ModalConcederAcesso'
 import { useRouter } from 'next/navigation'
 import { ModalArquivarPessoa } from './(arquivar)/ArquivarPessoa'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
-import { SearchX, Inbox } from 'lucide-react'
+import { SearchX, Inbox, X } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { SkeletonPessoas } from "./SkeletonPessoas";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -52,6 +52,7 @@ function PessoasConteudo() {
   const [pessoaConcedendo, setPessoaConcedendo] = useState<PessoaResponse | null>(null)
   const [pessoaArquivando, setPessoaArquivando] = useState<PessoaResponse | null>(null)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
   const { data, isLoading, isError, isFetching, refetch } = usePessoas({
     q: buscaDebounced,
@@ -187,7 +188,8 @@ function PessoasConteudo() {
                         <span className={styles.avatar}>
                           {urlFoto(p.fotoId, 'THUMB') ? (
                             // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                            <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                            <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto}
+                              onClick={(e) => { e.stopPropagation(); setFotoVisualizando(p.fotoId) }} />
                           ) : (
                             iniciais(p.nome)
                           )}
@@ -253,6 +255,16 @@ function PessoasConteudo() {
       )}
       {pessoaDetalheId && (
         <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
+      )}
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <X size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
+          </div>
+        </div>
       )}
     </div>
   )

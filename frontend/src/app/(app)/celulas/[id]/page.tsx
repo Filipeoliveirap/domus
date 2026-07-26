@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp } from 'lucide-react'
+import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useQueryClient } from '@tanstack/react-query'
@@ -18,6 +18,7 @@ import { rotuloDiaSemana, formatarHorario } from '@/lib/formats/celulaFormat'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import { ModalConverterVisitante } from './ModalConverterVisitante'
 import { urlFoto } from '@/lib/urlFoto'
@@ -56,6 +57,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(null)
   const [convertendoId, setConvertendoId] = useState<string | null>(null)
   const [cadastrarExterno, setCadastrarExterno] = useState(false)
+  const [fotoId, setFotoId] = useState<string | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
   const formExterno = useVisitanteForm({})
 
@@ -64,9 +67,10 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     nome: celula.nome,
     diaSemana: celula.diaSemana,
     horario: celula.horario,
+    fotoId: celula.fotoId,
     lideres: [] as string[],
     totalMembros: celula.membros.length,
-  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario])
+  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId])
 
   const form = useCelulaForm({ celulaId: id, celulaInicial })
   const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form
@@ -129,6 +133,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         nome: data.nome,
         diaSemana: (data.diaSemana || undefined) as 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO' | 'DOMINGO',
         horario: data.horario ? data.horario + ':00' : undefined,
+        fotoId: fotoId ?? undefined,
       })
       invalidarCache(queryClient, 'celula')
       notificar.sucesso('Célula atualizada.')
@@ -167,6 +172,16 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       ) : (
         <>
           <header className={styles.cabecalho}>
+            <div className={styles.fotoDetalhe}>
+              {celula.fotoId ? (
+                <img src={urlFoto(celula.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg}
+                  onClick={() => setFotoVisualizando(celula.fotoId)} />
+              ) : (
+                <div className={styles.fotoDetalheFallback}>
+                  <Grid3X3 size={32} />
+                </div>
+              )}
+            </div>
             <div>
               <div className={styles.tituloLinha}>
                 <h1 className={styles.titulo}>{celula.nome}</h1>
@@ -177,6 +192,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                     diaSemana: celula.diaSemana ?? '',
                     horario: celula.horario ? celula.horario.slice(0, 5) : '',
                   })
+                  setFotoId(celula?.fotoId ?? null)
                   setEditando(true)
                 }} title="Editar célula">
                   <Pencil size={16} />
@@ -202,7 +218,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
               <p className={styles.statValor}>{totalMembros}</p>
             </div>
             <div className={styles.statCard}>
-              <p className={styles.statLabel}>Pessoas</p>
+              <p className={styles.statLabel}>Pessoas DA IGREJA</p>
               <p className={styles.statValor}>{totalPessoas}</p>
             </div>
             <div className={styles.statCard}>
@@ -215,7 +231,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             {['TODOS', 'PESSOA', 'VISITANTE'].map(f => (
               <button key={f} className={`${styles.filtroBtn} ${filtro === f ? styles.filtroAtivo : ''}`}
                 onClick={() => setFiltro(f as typeof filtro)}>
-                {f === 'TODOS' ? 'Todos' : f === 'PESSOA' ? 'Pessoas' : 'Visitantes'}
+                {f === 'TODOS' ? 'Todos' : f === 'PESSOA' ? 'Pessoas da Igreja' : 'Visitantes'}
               </button>
             ))}
           </div>
@@ -259,7 +275,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                 >
                   <div className={styles.membroInfo}>
                     {m.fotoId ? (
-                      <img src={urlFoto(m.fotoId, 'THUMB')!} alt="" className={styles.membroAvatar} />
+                      <img src={urlFoto(m.fotoId, 'THUMB')!} alt="" className={styles.membroAvatar}
+                        onClick={(e) => { e.stopPropagation(); setFotoVisualizando(m.fotoId) }} />
                     ) : (
                       <span className={styles.membroAvatar}>
                         {m.tipo === 'PESSOA' ? iniciais(m.nome) : iniciaisVisitante(m.nome)}
@@ -296,6 +313,14 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             <button className={styles.modalClose} onClick={() => setEditando(false)}>✕</button>
             <h2 className={styles.modalTitulo}>Editar Célula</h2>
             <form onSubmit={handleSubmit(onSalvarEdicao)} className={styles.modalForm}>
+              <div className={styles.fotoWrap}>
+                <UploadFoto
+                  valor={fotoId}
+                  onChange={(id) => setFotoId(id)}
+                  formato="circulo"
+                  nomeFallback={form.getValues('nome') as string}
+                />
+              </div>
               <Input id="nome-edit" label="NOME*" placeholder="Nome da célula"
                 error={errors.nome?.message} {...register('nome')} />
               <Select id="diaSemana-edit" label="DIA QUE A CÉLULA OCORRE" placeholder="Selecione"
@@ -354,6 +379,16 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                 await handleCriarExterno(data)
               }}
             />
+          </div>
+        </div>
+      )}
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <X size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
           </div>
         </div>
       )}

@@ -22,6 +22,33 @@
   flex-wrap: wrap;
   gap: 16px;
 }
+
+.fotoDetalhe {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.fotoDetalheImg {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.fotoDetalheFallback {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-bg, #dbeafe);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tituloLinha {
   display: flex;
   align-items: center;
@@ -253,6 +280,12 @@
 }
 .btnRemover:hover { background: var(--color-bg-hover); color: var(--color-error); }
 
+.fotoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -318,4 +351,44 @@
   .membro {
     flex-wrap: wrap;
   }
+}
+
+.viewerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.75);
+}
+.viewerModal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 480px;
+  width: 100%;
+}
+.viewerClose {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.viewerClose:hover { background: rgba(255,255,255,0.2); }
+.viewerImg {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
 }

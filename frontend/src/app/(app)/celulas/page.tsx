@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Plus, Pencil, Archive, Grid3X3 } from 'lucide-react'
+import { ChevronRight, Plus, Pencil, Archive, Grid3X3, Crown, X } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useExcluirCelula } from '@/hooks/celula/useExcluirCelula'
@@ -17,9 +17,12 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { celulaService } from '@/services/celula.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
+import type { CelulaResponse } from '@/types/celula.type'
 import styles from './page.module.css'
 
 const DIA_OPTIONS = [
@@ -39,28 +42,38 @@ export default function CelulasPage() {
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const podeGerenciar = podeGerenciarCelulas(role)
   const [modalAberto, setModalAberto] = useState(false)
+  const [editando, setEditando] = useState<CelulaResponse | null>(null)
+  const [fotoId, setFotoId] = useState<string | null>(null)
   const [arquivando, setArquivando] = useState<string | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const form = useCelulaForm()
   const { register, handleSubmit, setValue, watch, formState: { errors }, isFormIncomplete, isLoading: salvando, erroGeral } = form
   const horarioValue = watch('horario') as string ?? ''
 
-  async function onCriar() {
+  async function onSalvar() {
     const data = form.getValues()
     try {
       const payload = {
         nome: data.nome,
         diaSemana: (data.diaSemana || undefined) as 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO' | 'DOMINGO',
         horario: data.horario ? data.horario + ':00' : undefined,
+        fotoId: fotoId ?? undefined,
       }
-      await celulaService.criar(payload)
+      if (editando) {
+        await celulaService.atualizar(editando.id, payload)
+      } else {
+        await celulaService.criar(payload)
+      }
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso('Célula criada com sucesso!')
+      notificar.sucesso(editando ? 'Célula atualizada!' : 'Célula criada!')
       form.reset()
+      setFotoId(null)
+      setEditando(null)
       setModalAberto(false)
     } catch {
-      notificar.erro('Erro ao criar célula.')
+      notificar.erro('Erro ao salvar célula.')
     }
   }
 
@@ -99,7 +112,7 @@ export default function CelulasPage() {
           <p className={styles.subtitulo}>Pequenos grupos de estudo bíblico.</p>
         </div>
         {podeGerenciar && (
-          <button className={styles.botaoPrimario} onClick={() => setModalAberto(true)}>
+          <button className={styles.botaoPrimario} onClick={() => { setFotoId(null); setEditando(null); setModalAberto(true) }}>
             Nova célula
           </button>
         )}
@@ -132,7 +145,16 @@ export default function CelulasPage() {
         <div className={styles.grid}>
           {celulas?.map(c => {
             const acoes: ItemAcao[] = [
-              ...(podeGerenciar ? [{ label: 'Editar', icone: Pencil, onClick: () => window.location.href = `/celulas/${c.id}` }] : []),
+              ...(podeGerenciar ? [{ label: 'Editar', icone: Pencil, onClick: () => {
+                form.reset({
+                  nome: c.nome,
+                  diaSemana: c.diaSemana ?? '',
+                  horario: c.horario ? c.horario.slice(0, 5) : '',
+                })
+                setFotoId(c.fotoId ?? null)
+                setEditando(c)
+                setModalAberto(true)
+              }}] : []),
               ...(podeGerenciar ? [{ label: 'Arquivar', icone: Archive, onClick: () => handleToggleArquivar(c.id), perigo: true, separadorAntes: true }] : []),
             ]
             return (
@@ -143,8 +165,13 @@ export default function CelulasPage() {
                   <MenuAcoes itens={acoes} />
                 </div>
                 )}
-                <div className={styles.cardIcon}>
-                  <Grid3X3 size={24} />
+                <div className={styles.cardIcon}
+                  onClick={c.fotoId ? (e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) } : undefined}>
+                  {c.fotoId ? (
+                    <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
+                  ) : (
+                    <Grid3X3 size={24} />
+                  )}
                 </div>
                 <h3 className={styles.cardNome}>{c.nome}</h3>
                 {(c.diaSemana || c.horario) && (
@@ -154,7 +181,7 @@ export default function CelulasPage() {
                 )}
                 <div className={styles.cardFooter}>
                   {c.lideres.length > 0 ? (
-                    <span className={styles.cardLider}>{c.lideres[0]}</span>
+                    <div className={styles.cardLider}><Crown size={14} /><span>{c.lideres[0]}</span></div>
                   ) : (
                     <span className={styles.cardLiderVazio}>Sem líder</span>
                   )}
@@ -167,11 +194,19 @@ export default function CelulasPage() {
       )}
 
       {modalAberto && (
-        <div className={styles.modalOverlay} onMouseDown={() => setModalAberto(false)}>
+        <div className={styles.modalOverlay} onMouseDown={() => { setModalAberto(false); setEditando(null) }}>
           <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.modalClose} onClick={() => setModalAberto(false)}>✕</button>
-            <h2 className={styles.modalTitulo}>Nova Célula</h2>
-            <form onSubmit={handleSubmit(onCriar)} className={styles.modalForm}>
+            <button className={styles.modalClose} onClick={() => { setModalAberto(false); setEditando(null) }}>✕</button>
+            <h2 className={styles.modalTitulo}>{editando ? 'Editar Célula' : 'Nova Célula'}</h2>
+            <form onSubmit={handleSubmit(onSalvar)} className={styles.modalForm}>
+              <div className={styles.fotoWrap}>
+                <UploadFoto
+                  valor={fotoId}
+                  onChange={(id) => setFotoId(id)}
+                  formato="circulo"
+                  nomeFallback={form.getValues('nome') as string}
+                />
+              </div>
               <Input id="nome-modal" label="NOME*" placeholder="Nome da célula"
                 error={errors.nome?.message} {...register('nome')} />
               <Select id="diaSemana-modal" label="DIA QUE A CÉLULA OCORRE" placeholder="Selecione"
@@ -186,10 +221,21 @@ export default function CelulasPage() {
               <div className={styles.modalAcoes}>
                 <Button type="submit" variant="primary" isLoading={salvando}
                   disabled={isFormIncomplete || salvando}>
-                  Criar célula
+                  {editando ? 'Salvar' : 'Criar célula'}
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {fotoVisualizando && (
+        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
+          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
+            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
+              <X size={20} />
+            </button>
+            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
           </div>
         </div>
       )}

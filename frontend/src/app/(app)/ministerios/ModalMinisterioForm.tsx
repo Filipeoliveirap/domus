@@ -5,6 +5,7 @@ import { useCriarMinisterio, useAtualizarMinisterio } from '@/hooks/ministerio/u
 import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
+import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ModalMinisterioForm.module.css'
 
@@ -17,6 +18,7 @@ interface Props {
 // sozinhas (ver Task 9) — este componente só decide fechar o modal em caso de sucesso.
 export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const [nome, setNome] = useState(ministerio?.nome ?? '')
+  const [fotoId, setFotoId] = useState<string | null>(ministerio?.fotoId ?? null)
   const [erro, setErro] = useState<string | undefined>(undefined)
   const criar = useCriarMinisterio()
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
@@ -25,9 +27,9 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   async function salvar() {
     try {
       if (ministerio) {
-        await atualizar.mutateAsync({ nome })
+        await atualizar.mutateAsync({ nome, fotoId })
       } else {
-        await criar.mutateAsync({ nome })
+        await criar.mutateAsync({ nome, fotoId })
       }
       onClose()
     } catch {
@@ -41,6 +43,14 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
         <h2 className={styles.titulo}>
           {ministerio ? `Editar ${ROTULO_MINISTERIO.toLowerCase()}` : `Nova ${ROTULO_MINISTERIO.toLowerCase()}`}
         </h2>
+        <div className={styles.fotoWrap}>
+          <UploadFoto
+            valor={fotoId}
+            onChange={(id) => setFotoId(id)}
+            formato="circulo"
+            nomeFallback={nome}
+          />
+        </div>
         <Input
           id="nome-ministerio"
           label="Nome"

@@ -30,6 +30,12 @@
   margin-bottom: 20px;
 }
 
+.fotoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
 .acoes {
   display: flex;
   justify-content: flex-end;

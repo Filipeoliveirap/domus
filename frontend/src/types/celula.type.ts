@@ -6,11 +6,13 @@ export interface CelulaRequest {
   nome: string
   diaSemana?: DiaSemana
   horario?: string
+  fotoId?: string | null
 }
 
 export interface CelulaResponse {
   id: string
   nome: string
+  fotoId: string | null
   diaSemana: DiaSemana | null
   horario: string | null
   lideres: string[]
@@ -20,6 +22,7 @@ export interface CelulaResponse {
 export interface CelulaDetalheResponse {
   id: string
   nome: string
+  fotoId: string | null
   diaSemana: DiaSemana | null
   horario: string | null
   membros: MembroCelulaResponse[]

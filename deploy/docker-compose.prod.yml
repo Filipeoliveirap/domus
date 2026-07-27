@@ -14,7 +14,6 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-    # SEM ports: — só a rede interna alcança o Spring.
     networks: [interna]
 
   front:
@@ -41,7 +40,6 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      # Trava o heap: sem isso o ES tenta usar metade da RAM da máquina.
       ES_JAVA_OPTS: "-Xms1g -Xmx1g"
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]

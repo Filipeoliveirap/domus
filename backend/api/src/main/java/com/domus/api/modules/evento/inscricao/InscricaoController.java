@@ -21,15 +21,6 @@ public class InscricaoController {
     private final InscricaoService inscricaoService;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    /**
-     * Auto-inscrição. NÃO recebe identidade alguma no corpo — o membro vem do JWT.
-     * É o que torna esta rota impossível de usar errado: não há campo a adulterar.
-     *
-     * <p>{@code confirmado=true} deixa quem GERENCIA inscrições se inscrever num evento cujo
-     * recorte não atende (o gestor organiza e pode participar — equipe do retiro de jovens,
-     * café dos homens que ele coordena). De quem NÃO gerencia, o parâmetro é ignorado: a
-     * restrição continua valendo. {@code role} vai para o service decidir isso.
-     */
     @PostMapping("/eventos/{eventoId}/inscricoes")
     public ResponseEntity<MinhaInscricaoResponse> inscrever(
             @PathVariable UUID eventoId,
@@ -48,14 +39,6 @@ public class InscricaoController {
                 inscricaoService.minhaInscricao(eventoId, usuario.getPessoa().getId()));
     }
 
-    /**
-     * Inscrever outras pessoas: aqui os ids VÊM do cliente, então são validados um a um.
-     *
-     * <p>{@code confirmado=true} só tem efeito para quem
-     * {@link com.domus.api.shared.security.Permissoes#podeGerenciarInscricoes(String)} — de
-     * quem não gerencia, o service ignora o parâmetro (não aceita "por engano"). Contorna só
-     * impedimentos contornáveis; vaga esgotada nunca é derrubada por aqui.
-     */
     @PostMapping("/eventos/{eventoId}/inscricoes/pessoas")
     public ResponseEntity<Void> inscreverPessoas(
             @PathVariable UUID eventoId,
@@ -91,11 +74,6 @@ public class InscricaoController {
                 eventoId, usuarioAutenticado.getIgrejaId(), buscaFiltro, semSort));
     }
 
-    /**
-     * Lista de participantes reduzida — QUALQUER MEMBRO autenticado (travado no
-     * SecurityConfig por "/eventos/*&#47;inscricoes/**", que casa este path e NÃO o exato
-     * "/eventos/*&#47;inscricoes" acima, restrito a ADMIN/LÍDER).
-     */
     @GetMapping("/eventos/{eventoId}/inscricoes/participantes")
     public ResponseEntity<List<ParticipanteResponse>> listarParticipantes(@PathVariable UUID eventoId) {
         return ResponseEntity.ok(inscricaoService.listarParticipantes(
@@ -118,10 +96,6 @@ public class InscricaoController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Botão "marcar todos vieram" — marca presente todo inscrito confirmado E seus
-     * acompanhantes. Corrige exceção depois com os PATCHs abaixo.
-     */
     @PostMapping("/eventos/{eventoId}/presenca/marcar-todos")
     public ResponseEntity<Void> marcarTodosPresentes(@PathVariable UUID eventoId) {
         var usuario = usuarioAutenticado.get();

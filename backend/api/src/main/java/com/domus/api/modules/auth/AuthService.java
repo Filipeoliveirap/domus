@@ -129,13 +129,7 @@ public class AuthService {
         log.info("Logout efetuado (refresh token revogado).");
     }
 
-    /**
-     * Dados de sessão de quem está autenticado (usado pelo {@code GET /auth/me}).
-     *
-     * <p>Consulta pelo id em vez de ler o principal: o principal é uma entidade desanexada
-     * (o SecurityFilter roda antes do open-in-view), então seus campos LAZY — como
-     * {@code igreja} — explodiriam ao serem lidos aqui. Ver {@code findSessaoById}.
-     */
+    /** Carrega os dados de sessão para {@code GET /auth/me}. */
     public SessaoDTO sessaoDe(UUID usuarioId) {
         SessaoDTO sessao = usuarioRepository.findSessaoById(usuarioId)
                 .orElseThrow(() -> {
@@ -150,11 +144,7 @@ public class AuthService {
                         .map(UsuarioCapacidade::getCapacidade).toList());
     }
 
-    /**
-     * Troca a própria senha (Meu Perfil), sabendo a atual — padrão de mercado, diferente do
-     * reset por token (que não exige senha atual porque é "esqueci a senha"). Revoga as OUTRAS
-     * sessões, mantendo a atual: quem acabou de provar a senha não devia ser derrubado.
-     */
+    /** Troca a própria senha e revoga as demais sessões, preservando a atual. */
     public void alterarSenha(UUID usuarioId, String refreshTokenAtual, ChangePasswordDTO data) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new SessaoExpiradaException("SESSAO_INVALIDA",

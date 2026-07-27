@@ -75,11 +75,8 @@ public class IgrejaService {
         );
     }
 
-    /**
-     * Cria igreja + membro + usuário ADMIN_IGREJA. Compartilhado entre o cadastro nativo
-     * (senha com hash) e o cadastro via Google (senha null + google_sub). NÃO emite tokens —
-     * isso é responsabilidade de quem chama.
-     */
+    /** Cria igreja + pessoa + usuário ADMIN_IGREJA. Compartilhado entre cadastro nativo
+     *  (senha com hash) e Google (senha null + google_sub). Não emite tokens. */
     @Transactional
     public Usuario criarIgrejaComAdmin(DadosNovaIgreja dados) {
         if (membroRepository.existsByEmail(dados.emailAdmin())) {
@@ -104,9 +101,7 @@ public class IgrejaService {
         Role roleAdmin = roleRepository.findByNome(Perfil.ADMIN_IGREJA.name())
                 .orElseThrow(() -> new IllegalStateException("Role ADMIN_IGREJA não encontrada. Verifique o seed da migration V2."));
 
-        // Quem cadastra a própria igreja quase sempre é membro batizado — não há opção
-        // neutra aqui (CONGREGANTE afirmaria o contrário, na direção menos provável).
-        // Se a exceção aparecer, corrige-se depois em dois cliques no cadastro de pessoa.
+        // Quem cadastra a própria igreja é assumido MEMBRO (batizado) — corrigível depois no cadastro.
         Pessoa membroAdmin = Pessoa.builder()
                 .igreja(igreja)
                 .nome(com.domus.api.shared.util.TextoUtil.capitalizar(dados.nomeAdmin()))
@@ -130,14 +125,8 @@ public class IgrejaService {
     }
 
     /**
-     * A igreja inteira para a tela de Configurações (e para qualquer outra leitura da própria
-     * igreja). Cacheado por {@code igrejaId} — que vem do JWT, nunca do corpo da requisição,
-     * então não existe chave para "roubar" a igreja de outra pessoa (A10: o antigo
-     * {@code GET /igrejas/{id}} foi removido por isso, e o cache não ressuscita esse risco
-     * porque não aceita um id arbitrário como parâmetro).
-     *
-     * <p>Invalidado em {@link #atualizar}, senão a tela mostraria dado velho logo depois de
-     * editar as Configurações.
+     * Detalhe da própria igreja, cacheado. O igrejaId vem do JWT — não do corpo —
+     * então não há como acessar a igreja de outro tenant. Invalidado em {@link #atualizar}.
      */
     @Cacheable(value = "igreja", key = "#igrejaId")
     @Transactional(readOnly = true)
@@ -147,13 +136,7 @@ public class IgrejaService {
         return IgrejaDetalheDTO.from(igreja, nomeDoAutor(igreja.getAtualizadoPor()));
     }
 
-    /**
-     * Atualiza os dados da própria igreja. O id vem do JWT (nunca do corpo), como toda
-     * operação do sistema — o admin só edita a igreja dele.
-     *
-     * <p>Registra quem alterou (o {@code updated_at} é automático), alimentando o card
-     * de logs de atividade.
-     */
+    /** Atualiza os dados da própria igreja. O igrejaId vem do JWT — nenhum corpo o informa. */
     @Transactional
     public IgrejaDetalheDTO atualizar(UUID igrejaId, UUID usuarioId, AtualizarIgrejaRequest data) {
         Igreja igreja = igrejaRepository.findById(igrejaId)

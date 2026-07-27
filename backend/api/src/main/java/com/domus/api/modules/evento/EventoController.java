@@ -40,10 +40,7 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, tipoFiltro, recorteFiltro, semSort));
     }
 
-    /**
-     * Sugestões de tipo para o autocomplete do cadastro. Precisa vir ANTES de
-     * {@code GET /eventos/**} no SecurityConfig (matcher específico antes do curinga).
-     */
+    // Deve vir antes de GET /eventos/** no SecurityConfig (matcher específico antes do curinga).
     @GetMapping("/tipos")
     public ResponseEntity<List<String>> tipos() {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
@@ -76,11 +73,6 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.buscarPorId(id, igrejaId));
     }
 
-    /**
-     * Prévia da elegibilidade da PRÓPRIA PESSOA logada — conveniência de UX para a tela
-     * decidir o que mostrar antes do POST de inscrição. NUNCA é defesa: ver Javadoc de
-     * {@link EventoService#elegibilidade}.
-     */
     @GetMapping("/{id}/elegibilidade")
     public ResponseEntity<ElegibilidadeResponse> elegibilidade(@PathVariable UUID id) {
         var usuario = usuarioAutenticado.get();
@@ -107,14 +99,7 @@ public class EventoController {
                 id, data, igrejaId, usuarioId, cancelarNaoElegiveis));
     }
 
-    /**
-     * Prévia PURA de impacto — Task 6. Devolve quem ficaria de fora se {@code data} fosse
-     * salvo, SEM gravar nada. Só quem {@link com.domus.api.shared.security.Permissoes
-     * #podeGerenciarEventos} pode chamar (a resposta traz nome e motivo de terceiros); a rota já
-     * é coberta pelo matcher {@code POST /eventos/**} do SecurityConfig (ADMIN/LÍDER), e o
-     * service repete a checagem como defesa em profundidade (mesmo padrão de
-     * {@code InscricaoService}).
-     */
+    // Prévia de quem ficaria de fora se data fosse salvo, sem gravar. Restrito a quem gerencia eventos.
     @PostMapping("/{id}/impacto-restricao")
     public ResponseEntity<ImpactoRestricaoResponse> impactoRestricao(
             @PathVariable UUID id, @Valid @RequestBody EventoRequest data) {

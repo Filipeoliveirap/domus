@@ -14,15 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Autorização da hierarquia de igrejas — o único ponto do sistema onde uma igreja
- * pode ler dado de outra.
- *
- * <p>A regra que não pode ser quebrada: o id de <b>quem pergunta</b> vem do JWT; o id de
- * <b>quem se quer ver</b> vem da requisição e <b>sempre</b> passa por
- * {@link #validarAcesso(UUID, UUID)}. Sem isso é IDOR — a mãe da família A pediria um
- * {@code igrejaId} da família B e leria financeiro de estranho.
- *
- * <p>A hierarquia enxerga só <b>para baixo</b>: a filha nunca vê a mãe nem as irmãs.
+ * Autorização da hierarquia de igrejas (sede↔congregação).
+ * Enxerga só para baixo: a filha nunca vê a mãe nem as irmãs.
  */
 @Service
 @Slf4j
@@ -37,10 +30,7 @@ public class FamiliaIgrejaService {
         return igrejaRepository.existsByIgrejaMaeId(igrejaId);
     }
 
-    /**
-     * Os ids que esta igreja pode enxergar: {@code {eu} ∪ {minhas filhas}}, e só se eu for mãe.
-     * Filha ou independente → apenas {@code {eu}}.
-     */
+    /** Retorna {@code {eu} ∪ {minhas filhas}}. Filha ou independente → apenas {@code {eu}}. */
     @Transactional(readOnly = true)
     public List<UUID> idsDaFamilia(UUID igrejaId) {
         List<UUID> ids = new ArrayList<>();
@@ -63,9 +53,7 @@ public class FamiliaIgrejaService {
 
     /**
      * Resolve o escopo de um endpoint que aceita {@code igrejaId} opcional.
-     *
-     * <p>Ausente → minha igreja (comportamento de hoje, intacto).
-     * Presente → só passa se pertencer à minha família.
+     * Ausente → minha igreja. Presente → só passa se pertencer à minha família.
      */
     @Transactional(readOnly = true)
     public UUID resolverEscopo(UUID igrejaSolicitanteId, UUID igrejaAlvoId) {

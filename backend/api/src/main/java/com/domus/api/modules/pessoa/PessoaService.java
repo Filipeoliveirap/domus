@@ -112,13 +112,7 @@ public class PessoaService {
         return PessoaResponse.from(salvo, aviso);
     }
 
-    /**
-     * Data de batismo só faz sentido para quem TEM o vínculo MEMBRO (batizado, por definição
-     * — ver design doc). Rejeita em vez de zerar em silêncio: quem manda {@code dataBatismo}
-     * num CONGREGANTE está com um bug no cliente (a UI já esconde o campo nesse caso) ou
-     * tentando registrar direto via API — nos dois casos, o chamador precisa de um erro que
-     * ele consiga agir, não de um campo que some sem aviso na resposta.
-     */
+    /** Rejeita {@code dataBatismo} em CONGREGANTE — só faz sentido para MEMBRO. */
     private void validarDataBatismo(PessoaRequestDTO data) {
         if (data.vinculo() != Vinculo.MEMBRO && data.dataBatismo() != null) {
             throw new BusinessException("DATA_BATISMO_INVALIDA",
@@ -153,9 +147,6 @@ public class PessoaService {
             }
         }
 
-        // Foto: resolve a NOVA antes de tocar no membro (valida que é da mesma igreja) e só
-        // grava a ANTIGA como candidata a remoção — nunca apaga antes de o membro apontar
-        // para a nova. Ver ordem completa logo após o save, mais abaixo.
         Foto fotoAntiga = membro.getFoto();
         Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
 
@@ -174,14 +165,8 @@ public class PessoaService {
 
         Pessoa salvo = membroRepository.save(membro);
 
-        // Remove a foto antiga só DEPOIS que a pessoa já aponta para a nova — antes, o
-        // ON DELETE RESTRICT recusaria (a FK ainda apontaria para ela).
-        //
-        // O apagamento do ARQUIVO é adiado para depois do commit dentro do FotoService: o
-        // bucket não participa de transação, e aqui ainda rodam outbox, reindexação e
-        // cancelamento de inscrição — qualquer um pode estourar. Se isso acontecesse com o
-        // arquivo já apagado, o rollback traria a linha de volta e a foto daria 404 para
-        // sempre.
+        // Foto antiga removida após o save (ON DELETE RESTRICT recusaria o contrário).
+        // O arquivo do bucket é apagado pós-commit (FotoService) para rollback não deixar linha órfã.
         boolean fotoMudou = !java.util.Objects.equals(
                 fotoAntiga == null ? null : fotoAntiga.getId(),
                 fotoNova == null ? null : fotoNova.getId());
@@ -202,12 +187,7 @@ public class PessoaService {
             reindexacaoMovimentacaoService.reindexarPorMembro(membro.getId(), igrejaId);
         }
 
-        // Perdeu o vínculo MEMBRO (ex.: virou CONGREGANTE): quem só é elegível a evento
-        // exclusivo_membros por SER membro não pode continuar confirmado nele — mesma regra
-        // de validarElegibilidade em InscricaoService, aplicada aqui porque a mudança de
-        // vínculo não passa pelo fluxo de atualização de evento (que já cobre o caso
-        // "evento virou exclusivo"). Reusa cancelarInterno via cancelarInscricoesEmEventosExclusivos,
-        // então os acompanhantes vão junto, igual a qualquer outro cancelamento.
+        // Perda de vínculo MEMBRO → cancela inscrições em eventos exclusivos para membros.
         if (vinculoAntigo == Vinculo.MEMBRO && membro.getVinculo() != Vinculo.MEMBRO) {
             inscricaoService.cancelarInscricoesEmEventosExclusivos(membro.getId());
         }
@@ -220,11 +200,7 @@ public class PessoaService {
         return PessoaResponse.from(salvo, aviso);
     }
 
-    /**
-     * Update "self" de foto — usado por quem só pode trocar a própria foto
-     * (ACESSO_COMUM/LIDER em Meu Perfil). Mesma ordem de troca de `atualizarMembro`:
-     * vincula a nova antes de remover a antiga (o ON DELETE RESTRICT recusaria o contrário).
-     */
+    /** Self-service de foto (Meu Perfil). Vincula a nova antes de remover a antiga. */
     @Transactional
     public PessoaResponse atualizarMinhaFoto(UUID id, UUID novoFotoId, UUID igrejaId) {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
@@ -250,16 +226,7 @@ public class PessoaService {
         return PessoaResponse.from(salvo, null, true);
     }
 
-    /**
-     * B2: procura OUTRO membro da mesma igreja com o mesmo telefone (dígitos normalizados) e
-     * devolve o NOME dele para o front avisar — nunca bloqueia. Telefone não é chave de login
-     * como o e-mail; casal, família e idoso usando o número de um parente são casos legítimos,
-     * então duplicidade aqui é só um alerta ("confira se não é a mesma pessoa duas vezes"),
-     * nunca um erro de negócio.
-     *
-     * <p>Isolado por {@code igrejaId} (nunca cruza tenant) e exclui o próprio {@code pessoaId}
-     * sendo salvo, senão toda atualização "acharia" a si mesma como duplicata.
-     */
+    /** Alerta (nunca erro) se outra pessoa na mesma igreja tiver o telefone idêntico. */
     private String avisoTelefoneDuplicado(String telefone, UUID pessoaId, UUID igrejaId) {
         String digitos = com.domus.api.shared.util.TextoUtil.somenteDigitos(telefone);
         if (digitos == null) return null;
@@ -278,13 +245,8 @@ public class PessoaService {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
-        // O ON DELETE SET NULL de evento.responsavel_pessoa_id NUNCA dispara: Pessoa usa
-        // soft delete (@SQLDelete/@SQLRestriction), não DELETE de verdade. Sem este passo, um
-        // evento com essa pessoa como responsável ficaria com a FK apontando para uma linha que
-        // o @SQLRestriction esconde — EventoResponse.PessoaResumo.dePessoa resolveria o proxy
-        // LAZY e estouraria EntityNotFoundException, derrubando a listagem INTEIRA de eventos
-        // (mesmo padrão já corrigido para LocalEvento em LocalEventoService.arquivar).
-        // Antes do soft delete da pessoa, porque copia o NOME atual dela.
+        // Soft delete não dispara FK ON DELETE (@SQLDelete/@SQLRestriction). Desvincula
+        // o responsável manualmente para que o proxy LAZY não estoure EntityNotFoundException.
         eventoRepository.desvincularResponsavel(membro.getId(), membro.getNome());
 
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);

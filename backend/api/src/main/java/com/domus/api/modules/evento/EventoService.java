@@ -45,10 +45,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventoService {
 
-    /**
-     * Sementes de tipo sugeridas antes de a igreja ter usado algo — completa a lista de
-     * sugestões enquanto o campo ainda não "aprendeu" nada da igreja (ver {@link #tiposSugeridos}).
-     */
+    /** Tipos sugeridos por padrão quando a igreja ainda não usou nenhum. */
     private static final List<String> SEMENTES =
             List.of("Culto", "Conferência", "Retiro", "Ensaio", "Reunião");
 
@@ -141,14 +138,9 @@ public class EventoService {
     }
 
     /**
-     * @param cancelarNaoElegiveis Task 6: escolha EXPLÍCITA do admin ({@code PUT
-     *                             /eventos/{id}?cancelarNaoElegiveis=true}) para cancelar quem
-     *                             não é mais elegível sob a configuração nova. {@code false}
-     *                             (o padrão) NUNCA cancela ninguém sozinho — apertar uma faixa
-     *                             etária ou ligar {@code exclusivoMembros} não apaga mais em
-     *                             silêncio as exceções que o admin abriu com "inscrever mesmo
-     *                             assim" (ver Javadoc de
-     *                             {@link InscricaoService#removerInscritosNaoElegiveis}).
+     * @param cancelarNaoElegiveis Se {@code true}, remove inscritos que não atendem
+     *                             às novas restrições. O padrão ({@code false}) nunca
+     *                             cancela ninguém sozinho.
      */
     @Transactional
     public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
@@ -163,9 +155,7 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        // Editar um evento que já começou reescreveria o passado (data, local, vagas) debaixo
-        // de gente que já confirmou presença ou já foi. AGENDADO é a única situação em que
-        // editar ainda faz sentido.
+        // Editar evento que não está AGENDADO reescreveria o passado com gente já confirmada.
         SituacaoEvento situacaoAtual = evento.getSituacao();
         if (situacaoAtual == SituacaoEvento.EM_ANDAMENTO) {
             throw new BusinessException("EVENTO_EM_ANDAMENTO",
@@ -194,10 +184,8 @@ public class EventoService {
         evento.setRestricaoSexo(data.restricaoSexo());
         evento.setAtualizadoPor(usuario);
 
-        // A9: vagas contam PESSOAS (inscritos confirmados + acompanhantes) — reduzir abaixo
-        // de quem já está confirmado deixaria o evento com mais gente que vaga declarada, e
-        // "vagas restantes" (evento.getVagas() - total) ficaria negativo. null (sem limite)
-        // sempre é permitido, não há o que estourar.
+        // Vagas contam inscritos confirmados + acompanhantes.
+        // Reduzir abaixo do total de confirmados é proibido; null = sem limite.
         if (data.vagas() != null) {
             long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
             if (data.vagas() < pessoasConfirmadas) {
@@ -214,17 +202,14 @@ public class EventoService {
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
         evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
 
-        // Foto: resolve a NOVA antes de tocar no evento (valida que é da mesma igreja) e só
-        // grava a ANTIGA como candidata a remoção — nunca apaga antes de o evento apontar
-        // para a nova (mesma ordem usada em PessoaService).
+        // Resolve a nova foto antes de trocar; só remove a antiga depois.
         Foto fotoAntiga = evento.getFoto();
         Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
         evento.setFoto(fotoNova);
 
         Evento salvo = eventoRepository.save(evento);
 
-        // Remove a foto antiga só DEPOIS que o evento já aponta para a nova — antes, o
-        // ON DELETE RESTRICT recusaria (a FK ainda apontaria para ela).
+        // Remove a foto antiga só depois que o evento já aponta para a nova.
         boolean fotoMudou = !java.util.Objects.equals(
                 fotoAntiga == null ? null : fotoAntiga.getId(),
                 fotoNova == null ? null : fotoNova.getId());
@@ -232,9 +217,6 @@ public class EventoService {
             fotoService.remover(fotoAntiga.getId());
         }
 
-        // Task 6: NUNCA cancela sozinho mais. Só quando o admin escolhe explicitamente
-        // cancelarNaoElegiveis=true (depois de ver a prévia de POST .../impacto-restricao) —
-        // ver Javadoc de removerInscritosNaoElegiveis para o porquê da mudança.
         int inscricoesRemovidas = cancelarNaoElegiveis
                 ? inscricaoService.removerInscritosNaoElegiveis(salvo.getId())
                 : 0;
@@ -256,10 +238,8 @@ public class EventoService {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        // Só bloqueia em andamento: arquivar um evento ENCERRADO é faxina normal (o piloto vai
-        // acumular evento passado toda semana), e travar isso empurraria o usuário pra pedir
-        // exceção sem necessidade. Em andamento é diferente — arquivar um evento que está
-        // rolando AGORA tira ele da lista de quem ainda vai chegar.
+        // Bloqueia só em andamento: arquivar evento encerrado é faxina, mas arquivar
+        // evento rolando tira ele de quem ainda vai chegar.
         if (evento.getSituacao() == SituacaoEvento.EM_ANDAMENTO) {
             throw new BusinessException("EVENTO_EM_ANDAMENTO",
                     "Não é possível arquivar um evento em andamento.");
@@ -277,11 +257,8 @@ public class EventoService {
     }
 
     /**
-     * Prévia de elegibilidade PARA A PRÓPRIA PESSOA logada — é o que alimenta o
-     * {@code GET /eventos/{id}/elegibilidade}, conveniência de UX para a tela decidir o que
-     * mostrar ANTES do POST de inscrição. NUNCA é defesa: o {@code InscricaoService} roda a
-     * MESMA {@link ElegibilidadeService#avaliar} de novo dentro da transação de inscrever,
-     * então quem chamar o POST direto (Insomnia, curl) esbarra na regra igual.
+     * Prévia de elegibilidade para a tela decidir o que mostrar antes da inscrição.
+     * O {@code InscricaoService} reavalia durante o POST como defesa real.
      */
     @Transactional(readOnly = true)
     public ElegibilidadeResponse elegibilidade(UUID eventoId, UUID pessoaId, UUID igrejaId) {
@@ -293,15 +270,8 @@ public class EventoService {
     }
 
     /**
-     * Prévia PURA (nada é gravado) de quem, dentre os inscritos confirmados de HOJE, ficaria de
-     * fora se {@code data} fosse salvo — alimenta {@code POST /eventos/{id}/impacto-restricao}
-     * (Task 6). É o que substitui o cancelamento automático que existia antes: em vez de
-     * cancelar em silêncio ao apertar/ligar uma restrição, o admin vê a lista e decide, via
-     * {@code PUT /eventos/{id}?cancelarNaoElegiveis=true}, se quer mesmo cancelar.
-     *
-     * <p><b>Privacidade:</b> a resposta traz nome e motivo (ex.: "34 anos") de terceiros — só
-     * quem {@link Permissoes#podeGerenciarEventos(String)} pode chamar (mesmo vazamento da
-     * revisão da Task 4, fechado aqui na origem).
+     * Prévia (não grava nada) de quem ficaria de fora se as restrições de {@code data}
+     * fossem aplicadas. Só {@link Permissoes#podeGerenciarEventos(String)} pode chamar.
      */
     @Transactional(readOnly = true)
     public ImpactoRestricaoResponse calcularImpacto(UUID eventoId, EventoRequest data, UUID igrejaId, String role) {
@@ -314,9 +284,7 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarIdades(data);
 
-        // Evento "de mentira", nunca persistido: só carrega as regras hipotéticas que
-        // ElegibilidadeService lê (idade, estado civil, sexo, exclusivoMembros — ver Javadoc
-        // de ElegibilidadeService sobre RegraVagas ficar de fora dessa lista).
+        // Evento nunca persistido — só carrega as regras que ElegibilidadeService avalia.
         Evento regrasHipoteticas = Evento.builder()
                 .idadeMin(data.idadeMin())
                 .idadeMax(data.idadeMax())
@@ -337,11 +305,7 @@ public class EventoService {
         }
     }
 
-    /**
-     * Espelha o CHECK do banco (V6) do lado de cá, para devolver mensagem decente em vez de
-     * 500 genérico vindo da constraint. Controlar presença sem organizar inscrição não faz
-     * sentido — não há lista prévia de quem "chamar".
-     */
+    /** Controlar presença sem inscrição não faz sentido — não há lista de quem chamar. */
     private void validarControlaPresenca(EventoRequest data) {
         boolean controlaPresenca = Boolean.TRUE.equals(data.controlaPresenca());
         boolean requerInscricao = Boolean.TRUE.equals(data.requerInscricao());
@@ -358,11 +322,7 @@ public class EventoService {
         }
     }
 
-    /**
-     * Resolve o local do evento a partir de {@code localId}/{@code localTexto}. O CHECK do
-     * banco (mutuamente exclusivos) é a rede de segurança — aqui é onde o usuário recebe uma
-     * mensagem decente em vez de um 500 genérico vindo da constraint.
-     */
+    /** Valida que localId e localTexto não vêm juntos (a constraint do banco é rede de segurança). */
     private LocalEvento resolverLocal(EventoRequest data, UUID igrejaId) {
         boolean temTexto = data.localTexto() != null && !data.localTexto().isBlank();
         if (data.localId() != null && temTexto) {
@@ -372,8 +332,7 @@ public class EventoService {
         if (data.localId() == null) {
             return null;
         }
-        // Isolamento multi-tenant: localId de OUTRA igreja é tratado como inexistente — nunca
-        // vaza que existe fora da própria igreja.
+        // localId de outra igreja é tratado como inexistente.
         return localEventoRepository.findByIdAndIgrejaId(data.localId(), igrejaId)
                 .orElseThrow(() -> new BusinessException("LOCAL_NAO_ENCONTRADO",
                         "Local não encontrado."));
@@ -386,11 +345,8 @@ public class EventoService {
     }
 
     /**
-     * Grava o tipo capitalizado, mas ANTES procura um tipo já usado pela igreja cujo
-     * {@code normalizarParaComparacao} bata com o novo — se houver, reusa a grafia existente.
-     * Sem isso, "Vigília" e "vigilia" virariam dois tipos diferentes no filtro (o mesmo evento,
-     * duas grafias). Tipos genuinamente diferentes ("Culto" vs. "Cultinho") não normalizam
-     * igual, então continuam distintos.
+     * Capitaliza o tipo, mas reusa grafia já existente da igreja se a forma normalizada
+     * bater — evita que "Vigília" e "vigilia" virem dois tipos diferentes no filtro.
      */
     private String resolverTipo(String tipoInformado, UUID igrejaId) {
         String capitalizado = TextoUtil.capitalizar(tipoInformado);
@@ -404,10 +360,8 @@ public class EventoService {
     }
 
     /**
-     * Sugestões de tipo: primeiro os que a IGREJA já usou (por frequência — o que ela mais
-     * digita sobe), depois as sementes que ainda não foram usadas. É essa ordem que faz o
-     * campo parecer que aprende: o que a igreja usou sobe e passa na frente do que o sistema
-     * chutou e ninguém usou.
+     * Sugestões de tipo: primeiro os usados pela igreja (por frequência),
+     * depois as sementes ainda não usadas.
      */
     @Transactional(readOnly = true)
     public List<String> tiposSugeridos(UUID igrejaId) {

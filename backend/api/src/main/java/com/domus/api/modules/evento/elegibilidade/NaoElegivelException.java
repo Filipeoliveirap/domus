@@ -4,20 +4,9 @@ import com.domus.api.shared.exception.BusinessException;
 
 import java.util.List;
 
-/**
- * Carrega a lista de {@link Impedimento} até o {@code GlobalExceptionHandler}, que responde
- * 422 (não 400 genérico) — a inscrição não foi rejeitada por dado inválido, foi rejeitada
- * porque a PESSOA não é elegível para o evento. O front usa {@link #getImpedimentos()} para
- * mostrar exatamente o que barrou, com o mesmo código que o {@code GET .../elegibilidade}
- * já teria mostrado antes de tentar.
- */
+/** Exceção de negócio usada quando uma pessoa não atende aos requisitos de elegibilidade do evento. */
 public class NaoElegivelException extends BusinessException {
 
-    // Mensagem genérica para quem NÃO gerencia inscrições: o 422 de elegibilidade é
-    // acionável (ACESSO_COMUM pode chamar POST .../inscricoes/pessoas com um pessoaId
-    // arbitrário da igreja e ler o resultado), então nome e idade de terceiro NUNCA podem
-    // sair aqui para quem não tem acesso à lista de pessoas. Quem gerencia continua vendo a
-    // mensagem detalhada (Regra 2 do InscricaoService já lhe dá acesso à decisão de contornar).
     private static final String MENSAGEM_GENERICA = "Esta pessoa não atende aos requisitos deste evento.";
 
     private final List<Impedimento> impedimentos;
@@ -32,13 +21,7 @@ public class NaoElegivelException extends BusinessException {
         this.impedimentos = impedimentos;
     }
 
-    /**
-     * @param podeVerDetalhes {@code false} para quem não gerencia inscrições: tanto a
-     *                        mensagem quanto CADA {@link Impedimento} da lista (que também
-     *                        vai no JSON de resposta, ver {@code ErrorResponse.ofElegibilidade})
-     *                        são trocados pela versão genérica — sanitizar só a mensagem de
-     *                        topo e deixar nome/idade vazando na lista seria meio furo.
-     */
+    /** Se {@code podeVerDetalhes} for false, sanitiza mensagens e impedimentos para quem não gerencia inscrições. */
     public static NaoElegivelException para(List<Impedimento> impedimentos, boolean podeVerDetalhes) {
         if (podeVerDetalhes) {
             return new NaoElegivelException(impedimentos);

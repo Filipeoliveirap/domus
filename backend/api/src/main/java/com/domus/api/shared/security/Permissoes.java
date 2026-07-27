@@ -5,19 +5,10 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Política de autorização, num lugar só.
- *
- * <p><b>Por que existe:</b> antes disto o código perguntava a IDENTIDADE
- * ({@code "ADMIN_IGREJA".equals(role) || "LIDER".equals(role)}) quando queria saber a
- * CAPACIDADE ("pode gerenciar inscrições?"). A mesma regra reimplementada em dezenas de
- * lugares tem dois custos: renomear um perfil vira caçada, e uma divergência entre duas
- * cópias é um furo de autorização SILENCIOSO — não quebra compilação nem teste.
- *
- * <p><b>Como usar:</b> chame o método com o nome da ação. Se a pergunta que você precisa
- * fazer não está aqui, adicione um método — não compare string no seu service.
- *
- * <p>Isto NÃO substitui o {@code SecurityConfig}: lá fica a trava por rota, aqui a regra
- * fina de dentro do serviço. As duas leem os mesmos perfis.
+ * Autorização centralizada: compare capacidade ("pode gerenciar inscrições?"), não
+ * identidade ({@code "ADMIN_IGREJA".equals(role)}). Divergência entre cópias de uma
+ * regra é um furo de autorização silencioso — não quebra compilação nem teste.
+ * Se uma pergunta não está aqui, adicione um método; não compare string no seu service.
  */
 public final class Permissoes {
 
@@ -62,11 +53,7 @@ public final class Permissoes {
         return temCapacidade(role, capacidadesExtras, SO_ADMIN, "TESOUREIRO");
     }
 
-    /**
-     * Busca global: além de membros e eventos (visíveis a todos), inclui usuários e dados
-     * financeiros (movimentações e categorias) nos resultados. Gate único porque a regra
-     * cobre os dois — nomear só por um dos dois enganaria quem lê.
-     */
+    /** Busca global: inclui usuários e dados financeiros nos resultados. */
     public static boolean podeVerUsuariosEFinanceiroNaBuscaGlobal(String role) { return tem(role, SO_ADMIN); }
     public static boolean podeVerUsuariosEFinanceiroNaBuscaGlobal(String role, Set<String> capacidadesExtras) {
         return temCapacidade(role, capacidadesExtras, SO_ADMIN, "TESOUREIRO");

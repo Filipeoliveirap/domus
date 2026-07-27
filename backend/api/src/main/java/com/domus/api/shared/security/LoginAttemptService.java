@@ -7,16 +7,10 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 
 /**
- * Anti-força-bruta por conta: conta falhas de login por e-mail e bloqueia após
- * {@link #MAX_TENTATIVAS} erros. O estado vive no Redis (não em memória), para
- * sobreviver a reinícios e ser compartilhado entre instâncias do backend.
- *
- * <p>Duas chaves por e-mail:
- * <ul>
- *   <li>{@code login:attempt:<email>} — contador de falhas (expira em {@link #BLOQUEIO});
- *   <li>{@code login:block:<email>} — marca de bloqueio com TTL; o Redis a apaga sozinho,
- *       o que já entrega o "desbloqueio automático".
- * </ul>
+ * Anti-força-bruta por conta. Conta falhas de login por e-mail no Redis (sobrevive a
+ * reinícios) e bloqueia após {@link #MAX_TENTATIVAS} erros. Duas chaves:
+ * {@code login:attempt:<email>} (contador) e {@code login:block:<email>} (marca com TTL
+ * para desbloqueio automático).
  */
 @Slf4j
 @Service

@@ -1,22 +1,5 @@
 #!/usr/bin/env bash
-#
-# Ensaio de restauração do backup — o teste que a automação NÃO consegue fazer.
-#
-# O workflow diário prova que o dump é íntegro, mas NÃO prova que o arquivo
-# criptografado abre com a sua chave: o CI só tem a chave pública, de propósito
-# (assim um GitHub comprometido não lê backup nenhum). Essa lacuna só um humano
-# fecha — e é este script.
-#
-# "Backup que nunca foi restaurado não é backup, é esperança."
-#
-# Rodar A CADA 3 MESES. Está no calendário; se não estiver, ponha.
-#
-# Uso:
-#   ./scripts/ensaio-restauracao.sh              # usa o backup mais recente
-#   ./scripts/ensaio-restauracao.sh <nome-do-objeto>
-#
-# Requer: docker, age. Nada é gravado fora de um diretório temporário, que é
-# apagado com shred no fim (inclusive se der erro no meio).
+
 
 set -Eeuo pipefail
 
@@ -30,11 +13,8 @@ CONTAINER="domus-ensaio-$$"
 STTY_ORIG="$(stty -g 2>/dev/null || true)"
 
 limpar() {
-  # Restaura o eco do terminal SEMPRE. Se o script morrer com o eco desligado,
-  # o terminal fica mudo e parece travado.
   [[ -n "$STTY_ORIG" ]] && stty "$STTY_ORIG" 2>/dev/null || stty echo 2>/dev/null || true
   docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-  # shred em tudo: a chave privada passa por aqui.
   find "$WORKDIR" -type f -exec shred -u {} + 2>/dev/null || true
   rm -rf "$WORKDIR"
   echo "    (temporários apagados com shred)"
@@ -51,7 +31,6 @@ echo "=== Ensaio de restauração do backup do Domus ==="
 echo
 
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
-  # read -s: não ecoa e não vira comando, então não entra no histórico do shell.
   read -rsp "R2 Access Key ID: " AWS_ACCESS_KEY_ID; echo
   read -rsp "R2 Secret Access Key: " AWS_SECRET_ACCESS_KEY; echo
   export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
@@ -75,9 +54,6 @@ echo "    $(stat -c%s "$WORKDIR/backup.age") bytes"
 echo "==> 3/5 Descriptografando"
 echo "    Cole as 3 linhas da chave PRIVADA (Bitwarden > Domus) e feche com Ctrl+D."
 echo "    (o terminal NÃO vai exibir o que você colar — é esperado)"
-# stty -echo em vez de um cat solto: o cat ECOA o que recebe, e a chave privada
-# ficaria na tela e no scrollback do terminal. É a mesma proteção do read -s
-# usado acima para as credenciais do R2.
 stty -echo 2>/dev/null || true
 cat > "$WORKDIR/chave.txt"
 [[ -n "$STTY_ORIG" ]] && stty "$STTY_ORIG" 2>/dev/null || stty echo 2>/dev/null || true

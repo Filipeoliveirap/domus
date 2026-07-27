@@ -6,27 +6,15 @@ import styles from './ModalConfirmacao.module.css'
 
 interface Props {
   titulo: string
-  /** Corpo da confirmação. Pode conter blocos (lista de motivos etc.) — é renderizado num
-   *  `<div>`, não num `<p>`, então `<ul>`/`<p>` dentro são HTML válido. */
   mensagem: React.ReactNode
   textoConfirmar?: string
   textoCancelar?: string
-  /** Realça o botão de confirmar como ação de risco (vermelho) em vez da cor primária. */
   perigo?: boolean
   isLoading?: boolean
   onConfirmar: () => void
   onClose: () => void
 }
 
-/**
- * Confirmação simples de sim/não — para decisões reversíveis ou de baixo risco, onde
- * pedir para digitar uma palavra (como o {@link ModalConfirmacaoCritica}) seria atrito à
- * toa. Ex.: "inscrever mesmo assim?" quando um gestor contorna uma restrição.
- *
- * <p>A mensagem entra num `<div>` (não num `<p>`), então pode conter lista/parágrafos sem
- * gerar HTML inválido — foi o que quebrava a hidratação quando uma `<ul>` ia parar dentro
- * do `<p>` do modal crítico.
- */
 export function ModalConfirmacao({
   titulo, mensagem, textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar',
   perigo = false, isLoading = false, onConfirmar, onClose,

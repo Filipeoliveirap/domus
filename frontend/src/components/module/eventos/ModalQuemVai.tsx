@@ -16,20 +16,10 @@ import styles from './ModalQuemVai.module.css'
 
 interface Props {
   eventoId: string
-  /** A2/rodada 3: fora de AGENDADO o backend recusa cancelar — o botão de cancelar some. */
   situacao: SituacaoEvento
   aoFechar: () => void
 }
 
-/**
- * Quem vai ao evento, aberto ao clicar na pilha de avatares.
- *
- * <p>Duas fontes por papel, e a diferença é de privacidade, não de conveniência:
- * a pessoa comum recebe a lista <b>reduzida</b> (nome e foto); ADMIN/LÍDER recebem a
- * completa, que inclui telefone de convidado e quem inscreveu quem. Disparar a consulta
- * de admin para uma pessoa comum devolveria 401 — por isso cada uma só roda para quem
- * tem direito.
- */
 export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
   const ehGestor = podeGerenciarInscricoes(role)
@@ -37,9 +27,7 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(
     eventoId, !ehGestor)
-  // Modal de conveniência ("quem vai") mostra TODO MUNDO de uma vez, não pagina — por
-  // isso pede um `size` grande (bem acima do que uma igreja pequena/média teria de
-  // inscritos num evento só), em vez do padrão de 20 da lista operacional de inscritos.
+  // size=500: "quem vai" mostra todos de uma vez, não pagina
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(
     eventoId, ehGestor, '', 0, 500)
   const cancelar = useCancelarInscricao()
@@ -55,7 +43,7 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [aoFechar])
 
-  // Normaliza as duas formas numa só, para a marcação não se ramificar por papel.
+  // Normaliza as duas fontes numa só, para não ramificar a marcação por papel
   const linhas = ehGestor
     ? (listaAdmin?.inscritos.content ?? []).map((i) => ({
         id: i.id,
@@ -118,11 +106,6 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
                   </span>
                   <span className={styles.nome}>{l.nome}</span>
 
-                  {/*
-                    Confirmação obrigatória: cancelar a inscrição de OUTRA pessoa não é
-                    desfazível por ela — ela só descobre no dia do evento. Um clique solto
-                    numa lista de nomes parecidos é fácil demais de errar.
-                  */}
                   {ehGestor && !podeCancelar && (
                     <span className={styles.selo}>Participou</span>
                   )}
@@ -154,9 +137,7 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
                         type="button"
                         className={styles.cancelar}
                         onClick={() => {
-                          // Sem convidado: confirmação leve inline. Com convidado, cancelar
-                          // arrasta os convidados junto (removidos, não voltam sozinhos numa
-                          // nova inscrição) — atrito sobe para digitar o nome.
+                          // Sem convidado: confirmação inline. Com convidado: cancela junto e exige digitar o nome.
                           if (l.convidados.length > 0) {
                             setCancelandoComConvidados({
                               id: l.id, nome: l.nome, quantidadeConvidados: l.convidados.length,
@@ -173,7 +154,6 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
                   )}
                 </div>
 
-                {/* Convidado aninhado sob quem o trouxe: é o que responde "de onde veio". */}
                 {l.convidados.map((nome, i) => (
                   <div key={`${l.id}-${i}`} className={styles.convidado}>
                     <span className={styles.avatarConvidado}>{iniciais(nome)}</span>

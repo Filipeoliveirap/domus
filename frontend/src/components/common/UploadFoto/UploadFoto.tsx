@@ -13,23 +13,13 @@ const TIPOS_ACEITOS = ['image/jpeg', 'image/png']
 const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
 
 interface Props {
-  /** Id da foto já salva (o que vira `urlFoto(valor)`), ou `null`/`undefined` sem foto. */
   valor: string | null | undefined
   onChange: (id: string | null) => void
-  /** Círculo (pessoa, logo da igreja) exige recorte; banner (capa de evento) não. */
   formato: 'circulo' | 'banner'
-  /** Nome usado só para o fallback de iniciais quando ainda não há foto — nunca mostramos
-   * uma silhueta genérica (convenção do sistema); sem nome, cai no ícone de câmera. */
   nomeFallback?: string
   disabled?: boolean
 }
 
-/**
- * Área de upload de foto: clique ou arraste, prévia local imediata, recorte (obrigatório
- * em `circulo`, opcional em `banner`) e envio para a API — que devolve o `id` a guardar
- * no formulário. O componente não sabe onde o `id` será usado; quem chama decide (campo
- * de pessoa, evento ou logo da igreja).
- */
 export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const upload = useUploadFoto()
@@ -39,9 +29,6 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
   const [arrastandoSobre, setArrastandoSobre] = useState(false)
   const [visualizando, setVisualizando] = useState(false)
 
-  // Prévia local antes de qualquer round-trip de rede — a pessoa vê o que escolheu na
-  // hora. O object URL é recriado a cada seleção e revogado assim que deixa de ser usado
-  // (troca de arquivo ou desmontagem), senão cada escolha vaza memória.
   const previaLocal = useMemo(
     () => (arquivoBruto ? URL.createObjectURL(arquivoBruto) : null),
     [arquivoBruto],
@@ -69,7 +56,6 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
   function selecionarArquivo(arquivo: File) {
     if (!validarArquivo(arquivo)) return
     setArquivoBruto(arquivo)
-    // Círculo (pessoa/logo) sempre passa pelo recorte; banner deixa a pessoa escolher.
     if (formato === 'circulo') setRecortando(true)
   }
 

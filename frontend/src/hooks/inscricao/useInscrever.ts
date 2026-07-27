@@ -22,17 +22,6 @@ interface Opcoes {
   onContornavel?: (impedimentos: Impedimento[]) => void
 }
 
-/**
- * Auto-inscrição do próprio usuário no evento.
- *
- * <p><b>`silencioso`</b> desliga o aviso de sucesso, para o modo "Eu vou" (evento sem
- * inscrição prévia). Ali a interação é leve, como curtir um post: o feedback é o próprio
- * botão mudando de estado, e um toast dizendo "inscrição confirmada" seria pesado demais.
- *
- * <p>O ERRO continua avisando: falha silenciosa deixaria a pessoa achando que marcou
- * presença sem ter marcado. A exceção é o 422 contornável com `onContornavel` (gestor):
- * aí a confirmação "inscrever mesmo assim" toma o lugar do toast.
- */
 export function useInscrever(eventoId: string, silencioso = false, opcoes: Opcoes = {}) {
   const queryClient = useQueryClient()
 

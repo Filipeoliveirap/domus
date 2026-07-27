@@ -40,13 +40,6 @@ export function ehNaoElegivelContornavel(error: unknown): boolean {
   return !!imps?.length && imps.every((i) => i.contornavel)
 }
 
-/**
- * ADMIN/LÍDER inscrevendo outras pessoas no evento (ids escolhidos na tela).
- *
- * O parâmetro chama-se `pessoaIds` porque é o nome do campo no contrato da API
- * (`InscreverPessoasRequest.pessoaIds`, rota `/inscricoes/pessoas`) — essa rota não foi
- * renomeada no backend, só a tabela/entidade (membro → pessoa).
- */
 export function useInscreverPessoas(eventoId: string, opcoes: Opcoes = {}) {
   const queryClient = useQueryClient()
 

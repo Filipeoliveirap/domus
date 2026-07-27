@@ -14,17 +14,14 @@ interface AuthState {
   id: string | null
   nome: string | null
   role: Role | null
-  /** Id da foto (não a URL) — quem exibe monta a URL com `urlFoto()`, como em todo o app. */
   fotoId: string | null
   igrejaId: string | null
   igrejaNome: string | null
   cargo: string | null
   igrejaSigla: string | null
   igrejaLogoId: string | null
-  /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
   capacidadesExtras: string[]
   isAuthenticated: boolean
-  /** true = já perguntamos ao servidor quem somos (não "o localStorage foi lido"). */
   hidratado: boolean
   /**
    * true = a pessoa clicou em "sair", em vez de a sessão ter caído sozinha.
@@ -60,8 +57,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
   ...estadoDeslogado,
   hidratado: false,
   logoutIntencional: false,
-  // `data` já vem com `fotoId` do backend (GET /auth/me, /auth/login, /auth/google/*) —
-  // Sessao inclui o campo desde que o upload de foto passou a existir na Fase 2.
   login: (data) =>
     set({ ...data, isAuthenticated: true, hidratado: true, logoutIntencional: false }),
   logout: () => set({ ...estadoDeslogado, hidratado: true, logoutIntencional: true }),

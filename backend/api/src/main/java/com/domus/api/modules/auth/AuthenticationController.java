@@ -54,25 +54,13 @@ public class AuthenticationController {
     @PostMapping("/google/registrar")
     public ResponseEntity<SessaoDTO> googleRegistrar(@RequestBody @Valid GoogleRegistrarDTO data) {
         RegistrarIgrejaResponse r = googleAuthService.registrar(data);
-        // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto — fotoId nulo é o
-        // dado real, não uma omissão.
         return comCookies(r.token(), r.refreshToken())
                 .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
                         null, null, null, null));
     }
 
-    /**
-     * Quem sou eu?
-     *
-     * <p>Com o cookie httpOnly o JavaScript não consegue mais ler a sessão, então o servidor
-     * vira o dono da verdade e o front pergunta. Rota autenticada: sem cookie válido o
-     * Spring Security devolve 401 pelo HttpStatusEntryPoint, antes de chegar aqui.
-     *
-     * <p>Usa só o ID do principal e vai buscar o resto: o principal é uma entidade
-     * DESANEXADA (carregada no SecurityFilter, um servlet filter, que roda antes do
-     * open-in-view), então ler dele um campo LAZY como {@code igreja} lançaria
-     * LazyInitializationException.
-     */
+    // O principal é carregado no SecurityFilter (antes do open-in-view): ler campo LAZY lança
+    // LazyInitializationException. Usa o ID e busca o resto.
     @GetMapping("/me")
     public ResponseEntity<SessaoDTO> me(@AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(authService.sessaoDe(usuario.getId()));

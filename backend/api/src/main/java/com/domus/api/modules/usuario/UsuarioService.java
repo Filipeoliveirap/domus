@@ -57,11 +57,8 @@ public class UsuarioService {
                 .orElse(null);
         if (existente != null) {
             if (existente.getDeleteAt() == null) {
-                // A5: distingue conta ATIVA de conta DESATIVADA (usuario.ativo) — as duas têm
-                // deleteAt nulo (não foram arquivadas), mas só a desativada precisa de uma
-                // mensagem que aponte o caminho certo (reativar), em vez do genérico "já tem
-                // acesso" (que soa como se bastasse esperar, quando na verdade a conta nem
-                // consegue logar hoje).
+                // Conta ATIVA vs DESATIVADA: ambas têm deleteAt nulo (não arquivadas),
+                // mas só a desativada precisa de mensagem de reativação, não de "já tem acesso".
                 if (!existente.isAtivo()) {
                     throw new BusinessException("USUARIO_DESATIVADO",
                             "Este membro já tem uma conta, mas ela está desativada. "
@@ -142,9 +139,8 @@ public class UsuarioService {
             throw new BusinessException("CONVITE_JA_ACEITO",
                     "Este usuário já fez login — o convite já foi aceito.");
         }
-        // A5: usuário desativado (usuario.ativo=false) não deve receber convite — reenviar um
-        // link de "definir senha" para uma conta que o admin decidiu desligar reabriria o
-        // acesso por trás da própria decisão de desativar.
+        // Usuário desativado não recebe convite: reenviar o link reabriria o acesso
+        // por trás da decisão do admin de desativar.
         if (!usuario.isAtivo()) {
             throw new BusinessException("USUARIO_DESATIVADO",
                     "Este usuário está desativado. Reative o acesso antes de reenviar o convite.");
@@ -158,10 +154,7 @@ public class UsuarioService {
         log.info("Convite reenviado. usuario_id={}", usuarioId);
     }
 
-    /**
-     * Garante que o membro tenha e-mail (o convite depende dele). Se já tem, retorna.
-     * Se não tem, exige o `emailFornecido`, valida unicidade e grava no membro.
-     */
+    /** Garante e-mail no membro (o convite depende dele). Se não tem, valida unicidade e grava. */
     private String garantirEmailDoMembro(Pessoa membro, String emailFornecido) {
         if (membro.getEmail() != null && !membro.getEmail().isBlank()) {
             return membro.getEmail();
@@ -311,12 +304,9 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
         garantirNaoEhUltimoAdmin(usuario, igrejaId);
 
-        // Mesmo raciocínio do arquivamento de pessoa (ver PessoaService.arquivarMembro): o
-        // ON DELETE SET NULL de criado_por_usuario_id/atualizado_por_usuario_id nunca dispara
-        // (Usuario usa soft delete), e criado_por é preenchido em TODO evento (não é opcional
-        // como o responsável) — arquivar um usuário que já cadastrou UM evento derrubaria a
-        // listagem INTEIRA se este passo faltasse. Antes do delete, pois usa o nome da pessoa
-        // dele (ainda resolvível — a pessoa não foi tocada aqui).
+        // Desvincula referências de auditoria em evento antes do delete.
+        // ON DELETE SET NULL nunca dispara (soft delete), e criado_por é preenchido em
+        // todo evento — arquivar um usuário sem este passo quebraria a listagem inteira.
         eventoRepository.desvincularUsuario(usuario.getId(), usuario.getPessoa().getNome());
 
         usuarioRepository.delete(usuario);
@@ -334,10 +324,7 @@ public class UsuarioService {
     public void arquivarPorMembro(UUID pessoaId, UUID igrejaId) {
         usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario -> {
             log.info("Arquivando usuário em cascata (membro arquivado). usuario_id={}, pessoa_id={}, igrejaId={}", usuario.getId(), pessoaId, igrejaId);
-            // Mesmo desvínculo do arquivamento direto (ver arquivarUsuario acima) — chamado
-            // aqui de novo porque este método é o caminho de cascata (PessoaService.arquivarMembro
-            // chama arquivarPorMembro ANTES do soft delete da pessoa, então usuario.getPessoa()
-            // ainda resolve o nome certo).
+            // Chamado antes do soft delete da pessoa — usuario.getPessoa() ainda resolve.
             eventoRepository.desvincularUsuario(usuario.getId(), usuario.getPessoa().getNome());
             usuarioRepository.delete(usuario);
             outboxRegistrador.registrar(

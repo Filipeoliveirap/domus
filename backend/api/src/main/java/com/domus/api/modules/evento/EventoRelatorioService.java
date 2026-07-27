@@ -21,11 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Agregações de presença/engajamento — relatório individual (por evento) e geral (entre
- * eventos, ver Task 8). Arquivo separado de {@link EventoService}: aquele é CRUD de evento,
- * este é leitura agregada; razões de mudar diferentes.
- */
 @Service
 @RequiredArgsConstructor
 public class EventoRelatorioService {
@@ -34,11 +29,6 @@ public class EventoRelatorioService {
     private final InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
 
-    /**
-     * Relatório de UM evento: inscritos sempre aparecem; comparecimento e
-     * {@code percentualIgreja} só quando {@code evento.controlaPresenca=true} — {@code null}
-     * explícito no contrário, para a seção sumir inteira no front (nunca aparecer zerada).
-     */
     @Transactional(readOnly = true)
     public RelatorioEventoResponse relatorioIndividual(UUID eventoId, UUID igrejaId) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
@@ -48,9 +38,6 @@ public class EventoRelatorioService {
         long convidadosInscritos = inscricaoRepository.countConvidadosInscritos(eventoId);
         var inscritos = new RelatorioEventoResponse.Inscritos(pessoasInscritas, convidadosInscritos);
 
-        // Mesmo raciocínio de "Impacto Global" (abaixo), mas para INSCRITOS — sempre
-        // calculado, não depende de controlaPresenca: só pessoas CADASTRADAS que se
-        // inscreveram sobre o total de pessoas ATIVAS da igreja; convidado não entra.
         long totalAtivas = pessoaRepository.countByIgrejaId(igrejaId);
         Double percentualIgrejaInscritos = totalAtivas > 0
                 ? arredondar((pessoasInscritas * 100.0) / totalAtivas)
@@ -64,9 +51,6 @@ public class EventoRelatorioService {
         long convidadosCompareceram = inscricaoRepository.countConvidadosCompareceram(eventoId);
         var compareceram = new RelatorioEventoResponse.Compareceram(pessoasCompareceram, convidadosCompareceram);
 
-        // "Impacto Global": só pessoas CADASTRADAS que compareceram sobre o total de pessoas
-        // ATIVAS da igreja — convidado nunca entra (nem no numerador, nem no denominador),
-        // porque a base é "pessoas da igreja", não "gente que apareceu".
         Double percentualIgreja = totalAtivas > 0
                 ? arredondar((pessoasCompareceram * 100.0) / totalAtivas)
                 : 0.0;
@@ -74,27 +58,22 @@ public class EventoRelatorioService {
         return new RelatorioEventoResponse(inscritos, percentualIgrejaInscritos, compareceram, percentualIgreja);
     }
 
-    /** Uma casa decimal — precisão suficiente para um percentual/média de presença. */
     static double arredondar(double valor) {
         return Math.round(valor * 10.0) / 10.0;
     }
 
     /**
-     * Relatório entre vários eventos, com filtros combináveis e opcionais (Período, Recorte
-     * Etário, Tipo). Ver Decisão 4 do spec: comparecimento médio/participantes
-     * únicos/tendência só existem entre eventos com {@code controlaPresenca=true}; evento
-     * mais popular e (parte de) variação caem para inscritos confirmados quando faltar dado
-     * de comparecimento — sempre com a base declarada, nunca implícita.
+     * Relatório entre eventos com filtros combináveis e opcionais (período, recorte etário, tipo).
+     * Comparecimento médio e participantes únicos só existem entre eventos com controlaPresenca=true;
+     * evento mais popular cai para inscritos confirmados quando falta dado de comparecimento.
      */
     @Transactional(readOnly = true)
     public RelatorioGeralResponse relatorioGeral(UUID igrejaId, LocalDateTime inicio, LocalDateTime fim,
                                                   String recorteEtario, String tipo, Pageable pageable) {
         List<Evento> eventosFiltrados = eventoRepository.buscarParaRelatorio(igrejaId, inicio, fim, recorteEtario, tipo);
 
-        // Totais por evento calculados uma vez só e reusados no resumo, no mais popular e
-        // nos últimos eventos — evita recontar a mesma coisa três vezes.
         Map<UUID, Long> totalInscritosPorEvento = new HashMap<>();
-        Map<UUID, Long> totalCompareceramPorEvento = new HashMap<>(); // só entra quem controlaPresenca=true
+        Map<UUID, Long> totalCompareceramPorEvento = new HashMap<>();
         for (Evento e : eventosFiltrados) {
             long inscritos = inscricaoRepository.countPessoasInscritas(e.getId())
                     + inscricaoRepository.countConvidadosInscritos(e.getId());
@@ -111,8 +90,6 @@ public class EventoRelatorioService {
         RelatorioGeralResponse.EventoMaisPopular maisPopular = eventoMaisPopular(eventosFiltrados, totalInscritosPorEvento);
         List<RelatorioGeralResponse.PontoTendencia> tendencia = montarTendencia(igrejaId, recorteEtario, tipo, totalCompareceramPorEvento);
 
-        // Lista COMPLETA calculada primeiro (variação usa a média do filtro inteiro, não só
-        // da página) — só a resposta final é que fatia pela página pedida.
         List<RelatorioGeralResponse.UltimoEvento> todosUltimosEventos = montarUltimosEventos(
                 igrejaId, eventosFiltrados, totalInscritosPorEvento, totalCompareceramPorEvento);
         PagedResponse<RelatorioGeralResponse.UltimoEvento> ultimosEventosPaginado = paginar(todosUltimosEventos, pageable);
@@ -138,7 +115,6 @@ public class EventoRelatorioService {
         return new RelatorioGeralResponse.Resumo(eventosFiltrados.size(), comparecimentoMedio, participantesUnicos);
     }
 
-    /** Sempre por inscritos confirmados — funciona em QUALQUER evento, com ou sem controle de presença. */
     private RelatorioGeralResponse.EventoMaisPopular eventoMaisPopular(List<Evento> eventosFiltrados,
                                                                         Map<UUID, Long> totalInscritosPorEvento) {
         return eventosFiltrados.stream()
@@ -149,9 +125,8 @@ public class EventoRelatorioService {
     }
 
     /**
-     * 6 meses fixos (o atual + 5 anteriores), independente do filtro de período — só o
-     * recorte etário/tipo se aplicam aqui. Mês sem NENHUM evento com controlaPresenca=true
-     * vira {@code null} explícito (nunca {@code 0} — zero mentiria "ninguém foi").
+     * Últimos 6 meses (atual + 5 anteriores), fixo, independente do filtro de período.
+     * Recorte etário e tipo se aplicam; mês sem evento com controlaPresenca=true vira null.
      */
     private List<RelatorioGeralResponse.PontoTendencia> montarTendencia(
             UUID igrejaId, String recorteEtario, String tipo, Map<UUID, Long> totalCompareceramJaCalculado) {
@@ -196,8 +171,6 @@ public class EventoRelatorioService {
             long totalInscritosAtual = totalInscritosPorEvento.get(e.getId());
             Long totalCompareceuAtual = totalCompareceramPorEvento.get(e.getId());
 
-            // "totalParticipantes": comparecimento real quando existe (dado mais fiel),
-            // inscritos confirmados senão.
             long totalParticipantes = (controlaAtual && totalCompareceuAtual != null)
                     ? totalCompareceuAtual : totalInscritosAtual;
 
@@ -229,7 +202,7 @@ public class EventoRelatorioService {
                 ? inscricaoRepository.countPessoasCompareceram(anterior.getId()) + inscricaoRepository.countConvidadosCompareceram(anterior.getId())
                 : inscricaoRepository.countPessoasInscritas(anterior.getId()) + inscricaoRepository.countConvidadosInscritos(anterior.getId());
 
-        if (valorAnterior == 0) return null; // divisão por zero não tem "cresceu/caiu" que faça sentido
+        if (valorAnterior == 0) return null;
 
         double percentual = arredondar(((valorAtual - valorAnterior) * 100.0) / valorAnterior);
         return new RelatorioGeralResponse.Variacao(percentual, usaComparecimento ? BaseComparacao.COMPARECIMENTO : BaseComparacao.INSCRITOS);
@@ -248,7 +221,6 @@ public class EventoRelatorioService {
             double percentual = arredondar(((totalInscritosAtual - mediaInscritosFiltro) * 100.0) / mediaInscritosFiltro);
             return new RelatorioGeralResponse.Variacao(percentual, BaseComparacao.INSCRITOS);
         }
-        // Filtro com um evento só (média = o próprio evento) ou vazio: sem variação real, 0%.
         return new RelatorioGeralResponse.Variacao(0.0, BaseComparacao.INSCRITOS);
     }
 }

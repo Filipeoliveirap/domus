@@ -1,13 +1,5 @@
-/**
- * Tipos da inscrição em evento. Nomenclatura de backend (tabela/campo `acompanhante*`) é
- * mantida aqui de propósito — só o texto voltado ao usuário usa "convidado" (ver hooks).
- */
 import type { PagedResponse } from './pagedResponse.type'
 
-/**
- * Mesmos códigos de `CodigoImpedimento.java` (back) — união de tipos, não string crua,
- * para o front nunca comparar por texto solto.
- */
 export type CodigoImpedimento =
   | 'FAIXA_ETARIA'
   | 'SEM_DATA_NASCIMENTO'
@@ -18,20 +10,12 @@ export type CodigoImpedimento =
   | 'SEM_SEXO'
   | 'VAGAS_ESGOTADAS'
 
-/**
- * Espelha `Impedimento.java`. `contornavel`: quem gerencia pode inscrever assim mesmo
- * (`confirmado=true`) — exceto `VAGAS_ESGOTADAS`, que nunca é contornável.
- */
 export interface Impedimento {
   codigo: CodigoImpedimento
   mensagem: string
   contornavel: boolean
 }
 
-/**
- * Espelha `ElegibilidadeResponse.java`. É conveniência de UX (decidir o que mostrar ANTES
- * do POST) — nunca defesa; quem chama o POST direto esbarra no mesmo 422.
- */
 export interface ElegibilidadeResponse {
   apto: boolean
   impedimentos: Impedimento[]
@@ -41,18 +25,15 @@ export interface AcompanhanteResponse {
   id: string
   nome: string
   telefone: string | null
-  /** Só significativo quando o evento controla presença — ver `EventoResponse.controlaPresenca`. */
   compareceu: boolean
 }
 
-/** O que o próprio usuário vê sobre a sua inscrição no evento. */
 export interface MinhaInscricaoResponse {
   id: string | null
   inscrito: boolean
   acompanhantes: AcompanhanteResponse[]
 }
 
-/** Linha da lista de participantes visível a qualquer pessoa inscrita — sem telefone nem metadados administrativos. */
 export interface ParticipanteResponse {
   id: string
   pessoaId: string
@@ -61,23 +42,15 @@ export interface ParticipanteResponse {
   convidados: string[]
 }
 
-/** Linha da lista de inscritos, restrita a ADMIN/LÍDER. */
 export interface InscritoResponse {
   id: string
   pessoaId: string
   nome: string
   fotoId: string | null
-  /** null = a pessoa se inscreveu sozinha. */
   inscritoPorUsuarioId: string | null
-  /**
-   * Nome de quem inscreveu. null quando `inscritoPorUsuarioId` também é null
-   * (auto-inscrição) OU quando a conta de quem inscreveu foi arquivada depois — nesse
-   * segundo caso o id continua presente, mas sem nome pra exibir.
-   */
   inscritoPorNome: string | null
   inscritoPorFotoId: string | null
   inscritoEm: string
-  /** Só significativo quando o evento controla presença. */
   compareceu: boolean
   acompanhantes: AcompanhanteResponse[]
 }
@@ -86,7 +59,6 @@ export interface ListaInscritosResponse {
   totalPessoas: number
   vagas: number | null
   vagasRestantes: number | null
-  /** Paginado e afetado por `busca` — totalPessoas/vagas/vagasRestantes acima não são. */
   inscritos: PagedResponse<InscritoResponse>
 }
 

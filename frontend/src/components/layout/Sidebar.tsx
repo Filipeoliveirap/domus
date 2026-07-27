@@ -28,24 +28,11 @@ const navItems: NavItem[] = [
   { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
 ]
 
-/**
- * Agrupa "Pessoas" e "Visitantes" sob o guarda-chuva "Pessoas" — mesmo padrão do
- * grupo "Configurações". "Visitantes" só aparece para ADMIN_IGREJA — o backend trava
- * igual, a UI só não oferece o link pra quem não tem permissão.
- */
 const pessoasSubItems: { href: string; label: string; roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }[] = [
   { href: '/pessoas', label: 'Pessoas', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/pessoas/visitantes', label: 'Visitantes', roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeGerenciarVisitantes(r, c) },
 ]
 
-/**
- * Configurações não é uma tela só — é um grupo de abas. Por isso vira menu expansível:
- * o pai abre/fecha e cada aba tem link próprio (URL, voltar do navegador, link direto).
- *
- * "Meu Perfil" é para todo mundo (é a própria conta). "Dados da Igreja" e "Igrejas
- * Vinculadas" mexem em dado institucional e no vínculo entre igrejas, que expõe
- * financeiro — só ADMIN_IGREJA. O backend trava igual — isto aqui é só a UI acompanhando.
- */
 const configuracoesSubItems: { href: string; label: string; roles: Role[] }[] = [
   { href: '/perfil', label: 'Meu Perfil', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/configuracoes/igreja', label: 'Dados da Igreja', roles: ['ADMIN_IGREJA'] },
@@ -115,11 +102,8 @@ export function Sidebar() {
     router.replace('/login')
   }
 
-  // Todo mundo tem pelo menos "Meu Perfil" — o grupo aparece para todos; o que muda por
-  // perfil é QUAIS abas aparecem dentro dele (ver configuracoesSubItems).
   const subItensVisiveis = filtrar(configuracoesSubItems)
   const pessoasSubItensVisiveis = filtrar(pessoasSubItems)
-  // Começa aberto quando já estamos numa das abas — senão o item ativo ficaria escondido.
   const [configAberto, setConfigAberto] = useState(
     () => pathname.startsWith('/configuracoes') || pathname === '/perfil',
   )
@@ -258,7 +242,6 @@ export function Sidebar() {
   )
 }
 
-/** Mostra só os dois primeiros nomes da pessoa para caber na sidebar. */
 function primeirosDoisNomes(nome: string | null): string {
   if (!nome) return 'Usuário'
   const partes = nome.trim().split(/\s+/)

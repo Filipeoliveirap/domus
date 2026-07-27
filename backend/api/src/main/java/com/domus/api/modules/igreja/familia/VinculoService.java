@@ -16,14 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Formação e desmanche da família de igrejas.
- *
- * <p>A direção do consentimento é o que sustenta o desenho: quem se expõe é a <b>filha</b>
- * (o financeiro dela é que aparece para a mãe), então é a filha quem digita o código. A mãe
- * apenas <b>gera</b> o código — ou seja, consente em receber. Se a mãe pudesse declarar
- * "aquela é minha congregação", qualquer igreja leria financeiro alheio.
- */
+/** Formação e desmanche da família de igrejas. A filha digita o código da mãe — a mãe apenas gera e consente em receber. */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -40,7 +33,6 @@ public class VinculoService {
 
         Igreja mae = igreja.getIgrejaMae();
         if (mae != null) {
-            // A filha vê a mãe e desde quando está na família — mas nunca as irmãs.
             return new VinculoStatusResponse(
                     EstadoVinculo.FILHA, null, null, resumir(mae, igreja.getVinculadoEm()), List.of());
         }
@@ -54,14 +46,7 @@ public class VinculoService {
                 estado, igreja.getCodigoVinculo(), igreja.getCodigoGeradoEm(), null, congregacoes);
     }
 
-    /**
-     * Gera (ou rotaciona) o código. Rotacionar invalida o anterior — é a defesa contra
-     * vazamento do código, junto com desvincular. Não há expiração nem uso único: o código
-     * é reutilizável porque a mãe tem várias congregações.
-     *
-     * <p>Gerar código <b>não</b> torna a igreja mãe: ela segue INDEPENDENTE até a primeira
-     * filha entrar, e ainda pode desistir e entrar na família de outra.
-     */
+    /** Gera (ou rotaciona) o código de vínculo. Rotacionar invalida o anterior — defesa contra vazamento. Gerar código não torna a igreja mãe. */
     @Transactional
     public String gerarCodigo(UUID igrejaId) {
         Igreja igreja = buscar(igrejaId);
@@ -91,12 +76,7 @@ public class VinculoService {
         return codigo;
     }
 
-    /**
-     * A filha entra na família digitando o código da mãe.
-     *
-     * <p>As quatro recusas, todas aqui no serviço (sem trigger no banco — a consulta da
-     * família não é recursiva, então um ciclo hipotético não derrubaria nada).
-     */
+    /** A filha entra na família digitando o código da mãe. As validações de hierarquia são feitas aqui — sem trigger no banco. */
     @Transactional
     public VinculoStatusResponse entrarNaFamilia(UUID igrejaId, UUID usuarioId, String codigoDigitado) {
         String codigo = gerador.normalizar(codigoDigitado);
@@ -104,12 +84,10 @@ public class VinculoService {
             throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
         }
 
-        // 1. O código existe?
         UUID maeId = igrejaRepository.findByCodigoVinculo(codigo)
                 .map(Igreja::getId)
                 .orElseThrow(() -> new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido."));
 
-        // 2. É ela mesma? (auto-vínculo)
         if (maeId.equals(igrejaId)) {
             throw new BusinessException("AUTO_VINCULO",
                     "Você não pode vincular sua igreja a ela mesma.");
@@ -143,14 +121,12 @@ public class VinculoService {
             throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
         }
 
-        // 3. A dona do código já tem mãe? (violaria os 2 níveis)
         if (mae.getIgrejaMae() != null) {
             // Mensagem propositalmente igual à de código inexistente: distinguir as duas
             // transformaria o endpoint num oráculo sobre igrejas de terceiros.
             throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
         }
 
-        // 4. Quem está entrando já tem filhas? (violaria os 2 níveis)
         if (familiaService.ehMae(filha.getId())) {
             throw new BusinessException("JA_EH_MAE",
                     "Sua igreja já tem congregações vinculadas e não pode virar congregação de outra.");
@@ -175,10 +151,7 @@ public class VinculoService {
         return status(igrejaId);
     }
 
-    /**
-     * A mãe remove uma congregação da família.
-     * Valida que a alvo é realmente filha de quem pediu — senão seria IDOR de escrita.
-     */
+    /** A mãe remove uma congregação. Valida que a alvo é filha de quem pediu. */
     @Transactional
     public void desvincularCongregacao(UUID maeId, UUID filhaId) {
         Igreja filha = buscar(filhaId);
@@ -194,11 +167,7 @@ public class VinculoService {
         log.info("Vínculo desfeito pela mãe. filha_igreja_id={}, mae_igreja_id={}", filhaId, maeId);
     }
 
-    /**
-     * A congregação sai da família por conta própria. Quem consente pode revogar — a filha
-     * expôs o financeiro dela por consentimento; se só a mãe pudesse desfazer, seria uma
-     * armadilha (entra fácil, nunca mais sai).
-     */
+    /** A congregação sai da família. Quem consentiu pode revogar — ambos os lados podem desfazer o vínculo. */
     @Transactional
     public void sairDaFamilia(UUID igrejaId) {
         Igreja filha = buscar(igrejaId);

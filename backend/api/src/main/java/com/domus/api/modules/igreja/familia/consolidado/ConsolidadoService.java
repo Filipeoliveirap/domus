@@ -22,11 +22,7 @@ import java.util.UUID;
 
 /**
  * Monta a visão geral da família: 3 consultas agregadas + montagem em memória.
- *
- * <p><b>Semântica dos períodos</b> (proposital, e diferente entre os blocos):
- * o financeiro respeita o período escolhido na tela; membros e eventos são a
- * <b>fotografia de agora</b> — quantos membros existem hoje, quantos eventos já
- * aconteceram e quantos ainda vêm.
+ * Financeiro respeita o período escolhido; membros e eventos são fotografia de agora.
  */
 @Service
 @Slf4j
@@ -49,8 +45,7 @@ public class ConsolidadoService {
         Map<UUID, Eventos> eventosPorIgreja = agruparEventos(idsDaFamilia, agora);
         Map<UUID, Financeiro> financeiroPorIgreja = agruparFinanceiro(idsDaFamilia, dataInicio, dataFim);
 
-        // Os nomes numa tacada só — buscar igreja a igreja dentro do laço seria um N+1,
-        // exatamente o que as 3 consultas agregadas acima evitaram.
+        // findAllById em vez de findById por igreja — evita N+1 no laço abaixo.
         Map<UUID, String> nomes = new HashMap<>();
         igrejaRepository.findAllById(idsDaFamilia).forEach(i -> nomes.put(i.getId(), i.getNome()));
 
@@ -69,11 +64,8 @@ public class ConsolidadoService {
     }
 
     private Map<UUID, Pessoas> agruparMembros(List<UUID> ids) {
-        // A consulta devolve uma linha por (igreja, vinculo); aqui viram os 2 números de cada
-        // igreja. Chave é o próprio enum Vinculo (EnumMap), não ordinal(): indexar por posição
-        // era um off-by-one esperando acontecer no dia em que um 3º vínculo for adicionado —
-        // o array teria tamanho 2 fixo e o índice do novo valor estouraria ou colidiria, sem
-        // o compilador acusar nada.
+        // EnumMap<Vinculo, Long> em vez de array indexado por ordinal — um novo vínculo não
+        // quebraria índices fixos sem aviso do compilador.
         Map<UUID, Map<Vinculo, Long>> acumulador = new HashMap<>();
         for (var linha : repository.contarMembros(ids)) {
             Map<Vinculo, Long> contagens = acumulador.computeIfAbsent(

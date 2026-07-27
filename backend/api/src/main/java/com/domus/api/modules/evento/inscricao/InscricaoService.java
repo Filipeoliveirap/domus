@@ -53,24 +53,8 @@ public class InscricaoService {
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
      *
-     * <p><b>Auto-inscrição funciona em QUALQUER evento</b> — é leve, tipo uma curtida ("eu
-     * vou"). {@code requerInscricao} não bloqueia mais este método; ele passou a significar
-     * só "este evento organiza vagas, convidados e inscrição de terceiros" (ver
-     * {@link #inscreverPessoas} e {@link #adicionarAcompanhante}, que continuam checando).
-     *
-     * <p>O evento é buscado COM LOCK: a contagem de vagas e o insert precisam ser atômicos,
-     * senão duas inscrições simultâneas na última vaga passam as duas. {@code validarVaga}
-     * já não faz nada quando {@code vagas} é NULL, que é o caso comum de evento casual —
-     * então a auto-inscrição neles nunca esbarra em limite de vaga.
-     *
-     * <p>{@code role}/{@code confirmado} só importam quando {@code inscritoPorOuNull != null}
-     * (inscrevendo um TERCEIRO): é a única situação em que a elegibilidade pode ser contornada
-     * por quem gerencia. Na auto-inscrição os dois são ignorados — ver Javadoc de
-     * {@link #validarElegibilidade}.
-     *
-     * <p>{@code minhaPessoaId} é a pessoa do USUÁRIO LOGADO (nunca do corpo da requisição).
-     * É contra ela — não contra {@code inscritoPorOuNull} — que decidimos se isto é
-     * auto-inscrição: ver Javadoc de {@link #validarElegibilidade} para o porquê.
+     * <p>Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}.
+     * O evento é buscado COM LOCK para atomizar contagem de vagas e insert.
      */
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
@@ -89,9 +73,6 @@ public class InscricaoService {
                 .orElse(null);
 
         if (inscricao != null && inscricao.estaConfirmada()) {
-            // Mesmo código (JA_INSCRITO) nos dois casos: quem chama já sabe o contexto (botão
-            // "eu vou" vs. modal de inscrever outra pessoa), então a mensagem só precisa ter
-            // as palavras certas — não é o front que precisa distinguir por código.
             String mensagem = inscritoPorOuNull == null
                     ? "Você já está inscrito neste evento."
                     : "Este membro já está inscrito no evento.";
@@ -101,8 +82,6 @@ public class InscricaoService {
         validarVaga(evento, 1);
 
         if (inscricao != null) {
-            // Reaproveita a linha cancelada: o UNIQUE (evento_id, pessoa_id) impediria inserir
-            // outra, e sem isto quem cancelasse ficaria impedido de voltar ao próprio evento.
             inscricao.setStatus(StatusInscricao.CONFIRMADA);
             inscricao.setInscritoPorUsuarioId(inscritoPorOuNull);
             inscricao.setInscritoPorExcecao(porExcecao);
@@ -124,21 +103,8 @@ public class InscricaoService {
     }
 
     /**
-     * Inscreve vários membros de uma vez (modal de seleção múltipla) — inscrição de
-     * TERCEIROS, então continua exigindo {@code requerInscricao}.
-     *
-     * <p><b>Tudo ou nada, por decisão:</b> se um membro falhar (ex.: já inscrito), a transação
-     * inteira volta atrás e nenhum é inscrito. Resultado parcial exigiria DTO e tela próprios
-     * para um caso que ainda não sabemos se acontece.
-     *
-     * <p>Os "já inscritos" são checados ANTES do laço (uma query só, com os ids todos) para
-     * poder nomear a QUANTIDADE na mensagem — se deixássemos o laço descobrir um de cada vez
-     * via {@link #inscrever}, o erro só falaria do primeiro que bateu, nunca do total.
-     *
-     * <p>{@code confirmado} só faz efeito se {@code role} tiver
-     * {@link Permissoes#podeGerenciarInscricoes(String)} — de quem NÃO gerencia, o parâmetro
-     * é simplesmente ignorado (nunca aceito "por engano"), checagem que vive dentro de
-     * {@link #validarElegibilidade}, não aqui.
+     * Inscreve vários membros de uma vez — tudo ou nada. Checa os já inscritos em uma
+     * query só antes do laço, para poder nomear a quantidade na mensagem de erro.
      */
     @Transactional
     public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
@@ -159,10 +125,6 @@ public class InscricaoService {
         }
 
         for (UUID pessoaId : pessoaIds) {
-            // minhaPessoaId segue até inscrever() SEM alteração: é lá, no único ponto que
-            // decide "isto é auto-inscrição?", que pessoaId (alvo) é comparado com ela — não
-            // com inscritoPorUsuarioId (id de USUÁRIO, nunca de pessoa; comparar os dois nunca
-            // bateria por acidente, e foi exatamente isso que escondeu o furo antes desta correção).
             inscrever(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado, igrejaId);
         }
     }
@@ -188,12 +150,7 @@ public class InscricaoService {
         }
     }
 
-    /**
-     * B3: bloqueia inscrição/convidado tanto em evento EM_ANDAMENTO quanto ENCERRADO —
-     * mensagens DIFERENTES porque são fatos diferentes ("já começou" não é o mesmo que "já
-     * aconteceu"). Antes disto, {@code inicioEm < agora} tratava os dois casos como
-     * "encerrado", o que é factualmente errado para um evento que está rolando agora.
-     */
+    /** Evento EM_ANDAMENTO ou ENCERRADO não aceita inscrição/convidado. */
     private void validarEventoAberto(Evento evento) {
         SituacaoEvento situacao = evento.getSituacao();
         if (situacao == SituacaoEvento.EM_ANDAMENTO) {
@@ -207,21 +164,8 @@ public class InscricaoService {
     }
 
     /**
-     * B1: bloqueia o MESMO convidado duas vezes NO MESMO EVENTO — o dano real é ocupar duas
-     * vagas. Fora do evento não faz sentido bloquear (a mesma pessoa pode ir a vários eventos),
-     * então a comparação é sempre restrita a {@code eventoId}.
-     *
-     * <p>Telefone é opcional, então a comparação principal é por telefone (normalizado para só
-     * dígitos — o front manda formatado e o que já está salvo pode estar inconsistente); sem
-     * telefone em QUALQUER um dos dois lados, cai para nome normalizado (sem acento, sem case,
-     * espaços colapsados).
-     *
-     * <p><b>Por que checagem no service, não constraint de banco:</b> a regra combina duas
-     * comparações diferentes (telefone OU nome) e a de nome depende de normalização (remover
-     * acento) que o Postgres não expressa como expressão de índice de forma simples/portável.
-     * Um índice único parcial em telefone normalizado por evento até seria possível, mas não
-     * cobriria o caminho por nome — e ter a UNIQUE cobrindo só metade da regra escondida atrás
-     * de uma exceção de banco (em vez de uma mensagem de negócio clara) seria pior que não ter.
+     * Bloqueia o mesmo convidado duas vezes no mesmo evento. Compara por telefone
+     * normalizado, com fallback para nome normalizado se não houver telefone.
      */
     private void validarConvidadoNaoDuplicado(UUID eventoId, AcompanhanteRequest data) {
         String telefoneNovo = TextoUtil.somenteDigitos(data.telefone());
@@ -241,41 +185,13 @@ public class InscricaoService {
     }
 
     /**
-     * Roda todas as regras de {@link ElegibilidadeService} (faixa etária, vínculo, sexo,
-     * estado civil...) e decide se o impedimento pode ser contornado.
+     * Aplica regras de {@link ElegibilidadeService} e decide se o impedimento pode ser
+     * contornado. Auto-inscrição NUNCA contorna, nem para admin. Quem não gerencia também
+     * não contorna e não vê detalhes de terceiro no 422. Vaga não entra aqui — é barrada
+     * por {@link #validarVaga}, sempre.
      *
-     * <p><b>Regra 1 — auto-inscrição NUNCA contorna, nem para quem gerencia.</b> A exceção
-     * existe para inscrever TERCEIROS (equipe, preletor, motorista); se o próprio admin
-     * pudesse burlar a própria inscrição, a restrição viraria decoração para quem tem acesso.
-     * {@code autoInscricao} é decidido em {@link #inscrever} comparando a PESSOA ALVO com a
-     * pessoa do usuário logado — NUNCA com {@code inscritoPorOuNull}/{@code
-     * inscritoPorUsuarioId}, que é id de USUÁRIO, sempre não-nulo em {@link #inscreverPessoas}
-     * (o controller manda {@code usuario.getId()} mesmo quando o admin bota o PRÓPRIO
-     * pessoaId na lista). Usar esse campo como sinal de auto-inscrição é exatamente o furo
-     * que já existiu aqui: {@code inscritoPorOuNull == null} nunca é verdade em
-     * {@code inscreverPessoas}, então "auto-inscrição nunca contorna" silenciosamente virava
-     * "auto-inscrição contorna igual a qualquer terceiro" para quem passasse pelo modal em vez
-     * da rota de auto-inscrição.
-     *
-     * <p><b>Regra 2 — {@code confirmado=true} de quem NÃO gerencia é IGNORADO</b>, não aceito:
-     * {@link Permissoes#podeGerenciarInscricoes(String)} é checado ANTES de olhar
-     * {@code confirmado}, então o parâmetro nunca é decisivo sozinho.
-     *
-     * <p><b>Regra 3 — vaga não entra aqui.</b> {@code VAGAS_ESGOTADAS} não é produzido por
-     * {@link ElegibilidadeService} (ver Javadoc dele) — quem barra vaga é
-     * {@link #validarVaga}, sempre, sem exceção administrativa.
-     *
-     * <p><b>Regra 4 — quem NÃO gerencia não vê nome/idade de terceiro no 422.</b> ACESSO_COMUM
-     * pode chamar {@code POST .../inscricoes/pessoas} com um {@code pessoaId} arbitrário da
-     * igreja; o impedimento é sempre recusado para ele (Regra 2), mas a MENSAGEM não pode virar
-     * um oráculo de dados pessoais. Só quem {@link Permissoes#podeGerenciarInscricoes(String)}
-     * vê o texto detalhado (ele já tem acesso à lista de pessoas e precisa da informação para
-     * decidir sobre o contorno).
-     *
-     * @return {@code true} quando a inscrição só existe porque um impedimento foi contornado
-     *         deliberadamente ("inscrever mesmo assim") — vira a marca DURÁVEL
-     *         {@link InscricaoEvento#isInscritoPorExcecao()} (Task 6), que protege esta
-     *         inscrição de ser cancelada em silêncio numa edição futura do evento.
+     * @return {@code true} se a inscrição contornou um impedimento deliberadamente
+     *         ({@link InscricaoEvento#isInscritoPorExcecao}).
      */
     private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
@@ -323,12 +239,9 @@ public class InscricaoService {
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
     @Transactional
     public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
-                                                      UUID usuarioId, UUID igrejaId) {
+                                                       UUID usuarioId, UUID igrejaId) {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
 
-        // Alcançável: a inscrição pode existir de quando o evento AINDA aceitava inscrição,
-        // e o admin desligar o toggle depois. Sem esta checagem, o evento fecharia as
-        // inscrições e continuaria aceitando convidados — que ocupam vaga igual.
         validarOrganizaInscricao(inscricao.getEvento(), "Este evento não permite convidados.");
 
         if (inscricao.getEvento().isExclusivoMembros()) {
@@ -386,21 +299,8 @@ public class InscricaoService {
     }
 
     /**
-     * Cancela uma inscrição.
-     *
-     * <p>Regra: você controla VOCÊ MESMO e o que você trouxe. Quem inscreveu alguém
-     * NÃO pode desinscrever — inscrever ocupa uma vaga, mas desinscrever tira a pessoa de
-     * um evento que ela achava que ia, e ela só descobre no dia.
-     *
-     * <p><b>A2 — vale para ADMIN/LÍDER também, sem exceção.</b> Cogitou-se liberar o admin
-     * para "corrigir um erro de digitação logo depois do evento", mas {@code validarEventoAberto}
-     * só enxerga a situação do evento (AGENDADO/EM_ANDAMENTO/ENCERRADO) — não tem noção de
-     * "isso acabou de terminar" vs. "isso terminou há três meses". Uma exceção para admin seria
-     * tudo ou nada: o mesmo caminho que corrige um engano no dia também apagaria, em silêncio,
-     * quem esteve num evento de meses atrás. Presença é histórico, e a igreja pode precisar
-     * dele depois (frequência, relatório, até prova de participação). Se um dia for preciso um
-     * ajuste pós-evento de verdade, isso é uma feature própria e auditada (motivo obrigatório,
-     * log de quem e por quê) — não uma brecha silenciosa no cancelamento normal.
+     * Cancela uma inscrição. Cada pessoa controla a sua; gestores controlam qualquer uma.
+     * Evento EM_ANDAMENTO/ENCERRADO não permite cancelamento — presença é histórico.
      */
     @Transactional
     public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
@@ -424,15 +324,8 @@ public class InscricaoService {
     }
 
     /**
-     * O cancelamento em si, sem checagem de permissão — reusado tanto pelo cancelamento manual
-     * ({@link #cancelar}) quanto pela remoção automática ao restringir o evento
-     * ({@link #removerInscritosNaoElegiveis}), para as duas vias levarem os convidados junto
-     * do mesmo jeito.
-     *
-     * <p>Os convidados vão embora com a inscrição, e NÃO voltam numa reinscrição. Sem isto,
-     * quem cancelou porque o convidado desistiu o veria reaparecer em silêncio ao se
-     * reinscrever — ocupando vaga de novo. Quem quiser levá-lo de novo cadastra de novo; é o
-     * passo consciente que o silêncio não teria.
+     * O cancelamento em si, reusado pelo cancelamento manual e pela remoção por restrição.
+     * Convidados vão junto com a inscrição e não voltam numa reinscrição.
      */
     private void cancelarInterno(InscricaoEvento inscricao) {
         inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
@@ -441,25 +334,9 @@ public class InscricaoService {
     }
 
     /**
-     * Cancela, dos CONFIRMADOS de hoje, quem não é mais elegível para a configuração ATUAL do
-     * evento — mesma regra de {@link #validarElegibilidade} (via
-     * {@link ElegibilidadeService#avaliar}), mesmo cancelamento de {@link #cancelarInterno}
-     * (leva os convidados junto).
-     *
-     * <p><b>Task 6 — só roda com escolha EXPLÍCITA do admin</b> ({@code cancelarNaoElegiveis=true}
-     * no {@code PUT /eventos/{id}}), nunca mais automaticamente ao salvar o evento. Apertar uma
-     * faixa etária ou ligar {@code exclusivoMembros} sozinho NÃO cancela mais ninguém — cancelar
-     * em silêncio apagaria as exceções que o próprio admin abriu com "inscrever mesmo assim"
-     * (ver {@link EventoService#calcularImpacto} para a prévia que substitui o cancelamento
-     * automático).
-     *
-     * <p><b>Preserva a exceção deliberada:</b> pula quem tem
-     * {@link InscricaoEvento#isInscritoPorExcecao()} — o motorista CONGREGANTE inscrito de
-     * propósito num evento exclusivo continua confirmado mesmo com {@code cancelarNaoElegiveis=true},
-     * porque a marca V5 é justamente o registro de que aquela irregularidade é intencional, não
-     * um efeito colateral da regra mudar.
-     *
-     * @return quantas inscrições foram canceladas, para o chamador logar/devolver ao front.
+     * Cancela inscrições de quem não é mais elegível para as regras atuais do evento.
+     * Só roda com escolha EXPLÍCITA do admin (campo {@code cancelarNaoElegiveis} no PUT).
+     * Pula quem foi inscrito por exceção deliberada ({@link InscricaoEvento#isInscritoPorExcecao}).
      */
     @Transactional
     public int removerInscritosNaoElegiveis(UUID eventoId) {

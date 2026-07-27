@@ -7,14 +7,9 @@ public final class TextoUtil {
 
     private TextoUtil() {}
 
-    // Conectores que ficam em minúsculo no meio de nomes próprios/títulos (PT-BR).
     private static final Set<String> CONECTORES = Set.of("de", "da", "do", "das", "dos", "e");
 
-    /**
-     * Capitaliza para exibição: Title Case por palavra, mantendo os conectores em minúsculo
-     * (exceto quando são a primeira palavra). Ex.: "joão da silva" -> "João da Silva".
-     * Colapsa espaços e apara. Retorna null se o texto for nulo ou vazio.
-     */
+    /** Title Case por palavra, mantendo conectores PT-BR em minúsculo. Ex.: "joão da silva" → "João da Silva". */
     public static String capitalizar(String texto) {
         if (texto == null) return null;
         String limpo = texto.trim().replaceAll("\\s+", " ");
@@ -34,23 +29,14 @@ public final class TextoUtil {
         return sb.toString();
     }
 
-    /**
-     * Deixa só os dígitos de um telefone (remove DDI, parênteses, traço, espaço). Usado para
-     * comparar telefones que chegam formatados de jeitos diferentes (ex.: "(11) 99999-8888" e
-     * "11999998888" devem contar como o mesmo número). Retorna {@code null} se a entrada for
-     * nula ou não sobrar nenhum dígito.
-     */
+    /** Remove tudo que não for dígito. Usado para comparar telefones formatados de jeitos diferentes. */
     public static String somenteDigitos(String texto) {
         if (texto == null) return null;
         String digitos = texto.replaceAll("\\D", "");
         return digitos.isEmpty() ? null : digitos;
     }
 
-    /**
-     * Normaliza um nome para COMPARAÇÃO (não para exibição): apara, colapsa espaços, remove
-     * acentuação e vira minúsculo. Ex.: "José  DA Silva" e "jose da silva" comparam iguais.
-     * Retorna {@code null} se a entrada for nula ou vazia.
-     */
+    /** Normaliza para comparação: apara, colapsa espaços, remove acentos e vira minúsculo. */
     public static String normalizarParaComparacao(String texto) {
         if (texto == null) return null;
         String limpo = texto.trim().replaceAll("\\s+", " ").toLowerCase();

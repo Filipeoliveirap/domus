@@ -14,10 +14,6 @@ const ICONES: Record<Tipo, typeof CheckCircle2> = {
   info: Info,
 }
 
-/**
- * Erro fica mais tempo na tela: quem errou precisa ler o motivo, enquanto "salvo com
- * sucesso" já é óbvio pela própria tela ter mudado.
- */
 const DURACAO: Record<Tipo, number> = {
   sucesso: 4000,
   erro: 7000,
@@ -64,13 +60,6 @@ function criar(tipo: Tipo) {
     )
 }
 
-/**
- * Ponto único de notificação do Domus. Use sempre isto no lugar do `toast` do sonner —
- * é o que garante que sucesso, erro e aviso tenham a mesma cara no sistema inteiro.
- *
- * @example
- * notificar.sucesso('Configurações salvas', 'As informações da instituição foram atualizadas.')
- */
 export const notificar = {
   sucesso: criar('sucesso'),
   erro: criar('erro'),

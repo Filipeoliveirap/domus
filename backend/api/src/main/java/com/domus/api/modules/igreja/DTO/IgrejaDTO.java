@@ -4,7 +4,7 @@ import com.domus.api.modules.igreja.Igreja;
 
 public record IgrejaDTO(
         String nome,
-        String cnpf,
+        String cnpj,
         String email,
         String telefone
 

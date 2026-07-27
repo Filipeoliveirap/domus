@@ -5,16 +5,11 @@ import { Filter, X } from "lucide-react";
 import { useClickFora } from "@/hooks/useClickFora";
 import styles from "./PainelFiltros.module.css";
 
-/** Uma opção dentro de um grupo de filtro (ex.: "Membros", valor "MEMBRO"). */
 export interface OpcaoFiltro {
   valor: string;
   label: string;
 }
 
-/**
- * Um grupo de filtro (ex.: "Vínculo"), com suas opções. Cada grupo é de seleção única
- * (rádio) — a opção "Todos" some o filtro daquele grupo (valor vazio).
- */
 export interface GrupoFiltro {
   chave: string;
   titulo: string;
@@ -22,28 +17,13 @@ export interface GrupoFiltro {
 }
 
 interface PainelFiltrosProps {
-  /** Os grupos a renderizar — quem usa o componente decide o que é filtrável. */
   grupos: GrupoFiltro[];
-  /** Valores aplicados agora, por chave de grupo. Ausente/vazio = sem filtro no grupo. */
   valores: Record<string, string>;
-  /** Chamado quando o usuário confirma a seleção (botão "Aplicar"). */
   onAplicar: (valores: Record<string, string>) => void;
 }
 
-/**
- * Botão "Filtros" + painel de opções, reutilizável por qualquer tela paginada (pessoas,
- * relatórios, etc). Os grupos vêm por prop — este componente não conhece "vínculo",
- * "categoria" ou qualquer domínio específico.
- *
- * No desktop abre como popover ancorado no botão; no mobile (≤767px, mesmo corte usado
- * no resto do projeto) vira uma folha inferior (bottom sheet) fixada na base da tela,
- * para não estourar a largura horizontal.
- */
 export function PainelFiltros({ grupos, valores, onAplicar }: PainelFiltrosProps) {
   const [aberto, setAberto] = useState(false);
-  // Rascunho: só vira filtro de verdade quando o usuário aperta "Aplicar". Inicializado
-  // a partir de `valores` no momento em que o painel abre (ação do usuário), não por
-  // efeito — não há estado derivado sendo sincronizado aqui, é um valor de edição.
   const [rascunho, setRascunho] = useState<Record<string, string>>(valores);
   const containerRef = useRef<HTMLDivElement>(null);
 

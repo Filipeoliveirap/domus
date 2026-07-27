@@ -7,17 +7,6 @@ import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 import type { ListaInscritosResponse } from '@/types/inscricao.type'
 
-/**
- * Corrige a exceção de UM inscrito específico (o botão individual da lista) — depois de
- * um "marcar todos", ou independentemente dele.
- *
- * Atualização otimista: o botão precisa alternar (marcar/desmarcar) na hora do clique, sem
- * esperar a resposta do servidor. Por isso o sucesso NÃO reinvalida `['inscricoes','lista']`
- * — isso disparava um refetch em cima do próprio patch otimista e piscava (o valor sumia e
- * voltava por uma fração de segundo, e um clique rápido nesse meio-tempo cancelava o que
- * tinha acabado de marcar). `compareceu` não afeta vagas/elegibilidade, então só o relatório
- * (cards de presença) precisa mesmo recarregar.
- */
 export function useMarcarPresencaInscricao(eventoId: string) {
   const queryClient = useQueryClient()
 

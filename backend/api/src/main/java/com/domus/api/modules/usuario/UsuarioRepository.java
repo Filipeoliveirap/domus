@@ -25,14 +25,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     Optional<Usuario> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
     /**
-     * Dados de sessão do usuário, como projeção — para o {@code GET /auth/me}.
-     *
-     * <p>Existe porque o principal do Spring Security é uma entidade DESANEXADA: o
-     * {@code SecurityFilter} é um servlet filter e roda ANTES do open-in-view (que é um
-     * interceptor de MVC), então o {@code EntityManager} usado por ele já fechou quando o
-     * controller executa. Ler {@code usuario.getIgreja().getNome()} de lá lança
-     * LazyInitializationException ({@code igreja} é LAZY). Uma projeção monta o DTO direto
-     * no banco, numa query, sem depender do estado da entidade.
+     * Projeção para {@code GET /auth/me}. Evita LazyInitializationException: o
+     * SecurityFilter roda antes do open-in-view, então a entidade chega desanexada ao
+     * controller. A projeção monta o DTO direto no banco.
      */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
@@ -43,29 +38,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     """)
     Optional<SessaoDTO> findSessaoById(@Param("id") UUID id);
 
-    /**
-     * Id da foto da pessoa, direto pela FK — sem carregar a {@code Foto} (associação LAZY em
-     * {@code Pessoa}). Selecionar só o id de um {@code @ManyToOne} é o próprio valor da coluna
-     * FK: o Hibernate não precisa de JOIN nem de inicializar o proxy, e {@code null} (sem
-     * foto) sai natural. Existe para popular {@code LoginResponseDTO} sem repetir o risco já
-     * documentado de ler campo LAZY de entidade que pode estar desanexada.
-     */
+    /** Id da foto via FK, sem inicializar o proxy LAZY de {@code Foto}. */
     @Query("SELECT u.pessoa.foto.id FROM Usuario u WHERE u.id = :id")
     UUID findFotoIdById(@Param("id") UUID id);
     long countByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
-    /**
-     * Ativos primeiro, depois por nome — e a ordenação é do BANCO, antes de paginar.
-     *
-     * <p>Ordenar isto no front resolveria só a página aberta: com três páginas, um desativado
-     * da página 1 continuaria acima de um ativo da página 2, e a lista pareceria certa em cada
-     * tela e errada no conjunto.
-     *
-     * <p>Projeta direto pra {@code UsuarioResponseDTO} (constructor expression), incluindo
-     * {@code u.pessoa.foto.id} — mesmo padrão de {@code findFotoIdById}/{@code findSessaoById}:
-     * selecionar só o id do {@code @ManyToOne} é a própria coluna FK, sem inicializar o proxy
-     * LAZY de {@code Foto}. Evita um N+1 (um SELECT lazy por linha) numa listagem paginada.
-     */
+    /** Ordenação no banco (ativos primeiro) antes de paginar — ordenar no front
+     *  só acertaria a página aberta, deixando inconsistência entre páginas. */
     @Query("""
     SELECT new com.domus.api.modules.usuario.DTO.UsuarioResponseDTO(
         u.id, u.pessoa.nome, u.pessoa.email, u.role.nome, u.ativo,
@@ -96,15 +75,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     """, nativeQuery = true)
     Optional<Usuario> findByPessoaIdIncluindoArquivados(@Param("pessoaId") UUID pessoaId);
 
-    /**
-     * Nome + foto de quem inscreveu, em lote — resolve {@code inscritoPorUsuarioId} da lista
-     * de inscritos numa única query (evita N+1 de buscar usuário por linha).
-     *
-     * <p>Usuários (ou o membro por trás deles) arquivados desde a inscrição simplesmente NÃO
-     * aparecem no resultado — {@code @SQLRestriction} de {@link Usuario} e de
-     * {@code Pessoa} filtra soft-deletados. O chamador trata ids ausentes no mapa como
-     * "quem inscreveu não está mais disponível", sem quebrar a listagem.
-     */
+    /** Nome + foto de quem inscreveu, em lote (evita N+1). Soft-deletados não aparecem
+     *  — o chamador trata ids ausentes como "não está mais disponível". */
     @Query("""
         SELECT new com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo(
             u.id, u.pessoa.nome, u.pessoa.foto.id)

@@ -62,9 +62,8 @@ export default function InscritosPage() {
   const marcarPresencaSelecionados = useMarcarPresencaSelecionados(eventoId)
   const [confirmarMarcarTodos, setConfirmarMarcarTodos] = useState(false)
 
-  // Modo seleção: liga checkboxes de escolha manual (em vez do clique instantâneo de
-  // presença) para marcar um SUBCONJUNTO — diferente de "marcar todos vieram". Chave
-  // composta (`tipo:id`) porque inscrito e convidado têm ids em espaços distintos.
+  // Modo seleção: checkboxes para marcar subconjunto. Chave composta (tipo:id) porque
+  // inscrito e acompanhante têm ids de espaços distintos.
   const [modoSelecao, setModoSelecao] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
@@ -106,22 +105,15 @@ export default function InscritosPage() {
     setSelecionados(new Set())
   }
 
-  // Presença só faz sentido quando o evento já começou (ou já acabou) — ninguém
-  // "compareceu" a um evento que ainda não aconteceu. O backend já recusa o POST/PATCH
-  // (409 de ConflitoNegocioException), mas sumir com os controles no front também evita
-  // a tentação de marcar presença em evento futuro.
+  // Presença só faz sentido em evento que já começou — backend recusa com 409
   const mostraPresenca = autorizado && !!evento?.controlaPresenca && evento!.situacao !== 'AGENDADO'
 
-  // O relatório individual busca SEMPRE que há inscrição — o card "Inscritos" (pessoas da
-  // igreja vs. convidados) não depende de controle de presença. Só os cards de
-  // comparecimento dentro dele é que ficam condicionados (ver CardsRelatorioEvento).
+  // Relatório busca sempre que há inscrições; cards de comparecimento são condicionados em CardsRelatorioEvento
   const { data: relatorio } = useRelatorioEvento(eventoId, autorizado && !!evento?.requerInscricao)
 
-  // A2/rodada 3: o backend recusa cancelar fora de AGENDADO, mesmo para ADMIN/LÍDER —
-  // presença em evento em andamento/encerrado é histórico, não algo que se desfaz aqui.
+  // Fora de AGENDADO o backend recusa cancelar, mesmo para ADMIN/LÍDER
   const podeCancelar = evento ? podeCancelarInscricao(evento.situacao) : true
-  // "Participou" (passado) só faz sentido depois que o evento de fato aconteceu — durante
-  // EM_ANDAMENTO ninguém "participou" ainda, só não dá pra cancelar porque já começou.
+  // ENCERRADO mostra "Participou"; EM_ANDAMENTO mostra "Em andamento"
   const textoBloqueado = evento?.situacao === 'ENCERRADO' ? 'Participou' : 'Em andamento'
 
   if (!hidratado) {
@@ -158,10 +150,6 @@ export default function InscritosPage() {
 
       <header className={styles.cabecalho}>
         <div className={styles.cabecalhoTextos}>
-          {/*
-            Botão de voltar além do breadcrumb: esta tela costuma ser aberta a partir de um
-            card de evento, e a rota de volta ("eventos") nem sempre é de onde a pessoa veio.
-          */}
           <button
             type="button"
             className={styles.voltar}
@@ -206,7 +194,6 @@ export default function InscritosPage() {
         </div>
       ) : (
         <>
-          {/* ─── Estatísticas ─── */}
           <div className={styles.stats}>
             <div className={styles.statCard}>
               <span className={styles.statIcone}><Users size={18} /></span>
@@ -233,7 +220,6 @@ export default function InscritosPage() {
             )}
           </div>
 
-          {/* ─── Busca + modo seleção ─── */}
           {lista.totalPessoas > 0 && (
             <div className={styles.buscaLinha}>
               <input
@@ -257,7 +243,6 @@ export default function InscritosPage() {
             </div>
           )}
 
-          {/* ─── Tabela ─── */}
           <div className={styles.painel}>
             {lista.inscritos.content.length === 0 ? (
               <EstadoVazio

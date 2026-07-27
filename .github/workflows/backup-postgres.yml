@@ -2,13 +2,9 @@ name: Backup do Postgres
 
 on:
   schedule:
-    # 06:00 UTC = 03:00 BRT. A essa hora o sistema está parado.
-    # O cron do GitHub não é pontual (atrasa em horários de pico) — por isso o
-    # monitor do Sentry tem 30 min de grace period.
     - cron: '0 6 * * *'
   workflow_dispatch:
 
-# Nunca dois backups ao mesmo tempo.
 concurrency:
   group: backup-postgres
   cancel-in-progress: false
@@ -23,16 +19,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      # Dead man's switch. Se este job não rodar — workflow desativado por 60
-      # dias sem commit, GitHub fora do ar, o que for — o check-in não chega e o
-      # Sentry avisa. Em vez de prever cada forma de quebrar, monitora-se a
-      # única coisa que importa: "o backup aconteceu?".
       - name: Sentry — avisar que começou
         run: curl -sS -m 10 -X POST "${{ secrets.SENTRY_CRONS_URL }}?status=in_progress" || true
 
-      # Só o age. O Postgres e o AWS CLI o script usa via Docker, com versão
-      # fixa, justamente para o CI rodar o mesmo que a máquina local.
       - name: Instalar age
         run: |
           sudo apt-get update -qq
@@ -48,8 +37,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: ./scripts/backup-postgres.sh
 
-      # Os check-ins usam || true de propósito: Sentry fora do ar não pode
-      # derrubar o backup. O backup é o fim; o monitoramento é o meio.
       - name: Sentry — sucesso
         if: success()
         run: curl -sS -m 10 -X POST "${{ secrets.SENTRY_CRONS_URL }}?status=ok" || true

@@ -10,12 +10,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * {@code @BatchSize} na CLASSE (não dá em campo @ManyToOne): agrupa a resolução de proxies
- * LAZY pendentes deste tipo num único {@code SELECT ... WHERE id IN (...)}, em vez de um
- * SELECT por linha — resolve o N+1 de {@code Evento.local} na listagem paginada ({@code
- * Evento.local} não pode usar JOIN FETCH porque a query de listagem é nativa).
- */
 @Entity
 @Table(name = "local_evento")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -34,13 +28,8 @@ public class LocalEvento {
     @Column(nullable = false, length = 150)
     private String nome;
 
-    /** NULL = não declarada. SUGERE as vagas do evento; nunca as impõe. */
     private Integer capacidade;
 
-    /**
-     * NULL = herda o endereço da igreja. O "Santuário Principal" não tem endereço próprio —
-     * ele É o endereço da igreja, e duplicá-lo criaria duas fontes que divergem na mudança.
-     */
     @Column(name = "cep_logradouro_numero")
     private String cepLogradouroNumero;
 

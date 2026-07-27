@@ -83,23 +83,12 @@ public class LocalEventoService {
         LocalEvento local = localEventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
 
-        // O ON DELETE SET NULL da FK evento.local_id NUNCA dispara aqui: LocalEvento usa
-        // @SQLDelete (soft delete — só marca deleted_at), não um DELETE de verdade. Sem este
-        // passo, o evento continuaria com local_id apontando para um local que o
-        // @SQLRestriction esconde — a próxima leitura de EventoResponse.from (que resolve o
-        // proxy LAZY de local) estouraria EntityNotFoundException e derrubaria a listagem
-        // INTEIRA de eventos (mais dashboard e outbox do Elasticsearch).
-        //
-        // Por isso, antes de arquivar, "desligamos" o vínculo copiando o NOME do local para
-        // local_texto — o evento não perde a informação de onde acontece (ela vira texto,
-        // que é exatamente o que o campo já representa para locais ad-hoc). Preferido a
-        // recusar o arquivamento: não bloqueia o usuário (o local pode ter sido descontinuado
-        // de verdade) e reaproveita um caminho que já existe (localTexto).
-        //
-        // Usa SQL nativo (EventoRepository.desvincularLocal), NÃO findByLocalIdAndIgrejaId +
-        // save: eventos ARQUIVADOS também têm que ser desvinculados (senão ficam órfãos pra
-        // sempre — ver o comentário do método no repository), e o @SQLRestriction de Evento
-        // esconde os arquivados de qualquer busca via JPQL/derived query.
+        // Soft delete do LocalEvento não dispara ON DELETE SET NULL da FK evento.local_id.
+        // Sem desvincular, o proxy LAZY de local dispararia EntityNotFoundException ao ler
+        // EventoResponse e derrubaria a listagem inteira de eventos. Copiamos o nome para
+        // local_texto (reaproveitando o campo ad-hoc já existente) e usamos SQL nativo para
+        // alcançar também os eventos já arquivados — @SQLRestriction esconde arquivados de
+        // qualquer query derivada/JPQL.
         eventoRepository.desvincularLocal(id, local.getNome());
 
         localEventoRepository.delete(local);

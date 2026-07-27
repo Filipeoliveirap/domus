@@ -25,6 +25,9 @@ public class Role {
     @Column(name = "nome", nullable = false, unique = true, length = 50)
     private String nome;
 
+    @Column(name = "descricao", length = 255)
+    private String descricao;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;

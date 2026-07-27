@@ -14,34 +14,20 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
- * Valida e transforma a imagem enviada. É aqui que mora o risco desta feature.
- *
- * <p>Três perigos, na ordem em que aparecem:
- *
+ * Valida e transforma a imagem enviada. Três riscos são mitigados aqui:
  * <ol>
- *   <li><b>Arquivo que não é imagem.</b> Validar pela extensão é confiar em quem envia —
- *       um {@code .jpg} pode conter qualquer coisa. Validamos tentando LER o conteúdo.</li>
- *
- *   <li><b>Bomba de descompressão.</b> Um PNG de 5 MB pode virar gigabytes de bitmap. O
- *       limite do multipart NÃO protege contra isso: o perigo não é o tamanho do arquivo,
- *       é o da imagem depois de decodificada. Por isso a dimensão é lida do CABEÇALHO,
- *       antes de qualquer pixel ser decodificado.</li>
- *
- *   <li><b>EXIF.</b> Guarda a orientação e, pior, a <b>coordenada de GPS</b> de onde a foto
- *       foi tirada — uma foto de perfil tirada em casa entrega o endereço de quem o sistema
- *       esconde o endereço com tanto cuidado. Descartar é obrigatório. E aplicar a rotação
- *       ANTES de descartar também: sem isso, toda foto de celular tirada em pé fica deitada
- *       para sempre.</li>
+ *   <li>Arquivo que não é imagem: valida pelo conteúdo, nunca pela extensão.</li>
+ *   <li>Bomba de descompressão: lê a dimensão do cabeçalho antes de decodificar pixels,
+ *       evitando que um PNG de 5 MB vire gigabytes de bitmap.</li>
+ *   <li>EXIF: descarta metadados (incluindo coordenada de GPS) e aplica a orientação
+ *       antes de regravar para que fotos de celular não saiam deitadas.</li>
  * </ol>
+ * <p>WebP não é aceito — o ImageIO do Java 21 não lê sem dependência extra, e celular/desktop
+ * entrega JPEG ou PNG na prática. A saída é sempre JPEG.
  */
 @Component
 public class ProcessadorImagem {
 
-    /**
-     * WebP ficou de fora: o {@code ImageIO} do Java 21 não lê sem dependência extra, e o
-     * seletor de arquivo — de celular ou de desktop — entrega JPEG ou PNG em praticamente
-     * todos os casos. A SAÍDA é sempre JPEG.
-     */
     private static final Set<String> TIPOS_ACEITOS = Set.of("image/jpeg", "image/png");
 
     /** ~50 megapixels. Acima disso o bitmap descomprimido passa de 200 MB. */
@@ -66,7 +52,7 @@ public class ProcessadorImagem {
                 tipo);
     }
 
-    /** Lê o tipo do CONTEÚDO. A extensão do arquivo não participa da decisão. */
+    /** Lê o tipo do conteúdo. A extensão do arquivo não participa da decisão. */
     private String detectarTipo(byte[] entrada) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(entrada))) {
             Iterator<ImageReader> leitores = ImageIO.getImageReaders(in);
@@ -84,10 +70,7 @@ public class ProcessadorImagem {
         }
     }
 
-    /**
-     * Confere a dimensão SEM decodificar os pixels — é o que impede a bomba de descompressão
-     * de estourar a memória antes de qualquer checagem acontecer.
-     */
+    /** Lê a dimensão do cabeçalho sem decodificar pixels — é o que impede a bomba de descompressão. */
     private void validarDimensoes(byte[] entrada) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(entrada))) {
             Iterator<ImageReader> leitores = ImageIO.getImageReaders(in);
@@ -117,8 +100,7 @@ public class ProcessadorImagem {
                     .outputQuality(QUALIDADE_JPEG);
 
             if (cabeDentroDe(entrada, lado)) {
-                // Já é menor que o alvo: regrava no mesmo tamanho (o que ainda descarta o
-                // EXIF e aplica a rotação) em vez de ampliar. Esticar só borra e ocupa espaço.
+                // Já cabe no alvo: regrava no mesmo tamanho para descartar EXIF, sem ampliar.
                 builder.scale(1.0);
             } else {
                 builder.size(lado, lado).keepAspectRatio(true);
@@ -132,12 +114,7 @@ public class ProcessadorImagem {
         }
     }
 
-    /**
-     * Cabe dentro da caixa do alvo?
-     *
-     * <p>Usa a dimensão do cabeçalho — de novo sem decodificar — e considera a orientação:
-     * numa foto que será girada, largura e altura trocam de papel.
-     */
+    /** Cabe dentro da caixa do alvo? Usa a dimensão do cabeçalho sem decodificar. */
     private boolean cabeDentroDe(byte[] entrada, int lado) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(entrada))) {
             ImageReader leitor = ImageIO.getImageReaders(in).next();
@@ -146,8 +123,6 @@ public class ProcessadorImagem {
             leitor.dispose();
             return maiorLado <= lado;
         } catch (IOException e) {
-            // Se não deu para ler a dimensão aqui, deixa o redimensionamento normal decidir —
-            // o pior caso é uma ampliação, não um erro.
             return false;
         }
     }

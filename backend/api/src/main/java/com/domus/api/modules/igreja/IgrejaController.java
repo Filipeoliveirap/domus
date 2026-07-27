@@ -24,7 +24,6 @@ public class IgrejaController {
     private final AuthCookieFactory cookieFactory;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    /** Registrar a igreja já deixa a pessoa logada — então emite os cookies de sessão. */
     @PostMapping("/registrar")
     public ResponseEntity<SessaoDTO> cadastrarIgreja(
             @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
@@ -48,10 +47,6 @@ public class IgrejaController {
      * tira o tenant do JWT e por isso não tem como pedir a igreja de outro.
      */
 
-    /**
-     * Dados completos da MINHA igreja (Configurações). Sem {@code id} no path de propósito:
-     * o tenant vem do JWT, então não há como pedir a igreja de outro.
-     */
     @GetMapping("/minha")
     public ResponseEntity<IgrejaDetalheDTO> buscarMinhaIgreja() {
         return ResponseEntity.ok(igrejaService.buscarDetalhe(usuarioAutenticado.getIgrejaId()));

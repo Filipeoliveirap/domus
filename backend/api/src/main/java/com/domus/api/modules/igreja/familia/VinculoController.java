@@ -26,33 +26,28 @@ public class VinculoController {
     private final VinculoService vinculoService;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    /** Estado da família: INDEPENDENTE, MAE ou FILHA — e o que cada estado precisa mostrar. */
     @GetMapping
     public VinculoStatusResponse status() {
         return vinculoService.status(usuarioAutenticado.getIgrejaId());
     }
 
-    /** Gera ou rotaciona o código. Rotacionar invalida o anterior. */
     @PostMapping("/codigo")
     public Map<String, String> gerarCodigo() {
         return Map.of("codigoVinculo", vinculoService.gerarCodigo(usuarioAutenticado.getIgrejaId()));
     }
 
-    /** A filha consente em se expor digitando o código da mãe. */
     @PostMapping("/entrar")
     public VinculoStatusResponse entrar(@RequestBody @Valid EntrarNaFamiliaRequest request) {
         return vinculoService.entrarNaFamilia(
                 usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(), request.codigo());
     }
 
-    /** A mãe remove uma congregação. */
     @DeleteMapping("/congregacoes/{congregacaoId}")
     public ResponseEntity<Void> desvincular(@PathVariable UUID congregacaoId) {
         vinculoService.desvincularCongregacao(usuarioAutenticado.getIgrejaId(), congregacaoId);
         return ResponseEntity.noContent().build();
     }
 
-    /** A congregação sai por conta própria — quem consente pode revogar. */
     @DeleteMapping("/sair")
     public ResponseEntity<Void> sair() {
         vinculoService.sairDaFamilia(usuarioAutenticado.getIgrejaId());

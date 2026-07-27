@@ -63,13 +63,6 @@ public class PessoaController {
         return ResponseEntity.ok(pessoaService.buscarPorId(id, igrejaId, podeVerDadosSensiveis()));
     }
 
-    /**
-     * Endereço e observações (notas pastorais) só saem da API para ADMIN_IGREJA.
-     *
-     * <p>LÍDER e MEMBRO enxergam o membro para o que precisam — contato, ministério, status —
-     * mas não onde a pessoa mora nem o que foi anotado sobre ela. Barrar isso na tela não
-     * adiantaria: o JSON está a um DevTools de distância.
-     */
     private boolean podeVerDadosSensiveis() {
         return Permissoes.podeVerDadosSensiveisDePessoa(usuarioAutenticado.getRole(),
                 usuarioAutenticado.getCapacidadesExtras());
@@ -83,12 +76,6 @@ public class PessoaController {
         }
     }
 
-    /**
-     * "Meu Perfil": sempre a pessoa vinculada a quem está logado, nunca um id do corpo/query.
-     * Dados sensíveis (endereço, observações) sempre inclusos aqui — são os PRÓPRIOS dados de
-     * quem pergunta, a restrição de `podeVerDadosSensiveis()` é sobre olhar o dado de OUTRA
-     * pessoa.
-     */
     @GetMapping("/me")
     public ResponseEntity<PessoaResponse> buscarMe() {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
@@ -96,15 +83,7 @@ public class PessoaController {
         return ResponseEntity.ok(pessoaService.buscarPorId(pessoaId, igrejaId, true));
     }
 
-    /**
-     * ADMIN_IGREJA edita qualquer campo do próprio cadastro, MENOS e-mail: o e-mail do
-     * payload é sempre substituído pelo e-mail já persistido antes de chamar o service, então
-     * mesmo que o corpo mande um valor diferente ele é ignorado — o backend força a
-     * imutabilidade, não confia em o front simplesmente não enviar o campo (email é a chave de
-     * login, nativo e Google). LIDER/ACESSO_COMUM só trocam a própria foto: a checagem de
-     * capacidade decide qual método do service roda, não um whitelist de campos dentro de
-     * `atualizarMembro` (mais simples de auditar).
-     */
+    // Email é imutável (chave de login). LÍDER/ACESSO_COMUM só trocam a própria foto.
     @PutMapping("/me")
     public ResponseEntity<PessoaResponse> atualizarMe(@Valid @RequestBody PessoaRequestDTO data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

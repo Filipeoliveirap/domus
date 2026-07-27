@@ -21,19 +21,8 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Rate limiting geral por IP, em duas camadas independentes (ambas no Redis):
- * <ul>
- *   <li><b>Global</b> — teto generoso em TODOS os endpoints, contra abuso/scraping;
- *   <li><b>Auth</b> — teto apertado nas rotas sensíveis (login, cadastro, reset), contra
- *       força bruta e enumeração.
- * </ul>
- *
- * <p>Algoritmo: janela fixa por minuto. A chave inclui o minuto atual
- * ({@code rl:<escopo>:<ip>:<minuto>}); {@code INCR} é atômico no Redis, então não há
- * corrida. Estourou → HTTP 429 + {@code Retry-After}, sem chegar ao controller.
- *
- * <p>Roda antes da autenticação: floods anônimos são barrados barato. Complementa (não
- * substitui) o {@link LoginAttemptService}, que é anti-força-bruta por conta (e-mail).
+ * Rate limiting por IP, janela fixa no Redis, em duas camadas: global (todos os endpoints)
+ * e auth (rotas sensíveis). Estoura → HTTP 429 + Retry-After. Roda antes da autenticação.
  */
 @Slf4j
 @Component
@@ -51,8 +40,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/auth/forgot-password",
             "/auth/reset-password",
             "/igrejas/registrar",
-            // O código de vínculo é credencial sem expiração: tentativa de adivinhá-lo
-            // merece o limite estrito, não só o global.
+            // Código de vínculo não expira: tentativa de adivinhação merece limite estrito.
             "/igrejas-vinculadas/entrar"
     );
 
@@ -103,7 +91,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** Incrementa o contador da janela atual e diz se ultrapassou o limite. */
     private boolean excedeu(String prefixo, String ip, long minuto, int limite) {
         String chave = prefixo + ip + ":" + minuto;
         Long contador = redisTemplate.opsForValue().increment(chave);
@@ -118,13 +105,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * IP de origem. Por padrão usa o IP do socket. Só confia em headers quando há um proxy
-     * confiável na frente (trust-forwarded-for=true) — confiar sem proxy permitiria forjar o
-     * IP e escapar/poluir o limite.
-     *
-     * <p>Atrás da Cloudflare, prefere {@code CF-Connecting-IP}: é o IP real do cliente, sempre,
-     * sem a ambiguidade do {@code X-Forwarded-For} (que pode conter itens forjados pelo cliente
-     * antes de chegar na Cloudflare). Cai no XFF só se o CF não vier.
+     * Por padrão usa o IP do socket. Só confia em headers com proxy confiável
+     * (trust-forwarded-for=true) — sem isso, qualquer um forjaria o IP.
+     * Atrás da Cloudflare, prefere CF-Connecting-IP (sempre é o IP real do cliente).
      */
     private String resolverIp(HttpServletRequest request) {
         if (trustForwardedFor) {

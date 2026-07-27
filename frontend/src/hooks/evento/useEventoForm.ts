@@ -23,7 +23,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const queryClient = useQueryClient()
   const ehEdicao = !!eventoId
 
-  // ─── Impacto retroativo (Task 9) ───
   // Ao editar, o payload calculado no clique de "salvar" fica aqui esperando a escolha
   // do admin no <ModalImpactoRestricao> — sem isso teríamos que recalcular tudo de novo.
   const [impactoAfetados, setImpactoAfetados] = useState<InscritoImpactado[] | null>(null)
@@ -145,7 +144,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const onSubmit = async (data: EventoFormData) => {
     setErroGeral(null)
     try {
-      // Já em ISO: o CampoData guarda aaaa-mm-dd no form e só exibe em pt-BR.
       const inicioEm = `${data.inicioData}T${data.inicioHora}:00`
       const fimEm = (data.fimData && data.fimHora)
         ? `${data.fimData}T${data.fimHora}:00`

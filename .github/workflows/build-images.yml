@@ -11,7 +11,7 @@ on:
 
 permissions:
   contents: read
-  packages: write   # necessário pra publicar no ghcr.io
+  packages: write
 
 jobs:
   build:
@@ -39,16 +39,9 @@ jobs:
           context: ${{ matrix.context }}
           push: true
           tags: ghcr.io/filipeoliveirap/domus-${{ matrix.name }}:latest
-          # NEXT_PUBLIC_* são assados no build do front. Não são segredo (Client ID é
-          # público, DSN é send-only) → vêm de repo VARIABLES, não secrets. O build da
-          # api ignora estes args (Docker só avisa, não falha).
           build-args: |
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
-
-  # Deploy na VPS. Só roda depois que as DUAS imagens (api+front) buildaram, e só na main.
-  # A chave SSH tem forced-command na VPS: ela SÓ consegue rodar /root/deploy/deploy.sh
-  # (docker compose pull && up -d). Por isso o comando mandado aqui ("deploy") é ignorado.
   deploy:
     needs: build
     if: github.ref == 'refs/heads/main'

@@ -263,6 +263,29 @@ class EventoServiceTest {
     }
 
     @Test
+    void elegibilidadeFuncionaParaEventoCompartilhadoDeOutraIgreja() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaId = UUID.randomUUID();
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        Pessoa pessoa = new Pessoa();
+        pessoa.setId(pessoaId);
+        pessoa.setNome("Maria");
+        pessoa.setVinculo(Vinculo.MEMBRO);
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(pessoa));
+        when(elegibilidadeService.avaliar(compartilhado, pessoa))
+                .thenReturn(new com.domus.api.modules.evento.elegibilidade.Elegibilidade(true, List.of()));
+
+        var response = service.elegibilidade(eventoId, pessoaId, igrejaId);
+
+        assertThat(response).isNotNull();
+    }
+
+    @Test
     void atualizarEventoLimpaCacheDeTodaFamilia() {
         UUID outraIgrejaId = UUID.randomUUID();
         when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))

@@ -271,7 +271,8 @@ public class EventoService {
      */
     @Transactional(readOnly = true)
     public ElegibilidadeResponse elegibilidade(UUID eventoId, UUID pessoaId, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         Pessoa pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));

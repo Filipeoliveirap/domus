@@ -140,35 +140,35 @@ class EventoTipoENormalizacaoTest {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, tipo, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComLocal(UUID localId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 localId, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComAmbos() {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 UUID.randomUUID(), "Chácara", null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComResponsavel(UUID pessoaId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, pessoaId,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComIdades(Integer min, Integer max) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, null,
                 null, min, max, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     @Test

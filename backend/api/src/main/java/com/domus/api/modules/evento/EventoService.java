@@ -118,6 +118,7 @@ public class EventoService {
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .controlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()))
+                .restritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -201,6 +202,7 @@ public class EventoService {
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
         evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
+        evento.setRestritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()));
 
         // Resolve a nova foto antes de trocar; só remove a antiga depois.
         Foto fotoAntiga = evento.getFoto();

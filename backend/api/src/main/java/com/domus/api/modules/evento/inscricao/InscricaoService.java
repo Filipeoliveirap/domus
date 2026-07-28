@@ -289,10 +289,17 @@ public class InscricaoService {
         // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
+        //
+        // Mesmo isolamento de cancelar(): o privilégio de GESTOR só vale sobre inscrição da
+        // PRÓPRIA igreja organizadora do evento. Remover convidado de terceiro é ação de
+        // gestão, nunca family-wide — senão um gestor da Congregação B remove o convidado de
+        // um desconhecido inscrito num evento organizado pela Sede A só porque as igrejas são
+        // da mesma família (o lookup no topo do método já é family-wide de propósito).
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
 
-        if (!ehGestor && !souODono) {
+        if (!gestorDaMesmaIgreja && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você só pode remover convidados da sua própria inscrição.");
         }

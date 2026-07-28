@@ -270,6 +270,15 @@
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
+.pillIgreja {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+}
 .colData,
 .colInscritoPor {
   font-size: var(--font-size-sm);

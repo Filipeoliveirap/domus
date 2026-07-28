@@ -116,6 +116,11 @@ export default function InscritosPage() {
   // ENCERRADO mostra "Participou"; EM_ANDAMENTO mostra "Em andamento"
   const textoBloqueado = evento?.situacao === 'ENCERRADO' ? 'Participou' : 'Em andamento'
 
+  const igrejasDistintas = new Set(
+    (lista?.inscritos.content ?? []).map((i) => i.igrejaDaPessoa.id),
+  )
+  const mostrarIgreja = !evento?.restritoPropriaIgreja || igrejasDistintas.size > 1
+
   if (!hidratado) {
     return <div className={styles.pagina} />
   }
@@ -276,6 +281,11 @@ export default function InscritosPage() {
                             )}
                           </span>
                           <span className={styles.nome}>{inscrito.nome}</span>
+                          {mostrarIgreja && (
+                            <span className={styles.pillIgreja}>
+                              {inscrito.igrejaDaPessoa.sigla ?? inscrito.igrejaDaPessoa.nome}
+                            </span>
+                          )}
                         </div>
                         <div className={styles.colData}>{formatarData(inscrito.inscritoEm)}</div>
                         <div className={styles.colInscritoPor}>

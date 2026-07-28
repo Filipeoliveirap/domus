@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { CalendarDays, MapPin, Pencil, Archive } from 'lucide-react'
+import { CalendarDays, MapPin, Pencil, Archive, Building2 } from 'lucide-react'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -10,7 +10,6 @@ import {
   podeEditarEvento,
   podeArquivarEvento,
 } from '@/lib/formats/eventoFormat'
-import { podeGerenciarEventos } from '@/lib/permissoes'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
 import { urlFoto } from '@/lib/urlFoto'
@@ -24,9 +23,10 @@ interface EventoCardProps {
 
 export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardProps) {
   const router = useRouter()
-  const role = useAuthStore((s) => s.role)
+  const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
 
-  const podeGerenciar = podeGerenciarEventos(role)
+  const podeGerenciar = evento.podeGerenciarEsteEvento
+  const ehOutraIgreja = evento.igrejaOrganizadora.id !== minhaIgrejaId
   const { dia, mes, ano } = dataAgenda(evento.inicioEm)
   const { label: seloLabel, variante: seloVariante } = seloEvento(evento)
 
@@ -69,6 +69,12 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
           {evento.recorteEtario && (
             <span className={`${styles.selo} ${styles.seloRecorte}`}>
               {evento.recorteEtario}
+            </span>
+          )}
+          {ehOutraIgreja && (
+            <span className={`${styles.selo} ${styles.seloIgreja}`}>
+              <Building2 size={12} aria-hidden="true" />
+              {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
             </span>
           )}
         </div>

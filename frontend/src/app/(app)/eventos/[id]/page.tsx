@@ -55,6 +55,10 @@ export default function EditarEventoPage() {
     )
   }
 
+  if (!evento.podeGerenciarEsteEvento) {
+    return <AcessoRestrito />
+  }
+
   return (
     <div className={styles.pagina}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">

@@ -73,6 +73,10 @@
   color: var(--color-primary);
   background: rgba(255, 255, 255, 0.85);
 }
+.seloIgreja {
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.85);
+}
 
 /* ─── Ações (3 pontinhos) ─── */
 .acoes {

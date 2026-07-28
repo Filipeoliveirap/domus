@@ -49,6 +49,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       restricaoEstadoCivil: null,
       restricaoSexo: null,
       fotoId: null,
+      restritoPropriaIgreja: false,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -104,6 +105,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         restricaoEstadoCivil: eventoInicial.restricaoEstadoCivil,
         restricaoSexo: eventoInicial.restricaoSexo,
         fotoId: eventoInicial.fotoId ?? null,
+        restritoPropriaIgreja: eventoInicial.restritoPropriaIgreja ?? false,
       })
     }
   }, [eventoInicial, reset])
@@ -185,6 +187,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         restricaoEstadoCivil: data.restricaoEstadoCivil ?? null,
         restricaoSexo: data.restricaoSexo ?? null,
         fotoId: data.fotoId ?? null,
+        restritoPropriaIgreja: data.restritoPropriaIgreja,
       }
 
       // Evento novo nunca tem inscritos — vai direto, sem checar impacto. Na edição,

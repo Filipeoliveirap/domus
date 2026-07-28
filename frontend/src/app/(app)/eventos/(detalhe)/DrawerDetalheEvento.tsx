@@ -15,7 +15,7 @@ import {
   vagasEsgotadas as calcVagasEsgotadas,
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
-import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
+import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
@@ -38,8 +38,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
   const role = useAuthStore((s) => s.role)
   const podeVerInscritos = podeVerListaCompletaDeInscritos(role)
-  // A6/rodada 3: mesma regra do modal do início — só quem gerencia, e só enquanto editável.
-  const podeGerenciar = podeGerenciarEventos(role)
+  const podeGerenciar = !!evento?.podeGerenciarEsteEvento
 
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)

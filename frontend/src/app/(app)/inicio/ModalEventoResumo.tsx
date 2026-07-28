@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { X, CalendarDays, MapPin, Users, UserPlus, Ticket, Flame, Pencil, XCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useAuthStore } from '@/store/authStore'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
@@ -24,7 +23,6 @@ import {
   vagasEsgotadas as calcVagasEsgotadas,
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
-import { podeGerenciarEventos } from '@/lib/permissoes'
 import styles from './ModalEventoResumo.module.css'
 
 interface Props {
@@ -45,8 +43,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const { data: evento, isLoading, isError } = useEvento(eventoId)
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
-  const role = useAuthStore((s) => s.role)
-  const podeGerenciar = podeGerenciarEventos(role)
+  const podeGerenciar = !!evento?.podeGerenciarEsteEvento
 
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [removendoId, setRemovendoId] = useState<string | null>(null)
@@ -341,7 +338,12 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
       )}
 
       {modalAberto === 'lista' && evento && (
-        <ModalQuemVai eventoId={eventoId} situacao={evento.situacao} aoFechar={() => setModalAberto(null)} />
+        <ModalQuemVai
+          eventoId={eventoId}
+          situacao={evento.situacao}
+          restritoPropriaIgreja={evento.restritoPropriaIgreja}
+          aoFechar={() => setModalAberto(null)}
+        />
       )}
     </div>
 

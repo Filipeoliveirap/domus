@@ -69,6 +69,19 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query("SELECT e FROM Evento e WHERE e.id = :id AND e.igreja.id = :igrejaId")
     Optional<Evento> buscarComLock(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
+    // Mesma trava, mas visível pela família (evento de outra igreja da família só entra
+    // se ela NÃO restringiu à própria) — usada na auto-inscrição em evento compartilhado.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.id = :id
+          AND e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+    """)
+    Optional<Evento> buscarComLockVisivelParaFamilia(@Param("id") UUID id,
+                                                      @Param("minhaIgreja") UUID minhaIgreja,
+                                                      @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     @Query("""
         SELECT e FROM Evento e
         WHERE e.igreja.id = :igrejaId AND e.inicioEm >= :agora

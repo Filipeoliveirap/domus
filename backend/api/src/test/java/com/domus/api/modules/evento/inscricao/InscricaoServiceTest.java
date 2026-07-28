@@ -915,7 +915,7 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void cancelarProrpiaInscricaoFuncionaMesmoEmEventoDeOutraIgrejaDaFamilia() {
+    void cancelarPropriaInscricaoFuncionaMesmoEmEventoDeOutraIgrejaDaFamilia() {
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricao = inscricaoConfirmada(outraIgrejaId, pessoaId);
         when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
@@ -962,5 +962,29 @@ class InscricaoServiceTest {
         service.cancelar(inscricaoId, usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
 
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoPodeRemoverAcompanhanteDeTerceiro() {
+        // Espelha gestorDeOutraIgrejaDaFamiliaNaoPodeCancelarInscricaoDeTerceiro, mas para
+        // removerAcompanhante(): remover convidado de terceiro é ação de gestão e não pode
+        // ser franqueada só porque idsDaFamiliaCompleta() agora inclui a igreja organizadora.
+        // Um LIDER da Congregação B não pode remover o convidado de um desconhecido inscrito
+        // num evento organizado pela Sede A só porque as igrejas são da mesma família.
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(inscricaoDeTerceiro).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), UUID.randomUUID(), "LIDER", outraIgrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("própria inscrição");
+
+        verify(acompanhanteRepository, never()).delete(any());
     }
 }

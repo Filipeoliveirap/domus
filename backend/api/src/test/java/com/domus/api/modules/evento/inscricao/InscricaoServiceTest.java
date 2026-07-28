@@ -679,7 +679,8 @@ class InscricaoServiceTest {
                 com.domus.api.modules.evento.inscricao.AcompanhanteInscricao.builder()
                         .id(UUID.randomUUID()).inscricao(inscricao)
                         .nome("Convidado").telefone("11999998888").build());
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
 
         var participantes = service.listarParticipantes(eventoId, igrejaId);
@@ -696,7 +697,7 @@ class InscricaoServiceTest {
     void listarParticipantesSoTrazConfirmadas() {
         // listarPorEvento já filtra CONFIRMADA na query; este teste garante que o service
         // não reintroduz canceladas ao montar a resposta.
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
                 .thenReturn(Optional.of(evento(10)));
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
 
@@ -878,10 +879,26 @@ class InscricaoServiceTest {
 
     @Test
     void listarParticipantesDeEventoDeOutraIgrejaEh404() {
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.empty());
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.listarParticipantes(eventoId, igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    void listarParticipantesFuncionaParaEventoCompartilhadoDeOutraIgreja() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+
+        var resposta = service.listarParticipantes(eventoId, igrejaId);
+
+        assertThat(resposta).isEmpty();
     }
 
     @Test

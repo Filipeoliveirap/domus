@@ -136,7 +136,7 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
         return EventoResponse.from(salvo, igrejaId, true);
     }
 
@@ -237,7 +237,7 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
         return EventoResponse.from(salvo, inscricoesRemovidas, igrejaId, true);
     }
 
@@ -262,7 +262,7 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
     /**
@@ -387,5 +387,15 @@ public class EventoService {
             }
         }
         return sugestoes;
+    }
+
+    /**
+     * Evicta o cache de eventos para toda a família de igrejas.
+     * Garante que mudanças de visibilidade (compartilhado/restrito) reflitam
+     * para os membros de outras igrejas da família sem esperar expiração.
+     */
+    private void evictarCacheDeEventosDaFamilia(UUID igrejaId) {
+        familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)
+                .forEach(id -> cacheEvictor.evictPorIgreja("eventos", id));
     }
 }

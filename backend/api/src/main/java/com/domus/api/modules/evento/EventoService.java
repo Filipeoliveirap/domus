@@ -69,7 +69,7 @@ public class EventoService {
             UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
         Page<EventoResponse> pagina = eventoRepository
                 .buscarPorIgreja(igrejaId, q, tipo, recorteEtario, java.time.LocalDateTime.now(), pageable)
-                .map(EventoResponse::from);
+                .map(evento -> EventoResponse.from(evento, igrejaId, true));
         return PagedResponse.from(pagina);
     }
 
@@ -77,7 +77,7 @@ public class EventoService {
     public EventoResponse buscarPorId(UUID id, UUID igrejaId) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        return EventoResponse.from(evento);
+        return EventoResponse.from(evento, igrejaId, true);
     }
 
     @Transactional
@@ -129,7 +129,7 @@ public class EventoService {
         );
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo);
+        return EventoResponse.from(salvo, igrejaId, true);
     }
 
     @Transactional
@@ -229,7 +229,7 @@ public class EventoService {
         );
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo, inscricoesRemovidas);
+        return EventoResponse.from(salvo, inscricoesRemovidas, igrejaId, true);
     }
 
     @Transactional

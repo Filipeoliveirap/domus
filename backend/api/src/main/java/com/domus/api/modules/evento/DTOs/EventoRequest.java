@@ -49,6 +49,8 @@ public record EventoRequest(
          */
         Boolean controlaPresenca,
 
+        Boolean restritoPropriaIgreja,
+
         /** Id da foto já enviada via {@code POST /fotos}; {@code null} = sem foto. */
         UUID fotoId
 ) {}

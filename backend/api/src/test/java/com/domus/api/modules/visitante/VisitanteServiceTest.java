@@ -1,5 +1,7 @@
 package com.domus.api.modules.visitante;
 
+import com.domus.api.modules.celula.Celula;
+import com.domus.api.modules.celula.CelulaMembro;
 import com.domus.api.modules.celula.CelulaMembroRepository;
 import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.igreja.Igreja;
@@ -12,9 +14,11 @@ import com.domus.api.modules.visitante.DTOs.VisitanteRequest;
 import com.domus.api.modules.visitante.DTOs.VisitanteResponse;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -250,6 +254,52 @@ class VisitanteServiceTest {
         assertThatThrownBy(() -> service.excluir(visitanteId, igrejaId))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(visitanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteVisitanteEmCelulaRecusaComConflito() {
+        dadoQueExiste();
+        when(visitanteRepository.existeCelulaMembroAtivo(visitanteId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.excluir(visitanteId, igrejaId))
+                .isInstanceOf(ConflitoNegocioException.class);
+        verify(visitanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void moverParaCelulaGravaEntrouEmCelulaEmSoNaPrimeiraVez() {
+        dadoQueExiste();
+        UUID celulaId = UUID.randomUUID();
+        Celula celula = Celula.builder().id(celulaId).igreja(igreja()).nome("Célula A").build();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(celula));
+        when(celulaMembroRepository.findByVisitanteId(visitanteId)).thenReturn(Optional.empty());
+        when(celulaMembroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.moverParaCelula(visitanteId, celulaId, igrejaId);
+
+        verify(celulaMembroRepository).save(any(CelulaMembro.class));
+        ArgumentCaptor<Visitante> captor = ArgumentCaptor.forClass(Visitante.class);
+        verify(visitanteRepository).save(captor.capture());
+        assertThat(captor.getValue().getEntrouEmCelulaEm()).isNotNull();
+    }
+
+    @Test
+    void moverParaOutraCelulaAtualizaLinhaExistente() {
+        dadoQueExiste();
+        UUID celulaId = UUID.randomUUID();
+        Celula celula = Celula.builder().id(celulaId).igreja(igreja()).nome("Célula B").build();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(celula));
+
+        CelulaMembro existente = CelulaMembro.builder().id(UUID.randomUUID())
+                .celula(Celula.builder().id(UUID.randomUUID()).igreja(igreja()).nome("Antiga").build())
+                .igreja(igreja()).build();
+        when(celulaMembroRepository.findByVisitanteId(visitanteId)).thenReturn(Optional.of(existente));
+        when(celulaMembroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.moverParaCelula(visitanteId, celulaId, igrejaId);
+
+        assertThat(existente.getCelula().getId()).isEqualTo(celulaId);
+        verify(celulaMembroRepository).save(existente);
     }
 
     @Test

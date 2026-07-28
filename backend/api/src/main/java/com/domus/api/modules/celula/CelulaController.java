@@ -24,7 +24,8 @@ public class CelulaController {
 
     @GetMapping
     public ResponseEntity<List<CelulaResponse>> listar() {
-        return ResponseEntity.ok(celulaService.listar(usuarioAutenticado.getIgrejaId()));
+        return ResponseEntity.ok(celulaService.listar(
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getPessoaId()));
     }
 
     @GetMapping("/{id}")
@@ -45,13 +46,21 @@ public class CelulaController {
     public ResponseEntity<CelulaResponse> atualizar(@PathVariable UUID id,
                                                      @Valid @RequestBody CelulaRequest data) {
         return ResponseEntity.ok(celulaService.atualizar(id, data,
-                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                usuarioAutenticado.getPessoaId(), souAdmin()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable UUID id) {
         exigirAdmin();
         celulaService.excluir(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        exigirAdmin();
+        celulaService.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
         return ResponseEntity.noContent().build();
     }
 
@@ -73,8 +82,9 @@ public class CelulaController {
 
     @PutMapping("/{id}/membros/{membroId}/papel")
     public ResponseEntity<Void> atualizarPapel(@PathVariable UUID id,
-                                                @PathVariable UUID membroId) {
-        celulaService.atualizarPapel(id, membroId, usuarioAutenticado.getIgrejaId(), souAdmin());
+                                                @PathVariable UUID membroId,
+                                                @Valid @RequestBody AtualizarPapelCelulaRequest data) {
+        celulaService.atualizarPapel(id, membroId, data, usuarioAutenticado.getIgrejaId(), souAdmin());
         return ResponseEntity.noContent().build();
     }
 

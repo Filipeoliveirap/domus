@@ -13,6 +13,7 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
@@ -39,9 +40,9 @@ public class CelulaService {
     private final FotoService fotoService;
 
     @Transactional(readOnly = true)
-    public List<CelulaResponse> listar(UUID igrejaId) {
+    public List<CelulaResponse> listar(UUID igrejaId, UUID pessoaLogadaId) {
         return celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId).stream()
-                .map(c -> CelulaResponse.comResumo(c, membrosAtivosDe(c.getId())))
+                .map(c -> CelulaResponse.comResumo(c, membrosAtivosDe(c.getId()), pessoaLogadaId))
                 .toList();
     }
 
@@ -72,8 +73,10 @@ public class CelulaService {
     }
 
     @Transactional
-    public CelulaResponse atualizar(UUID id, CelulaRequest data, UUID igrejaId, UUID usuarioId) {
+    public CelulaResponse atualizar(UUID id, CelulaRequest data, UUID igrejaId,
+                                     UUID usuarioId, UUID atorPessoaId, boolean isAdmin) {
         Celula celula = buscarDaIgrejaOuFalhar(id, igrejaId);
+        exigirAdminOuLider(id, atorPessoaId, isAdmin);
 
         String nome = TextoUtil.capitalizar(data.nome());
         validarNaoDuplicado(nome, igrejaId, id);
@@ -103,12 +106,17 @@ public class CelulaService {
     @Transactional
     public void excluir(UUID id, UUID igrejaId) {
         Celula celula = buscarDaIgrejaOuFalhar(id, igrejaId);
+        celulaRepository.delete(celula);
+    }
+
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        buscarDaIgrejaOuFalhar(id, igrejaId);
         if (membroRepository.existsByCelulaId(id)) {
-            celulaRepository.delete(celula);
-        } else {
-            membroRepository.findByCelulaIdOrderByPapelAsc(id).forEach(membroRepository::delete);
-            celulaRepository.deleteById(id);
+            throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
+                    "Não é possível apagar uma célula que tem membros.");
         }
+        celulaRepository.hardDeleteById(id);
     }
 
     @Transactional(readOnly = true)
@@ -204,7 +212,8 @@ public class CelulaService {
     }
 
     @Transactional
-    public void atualizarPapel(UUID celulaId, UUID membroId, UUID igrejaId, boolean isAdmin) {
+    public void atualizarPapel(UUID celulaId, UUID membroId, AtualizarPapelCelulaRequest data,
+                                UUID igrejaId, boolean isAdmin) {
         buscarDaIgrejaOuFalhar(celulaId, igrejaId);
         if (!isAdmin) {
             throw new AccessDeniedException(
@@ -217,7 +226,7 @@ public class CelulaService {
             throw new BusinessException("VISITANTE_NAO_PODE_SER_LIDER",
                     "Um visitante não pode ser promovido a líder de célula.");
         }
-        membro.setPapel(membro.getPapel() == PapelCelula.LIDER ? PapelCelula.MEMBRO : PapelCelula.LIDER);
+        membro.setPapel(data.papel());
         membroRepository.save(membro);
     }
 

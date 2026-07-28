@@ -70,7 +70,8 @@ public class EventoController {
     @GetMapping("/{id}")
     public ResponseEntity<EventoResponse> buscarPorId(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(eventoService.buscarPorId(id, igrejaId));
+        String role = usuarioAutenticado.getRole();
+        return ResponseEntity.ok(eventoService.buscarPorId(id, igrejaId, role));
     }
 
     @GetMapping("/{id}/elegibilidade")

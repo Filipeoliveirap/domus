@@ -76,6 +76,9 @@ class EventoServiceCamposInscricaoTest {
         when(inscricaoService.removerInscritosNaoElegiveis(any()))
                 .thenReturn(0);
         when(eventoRepository.tiposUsadosPorFrequencia(any())).thenReturn(java.util.List.of());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(any(), any(), any()))
+                .thenAnswer(inv -> eventoRepository.findByIdAndIgrejaId(inv.getArgument(0), inv.getArgument(1)));
         Usuario usuario = new Usuario();
         usuario.setId(usuarioId);
         Pessoa pessoaDoUsuario = new Pessoa();
@@ -193,7 +196,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.AGENDADO);
     }
 
@@ -207,7 +210,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.EM_ANDAMENTO);
     }
 
@@ -221,7 +224,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.ENCERRADO);
     }
 

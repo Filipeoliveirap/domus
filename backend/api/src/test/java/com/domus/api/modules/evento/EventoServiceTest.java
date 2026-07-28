@@ -11,6 +11,7 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -171,6 +173,60 @@ class EventoServiceTest {
                 igrejaId, null, null, null, PageRequest.of(0, 12));
 
         assertThat(resposta.getContent()).hasSize(2);
+    }
+
+    @Test
+    void buscarPorIdRetornaEventoCompartilhadoDeOutraIgrejaDaFamilia() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+
+        EventoResponse response = service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA");
+
+        assertThat(response.podeGerenciarEsteEvento()).isFalse();
+    }
+
+    @Test
+    void buscarPorIdRecusaEventoRestritoDeOutraIgreja() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraIgrejaId = UUID.randomUUID();
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void buscarPorIdDaPropriaIgrejaSempreDeixaGerenciar() {
+        UUID eventoId = UUID.randomUUID();
+        Evento meu = evento(igrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)).thenReturn(Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(meu));
+
+        EventoResponse response = service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA");
+
+        assertThat(response.podeGerenciarEsteEvento()).isTrue();
+    }
+
+    @Test
+    void buscarPorIdAcessoComumNuncaGerencia() {
+        UUID eventoId = UUID.randomUUID();
+        Evento meu = evento(igrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)).thenReturn(Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(meu));
+
+        EventoResponse response = service.buscarPorId(eventoId, igrejaId, "ACESSO_COMUM");
+
+        assertThat(response.podeGerenciarEsteEvento()).isFalse();
     }
 
     private Evento evento(UUID igrejaId, boolean restrito) {

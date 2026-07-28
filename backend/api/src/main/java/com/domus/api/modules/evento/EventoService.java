@@ -78,10 +78,13 @@ public class EventoService {
     }
 
     @Transactional(readOnly = true)
-    public EventoResponse buscarPorId(UUID id, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
+    public EventoResponse buscarPorId(UUID id, UUID igrejaId, String role) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(id, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        return EventoResponse.from(evento, igrejaId, true);
+        boolean podeGerenciar = Permissoes.podeGerenciarEventos(role)
+                && evento.getIgreja().getId().equals(igrejaId);
+        return EventoResponse.from(evento, igrejaId, podeGerenciar);
     }
 
     @Transactional

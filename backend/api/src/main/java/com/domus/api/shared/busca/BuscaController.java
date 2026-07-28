@@ -3,6 +3,7 @@ package com.domus.api.shared.busca;
 import com.domus.api.modules.evento.busca.BuscaEventoService;
 import com.domus.api.modules.financeiro.categoria.busca.BuscaCategoriaService;
 import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoService;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.busca.BuscaPessoaService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
@@ -26,6 +27,7 @@ public class BuscaController {
     private final BuscaMovimentacaoService buscaMovimentacaoService;
     private final BuscaCategoriaService buscaCategoriaService;
     private final BuscaGlobalService buscaGlobalService;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     private void exigirFinanceiro() {
         if (!Permissoes.podeVerFinanceiro(usuarioAutenticado.getRole(),
@@ -48,7 +50,8 @@ public class BuscaController {
         if (q == null || q.isBlank()) {
             return List.of();
         }
-        return buscaEventoService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(), 10);
+        return buscaEventoService.buscar(q.trim(), usuarioAutenticado.getIgrejaId(),
+                familiaIgrejaService.idsDaFamiliaCompleta(usuarioAutenticado.getIgrejaId()), 10);
     }
 
     @GetMapping("/usuarios")

@@ -311,10 +311,14 @@ public class InscricaoService {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
         validarEventoAberto(inscricao.getEvento());
 
+        // Self-cancel é family-wide por design (inscricao já veio de buscarInscricao).
+        // Mas o privilégio de GESTOR só vale sobre inscrição da PRÓPRIA igreja organizadora:
+        // cancelar inscrição de terceiro é ação de gestão, nunca family-wide.
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souEu = inscricao.getPessoa().getId().equals(meuMembroId);
 
-        if (!ehGestor && !souEu) {
+        if (!gestorDaMesmaIgreja && !souEu) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você não pode cancelar a inscrição de outra pessoa. "
                     + "Peça a ela ou a um líder da igreja.");
@@ -549,7 +553,10 @@ public class InscricaoService {
                     "Você não tem permissão para marcar presença.");
         }
 
-        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+        // Ação de GESTOR pura (não tem caminho self-service) — nunca family-wide, senão
+        // um gestor de outra igreja da família controlaria presença de evento alheio.
+        InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
         validarControlaPresenca(inscricao.getEvento());
         validarInscricaoConfirmada(inscricao);
 

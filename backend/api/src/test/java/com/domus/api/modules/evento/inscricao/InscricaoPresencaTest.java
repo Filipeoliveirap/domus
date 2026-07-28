@@ -115,7 +115,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusa409_quandoEventoNaoControlaPresenca() {
         Evento evento = evento(false);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
@@ -126,7 +126,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_marcaEDesmarca_individualmente() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
 
         service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA");
         assertThat(inscricao.isCompareceu()).isTrue();
@@ -139,7 +139,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusaSemPermissao() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ACESSO_COMUM"))
@@ -150,13 +150,34 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusa409_quandoInscricaoCancelada() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricaoCancelada(evento);
-        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
                 .isInstanceOf(ConflitoNegocioException.class);
 
         assertThat(inscricao.isCompareceu()).isFalse();
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void marcarPresencaInscricao_naoEnxergaInscricaoDeOutraIgrejaDaFamilia() {
+        // marcarPresencaInscricao é ação de GESTOR (controle de presença), não self-service:
+        // family-wide NUNCA pode se aplicar aqui — mesmo que a inscrição esteja visível
+        // via buscarVisivelParaFamilia, a busca estrita (findByIdAndIgrejaId) tem que falhar.
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento evento = evento(true);
+        InscricaoEvento inscricao = inscricao(evento);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(java.util.Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ResourceNotFoundException.class);
+
         verify(inscricaoRepository, never()).save(any());
     }
 

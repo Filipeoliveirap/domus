@@ -1,5 +1,6 @@
 package com.domus.api.modules.evento.inscricao.DTOs;
 
+import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +22,8 @@ public record InscritoResponse(
         String inscritoPorNome,
         UUID inscritoPorFotoId,
         LocalDateTime inscritoEm,
-        List<AcompanhanteResponse> acompanhantes
+        List<AcompanhanteResponse> acompanhantes,
+        EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
     /**
      * @param registrante resumo (nome/foto) de quem inscreveu, já resolvido em lote pelo
@@ -38,7 +40,8 @@ public record InscritoResponse(
                 registrante == null ? null : registrante.nome(),
                 registrante == null ? null : registrante.fotoId(),
                 i.getCreatedAt(),
-                i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList()
+                i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList(),
+                EventoResponse.IgrejaResumo.de(i.getPessoa().getIgreja())
         );
     }
 }

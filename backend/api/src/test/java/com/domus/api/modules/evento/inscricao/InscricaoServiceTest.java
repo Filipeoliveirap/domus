@@ -8,8 +8,10 @@ import com.domus.api.modules.evento.elegibilidade.regras.RegraFaixaEtaria;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraSexo;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraVinculo;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
+import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -110,6 +113,17 @@ class InscricaoServiceTest {
                 .pessoa(Pessoa.builder().id(daPessoaId).igreja(igreja()).nome("Maria")
                         .vinculo(Vinculo.MEMBRO).build())
                 .status(StatusInscricao.CONFIRMADA).build();
+    }
+
+    private Pessoa pessoaComIgreja(UUID pessoaUUID, String igrejanome, String sigla) {
+        Igreja igrejaCustom = new Igreja();
+        igrejaCustom.setId(UUID.randomUUID());
+        igrejaCustom.setNome(igrejanome);
+        igrejaCustom.setSigla(sigla);
+        return Pessoa.builder()
+                .id(pessoaUUID).igreja(igrejaCustom).nome("João")
+                .vinculo(Vinculo.MEMBRO)
+                .build();
     }
 
     private void dado(Evento e, Pessoa m, long ocupadas) {
@@ -1003,5 +1017,31 @@ class InscricaoServiceTest {
                 .hasMessageContaining("própria inscrição");
 
         verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void inscritoResponseTrazIgrejaDaPessoa() {
+        Pessoa pessoaDeOutraIgreja = pessoaComIgreja(UUID.randomUUID(), "Congregação Norte", "CN");
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).pessoa(pessoaDeOutraIgreja)
+                .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        InscritoResponse response = InscritoResponse.from(inscricao, null);
+
+        assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Norte");
+    }
+
+    @Test
+    void participanteResponseTrazIgrejaDaPessoa() {
+        Pessoa pessoaDeOutraIgreja = pessoaComIgreja(UUID.randomUUID(), "Congregação Sul", "CS");
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).pessoa(pessoaDeOutraIgreja)
+                .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        ParticipanteResponse response = ParticipanteResponse.from(inscricao);
+
+        assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Sul");
     }
 }

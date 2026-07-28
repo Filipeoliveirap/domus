@@ -144,8 +144,9 @@ export default function CelulasPage() {
       ) : (
         <div className={styles.grid}>
           {celulas?.map(c => {
+            const podeEditarEsta = podeGerenciar || c.souLiderDestaCelula
             const acoes: ItemAcao[] = [
-              ...(podeGerenciar ? [{ label: 'Editar', icone: Pencil, onClick: () => {
+              ...(podeEditarEsta ? [{ label: 'Editar', icone: Pencil, onClick: () => {
                 form.reset({
                   nome: c.nome,
                   diaSemana: c.diaSemana ?? '',

@@ -16,21 +16,25 @@ public record CelulaResponse(
         LocalTime horario,
         List<String> lideres,
         int totalMembros,
-        UUID fotoId
+        UUID fotoId,
+        boolean souLiderDestaCelula
 ) {
     public static CelulaResponse from(Celula celula) {
         return new CelulaResponse(celula.getId(), celula.getNome(),
                 celula.getDiaSemana(), celula.getHorario(), List.of(), 0,
-                celula.getFoto() != null ? celula.getFoto().getId() : null);
+                celula.getFoto() != null ? celula.getFoto().getId() : null, false);
     }
 
-    public static CelulaResponse comResumo(Celula celula, List<CelulaMembro> membros) {
+    public static CelulaResponse comResumo(Celula celula, List<CelulaMembro> membros, UUID pessoaLogadaId) {
         List<String> lideres = membros.stream()
                 .filter(m -> m.getPapel() == PapelCelula.LIDER)
                 .map(m -> m.getPessoa() != null ? m.getPessoa().getNome() : m.getVisitante().getNome())
                 .toList();
+        boolean souLider = pessoaLogadaId != null && membros.stream()
+                .anyMatch(m -> m.getPapel() == PapelCelula.LIDER
+                        && m.getPessoa() != null && pessoaLogadaId.equals(m.getPessoa().getId()));
         return new CelulaResponse(celula.getId(), celula.getNome(),
                 celula.getDiaSemana(), celula.getHorario(), lideres, membros.size(),
-                celula.getFoto() != null ? celula.getFoto().getId() : null);
+                celula.getFoto() != null ? celula.getFoto().getId() : null, souLider);
     }
 }

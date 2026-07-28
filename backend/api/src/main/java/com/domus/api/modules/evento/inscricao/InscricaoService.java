@@ -8,6 +8,7 @@ import com.domus.api.modules.evento.elegibilidade.Elegibilidade;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -49,6 +50,7 @@ public class InscricaoService {
     private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final ElegibilidadeService elegibilidadeService;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
@@ -59,7 +61,8 @@ public class InscricaoService {
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
                                             UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
-        Evento evento = eventoRepository.buscarComLock(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
@@ -274,7 +277,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
 
         InscricaoEvento inscricao = a.getInscricao();
-        if (!inscricao.getIgreja().getId().equals(igrejaId)) {
+        if (!familiaIgrejaService.idsDaFamiliaCompleta(igrejaId).contains(inscricao.getIgreja().getId())) {
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
 
@@ -495,8 +498,9 @@ public class InscricaoService {
         return mapa;
     }
 
-    private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {
-        return inscricaoRepository.findByIdAndIgrejaId(id, igrejaId)
+    private InscricaoEvento buscarInscricao(UUID id, UUID minhaIgrejaId) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(minhaIgrejaId);
+        return inscricaoRepository.buscarVisivelParaFamilia(id, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
     }
 

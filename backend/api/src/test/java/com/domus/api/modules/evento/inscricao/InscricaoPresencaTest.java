@@ -4,6 +4,7 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -28,6 +29,7 @@ class InscricaoPresencaTest {
     AcompanhanteRepository acompanhanteRepository;
     PessoaRepository pessoaRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -42,9 +44,12 @@ class InscricaoPresencaTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(List.of());
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService);
+                acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService,
+                familiaIgrejaService);
     }
 
     private Igreja igreja() {
@@ -110,7 +115,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusa409_quandoEventoNaoControlaPresenca() {
         Evento evento = evento(false);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
@@ -121,7 +126,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_marcaEDesmarca_individualmente() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
 
         service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA");
         assertThat(inscricao.isCompareceu()).isTrue();
@@ -134,7 +139,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusaSemPermissao() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricao(evento);
-        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ACESSO_COMUM"))
@@ -145,7 +150,7 @@ class InscricaoPresencaTest {
     void marcarPresencaInscricao_recusa409_quandoInscricaoCancelada() {
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricaoCancelada(evento);
-        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() ->
                 service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))

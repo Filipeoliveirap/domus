@@ -27,6 +27,13 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     Optional<InscricaoEvento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
+    // Visível pela família: InscricaoEvento.igreja é sempre a igreja ORGANIZADORA do
+    // evento, não a da pessoa — por isso a auto-inscrição/cancelamento entre igrejas da
+    // mesma família não pode exigir igualdade estrita de igreja_id.
+    @Query("SELECT i FROM InscricaoEvento i WHERE i.id = :id AND i.igreja.id IN :idsFamilia")
+    Optional<InscricaoEvento> buscarVisivelParaFamilia(@Param("id") UUID id,
+                                                        @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
         LEFT JOIN FETCH i.acompanhantes

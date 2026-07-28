@@ -1,5 +1,6 @@
 package com.domus.api.modules.evento.inscricao.DTOs;
 
+import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import java.util.List;
 import java.util.UUID;
@@ -18,7 +19,8 @@ public record ParticipanteResponse(
         UUID pessoaId,
         String nome,
         UUID fotoId,
-        List<String> convidados
+        List<String> convidados,
+        EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
     public static ParticipanteResponse from(InscricaoEvento i) {
         return new ParticipanteResponse(
@@ -26,7 +28,8 @@ public record ParticipanteResponse(
                 i.getPessoa().getId(),
                 i.getPessoa().getNome(),
                 i.getPessoa().getFoto() != null ? i.getPessoa().getFoto().getId() : null,
-                i.getAcompanhantes().stream().map(a -> a.getNome()).toList()
+                i.getAcompanhantes().stream().map(a -> a.getNome()).toList(),
+                EventoResponse.IgrejaResumo.de(i.getPessoa().getIgreja())
         );
     }
 }

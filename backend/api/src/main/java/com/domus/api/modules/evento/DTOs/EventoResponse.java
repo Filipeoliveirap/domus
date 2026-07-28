@@ -65,7 +65,7 @@ public record EventoResponse(
     }
 
     public record IgrejaResumo(UUID id, String nome, String sigla) {
-        static IgrejaResumo de(com.domus.api.modules.igreja.Igreja igreja) {
+        public static IgrejaResumo de(com.domus.api.modules.igreja.Igreja igreja) {
             return new IgrejaResumo(igreja.getId(), igreja.getNome(), igreja.getSigla());
         }
     }

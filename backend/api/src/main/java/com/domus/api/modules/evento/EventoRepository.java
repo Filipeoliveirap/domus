@@ -107,6 +107,49 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
                                  @Param("agora") LocalDateTime agora,
                                  Pageable pageable);
 
+    // Família = própria igreja + igrejas vinculadas (idsDaFamiliaCompleta). Um evento de
+    // outra igreja da família só aparece se ela NÃO o restringiu à própria (restrito=false);
+    // os da própria igreja sempre aparecem, restrito ou não.
+    @Query(value = """
+        SELECT * FROM evento e
+        WHERE e.deleted_at IS NULL
+          AND e.igreja_id = ANY(CAST(:idsFamilia AS uuid[]))
+          AND (e.igreja_id = :minhaIgreja OR e.restrito_propria_igreja = false)
+          AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
+        ORDER BY
+          CASE
+            WHEN CAST(:agora AS timestamp) >= e.inicio_em
+                 AND CAST(:agora AS timestamp) <= COALESCE(e.fim_em, date_trunc('day', e.inicio_em) + INTERVAL '23:59:59')
+              THEN 0
+            WHEN CAST(:agora AS timestamp) < e.inicio_em
+                 AND CAST(e.inicio_em AS date) = CAST(CAST(:agora AS timestamp) AS date)
+              THEN 1
+            WHEN CAST(:agora AS timestamp) < e.inicio_em
+              THEN 2
+            ELSE 3
+          END,
+          e.inicio_em ASC
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM evento e
+        WHERE e.deleted_at IS NULL
+          AND e.igreja_id = ANY(CAST(:idsFamilia AS uuid[]))
+          AND (e.igreja_id = :minhaIgreja OR e.restrito_propria_igreja = false)
+          AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
+          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
+          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
+        """,
+        nativeQuery = true)
+    Page<Evento> buscarPorFamilia(@Param("minhaIgreja") UUID minhaIgreja,
+                                   @Param("idsFamilia") UUID[] idsFamilia,
+                                   @Param("q") String q,
+                                   @Param("tipo") String tipo,
+                                   @Param("recorteEtario") String recorteEtario,
+                                   @Param("agora") LocalDateTime agora,
+                                   Pageable pageable);
+
     @Query("""
         SELECT e.tipo FROM Evento e
          WHERE e.igreja.id = :igrejaId AND e.tipo IS NOT NULL

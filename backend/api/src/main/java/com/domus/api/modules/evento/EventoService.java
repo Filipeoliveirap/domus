@@ -13,6 +13,7 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
@@ -59,6 +60,7 @@ public class EventoService {
     private final PessoaRepository pessoaRepository;
     private final LocalEventoRepository localEventoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     @Cacheable(
             value = "eventos",
@@ -67,9 +69,11 @@ public class EventoService {
     @Transactional(readOnly = true)
     public PagedResponse<EventoResponse> listarEventos(
             UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
+        Set<UUID> idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Page<EventoResponse> pagina = eventoRepository
-                .buscarPorIgreja(igrejaId, q, tipo, recorteEtario, java.time.LocalDateTime.now(), pageable)
-                .map(evento -> EventoResponse.from(evento, igrejaId, true));
+                .buscarPorFamilia(igrejaId, idsFamilia.toArray(new UUID[0]), q, tipo, recorteEtario,
+                        java.time.LocalDateTime.now(), pageable)
+                .map(evento -> EventoResponse.from(evento, igrejaId, evento.getIgreja().getId().equals(igrejaId)));
         return PagedResponse.from(pagina);
     }
 

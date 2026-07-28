@@ -142,4 +142,61 @@ class FamiliaIgrejaServiceTest {
         assertThat(service.ehMae(maeA)).isTrue();
         assertThat(service.ehMae(independente)).isFalse();
     }
+
+    // ---------- idsDaFamiliaCompleta (bidirecional) ----------
+
+    @Test
+    void igrejaComMaeVeMaeEIrmas() {
+        UUID maeId = UUID.randomUUID();
+        UUID euId = UUID.randomUUID();
+        UUID irmaId = UUID.randomUUID();
+        Igreja mae = new Igreja();
+        mae.setId(maeId);
+        mae.setIgrejaMae(null);
+        Igreja eu = new Igreja();
+        eu.setId(euId);
+        eu.setIgrejaMae(mae);
+
+        when(igrejaRepository.findById(euId)).thenReturn(Optional.of(eu));
+        when(igrejaRepository.findByIgrejaMaeIdOrderByNomeAsc(maeId))
+                .thenReturn(List.of(
+                        Igreja.builder().id(euId).igrejaMae(mae).build(),
+                        Igreja.builder().id(irmaId).igrejaMae(mae).build()
+                ));
+
+        var familia = service.idsDaFamiliaCompleta(euId);
+
+        assertThat(familia).containsExactlyInAnyOrder(maeId, euId, irmaId);
+    }
+
+    @Test
+    void igrejaSedeVeSiMesmaEFilhas() {
+        UUID sedeId = UUID.randomUUID();
+        UUID filhaId = UUID.randomUUID();
+        Igreja sede = new Igreja();
+        sede.setId(sedeId);
+        sede.setIgrejaMae(null);
+
+        when(igrejaRepository.findById(sedeId)).thenReturn(Optional.of(sede));
+        when(igrejaRepository.buscarIdsDasFilhas(sedeId)).thenReturn(List.of(filhaId));
+
+        var familia = service.idsDaFamiliaCompleta(sedeId);
+
+        assertThat(familia).containsExactlyInAnyOrder(sedeId, filhaId);
+    }
+
+    @Test
+    void igrejaIndependenteSoVeASiMesma() {
+        UUID id = UUID.randomUUID();
+        Igreja independente = new Igreja();
+        independente.setId(id);
+        independente.setIgrejaMae(null);
+
+        when(igrejaRepository.findById(id)).thenReturn(Optional.of(independente));
+        when(igrejaRepository.buscarIdsDasFilhas(id)).thenReturn(List.of());
+
+        var familia = service.idsDaFamiliaCompleta(id);
+
+        assertThat(familia).containsExactly(id);
+    }
 }

@@ -927,4 +927,40 @@ class InscricaoServiceTest {
 
         verify(inscricaoRepository).save(argThat(i -> i.getStatus() == StatusInscricao.CANCELADA));
     }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoPodeCancelarInscricaoDeTerceiro() {
+        // Cancelar inscrição de OUTRA PESSOA é ação de gestão: family-wide não pode valer
+        // aqui, senão um gestor da Congregação B cancela um desconhecido inscrito num
+        // evento organizado pela Sede A só porque as igrejas são da mesma família.
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() -> service.cancelar(
+                inscricaoId, usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", outraIgrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não pode cancelar");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void gestorDaMesmaIgrejaAindaPodeCancelarInscricaoDeTerceiroEmEventoCompartilhado() {
+        // Regressão: o gestor da PRÓPRIA igreja organizadora do evento continua podendo
+        // cancelar a inscrição de terceiros, mesmo com family-wide habilitado no lookup.
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+
+        service.cancelar(inscricaoId, usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
 }

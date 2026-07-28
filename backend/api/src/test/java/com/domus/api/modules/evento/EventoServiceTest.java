@@ -261,4 +261,27 @@ class EventoServiceTest {
 
         assertThat(existente.isRestritoPropriaIgreja()).isFalse();
     }
+
+    @Test
+    void atualizarEventoLimpaCacheDeTodaFamilia() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(null);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(cacheEvictor).evictPorIgreja("eventos", igrejaId);
+        verify(cacheEvictor).evictPorIgreja("eventos", outraIgrejaId);
+    }
 }

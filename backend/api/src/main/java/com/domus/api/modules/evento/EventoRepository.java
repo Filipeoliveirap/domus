@@ -17,6 +17,16 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     Optional<Evento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.id = :id
+          AND e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+    """)
+    Optional<Evento> buscarVisivelParaFamilia(@Param("id") UUID id,
+                                              @Param("minhaIgreja") UUID minhaIgreja,
+                                              @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     // FK ON DELETE SET NULL nunca dispara — LocalEvento usa soft delete.
     // Este método resolve o vínculo antes de arquivar o local.
     List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);

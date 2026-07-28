@@ -34,7 +34,9 @@ public record EventoResponse(
         Integer idadeMin,
         Integer idadeMax,
         EstadoCivil restricaoEstadoCivil,
-        Sexo restricaoSexo
+        Sexo restricaoSexo,
+        IgrejaResumo igrejaOrganizadora,
+        boolean podeGerenciarEsteEvento
 ) {
     public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado) {
         static LocalInfo from(Evento e) {
@@ -62,11 +64,18 @@ public record EventoResponse(
         }
     }
 
-    public static EventoResponse from(Evento e) {
-        return from(e, null);
+    public record IgrejaResumo(UUID id, String nome, String sigla) {
+        static IgrejaResumo de(com.domus.api.modules.igreja.Igreja igreja) {
+            return new IgrejaResumo(igreja.getId(), igreja.getNome(), igreja.getSigla());
+        }
     }
 
-    public static EventoResponse from(Evento e, Integer inscricoesRemovidas) {
+    public static EventoResponse from(Evento e, UUID minhaIgrejaId, boolean podeGerenciar) {
+        return from(e, null, minhaIgrejaId, podeGerenciar);
+    }
+
+    public static EventoResponse from(Evento e, Integer inscricoesRemovidas,
+                                       UUID minhaIgrejaId, boolean podeGerenciar) {
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), LocalInfo.from(e), e.getTipo(),
@@ -77,7 +86,8 @@ public record EventoResponse(
                 e.getVagas(), e.getPreco(), e.isExclusivoMembros(),
                 e.isRequerInscricao(), e.isControlaPresenca(), e.getSituacao(), inscricoesRemovidas,
                 e.getRecorteEtario(), e.getIdadeMin(), e.getIdadeMax(),
-                e.getRestricaoEstadoCivil(), e.getRestricaoSexo()
+                e.getRestricaoEstadoCivil(), e.getRestricaoSexo(),
+                IgrejaResumo.de(e.getIgreja()), podeGerenciar
         );
     }
 }

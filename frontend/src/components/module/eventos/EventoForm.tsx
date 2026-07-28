@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2 } from 'lucide-react'
+import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -60,6 +61,9 @@ export function EventoForm(props: EventoFormProps) {
   const restricaoSexoAtual = watch('restricaoSexo') as RestricaoSexo | null | undefined
 
   const { data: tiposSugeridos = [] } = useTiposEvento()
+
+  const { data: vinculoStatus } = useVinculoStatus()
+  const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -255,6 +259,24 @@ export function EventoForm(props: EventoFormProps) {
               nomeInicial={responsavelNomeInicial}
               onChange={(id) => setValue('responsavelPessoaId', id, { shouldDirty: true })}
             />
+
+            {temFamilia && (
+              <label className={styles.toggleRow}>
+                <span className={styles.toggleTexto}>
+                  <span className={styles.toggleTitulo}>
+                    <Building2 size={16} aria-hidden="true" style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                    Apenas minha igreja
+                  </span>
+                  <span className={styles.toggleDescricao}>
+                    Ative para este evento não aparecer para as demais unidades da família.
+                  </span>
+                </span>
+                <span className={styles.switch}>
+                  <input type="checkbox" className={styles.switchInput} {...register('restritoPropriaIgreja')} />
+                  <span className={styles.switchTrilho} />
+                </span>
+              </label>
+            )}
           </section>
 
           {/* ─── Para quem é ─── */}

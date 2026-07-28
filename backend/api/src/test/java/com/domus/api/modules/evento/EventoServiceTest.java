@@ -121,4 +121,42 @@ class EventoServiceTest {
         service.cadastrarEvento(req, igrejaId, usuarioId);
         verify(eventoRepository).save(argThat(e -> !e.isRestritoPropriaIgreja()));
     }
+
+    @Test
+    void atualizarEventoGravaRestritoPropriaIgrejaComoTrue() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .restritoPropriaIgreja(false)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(true);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        assertThat(existente.isRestritoPropriaIgreja()).isTrue();
+    }
+
+    @Test
+    void atualizarEventoSemInformarRestricaoGravaFalse() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .restritoPropriaIgreja(true)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(null);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        assertThat(existente.isRestritoPropriaIgreja()).isFalse();
+    }
 }

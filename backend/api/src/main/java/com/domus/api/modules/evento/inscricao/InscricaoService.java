@@ -476,7 +476,8 @@ public class InscricaoService {
      */
     @Transactional(readOnly = true)
     public List<ParticipanteResponse> listarParticipantes(UUID eventoId, UUID igrejaId) {
-        eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         return inscricaoRepository.listarPorEvento(eventoId)

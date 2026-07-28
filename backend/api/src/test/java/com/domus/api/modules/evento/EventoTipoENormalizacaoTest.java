@@ -10,6 +10,7 @@ import com.domus.api.modules.evento.local.LocalEventoRepository;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -48,6 +49,7 @@ class EventoTipoENormalizacaoTest {
     PessoaRepository pessoaRepository;
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -71,9 +73,10 @@ class EventoTipoENormalizacaoTest {
         pessoaRepository = mock(PessoaRepository.class);
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository);
+                localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));

@@ -5,6 +5,7 @@ import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
@@ -47,6 +48,7 @@ class EventoServiceCamposInscricaoTest {
     PessoaRepository pessoaRepository;
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -65,9 +67,10 @@ class EventoServiceCamposInscricaoTest {
         pessoaRepository = mock(PessoaRepository.class);
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository);
+                localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any()))

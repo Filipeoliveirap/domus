@@ -1001,11 +1001,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDeOutraIgrejaDaFamiliaNaoPodeRemoverAcompanhanteDeTerceiro() {
-        // Espelha gestorDeOutraIgrejaDaFamiliaNaoPodeCancelarInscricaoDeTerceiro, mas para
-        // removerAcompanhante(): remover convidado de terceiro é ação de gestão e não pode
-        // ser franqueada só porque idsDaFamiliaCompleta() agora inclui a igreja organizadora.
-        // Um LIDER da Congregação B não pode remover o convidado de um desconhecido inscrito
-        // num evento organizado pela Sede A só porque as igrejas são da mesma família.
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
         AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
@@ -1051,8 +1046,6 @@ class InscricaoServiceTest {
 
     @Test
     void donoDaInscricaoConsegueAdicionarAcompanhanteMesmoEmEventoDeOutraIgrejaDaFamilia() {
-        // O caso self-service que a feature existe para resolver: pessoa da Congregação B
-        // adicionando convidado à PRÓPRIA inscrição num evento compartilhado da Sede A.
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricao = inscricaoConfirmada(outraIgrejaId, pessoaId);
         when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
@@ -1071,8 +1064,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDeOutraIgrejaDaFamiliaNaoPodeAdicionarAcompanhanteDeTerceiro() {
-        // Espelha gestorDeOutraIgrejaDaFamiliaNaoPodeRemoverAcompanhanteDeTerceiro: adicionar
-        // convidado à inscrição de um desconhecido também é ação de gestão, nunca family-wide.
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
         when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
@@ -1091,8 +1082,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDaMesmaIgrejaAindaPodeAdicionarAcompanhanteDeTerceiro() {
-        // Regressão: gestor da PRÓPRIA igreja organizadora continua podendo adicionar
-        // convidado à inscrição de terceiro, mesmo com o lookup family-wide.
         InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
         when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
                 .thenReturn(Optional.of(inscricaoDeTerceiro));
@@ -1108,9 +1097,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDeOutraIgrejaDaFamiliaNaoContornaElegibilidadeAoSeAutoInscrever() {
-        // Finding 5: o privilégio de contornar restrição de elegibilidade na PRÓPRIA
-        // inscrição só vale dentro da igreja organizadora. Um ADMIN da Congregação B não
-        // pode usar o cargo para burlar a idade mínima de um evento da Sede A.
         UUID outraIgrejaId = UUID.randomUUID();
         Igreja sedeA = new Igreja();
         sedeA.setId(igrejaId);
@@ -1140,8 +1126,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDaMesmaIgrejaAindaContornaElegibilidadeAoSeAutoInscrever() {
-        // Regressão: o mesmo cargo, na PRÓPRIA igreja organizadora, continua contornando —
-        // é o privilégio que a Task original criou (café dos homens, equipe do retiro).
         Evento eventoRestrito = Evento.builder()
                 .id(eventoId).igreja(igreja())
                 .titulo("Retiro de Jovens").inicioEm(LocalDateTime.now().plusDays(10))

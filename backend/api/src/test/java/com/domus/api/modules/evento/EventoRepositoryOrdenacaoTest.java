@@ -59,9 +59,6 @@ class EventoRepositoryOrdenacaoTest {
                 emAndamento.getId(), hoje.getId(), futuroProximo.getId(),
                 futuroDistante.getId(), encerrado.getId());
 
-        // buscarPorFamilia é quem realmente atende a listagem hoje (buscarPorIgreja foi
-        // removida por não ter mais chamador em produção); família = só a própria igreja,
-        // igual a uma igreja sem vínculo, para exercitar a mesma ordenação.
         UUID[] idsFamilia = new UUID[] { igrejaId };
 
         // Página 0 (tamanho 2): deve trazer os DOIS primeiros da ordem por situação.

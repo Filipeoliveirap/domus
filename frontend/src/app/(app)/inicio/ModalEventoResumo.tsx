@@ -135,7 +135,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
               {ehOutraIgreja && (
                 <span className={styles.igrejaOrganizadora}>
                   <Building2 size={13} aria-hidden="true" />
-                  {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
+                  Evento compartilhado por {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
                 </span>
               )}
 
@@ -352,6 +352,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
           eventoId={eventoId}
           situacao={evento.situacao}
           restritoPropriaIgreja={evento.restritoPropriaIgreja}
+          podeGerenciarEsteEvento={podeGerenciar}
           aoFechar={() => setModalAberto(null)}
         />
       )}

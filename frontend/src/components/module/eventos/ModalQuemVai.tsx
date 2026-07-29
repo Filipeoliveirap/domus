@@ -18,12 +18,13 @@ interface Props {
   eventoId: string
   situacao: SituacaoEvento
   restritoPropriaIgreja?: boolean
+  podeGerenciarEsteEvento: boolean
   aoFechar: () => void
 }
 
-export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, aoFechar }: Props) {
+export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
-  const ehGestor = podeGerenciarInscricoes(role)
+  const ehGestor = podeGerenciarInscricoes(role) && podeGerenciarEsteEvento
   const podeCancelar = podeCancelarInscricao(situacao)
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(

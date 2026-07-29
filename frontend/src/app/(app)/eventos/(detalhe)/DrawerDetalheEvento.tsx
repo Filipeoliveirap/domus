@@ -116,7 +116,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               {ehOutraIgreja && (
                 <span className={styles.igrejaOrganizadora}>
                   <Building2 size={13} aria-hidden="true" />
-                  {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
+                  Evento compartilhado por {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
                 </span>
               )}
             </header>
@@ -367,6 +367,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 eventoId={evento.id}
                 situacao={evento.situacao}
                 restritoPropriaIgreja={evento.restritoPropriaIgreja}
+                podeGerenciarEsteEvento={podeGerenciar}
                 aoFechar={() => setModalAberto(null)}
               />
             )}

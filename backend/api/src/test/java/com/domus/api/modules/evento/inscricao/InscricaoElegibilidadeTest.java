@@ -115,6 +115,7 @@ class InscricaoElegibilidadeTest {
     /** Idêntico ao {@link #dado}, mas usado pelo caminho de {@code inscreverPessoas}. */
     private void dadoParaInscreverPessoas(Evento e, Pessoa pessoa, long ocupadas) {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(e));
         when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(e));
         when(membroRepository.findByIdAndIgrejaId(pessoa.getId(), igrejaId)).thenReturn(Optional.of(pessoa));
         when(inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, List.of(pessoa.getId())))

@@ -33,11 +33,12 @@ public class EventoController {
             @RequestParam(required = false) String recorteEtario,
             @PageableDefault(size = 12) Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String role = usuarioAutenticado.getRole();
         String termo = (q == null || q.isBlank()) ? null : q.trim();
         String tipoFiltro = (tipo == null || tipo.isBlank()) ? null : tipo.trim();
         String recorteFiltro = (recorteEtario == null || recorteEtario.isBlank()) ? null : recorteEtario.trim();
         Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, tipoFiltro, recorteFiltro, semSort));
+        return ResponseEntity.ok(eventoService.listarEventos(igrejaId, termo, tipoFiltro, recorteFiltro, role, semSort));
     }
 
     // Deve vir antes de GET /eventos/** no SecurityConfig (matcher específico antes do curinga).

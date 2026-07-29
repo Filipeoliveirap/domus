@@ -51,7 +51,7 @@ export interface EventoResponse {
   restricaoSexo: RestricaoSexo | null
   igrejaOrganizadora: IgrejaResumo
   podeGerenciarEsteEvento: boolean
-  restritoPropriaIgreja?: boolean
+  restritoPropriaIgreja: boolean
 }
 
 export interface EventoRequest {

@@ -69,7 +69,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
-        boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado);
+        boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
 
         InscricaoEvento inscricao = inscricaoRepository
                 .findByEventoIdAndPessoaId(eventoId, pessoaId)
@@ -196,7 +196,8 @@ public class InscricaoService {
      * @return {@code true} se a inscrição contornou um impedimento deliberadamente
      *         ({@link InscricaoEvento#isInscritoPorExcecao}).
      */
-    private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado) {
+    private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado,
+                                          UUID igrejaId) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
         if (elegibilidade.apto()) return false;
 
@@ -207,7 +208,10 @@ public class InscricaoService {
         // burla casual. Quem NÃO gerencia nunca contorna (podeGerenciar == false barra),
         // então a restrição continua real para o membro comum — que era a proteção que
         // importava. VAGAS_ESGOTADAS não é contornável (não entra em totalmenteContornavel).
-        boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role);
+        // Só vale dentro da PRÓPRIA igreja — em outra igreja da família, "só visualiza e se
+        // inscreve, igual qualquer pessoa comum".
+        boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role)
+                && evento.getIgreja().getId().equals(igrejaId);
         boolean podeContornar = podeGerenciar
                 && confirmado
                 && elegibilidade.totalmenteContornavel();
@@ -242,8 +246,17 @@ public class InscricaoService {
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
     @Transactional
     public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
-                                                       UUID usuarioId, UUID igrejaId) {
+                                                       UUID usuarioId, UUID meuMembroId, String role,
+                                                       UUID igrejaId) {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+
+        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
+        boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
+        if (!gestorDaMesmaIgreja && !souODono) {
+            throw new BusinessException("SEM_PERMISSAO",
+                    "Você só pode adicionar convidados à sua própria inscrição.");
+        }
 
         validarOrganizaInscricao(inscricao.getEvento(), "Este evento não permite convidados.");
 
@@ -254,8 +267,8 @@ public class InscricaoService {
         validarEventoAberto(inscricao.getEvento());
         validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
 
-        // Trava o evento antes de contar: mesma corrida da inscrição.
-        eventoRepository.buscarComLock(inscricao.getEvento().getId(), igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        eventoRepository.buscarComLockVisivelParaFamilia(inscricao.getEvento().getId(), igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarVaga(inscricao.getEvento(), 1);
 
@@ -289,12 +302,6 @@ public class InscricaoService {
         // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
-        //
-        // Mesmo isolamento de cancelar(): o privilégio de GESTOR só vale sobre inscrição da
-        // PRÓPRIA igreja organizadora do evento. Remover convidado de terceiro é ação de
-        // gestão, nunca family-wide — senão um gestor da Congregação B remove o convidado de
-        // um desconhecido inscrito num evento organizado pela Sede A só porque as igrejas são
-        // da mesma família (o lookup no topo do método já é family-wide de propósito).
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
@@ -318,9 +325,6 @@ public class InscricaoService {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
         validarEventoAberto(inscricao.getEvento());
 
-        // Self-cancel é family-wide por design (inscricao já veio de buscarInscricao).
-        // Mas o privilégio de GESTOR só vale sobre inscrição da PRÓPRIA igreja organizadora:
-        // cancelar inscrição de terceiro é ação de gestão, nunca family-wide.
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souEu = inscricao.getPessoa().getId().equals(meuMembroId);
@@ -561,8 +565,6 @@ public class InscricaoService {
                     "Você não tem permissão para marcar presença.");
         }
 
-        // Ação de GESTOR pura (não tem caminho self-service) — nunca family-wide, senão
-        // um gestor de outra igreja da família controlaria presença de evento alheio.
         InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
         validarControlaPresenca(inscricao.getEvento());

@@ -132,6 +132,15 @@
   margin-top: 10px;
 }
 
+.igrejaOrganizadora {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
 .chipData {
   display: inline-flex;
   align-items: center;

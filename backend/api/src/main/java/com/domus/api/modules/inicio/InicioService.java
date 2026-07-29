@@ -1,6 +1,7 @@
 package com.domus.api.modules.inicio;
 
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.inicio.dto.EventoResumoDTO;
 import com.domus.api.modules.inicio.dto.InicioResponse;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -22,6 +23,7 @@ public class InicioService {
 
     private final PessoaRepository pessoaRepository;
     private final EventoRepository eventoRepository;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     @Transactional(readOnly = true)
     public InicioResponse carregar(UUID igrejaId) {
@@ -34,8 +36,10 @@ public class InicioService {
                                 m.getFoto() != null ? m.getFoto().getId() : null))
                         .toList();
 
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         List<EventoResumoDTO> proximos =
-                eventoRepository.proximos(igrejaId, LocalDateTime.now(), PageRequest.of(0, LIMITE_EVENTOS))
+                eventoRepository.proximosDaFamilia(igrejaId, idsFamilia, LocalDateTime.now(),
+                                PageRequest.of(0, LIMITE_EVENTOS))
                         .stream().map(EventoResumoDTO::from).toList();
 
         return new InicioResponse(aniversariantes, proximos);

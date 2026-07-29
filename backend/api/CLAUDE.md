@@ -57,6 +57,14 @@ via *transactional outbox*).
   commitar depois do teste — e num commit só, coerente, em vez de vários commits parciais
   da mesma coisa. Exceção: algo que valha por si (ex.: uma correção isolada que não depende
   do resto). Isso vale para **toda a aplicação**, não só para a feature da vez.
+- **Feature grande: desenvolver em pedaços testáveis, não tudo de uma vez.** Quando o
+  trabalho for grande (várias tasks, back+front, múltiplos módulos), não construir a coisa
+  inteira e só depois despejar tudo pro autor testar no final. Entregar um pedaço coerente
+  (ex.: uma task do plano, ou um grupo pequeno de tasks relacionadas), avisar, e **esperar
+  o autor testar aquele pedaço** antes de seguir pro próximo. Motivo: testar tudo de uma vez
+  no final concentra o risco — se algo quebrar, fica difícil saber qual das N mudanças foi
+  a causa, e o retrabalho é maior. Isso não substitui a regra acima (não commitar antes do
+  teste) — as duas juntas: pedaço pequeno, teste, commit, próximo pedaço.
 - **Nunca imprimir segredo.** Não despejar `.env`, chave, token ou senha na conversa — nem via
   `cat`, nem por script que gere `export` no stdout. Segredo impresso não se apaga: fica no
   histórico e só sai por rotação, que custa ao autor. Para carregar variáveis, redirecione para

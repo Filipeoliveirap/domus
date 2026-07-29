@@ -130,11 +130,6 @@ class EventoServiceTest {
         verify(eventoRepository).save(argThat(e -> e.isRestritoPropriaIgreja()));
     }
 
-    /**
-     * Finding 1 do review final: restritoPropriaIgreja precisa vir na RESPOSTA da API, não
-     * só na entidade — senão o front rehidrata o toggle de edição sempre como false e
-     * regrava restritoPropriaIgreja=false ao salvar, desprotegendo o evento.
-     */
     @Test
     void cadastrarEventoResponseReflecteRestritoPropriaIgrejaTrue() {
         EventoRequest req = requestComRestricao(true);

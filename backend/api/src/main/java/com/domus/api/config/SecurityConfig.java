@@ -133,7 +133,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/locais-evento").authenticated()
                         .requestMatchers("/locais-evento/**").hasAnyRole(ADMIN, LIDER)
 
-                        // Status da família é lido por qualquer perfil (ver VinculoController).
                         .requestMatchers(HttpMethod.GET, "/igrejas-vinculadas")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers("/igrejas-vinculadas/**").hasRole(ADMIN)

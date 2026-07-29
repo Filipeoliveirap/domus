@@ -87,6 +87,18 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     """)
     List<Evento> proximos(@Param("igrejaId") UUID igrejaId, @Param("agora") LocalDateTime agora, Pageable pageable);
 
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+          AND e.inicioEm >= :agora
+        ORDER BY e.inicioEm ASC
+    """)
+    List<Evento> proximosDaFamilia(@Param("minhaIgreja") UUID minhaIgreja,
+                                    @Param("idsFamilia") java.util.Set<UUID> idsFamilia,
+                                    @Param("agora") LocalDateTime agora,
+                                    Pageable pageable);
+
     long countByIgrejaIdAndInicioEmBetween(UUID igrejaId, LocalDateTime de, LocalDateTime ate);
 
     @Query(value = """

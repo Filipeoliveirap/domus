@@ -59,21 +59,26 @@ class EventoRepositoryOrdenacaoTest {
                 emAndamento.getId(), hoje.getId(), futuroProximo.getId(),
                 futuroDistante.getId(), encerrado.getId());
 
+        UUID[] idsFamilia = new UUID[] { igrejaId };
+
         // Página 0 (tamanho 2): deve trazer os DOIS primeiros da ordem por situação.
-        Page<Evento> pagina0 = eventoRepository.buscarPorIgreja(igrejaId, null, null, null, agora, PageRequest.of(0, 2));
+        Page<Evento> pagina0 = eventoRepository.buscarPorFamilia(
+                igrejaId, idsFamilia, null, null, null, agora, PageRequest.of(0, 2));
         assertThat(pagina0.getTotalElements()).isEqualTo(5);
         assertThat(pagina0.getContent()).extracting(Evento::getId)
                 .containsExactly(ordemEsperada.get(0), ordemEsperada.get(1));
 
         // Página 1: os dois seguintes — prova que o corte de página respeita a ordem GLOBAL,
         // não reordena só o que caiu na página.
-        Page<Evento> pagina1 = eventoRepository.buscarPorIgreja(igrejaId, null, null, null, agora, PageRequest.of(1, 2));
+        Page<Evento> pagina1 = eventoRepository.buscarPorFamilia(
+                igrejaId, idsFamilia, null, null, null, agora, PageRequest.of(1, 2));
         assertThat(pagina1.getContent()).extracting(Evento::getId)
                 .containsExactly(ordemEsperada.get(2), ordemEsperada.get(3));
 
         // Página 2: o último — o ENCERRADO, que é cronologicamente o MAIS ANTIGO dos 5, mas
         // tem que aparecer por último por causa da situação.
-        Page<Evento> pagina2 = eventoRepository.buscarPorIgreja(igrejaId, null, null, null, agora, PageRequest.of(2, 2));
+        Page<Evento> pagina2 = eventoRepository.buscarPorFamilia(
+                igrejaId, idsFamilia, null, null, null, agora, PageRequest.of(2, 2));
         assertThat(pagina2.getContent()).extracting(Evento::getId)
                 .containsExactly(ordemEsperada.get(4));
     }

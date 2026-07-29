@@ -18,6 +18,12 @@ export interface EventoPessoaResumo {
   nome: string
 }
 
+export interface IgrejaResumo {
+  id: string
+  nome: string
+  sigla: string | null
+}
+
 export interface EventoResponse {
   id: string
   titulo: string
@@ -43,6 +49,9 @@ export interface EventoResponse {
   idadeMax: number | null
   restricaoEstadoCivil: RestricaoEstadoCivil | null
   restricaoSexo: RestricaoSexo | null
+  igrejaOrganizadora: IgrejaResumo
+  podeGerenciarEsteEvento: boolean
+  restritoPropriaIgreja: boolean
 }
 
 export interface EventoRequest {
@@ -65,6 +74,7 @@ export interface EventoRequest {
   idadeMax?: number | null
   restricaoEstadoCivil?: RestricaoEstadoCivil | null
   restricaoSexo?: RestricaoSexo | null
+  restritoPropriaIgreja?: boolean
 }
 
 export interface InscritoImpactado {

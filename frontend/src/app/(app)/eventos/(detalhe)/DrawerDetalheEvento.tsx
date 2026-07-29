@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle, Building2 } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -15,7 +15,7 @@ import {
   vagasEsgotadas as calcVagasEsgotadas,
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
-import { podeVerListaCompletaDeInscritos, podeGerenciarEventos } from '@/lib/permissoes'
+import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
@@ -26,6 +26,8 @@ import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
+import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
+import { iniciais } from '@/lib/formats/pessoaFormat'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 
@@ -34,16 +36,19 @@ interface DrawerDetalheEventoProps {
   onClose: () => void
 }
 
+const MAX_AVATARES = 3
+
 export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoProps) {
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
   const role = useAuthStore((s) => s.role)
-  const podeVerInscritos = podeVerListaCompletaDeInscritos(role)
-  // A6/rodada 3: mesma regra do modal do início — só quem gerencia, e só enquanto editável.
-  const podeGerenciar = podeGerenciarEventos(role)
+  const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
+  const podeGerenciar = !!evento?.podeGerenciarEsteEvento
+  const podeVerInscritos = podeVerListaCompletaDeInscritos(role) && podeGerenciar
+  const ehOutraIgreja = !!evento && evento.igrejaOrganizadora.id !== minhaIgrejaId
 
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
-  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | null>(null)
+  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
@@ -108,6 +113,12 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                   </Link>
                 )}
               </div>
+              {ehOutraIgreja && (
+                <span className={styles.igrejaOrganizadora}>
+                  <Building2 size={13} aria-hidden="true" />
+                  Evento compartilhado por {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
+                </span>
+              )}
             </header>
 
             {/* Infos */}
@@ -184,29 +195,66 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               )}
             </div>
 
-            {/* F6/F8: aviso de vagas acabando/esgotado e contador — antes só no modal do início. */}
-            {vagas != null && (
-              <div className={styles.vagasBloco}>
-                <p className={styles.vagasContador}>
-                  {esgotado && evento.situacao !== 'ENCERRADO'
-                    ? 'Esgotado'
-                    : `${totalPessoas} de ${vagas} vagas preenchidas`}
-                </p>
-                {evento.situacao !== 'ENCERRADO' && (
-                  esgotado ? (
-                    <p className={styles.vagasAcabando}>
-                      <Flame size={14} aria-hidden="true" />
-                      Esgotado
-                    </p>
-                  ) : mostrarVagasAcabando && (
-                    <p className={styles.vagasAcabando}>
-                      <Flame size={14} aria-hidden="true" />
-                      {vagasRestantes === 1 ? 'Última vaga!' : `Últimas ${vagasRestantes} vagas`}
-                    </p>
-                  )
-                )}
-              </div>
-            )}
+            <section className={styles.presenca}>
+              {participantes.length > 0 ? (
+                <button
+                  type="button"
+                  className={styles.presencaPessoas}
+                  onClick={() => setModalAberto('lista')}
+                  aria-label="Ver quem vai a este evento"
+                >
+                  <div className={styles.pilhaAvatares}>
+                    {participantes.slice(0, MAX_AVATARES).map((p) => (
+                      <span key={p.id} className={styles.avatarPresenca} title={p.nome}>
+                        {urlFoto(p.fotoId, 'THUMB') ? (
+                          <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarPresencaFoto} />
+                        ) : (
+                          iniciais(p.nome)
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <span className={styles.presencaTexto}>
+                    {totalPessoas === 1
+                      ? '1 pessoa confirmou que vai'
+                      : `${totalPessoas} pessoas confirmaram que vão`}
+                  </span>
+                </button>
+              ) : (
+                <div className={styles.presencaPessoas}>
+                  <span className={styles.avatarPresenca} aria-hidden="true">
+                    <Users size={14} />
+                  </span>
+                  <span className={styles.presencaTexto}>
+                    Ninguém confirmou ainda — seja o primeiro.
+                  </span>
+                </div>
+              )}
+
+              {/* F6/F8: aviso de vagas acabando/esgotado e contador — antes só no modal do início. */}
+              {vagas != null && (
+                <>
+                  <p className={styles.vagasContador}>
+                    {esgotado && evento.situacao !== 'ENCERRADO'
+                      ? 'Esgotado'
+                      : `${totalPessoas} de ${vagas} vagas preenchidas`}
+                  </p>
+                  {evento.situacao !== 'ENCERRADO' && (
+                    esgotado ? (
+                      <p className={styles.vagasAcabando}>
+                        <Flame size={14} aria-hidden="true" />
+                        Esgotado
+                      </p>
+                    ) : mostrarVagasAcabando && (
+                      <p className={styles.vagasAcabando}>
+                        <Flame size={14} aria-hidden="true" />
+                        {vagasRestantes === 1 ? 'Última vaga!' : `Últimas ${vagasRestantes} vagas`}
+                      </p>
+                    )
+                  )}
+                </>
+              )}
+            </section>
 
             {/* Descrição */}
             {evento.descricao && (
@@ -311,6 +359,16 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 eventoId={evento.id}
                 inscricaoId={minha.id}
                 onClose={() => setModalAberto(null)}
+              />
+            )}
+
+            {modalAberto === 'lista' && (
+              <ModalQuemVai
+                eventoId={evento.id}
+                situacao={evento.situacao}
+                restritoPropriaIgreja={evento.restritoPropriaIgreja}
+                podeGerenciarEsteEvento={podeGerenciar}
+                aoFechar={() => setModalAberto(null)}
               />
             )}
           </div>

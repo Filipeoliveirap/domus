@@ -2,6 +2,7 @@ package com.domus.api.modules.dashboard;
 
 import com.domus.api.modules.dashboard.dto.DashboardResponse;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.relatorio.RelatorioProjections;
@@ -31,6 +32,7 @@ public class DashboardService {
     private final EventoRepository eventoRepository;
     private final RelatorioRepository relatorioRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     @Transactional(readOnly = true)
     public DashboardResponse carregar(UUID igrejaId) {
@@ -58,8 +60,9 @@ public class DashboardService {
                 movimentacaoRepository.recentes(igrejaId, PageRequest.of(0, LIMITE))
                         .stream().map(MovimentacaoResponse::de).toList();
 
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         List<EventoResumoDTO> proximos =
-                eventoRepository.proximos(igrejaId, LocalDateTime.now(), PageRequest.of(0, LIMITE))
+                eventoRepository.proximosDaFamilia(igrejaId, idsFamilia, LocalDateTime.now(), PageRequest.of(0, LIMITE))
                         .stream().map(EventoResumoDTO::from).toList();
 
         return new DashboardResponse(

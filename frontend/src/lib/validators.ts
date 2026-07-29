@@ -149,6 +149,8 @@ const eventoSchemaBase = z.object({
   idadeMax: opcionalNumero(z.coerce.number().int().min(0, 'A idade máxima não pode ser negativa.')),
   restricaoEstadoCivil: z.enum(['SOLTEIRO', 'CASADO', 'DIVORCIADO', 'VIUVO']).nullable().optional(),
   restricaoSexo: z.enum(['HOMEM', 'MULHER']).nullable().optional(),
+
+  restritoPropriaIgreja: z.boolean().default(false),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(

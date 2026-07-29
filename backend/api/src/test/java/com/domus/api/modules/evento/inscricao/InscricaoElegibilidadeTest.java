@@ -10,6 +10,7 @@ import com.domus.api.modules.evento.elegibilidade.regras.RegraFaixaEtaria;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraSexo;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraVinculo;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -46,6 +47,7 @@ class InscricaoElegibilidadeTest {
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
     ElegibilidadeService elegibilidadeService;
+    FamiliaIgrejaService familiaIgrejaService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -64,8 +66,11 @@ class InscricaoElegibilidadeTest {
         elegibilidadeService = new ElegibilidadeService(List.of(
                 new RegraFaixaEtaria(), new RegraVinculo(),
                 new RegraEstadoCivil(), new RegraSexo()));
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService);
+                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService,
+                familiaIgrejaService);
     }
 
     private Igreja igreja() {
@@ -100,7 +105,7 @@ class InscricaoElegibilidadeTest {
     }
 
     private void dado(Evento e, Pessoa pessoa, long ocupadas) {
-        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(e));
         when(membroRepository.findByIdAndIgrejaId(pessoa.getId(), igrejaId)).thenReturn(Optional.of(pessoa));
         when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoa.getId())).thenReturn(Optional.empty());
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(ocupadas);
@@ -110,7 +115,8 @@ class InscricaoElegibilidadeTest {
     /** Idêntico ao {@link #dado}, mas usado pelo caminho de {@code inscreverPessoas}. */
     private void dadoParaInscreverPessoas(Evento e, Pessoa pessoa, long ocupadas) {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
-        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId))).thenReturn(Optional.of(e));
         when(membroRepository.findByIdAndIgrejaId(pessoa.getId(), igrejaId)).thenReturn(Optional.of(pessoa));
         when(inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, List.of(pessoa.getId())))
                 .thenReturn(List.of());

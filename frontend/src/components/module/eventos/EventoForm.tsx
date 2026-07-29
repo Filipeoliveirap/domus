@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2 } from 'lucide-react'
+import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -26,7 +27,6 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   ehEdicao: boolean
   responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
-  // ─── Impacto retroativo (Task 9) ───
   impactoAfetados: InscritoImpactado[] | null
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
@@ -61,6 +61,9 @@ export function EventoForm(props: EventoFormProps) {
 
   const { data: tiposSugeridos = [] } = useTiposEvento()
 
+  const { data: vinculoStatus } = useVinculoStatus()
+  const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
+
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
       <div className={styles.colunas}>
@@ -79,12 +82,6 @@ export function EventoForm(props: EventoFormProps) {
                 error={errors.titulo?.message}
                 {...register('titulo')}
               />
-
-              {/*
-                Tipo: texto livre com sugestões (chips). As sugestões vêm do servidor já
-                ordenadas — o que a igreja mais usa primeiro, sementes depois — e o campo
-                aceita qualquer valor digitado. NÃO é "categoria" (esse nome é do financeiro).
-              */}
               <div>
                 <InputComSugestoes
                   id="tipo"
@@ -115,12 +112,6 @@ export function EventoForm(props: EventoFormProps) {
               <span className={styles.secaoIcone}><MapPin size={20} /></span>
               <h2 className={styles.secaoTitulo}>Local</h2>
             </div>
-            {/*
-              O SeletorLocal alterna entre local cadastrado (localId) e texto livre
-              (localTexto), mantendo os dois mutuamente exclusivos. A capacidade do local
-              escolhido SUGERE vagas — mas só quando o campo está vazio, nunca sobrescrevendo
-              o que a pessoa já digitou (cabem 300, mas o ônibus pode limitar em 80).
-            */}
             <SeletorLocal
               localId={localIdAtual}
               localTexto={localTextoAtual}
@@ -134,10 +125,6 @@ export function EventoForm(props: EventoFormProps) {
                 if (texto) setValue('localId', undefined, { shouldDirty: true })
               }}
               onCapacidadeSugerida={(cap) => {
-                // Sugere vagas SÓ se o evento já pede inscrição E o campo está vazio. NÃO
-                // liga requerInscricao: esse é o interruptor mestre do domínio ("evento que
-                // se organiza" vs. "evento que só acontece"), e escolher um local só para
-                // registrar ONDE o evento é não pode convertê-lo em evento com inscrição.
                 if (requerInscricao && vagasAtual == null) {
                   setValue('vagas', cap, { shouldDirty: true, shouldValidate: true })
                 }
@@ -155,14 +142,6 @@ export function EventoForm(props: EventoFormProps) {
             </div>
 
             <div className={styles.campos}>
-              {/*
-                F4: `<input type="date">`/`type="time"` renderizam no idioma do NAVEGADOR/SO,
-                não no da página — em um Chrome configurado em en-US o campo aparecia em
-                mm/dd/aaaa mesmo com o resto da tela em pt-BR (bug relatado ao vivo). Trocado
-                por texto mascarado (dd/mm/aaaa e hh:mm, sempre 24h) que formata a cada tecla —
-                o mesmo padrão já usado para telefone/preço neste form. Continua 100% teclado,
-                com `inputMode="numeric"` para abrir o teclado numérico no celular.
-              */}
               {/* Início */}
               <div className={styles.grupoData}>
                 <span className={styles.labelData}>INÍCIO*</span>
@@ -255,6 +234,24 @@ export function EventoForm(props: EventoFormProps) {
               nomeInicial={responsavelNomeInicial}
               onChange={(id) => setValue('responsavelPessoaId', id, { shouldDirty: true })}
             />
+
+            {temFamilia && (
+              <label className={styles.toggleRow}>
+                <span className={styles.toggleTexto}>
+                  <span className={styles.toggleTitulo}>
+                    <Building2 size={16} aria-hidden="true" style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                    Apenas minha igreja
+                  </span>
+                  <span className={styles.toggleDescricao}>
+                    Ative para este evento não aparecer para as demais unidades da Rede.
+                  </span>
+                </span>
+                <span className={styles.switch}>
+                  <input type="checkbox" className={styles.switchInput} {...register('restritoPropriaIgreja')} />
+                  <span className={styles.switchTrilho} />
+                </span>
+              </label>
+            )}
           </section>
 
           {/* ─── Para quem é ─── */}
@@ -380,13 +377,6 @@ export function EventoForm(props: EventoFormProps) {
                     </span>
                   </div>
                 )}
-
-                {/*
-                  "Para quem é" (elegibilidade): recolhido em "Todos" por padrão. Agora
-                  sempre visível — o recorte etário/sexo classifica o evento para filtros e
-                  relatórios mesmo sem inscrição formal. Só o toggle "Somente membros" some
-                  fora de requerInscricao (sem inscrição não há quem restringir).
-                */}
               </div>
             )}
           </section>
@@ -409,10 +399,6 @@ export function EventoForm(props: EventoFormProps) {
         </div>
       </div>
 
-      {/*
-        Só aparece quando o backend devolveu gente afetada (POST /impacto-restricao) —
-        evento novo nunca tem inscritos, então este passo nem entra na jogada.
-      */}
       {impactoAfetados && impactoAfetados.length > 0 && (
         <ModalImpactoRestricao
           afetados={impactoAfetados}

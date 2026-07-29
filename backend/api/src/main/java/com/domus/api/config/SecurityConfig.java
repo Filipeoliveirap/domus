@@ -92,7 +92,7 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
-                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasAnyRole(ADMIN, LIDER, COMUM)
 
                         // Matchers específicos ANTES dos curingas /eventos/** —
                         // Spring Security casa o primeiro que der match.
@@ -133,6 +133,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/locais-evento").authenticated()
                         .requestMatchers("/locais-evento/**").hasAnyRole(ADMIN, LIDER)
 
+                        .requestMatchers(HttpMethod.GET, "/igrejas-vinculadas")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers("/igrejas-vinculadas/**").hasRole(ADMIN)
 
                         // Acesso amplo — a verificação fina (Permissoes + capacidadesExtras)

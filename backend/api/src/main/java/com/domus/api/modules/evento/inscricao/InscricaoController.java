@@ -58,7 +58,8 @@ public class InscricaoController {
             @Valid @RequestBody AcompanhanteRequest data) {
         var usuario = usuarioAutenticado.get();
         var response = inscricaoService.adicionarAcompanhante(
-                inscricaoId, data, usuario.getId(), usuario.getIgreja().getId());
+                inscricaoId, data, usuario.getId(), usuario.getPessoa().getId(),
+                usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

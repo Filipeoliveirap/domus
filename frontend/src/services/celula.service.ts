@@ -28,8 +28,8 @@ export const celulaService = {
   removerMembro: (celulaId: string, membroId: string): Promise<void> =>
     api.delete(Endpoints.celulas.MEMBRO(celulaId, membroId)).then(() => undefined),
 
-  atualizarPapel: (celulaId: string, membroId: string): Promise<void> =>
-    api.put(Endpoints.celulas.PAPEL(celulaId, membroId), {}).then(() => undefined),
+  atualizarPapel: (celulaId: string, membroId: string, papel: 'LIDER' | 'MEMBRO'): Promise<void> =>
+    api.put(Endpoints.celulas.PAPEL(celulaId, membroId), { papel }).then(() => undefined),
 
   converterVisitante: (celulaId: string, visitanteId: string, data: ConverterVisitanteRequest): Promise<PessoaResponse> =>
     api.post<PessoaResponse>(Endpoints.celulas.CONVERTER(celulaId, visitanteId), data).then(res => res.data),

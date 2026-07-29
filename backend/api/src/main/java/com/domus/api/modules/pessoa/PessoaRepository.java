@@ -4,6 +4,7 @@ import com.domus.api.modules.usuario.Usuario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -67,4 +68,18 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
     long countByIgrejaId(UUID igrejaId);
 
     long countByIgrejaIdAndCreatedAtAfter(UUID igrejaId, java.time.LocalDateTime desde);
+
+    /**
+     * Solta a referência de {@code pessoa.foto_id} antes de apagar a foto de verdade.
+     *
+     * <p>{@code Pessoa} tem {@code @SQLRestriction("deleted_at IS NULL")}, então um
+     * {@code UPDATE} via JPQL não enxergaria pessoa arquivada — exatamente quem
+     * {@link com.domus.api.modules.foto.LimpezaFotosJob#limparDeArquivadas} precisa
+     * desvincular. Por isso é nativa, mesmo padrão de
+     * {@link com.domus.api.modules.foto.FotoRepository#buscarDeArquivadas}. Sem isto, o
+     * {@code DELETE FROM foto} seguinte é recusado pelo {@code ON DELETE RESTRICT}.
+     */
+    @Modifying
+    @Query(value = "UPDATE pessoa SET foto_id = NULL WHERE foto_id = :fotoId", nativeQuery = true)
+    void desvincularFoto(@Param("fotoId") UUID fotoId);
 }

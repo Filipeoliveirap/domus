@@ -208,8 +208,6 @@ public class InscricaoService {
         // burla casual. Quem NÃO gerencia nunca contorna (podeGerenciar == false barra),
         // então a restrição continua real para o membro comum — que era a proteção que
         // importava. VAGAS_ESGOTADAS não é contornável (não entra em totalmenteContornavel).
-        // Só vale dentro da PRÓPRIA igreja — em outra igreja da família, "só visualiza e se
-        // inscreve, igual qualquer pessoa comum".
         boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role)
                 && evento.getIgreja().getId().equals(igrejaId);
         boolean podeContornar = podeGerenciar

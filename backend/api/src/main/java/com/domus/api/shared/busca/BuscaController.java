@@ -37,6 +37,14 @@ public class BuscaController {
         }
     }
 
+    private void exigirUsuarios() {
+        if (!Permissoes.podeVerUsuariosEFinanceiroNaBuscaGlobal(usuarioAutenticado.getRole(),
+                usuarioAutenticado.getCapacidadesExtras())) {
+            throw new AccessDeniedException(
+                    "Só um administrador ou tesoureiro pode buscar usuários.");
+        }
+    }
+
     @GetMapping("/pessoas")
     public List<ResultadoBusca> buscarMembros(@RequestParam String q) {
         if (q == null || q.isBlank()) {
@@ -56,6 +64,7 @@ public class BuscaController {
 
     @GetMapping("/usuarios")
     public List<ResultadoBusca> buscarUsuarios(@RequestParam String q) {
+        exigirUsuarios();
         if (q == null || q.isBlank()) {
             return List.of();
         }

@@ -92,7 +92,7 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
-                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasAnyRole(ADMIN, LIDER, COMUM)
 
                         // Matchers específicos ANTES dos curingas /eventos/** —
                         // Spring Security casa o primeiro que der match.

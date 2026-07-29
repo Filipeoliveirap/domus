@@ -32,6 +32,12 @@ public class FamiliaIgrejaService {
         return igrejaRepository.existsByIgrejaMaeId(igrejaId);
     }
 
+    /** Filha é quem tem mãe. Usado onde só a sede pode agir (ex.: consolidado financeiro). */
+    @Transactional(readOnly = true)
+    public boolean ehFilha(UUID igrejaId) {
+        return buscar(igrejaId).getIgrejaMae() != null;
+    }
+
     /** Retorna {@code {eu} ∪ {minhas filhas}}. Filha ou independente → apenas {@code {eu}}. */
     @Transactional(readOnly = true)
     public List<UUID> idsDaFamilia(UUID igrejaId) {

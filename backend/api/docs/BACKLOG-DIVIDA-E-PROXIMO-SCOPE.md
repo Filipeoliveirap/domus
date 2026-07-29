@@ -239,8 +239,10 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
   do módulo de eventos** — reavaliar se aparecer igreja fora de BRT.
 - **`Endereco` (`@Embeddable`) mora em `modules.membro`** e é reusado por `Igreja`. Funciona e é
   DRY, mas o lugar certo seria `shared`. Mover quando alguém encostar no módulo de membro.
-- **Listas navegáveis** (a mãe folhear membros/eventos das filhas) e **irmãs verem eventos umas
-  das outras** — continuam fora, como o spec já dizia. Depende de consultar o pastor primeiro.
+- **Listas navegáveis** (a mãe folhear membros/eventos das filhas) — continua fora, como o
+  spec já dizia. Depende de consultar o pastor primeiro. ~~**Irmãs verem eventos umas das
+  outras**~~ **RESOLVIDO** (2026-07-29): eventos compartilhados entre igrejas vinculadas
+  (`evento.restrito_propria_igreja`), ver spec `2026-07-28-eventos-compartilhados-design.md`.
 - **Upload do logo da igreja.** A coluna `logo_url` existe desde a V13, mas a tela só a preserva
   (não faz upload). Entra junto com o upload de foto de membro/evento da Fase 2.
 - ~~**Confirmações usam `window.confirm`.**~~ **RESOLVIDO** (2026-07-19): criado

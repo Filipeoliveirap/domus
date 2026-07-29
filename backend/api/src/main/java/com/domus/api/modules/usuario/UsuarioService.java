@@ -350,8 +350,19 @@ public class UsuarioService {
         });
     }
 
+    private static final java.util.Set<String> CAPACIDADES_VALIDAS =
+            java.util.Set.of("SECRETARIO", "TESOUREIRO");
+
+    private void validarCapacidade(String capacidade) {
+        if (!CAPACIDADES_VALIDAS.contains(capacidade)) {
+            throw new BusinessException("CAPACIDADE_INVALIDA",
+                    "Capacidade inválida. Use SECRETARIO ou TESOUREIRO.");
+        }
+    }
+
     @Transactional
     public void concederCapacidade(UUID id, String capacidade, UUID igrejaId, UUID concedidoPorId) {
+        validarCapacidade(capacidade);
         usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
@@ -365,6 +376,7 @@ public class UsuarioService {
 
     @Transactional
     public void revogarCapacidade(UUID id, String capacidade, UUID igrejaId) {
+        validarCapacidade(capacidade);
         usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 

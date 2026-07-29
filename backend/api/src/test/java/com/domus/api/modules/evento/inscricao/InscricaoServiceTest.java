@@ -197,7 +197,8 @@ class InscricaoServiceTest {
         // Diferente da auto-inscrição: inscrever OUTRA pessoa continua exigindo requerInscricao.
         Evento e = evento(10);
         e.setRequerInscricao(false);
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
@@ -210,7 +211,8 @@ class InscricaoServiceTest {
     void inscreverPessoasNomeiaQuantosJaEstavamInscritos() {
         Evento e = evento(10);
         UUID outroMembroId = UUID.randomUUID();
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
         when(inscricaoRepository.listarPessoaIdsJaInscritos(eventoId,
                 java.util.List.of(pessoaId, outroMembroId)))
                 .thenReturn(java.util.List.of(pessoaId, outroMembroId));
@@ -258,13 +260,35 @@ class InscricaoServiceTest {
         Evento e = evento(10);
         e.setInicioEm(LocalDateTime.now().minusHours(1));
         e.setFimEm(LocalDateTime.now().plusHours(1));
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
                 "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já começou");
+    }
+
+    @Test
+    void liderDeOutraIgrejaDaFamiliaConsegueInscreverMembroDaPropriaIgrejaEmEventoCompartilhado() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, outraIgrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, outraIgrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, outraIgrejaId))
+                .thenReturn(Optional.of(membro(Vinculo.MEMBRO)));
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)).thenReturn(Optional.empty());
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.inscreverPessoas(eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
+                "LIDER", false, outraIgrejaId);
+
+        verify(inscricaoRepository).save(any());
     }
 
     @Test

@@ -398,7 +398,7 @@ export function EventoForm(props: EventoFormProps) {
           </div>
         </div>
       </div>
-      
+
       {impactoAfetados && impactoAfetados.length > 0 && (
         <ModalImpactoRestricao
           afetados={impactoAfetados}

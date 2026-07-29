@@ -212,7 +212,7 @@ export default function InicioPage() {
                         {ehOutraIgreja && (
                           <span className={styles.eventoIgreja}>
                             <Building2 size={13} aria-hidden="true" />
-                            {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
+                            Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
                           </span>
                         )}
                       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { X, CalendarDays, MapPin, Users, UserPlus, Ticket, Flame, Pencil, XCircle } from 'lucide-react'
+import { X, CalendarDays, MapPin, Users, UserPlus, Ticket, Flame, Pencil, XCircle, Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
@@ -24,7 +24,6 @@ import {
   vagasEsgotadas as calcVagasEsgotadas,
   podeEditarEvento,
 } from '@/lib/formats/eventoFormat'
-import { podeGerenciarEventos } from '@/lib/permissoes'
 import styles from './ModalEventoResumo.module.css'
 
 interface Props {
@@ -45,8 +44,9 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const { data: evento, isLoading, isError } = useEvento(eventoId)
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
-  const role = useAuthStore((s) => s.role)
-  const podeGerenciar = podeGerenciarEventos(role)
+  const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
+  const podeGerenciar = !!evento?.podeGerenciarEsteEvento
+  const ehOutraIgreja = !!evento && evento.igrejaOrganizadora.id !== minhaIgrejaId
 
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
   const [removendoId, setRemovendoId] = useState<string | null>(null)
@@ -131,6 +131,13 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   </Link>
                 )}
               </div>
+
+              {ehOutraIgreja && (
+                <span className={styles.igrejaOrganizadora}>
+                  <Building2 size={13} aria-hidden="true" />
+                  Evento compartilhado por {evento.igrejaOrganizadora.sigla ?? evento.igrejaOrganizadora.nome}
+                </span>
+              )}
 
               <div className={styles.metadados}>
                 <span className={styles.chipData}>
@@ -341,7 +348,13 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
       )}
 
       {modalAberto === 'lista' && evento && (
-        <ModalQuemVai eventoId={eventoId} situacao={evento.situacao} aoFechar={() => setModalAberto(null)} />
+        <ModalQuemVai
+          eventoId={eventoId}
+          situacao={evento.situacao}
+          restritoPropriaIgreja={evento.restritoPropriaIgreja}
+          podeGerenciarEsteEvento={podeGerenciar}
+          aoFechar={() => setModalAberto(null)}
+        />
       )}
     </div>
 

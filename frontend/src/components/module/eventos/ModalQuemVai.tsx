@@ -17,12 +17,14 @@ import styles from './ModalQuemVai.module.css'
 interface Props {
   eventoId: string
   situacao: SituacaoEvento
+  restritoPropriaIgreja?: boolean
+  podeGerenciarEsteEvento: boolean
   aoFechar: () => void
 }
 
-export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
+export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
-  const ehGestor = podeGerenciarInscricoes(role)
+  const ehGestor = podeGerenciarInscricoes(role) && podeGerenciarEsteEvento
   const podeCancelar = podeCancelarInscricao(situacao)
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(
@@ -50,16 +52,21 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
         nome: i.nome,
         fotoId: i.fotoId,
         convidados: i.acompanhantes.map((a) => a.nome),
+        igrejaDaPessoa: i.igrejaDaPessoa,
       }))
     : participantes.map((p) => ({
         id: p.id,
         nome: p.nome,
         fotoId: p.fotoId,
         convidados: p.convidados,
+        igrejaDaPessoa: p.igrejaDaPessoa,
       }))
 
   const carregando = ehGestor ? carregandoAdmin : carregandoLista
   const total = linhas.reduce((acc, l) => acc + 1 + l.convidados.length, 0)
+
+  const igrejasDistintas = new Set(linhas.map((l) => l.igrejaDaPessoa?.id).filter(Boolean))
+  const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
 
   return (
     <div className={styles.overlay} onMouseDown={aoFechar}>
@@ -105,6 +112,12 @@ export function ModalQuemVai({ eventoId, situacao, aoFechar }: Props) {
                     )}
                   </span>
                   <span className={styles.nome}>{l.nome}</span>
+
+                  {mostrarIgreja && l.igrejaDaPessoa && (
+                    <span className={styles.selo}>
+                      {l.igrejaDaPessoa.sigla ?? l.igrejaDaPessoa.nome}
+                    </span>
+                  )}
 
                   {ehGestor && !podeCancelar && (
                     <span className={styles.selo}>Participou</span>

@@ -311,6 +311,92 @@
   color: var(--color-text-muted);
 }
 
+.igrejaOrganizadora {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.presenca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.presencaPessoas {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pilhaAvatares {
+  display: flex;
+}
+
+.pilhaAvatares > * + * {
+  margin-left: -8px;
+}
+
+.avatarPresenca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-bg-white);
+  overflow: hidden;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.avatarPresencaFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.presencaTexto {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+button.presencaPessoas {
+  border: none;
+  background: none;
+  padding: 4px;
+  margin: -4px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+}
+
+button.presencaPessoas:hover {
+  background: var(--color-bg-page);
+}
+
+button.presencaPessoas:hover .presencaTexto {
+  color: var(--color-primary);
+}
+
 .vagasAcabando {
   display: inline-flex;
   align-self: flex-start;

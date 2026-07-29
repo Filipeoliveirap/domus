@@ -3,6 +3,7 @@ package com.domus.api.shared.busca;
 import com.domus.api.modules.evento.busca.BuscaEventoService;
 import com.domus.api.modules.financeiro.categoria.busca.BuscaCategoriaService;
 import com.domus.api.modules.financeiro.movimentacao.busca.BuscaMovimentacaoService;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.busca.BuscaPessoaService;
 import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
@@ -26,6 +27,7 @@ public class BuscaGlobalService {
     private final BuscaUsuarioService buscaUsuarioService;
     private final BuscaMovimentacaoService buscaMovimentacaoService;
     private final BuscaCategoriaService buscaCategoriaService;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     private static final int LIMITE_POR_TIPO = 5;
 
@@ -33,7 +35,8 @@ public class BuscaGlobalService {
         List<ResultadoBusca> resultados = new ArrayList<>();
 
         resultados.addAll(buscaPessoaService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
-        resultados.addAll(buscaEventoService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
+        resultados.addAll(buscaEventoService.buscar(termo, igrejaId,
+                familiaIgrejaService.idsDaFamiliaCompleta(igrejaId), LIMITE_POR_TIPO));
 
         if (Permissoes.podeVerUsuariosEFinanceiroNaBuscaGlobal(role, capacidadesExtras)) {
             resultados.addAll(buscaUsuarioService.buscar(termo, igrejaId, LIMITE_POR_TIPO));

@@ -50,6 +50,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const role = useAuthStore(s => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
   const isAdmin = podeGerenciarCelulas(role)
+  const podeGerenciarCelula = isAdmin || !!celula?.souLiderDestaCelula
   const [filtro, setFiltro] = useState<'TODOS' | 'PESSOA' | 'VISITANTE'>('TODOS')
   const [editando, setEditando] = useState(false)
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false)
@@ -70,7 +71,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     fotoId: celula.fotoId,
     lideres: [] as string[],
     totalMembros: celula.membros.length,
-  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId])
+    souLiderDestaCelula: celula.souLiderDestaCelula,
+  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula])
 
   const form = useCelulaForm({ celulaId: id, celulaInicial })
   const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form
@@ -86,9 +88,10 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     }
   }
 
-  async function handlePromover(membroId: string) {
+  async function handlePromover(membroId: string, papelAtual: 'LIDER' | 'MEMBRO') {
     try {
-      await celulaService.atualizarPapel(id, membroId)
+      const novoPapel = papelAtual === 'LIDER' ? 'MEMBRO' : 'LIDER'
+      await celulaService.atualizarPapel(id, membroId, novoPapel)
       invalidarCache(queryClient, 'celula')
       notificar.sucesso('Papel atualizado.')
     } catch {
@@ -185,7 +188,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             <div>
               <div className={styles.tituloLinha}>
                 <h1 className={styles.titulo}>{celula.nome}</h1>
-                {isAdmin && (
+                {podeGerenciarCelula && (
                 <button className={styles.btnEditar} onClick={() => {
                   if (celula) form.reset({
                     nome: celula.nome,
@@ -205,7 +208,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                 </p>
               )}
             </div>
-            {isAdmin && (
+            {podeGerenciarCelula && (
             <button className={styles.botaoPrimario} onClick={() => setModalAdicionarAberto(true)}>
               <UserPlus size={18} /> Adicionar
             </button>
@@ -238,14 +241,14 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
 
           <div className={styles.lista}>
             {membrosFiltrados().map(m => {
-              const podeGerenciar = isAdmin || celula?.souLiderDestaCelula
+              const podeGerenciar = podeGerenciarCelula
 
               const acoes: ItemAcao[] = []
               if (isAdmin && m.tipo === 'PESSOA') {
                 acoes.push({
                   label: m.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder',
                   icone: m.papel === 'LIDER' ? TrendingUp : Crown,
-                  onClick: () => handlePromover(m.id),
+                  onClick: () => handlePromover(m.id, m.papel),
                 })
               }
               if (m.tipo === 'VISITANTE' && podeGerenciar) {

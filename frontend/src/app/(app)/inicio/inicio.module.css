@@ -247,6 +247,19 @@
   min-width: 0;
 }
 
+.eventoIgreja {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
 .eventoAcao {
   display: block;
   padding: 8px;

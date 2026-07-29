@@ -12,6 +12,7 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,9 +22,20 @@ public class BuscaEventoService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    public List<ResultadoBusca> buscar(String termo, UUID igrejaId, int limite) {
-        Query filtroIgreja = Query.of(q -> q
-                .term(t -> t.field("igrejaId").value(igrejaId.toString()))
+    public List<ResultadoBusca> buscar(String termo, UUID igrejaId, Set<UUID> idsFamilia, int limite) {
+        List<String> idsFamiliaStr = idsFamilia.stream().map(UUID::toString).toList();
+
+        Query filtroVisibilidade = Query.of(q -> q
+                .bool(b -> b
+                        .should(s -> s.term(t -> t.field("igrejaId").value(igrejaId.toString())))
+                        .should(s -> s.bool(bb -> bb
+                                .filter(f -> f.terms(t -> t.field("igrejaId")
+                                        .terms(tt -> tt.value(idsFamiliaStr.stream()
+                                                .map(co.elastic.clients.elasticsearch._types.FieldValue::of).toList()))))
+                                .filter(f -> f.term(t -> t.field("restritoPropriaIgreja").value(false)))
+                        ))
+                        .minimumShouldMatch("1")
+                )
         );
 
         Query fuzzyTitulo = Query.of(q -> q
@@ -54,7 +66,7 @@ public class BuscaEventoService {
 
         Query queryFinal = Query.of(q -> q
                 .bool(b -> b
-                        .filter(filtroIgreja)
+                        .filter(filtroVisibilidade)
                         .should(fuzzyTitulo)
                         .should(fuzzyOutros)
                         .should(prefixo)

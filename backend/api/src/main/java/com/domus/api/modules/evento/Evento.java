@@ -111,6 +111,10 @@ public class Evento {
     @Builder.Default
     private boolean controlaPresenca = false;
 
+    @Column(name = "restrito_propria_igreja", nullable = false)
+    @Builder.Default
+    private boolean restritoPropriaIgreja = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

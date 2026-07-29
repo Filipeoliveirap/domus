@@ -1,6 +1,7 @@
 package com.domus.api.modules.igreja.familia;
 
 import com.domus.api.modules.igreja.familia.DTO.VinculoDTOs.*;
+import com.domus.api.shared.security.Perfil;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,11 @@ public class VinculoController {
 
     @GetMapping
     public VinculoStatusResponse status() {
-        return vinculoService.status(usuarioAutenticado.getIgrejaId());
+        VinculoStatusResponse status = vinculoService.status(usuarioAutenticado.getIgrejaId());
+        if (Perfil.ADMIN_IGREJA.name().equals(usuarioAutenticado.getRole())) {
+            return status;
+        }
+        return new VinculoStatusResponse(status.estado(), null, null, status.mae(), status.congregacoes());
     }
 
     @PostMapping("/codigo")

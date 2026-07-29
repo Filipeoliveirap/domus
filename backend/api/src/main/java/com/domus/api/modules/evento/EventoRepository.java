@@ -17,6 +17,16 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     Optional<Evento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.id = :id
+          AND e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+    """)
+    Optional<Evento> buscarVisivelParaFamilia(@Param("id") UUID id,
+                                              @Param("minhaIgreja") UUID minhaIgreja,
+                                              @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     // FK ON DELETE SET NULL nunca dispara — LocalEvento usa soft delete.
     // Este método resolve o vínculo antes de arquivar o local.
     List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
@@ -59,6 +69,17 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query("SELECT e FROM Evento e WHERE e.id = :id AND e.igreja.id = :igrejaId")
     Optional<Evento> buscarComLock(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.id = :id
+          AND e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+    """)
+    Optional<Evento> buscarComLockVisivelParaFamilia(@Param("id") UUID id,
+                                                      @Param("minhaIgreja") UUID minhaIgreja,
+                                                      @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     @Query("""
         SELECT e FROM Evento e
         WHERE e.igreja.id = :igrejaId AND e.inicioEm >= :agora
@@ -66,14 +87,25 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     """)
     List<Evento> proximos(@Param("igrejaId") UUID igrejaId, @Param("agora") LocalDateTime agora, Pageable pageable);
 
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.igreja.id IN :idsFamilia
+          AND (e.igreja.id = :minhaIgreja OR e.restritoPropriaIgreja = false)
+          AND e.inicioEm >= :agora
+        ORDER BY e.inicioEm ASC
+    """)
+    List<Evento> proximosDaFamilia(@Param("minhaIgreja") UUID minhaIgreja,
+                                    @Param("idsFamilia") java.util.Set<UUID> idsFamilia,
+                                    @Param("agora") LocalDateTime agora,
+                                    Pageable pageable);
+
     long countByIgrejaIdAndInicioEmBetween(UUID igrejaId, LocalDateTime de, LocalDateTime ate);
 
-    // Ordena por situação (EM_ANDAMENTO → hoje → futuro → ENCERRADO) via CASE WHEN.
-    // :agora vem de Java (LocalDateTime.now()) porque o Neon roda em UTC e inicio_em/fim_em usam hora local.
     @Query(value = """
         SELECT * FROM evento e
-        WHERE e.igreja_id = :igrejaId
-          AND e.deleted_at IS NULL
+        WHERE e.deleted_at IS NULL
+          AND e.igreja_id = ANY(CAST(:idsFamilia AS uuid[]))
+          AND (e.igreja_id = :minhaIgreja OR e.restrito_propria_igreja = false)
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
           AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
           AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
@@ -93,19 +125,21 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         """,
         countQuery = """
         SELECT COUNT(*) FROM evento e
-        WHERE e.igreja_id = :igrejaId
-          AND e.deleted_at IS NULL
+        WHERE e.deleted_at IS NULL
+          AND e.igreja_id = ANY(CAST(:idsFamilia AS uuid[]))
+          AND (e.igreja_id = :minhaIgreja OR e.restrito_propria_igreja = false)
           AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
           AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
           AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
         """,
         nativeQuery = true)
-    Page<Evento> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
-                                 @Param("q") String q,
-                                 @Param("tipo") String tipo,
-                                 @Param("recorteEtario") String recorteEtario,
-                                 @Param("agora") LocalDateTime agora,
-                                 Pageable pageable);
+    Page<Evento> buscarPorFamilia(@Param("minhaIgreja") UUID minhaIgreja,
+                                   @Param("idsFamilia") UUID[] idsFamilia,
+                                   @Param("q") String q,
+                                   @Param("tipo") String tipo,
+                                   @Param("recorteEtario") String recorteEtario,
+                                   @Param("agora") LocalDateTime agora,
+                                   Pageable pageable);
 
     @Query("""
         SELECT e.tipo FROM Evento e

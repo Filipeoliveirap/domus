@@ -42,10 +42,12 @@ public final class CacheKeys {
         return igrejaId + ":" + sha256Curto(bruto);
     }
 
-    public static String eventos(UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
+    public static String eventos(UUID igrejaId, String q, String tipo, String recorteEtario,
+                                  String role, Pageable pageable) {
         String bruto = (q == null ? "" : q) + "|"
                 + (tipo == null ? "" : tipo) + "|"
                 + (recorteEtario == null ? "" : recorteEtario) + "|"
+                + (role == null ? "" : role) + "|"
                 + pageable.getPageNumber() + "|"
                 + pageable.getPageSize() + "|"
                 + pageable.getSort().toString();

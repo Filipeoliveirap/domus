@@ -108,14 +108,31 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void trustForwardedFor_usaPrimeiroIpDoHeader() throws Exception {
+    void trustForwardedFor_usaUltimoIpDoHeader() throws Exception {
+        // Não o primeiro: um atacante controla o que vem antes do proxy confiável
+        // (proxies costumam ACRESCENTAR ao header, não substituir) — variando o primeiro
+        // elemento a cada requisição, driblaria o rate limit inteiro se ele contasse.
         when(request.getRequestURI()).thenReturn("/pessoas");
         when(request.getHeader("X-Forwarded-For")).thenReturn("9.9.9.9, 10.0.0.1");
         incrementaPara("rl:global:", 1L);
 
         filtro(100, 10, true).doFilter(request, response, chain);
 
-        verify(valueOps).increment(startsWith("rl:global:9.9.9.9:"));
+        verify(valueOps).increment(startsWith("rl:global:10.0.0.1:"));
+    }
+
+    @Test
+    void trustForwardedFor_atacanteVariandoPrimeiroElementoNaoEscapaOLimite() throws Exception {
+        when(request.getRequestURI()).thenReturn("/pessoas");
+        incrementaPara("rl:global:", 101L);
+
+        for (String forjado : new String[]{"1.1.1.1", "2.2.2.2", "3.3.3.3"}) {
+            when(request.getHeader("X-Forwarded-For")).thenReturn(forjado + ", 10.0.0.1");
+            filtro(100, 10, true).doFilter(request, response, chain);
+        }
+
+        verify(valueOps, times(3)).increment("rl:global:10.0.0.1:" + (java.time.Instant.now().getEpochSecond() / 60));
+        verify(response, atLeast(3)).setStatus(429);
     }
 
     @Test

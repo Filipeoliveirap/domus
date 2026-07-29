@@ -40,14 +40,11 @@
     - **Limites por rota individual.** Hoje há só dois tiers (global e auth). Se algum endpoint
       específico precisar de teto próprio, generalizar a configuração.
 
-- **`X-Forwarded-For`: pegamos o PRIMEIRO elemento da lista.** `RateLimitFilter.resolverIp()`
-  faz `forwarded.split(",")[0]`. Isso só é correto se o proxy **substituir** o header
-  (`proxy_set_header X-Forwarded-For $remote_addr`). Se ele **acrescentar** (o mais comum:
-  `$proxy_add_x_forwarded_for`), a lista fica `<forjado pelo cliente>, <ip real>` e o
-  primeiro elemento é o **forjado** — um atacante escaparia do rate limiting só mandando o
-  header. Hoje é inofensivo (`trust-forwarded-for=false`), mas vira crítico no dia em que
-  for ligado. Decidir junto com a hospedagem: ou configurar o proxy para substituir, ou
-  trocar o código para pegar o **último** elemento (o mais próximo do proxy confiável).
+- ~~**`X-Forwarded-For`: pegamos o PRIMEIRO elemento da lista.**~~ **RESOLVIDO** (2026-07-29):
+  `RateLimitFilter.resolverIp()` agora pega o **último** elemento, não o primeiro — correto
+  tanto se o proxy substitui quanto se acrescenta ao header. Coberto por
+  `trustForwardedFor_usaUltimoIpDoHeader` e um teste simulando um atacante variando o
+  primeiro elemento a cada requisição (`RateLimitFilterTest`).
 
 - **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
   migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
@@ -485,14 +482,18 @@ Dois tokens distintos. Quando separar, lembrar que o backup usa os secrets do **
 Origem: em 2026-07-22 as credenciais foram rotacionadas porque vazaram numa conversa, e na
 recriação os dois usos ficaram com o mesmo token.
 
-### ⚠️ Limpeza de foto de arquivada pode falhar por FK RESTRICT (a verificar) — 2026-07-22
+### ~~⚠️ Limpeza de foto de arquivada pode falhar por FK RESTRICT~~ — 2026-07-22, **RESOLVIDO 2026-07-29**
 
-`LimpezaFotosJob.limparDeArquivadas` chama `fotoService.remover`, que faz `DELETE FROM foto`.
-Mas `pessoa.foto_id` é `ON DELETE RESTRICT` (V2) e a pessoa arquivada **ainda referencia** a
-foto — o DELETE seria recusado pelo banco. O teste do job é Mockito e não exercita a FK, então
-não pega. Falta desvincular (`pessoa.foto_id = NULL`) antes de apagar a foto. Reproduzir contra
-Postgres real (arquivar pessoa com foto, avançar o corte, rodar o job) e corrigir.
-Regra de domínio associada: o REGISTRO da pessoa nunca é apagado pela rotina — só a foto.
+`LimpezaFotosJob.limparDeArquivadas` chamava `fotoService.remover` (que faz `DELETE FROM
+foto`) sem antes soltar `pessoa.foto_id` — como essa coluna é `ON DELETE RESTRICT` (V2) e a
+pessoa arquivada ainda referenciava a foto, o DELETE era recusado pelo banco todo dia, sem
+alerta. Corrigido com `PessoaRepository.desvincularFoto` (nativa, porque `Pessoa` tem
+`@SQLRestriction` e um UPDATE via JPQL não enxergaria a pessoa arquivada), chamada antes de
+`fotoService.remover`. Provado contra Postgres real em
+`PessoaRepositoryDesvincularFotoTest` (arquiva pessoa com foto, roda o UPDATE, confirma
+`foto_id NULL` via query nativa) — exatamente o cenário que o Mockito não pegava.
+Regra de domínio associada continua valendo: o REGISTRO da pessoa nunca é apagado pela
+rotina — só a foto.
 
 ### Rótulo do módulo "Ministério" deveria ser self-service por igreja (Fase 5) — 2026-07-24
 

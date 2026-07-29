@@ -162,9 +162,6 @@ class InscricaoPresencaTest {
 
     @Test
     void marcarPresencaInscricao_naoEnxergaInscricaoDeOutraIgrejaDaFamilia() {
-        // marcarPresencaInscricao é ação de GESTOR (controle de presença), não self-service:
-        // family-wide NUNCA pode se aplicar aqui — mesmo que a inscrição esteja visível
-        // via buscarVisivelParaFamilia, a busca estrita (findByIdAndIgrejaId) tem que falhar.
         UUID outraIgrejaId = UUID.randomUUID();
         Evento evento = evento(true);
         InscricaoEvento inscricao = inscricao(evento);

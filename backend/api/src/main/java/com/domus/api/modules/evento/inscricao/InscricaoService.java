@@ -112,7 +112,8 @@ public class InscricaoService {
     @Transactional
     public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
                                  UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
         validarEventoAberto(evento);

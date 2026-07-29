@@ -314,9 +314,15 @@
 .igrejaOrganizadora {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
 }
 
 .presenca {

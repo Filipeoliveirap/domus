@@ -143,7 +143,6 @@ class FamiliaIgrejaServiceTest {
         assertThat(service.ehMae(independente)).isFalse();
     }
 
-    // ---------- idsDaFamiliaCompleta (bidirecional) ----------
 
     @Test
     void igrejaComMaeVeMaeEIrmas() {

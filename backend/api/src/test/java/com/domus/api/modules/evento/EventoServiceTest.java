@@ -130,6 +130,37 @@ class EventoServiceTest {
         verify(eventoRepository).save(argThat(e -> e.isRestritoPropriaIgreja()));
     }
 
+    /**
+     * Finding 1 do review final: restritoPropriaIgreja precisa vir na RESPOSTA da API, não
+     * só na entidade — senão o front rehidrata o toggle de edição sempre como false e
+     * regrava restritoPropriaIgreja=false ao salvar, desprotegendo o evento.
+     */
+    @Test
+    void cadastrarEventoResponseReflecteRestritoPropriaIgrejaTrue() {
+        EventoRequest req = requestComRestricao(true);
+        EventoResponse response = service.cadastrarEvento(req, igrejaId, usuarioId);
+        assertThat(response.restritoPropriaIgreja()).isTrue();
+    }
+
+    @Test
+    void atualizarEventoResponseReflecteRestritoPropriaIgrejaSalvo() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .restritoPropriaIgreja(false)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(true);
+        EventoResponse response = service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        assertThat(response.restritoPropriaIgreja()).isTrue();
+    }
+
     @Test
     void cadastrarEventoSemInformarRestricaoGravaFalse() {
         EventoRequest req = requestComRestricao(null);
@@ -170,9 +201,37 @@ class EventoServiceTest {
                 isNull(), isNull(), isNull(), any(), any())).thenReturn(pagina);
 
         PagedResponse<EventoResponse> resposta = service.listarEventos(
-                igrejaId, null, null, null, PageRequest.of(0, 12));
+                igrejaId, null, null, null, "ADMIN_IGREJA", PageRequest.of(0, 12));
 
         assertThat(resposta.getContent()).hasSize(2);
+    }
+
+    @Test
+    void listarEventosAcessoComumNuncaGerenciaMesmoNaPropriaIgreja() {
+        Evento meu = evento(igrejaId, false);
+        Page<Evento> pagina = new PageImpl<>(List.of(meu));
+        when(eventoRepository.buscarPorFamilia(eq(igrejaId),
+                argThat(arr -> Set.of(arr).equals(Set.of(igrejaId))),
+                isNull(), isNull(), isNull(), any(), any())).thenReturn(pagina);
+
+        PagedResponse<EventoResponse> resposta = service.listarEventos(
+                igrejaId, null, null, null, "ACESSO_COMUM", PageRequest.of(0, 12));
+
+        assertThat(resposta.getContent().get(0).podeGerenciarEsteEvento()).isFalse();
+    }
+
+    @Test
+    void listarEventosAdminGerenciaEventoDaPropriaIgreja() {
+        Evento meu = evento(igrejaId, false);
+        Page<Evento> pagina = new PageImpl<>(List.of(meu));
+        when(eventoRepository.buscarPorFamilia(eq(igrejaId),
+                argThat(arr -> Set.of(arr).equals(Set.of(igrejaId))),
+                isNull(), isNull(), isNull(), any(), any())).thenReturn(pagina);
+
+        PagedResponse<EventoResponse> resposta = service.listarEventos(
+                igrejaId, null, null, null, "ADMIN_IGREJA", PageRequest.of(0, 12));
+
+        assertThat(resposta.getContent().get(0).podeGerenciarEsteEvento()).isTrue();
     }
 
     @Test

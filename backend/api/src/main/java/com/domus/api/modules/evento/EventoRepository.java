@@ -69,8 +69,6 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query("SELECT e FROM Evento e WHERE e.id = :id AND e.igreja.id = :igrejaId")
     Optional<Evento> buscarComLock(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
-    // Mesma trava, mas visível pela família (evento de outra igreja da família só entra
-    // se ela NÃO restringiu à própria) — usada na auto-inscrição em evento compartilhado.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT e FROM Evento e
@@ -91,48 +89,6 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     long countByIgrejaIdAndInicioEmBetween(UUID igrejaId, LocalDateTime de, LocalDateTime ate);
 
-    // Ordena por situação (EM_ANDAMENTO → hoje → futuro → ENCERRADO) via CASE WHEN.
-    // :agora vem de Java (LocalDateTime.now()) porque o Neon roda em UTC e inicio_em/fim_em usam hora local.
-    @Query(value = """
-        SELECT * FROM evento e
-        WHERE e.igreja_id = :igrejaId
-          AND e.deleted_at IS NULL
-          AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
-          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
-          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
-        ORDER BY
-          CASE
-            WHEN CAST(:agora AS timestamp) >= e.inicio_em
-                 AND CAST(:agora AS timestamp) <= COALESCE(e.fim_em, date_trunc('day', e.inicio_em) + INTERVAL '23:59:59')
-              THEN 0
-            WHEN CAST(:agora AS timestamp) < e.inicio_em
-                 AND CAST(e.inicio_em AS date) = CAST(CAST(:agora AS timestamp) AS date)
-              THEN 1
-            WHEN CAST(:agora AS timestamp) < e.inicio_em
-              THEN 2
-            ELSE 3
-          END,
-          e.inicio_em ASC
-        """,
-        countQuery = """
-        SELECT COUNT(*) FROM evento e
-        WHERE e.igreja_id = :igrejaId
-          AND e.deleted_at IS NULL
-          AND (CAST(:q AS text) IS NULL OR LOWER(e.titulo) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))
-          AND (CAST(:tipo AS text) IS NULL OR e.tipo = CAST(:tipo AS text))
-          AND (CAST(:recorteEtario AS text) IS NULL OR e.recorte_etario = CAST(:recorteEtario AS text))
-        """,
-        nativeQuery = true)
-    Page<Evento> buscarPorIgreja(@Param("igrejaId") UUID igrejaId,
-                                 @Param("q") String q,
-                                 @Param("tipo") String tipo,
-                                 @Param("recorteEtario") String recorteEtario,
-                                 @Param("agora") LocalDateTime agora,
-                                 Pageable pageable);
-
-    // Família = própria igreja + igrejas vinculadas (idsDaFamiliaCompleta). Um evento de
-    // outra igreja da família só aparece se ela NÃO o restringiu à própria (restrito=false);
-    // os da própria igreja sempre aparecem, restrito ou não.
     @Query(value = """
         SELECT * FROM evento e
         WHERE e.deleted_at IS NULL

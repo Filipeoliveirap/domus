@@ -64,16 +64,17 @@ public class EventoService {
 
     @Cacheable(
             value = "eventos",
-            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #tipo, #recorteEtario, #pageable)"
+            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #tipo, #recorteEtario, #role, #pageable)"
     )
     @Transactional(readOnly = true)
     public PagedResponse<EventoResponse> listarEventos(
-            UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
+            UUID igrejaId, String q, String tipo, String recorteEtario, String role, Pageable pageable) {
         Set<UUID> idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Page<EventoResponse> pagina = eventoRepository
                 .buscarPorFamilia(igrejaId, idsFamilia.toArray(new UUID[0]), q, tipo, recorteEtario,
                         java.time.LocalDateTime.now(), pageable)
-                .map(evento -> EventoResponse.from(evento, igrejaId, evento.getIgreja().getId().equals(igrejaId)));
+                .map(evento -> EventoResponse.from(evento, igrejaId,
+                        Permissoes.podeGerenciarEventos(role) && evento.getIgreja().getId().equals(igrejaId)));
         return PagedResponse.from(pagina);
     }
 
@@ -390,11 +391,6 @@ public class EventoService {
         return sugestoes;
     }
 
-    /**
-     * Evicta o cache de eventos para toda a família de igrejas.
-     * Garante que mudanças de visibilidade (compartilhado/restrito) reflitam
-     * para os membros de outras igrejas da família sem esperar expiração.
-     */
     private void evictarCacheDeEventosDaFamilia(UUID igrejaId) {
         familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)
                 .forEach(id -> cacheEvictor.evictPorIgreja("eventos", id));

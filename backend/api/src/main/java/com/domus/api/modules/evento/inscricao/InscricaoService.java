@@ -8,6 +8,7 @@ import com.domus.api.modules.evento.elegibilidade.Elegibilidade;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -49,6 +50,7 @@ public class InscricaoService {
     private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final ElegibilidadeService elegibilidadeService;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     /**
      * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
@@ -59,14 +61,15 @@ public class InscricaoService {
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
                                             UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
-        Evento evento = eventoRepository.buscarComLock(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
         validarEventoAberto(evento);
-        boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado);
+        boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
 
         InscricaoEvento inscricao = inscricaoRepository
                 .findByEventoIdAndPessoaId(eventoId, pessoaId)
@@ -109,7 +112,8 @@ public class InscricaoService {
     @Transactional
     public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
                                  UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
         validarEventoAberto(evento);
@@ -193,7 +197,8 @@ public class InscricaoService {
      * @return {@code true} se a inscrição contornou um impedimento deliberadamente
      *         ({@link InscricaoEvento#isInscritoPorExcecao}).
      */
-    private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado) {
+    private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado,
+                                          UUID igrejaId) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
         if (elegibilidade.apto()) return false;
 
@@ -204,7 +209,8 @@ public class InscricaoService {
         // burla casual. Quem NÃO gerencia nunca contorna (podeGerenciar == false barra),
         // então a restrição continua real para o membro comum — que era a proteção que
         // importava. VAGAS_ESGOTADAS não é contornável (não entra em totalmenteContornavel).
-        boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role);
+        boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role)
+                && evento.getIgreja().getId().equals(igrejaId);
         boolean podeContornar = podeGerenciar
                 && confirmado
                 && elegibilidade.totalmenteContornavel();
@@ -239,8 +245,17 @@ public class InscricaoService {
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
     @Transactional
     public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
-                                                       UUID usuarioId, UUID igrejaId) {
+                                                       UUID usuarioId, UUID meuMembroId, String role,
+                                                       UUID igrejaId) {
         InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+
+        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
+        boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
+        if (!gestorDaMesmaIgreja && !souODono) {
+            throw new BusinessException("SEM_PERMISSAO",
+                    "Você só pode adicionar convidados à sua própria inscrição.");
+        }
 
         validarOrganizaInscricao(inscricao.getEvento(), "Este evento não permite convidados.");
 
@@ -251,8 +266,8 @@ public class InscricaoService {
         validarEventoAberto(inscricao.getEvento());
         validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
 
-        // Trava o evento antes de contar: mesma corrida da inscrição.
-        eventoRepository.buscarComLock(inscricao.getEvento().getId(), igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        eventoRepository.buscarComLockVisivelParaFamilia(inscricao.getEvento().getId(), igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarVaga(inscricao.getEvento(), 1);
 
@@ -274,7 +289,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
 
         InscricaoEvento inscricao = a.getInscricao();
-        if (!inscricao.getIgreja().getId().equals(igrejaId)) {
+        if (!familiaIgrejaService.idsDaFamiliaCompleta(igrejaId).contains(inscricao.getIgreja().getId())) {
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
 
@@ -287,9 +302,10 @@ public class InscricaoService {
         // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
         // (o caso mais comum), e qualquer NULL-check liberaria geral.
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
 
-        if (!ehGestor && !souODono) {
+        if (!gestorDaMesmaIgreja && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você só pode remover convidados da sua própria inscrição.");
         }
@@ -309,9 +325,10 @@ public class InscricaoService {
         validarEventoAberto(inscricao.getEvento());
 
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
         boolean souEu = inscricao.getPessoa().getId().equals(meuMembroId);
 
-        if (!ehGestor && !souEu) {
+        if (!gestorDaMesmaIgreja && !souEu) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você não pode cancelar a inscrição de outra pessoa. "
                     + "Peça a ela ou a um líder da igreja.");
@@ -462,7 +479,8 @@ public class InscricaoService {
      */
     @Transactional(readOnly = true)
     public List<ParticipanteResponse> listarParticipantes(UUID eventoId, UUID igrejaId) {
-        eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         return inscricaoRepository.listarPorEvento(eventoId)
@@ -495,8 +513,9 @@ public class InscricaoService {
         return mapa;
     }
 
-    private InscricaoEvento buscarInscricao(UUID id, UUID igrejaId) {
-        return inscricaoRepository.findByIdAndIgrejaId(id, igrejaId)
+    private InscricaoEvento buscarInscricao(UUID id, UUID minhaIgrejaId) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(minhaIgrejaId);
+        return inscricaoRepository.buscarVisivelParaFamilia(id, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
     }
 
@@ -545,7 +564,8 @@ public class InscricaoService {
                     "Você não tem permissão para marcar presença.");
         }
 
-        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
+        InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
         validarControlaPresenca(inscricao.getEvento());
         validarInscricaoConfirmada(inscricao);
 

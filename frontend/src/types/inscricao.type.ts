@@ -1,4 +1,5 @@
 import type { PagedResponse } from './pagedResponse.type'
+import type { IgrejaResumo } from './evento.type'
 
 export type CodigoImpedimento =
   | 'FAIXA_ETARIA'
@@ -40,6 +41,7 @@ export interface ParticipanteResponse {
   nome: string
   fotoId: string | null
   convidados: string[]
+  igrejaDaPessoa: IgrejaResumo
 }
 
 export interface InscritoResponse {
@@ -53,6 +55,7 @@ export interface InscritoResponse {
   inscritoEm: string
   compareceu: boolean
   acompanhantes: AcompanhanteResponse[]
+  igrejaDaPessoa: IgrejaResumo
 }
 
 export interface ListaInscritosResponse {

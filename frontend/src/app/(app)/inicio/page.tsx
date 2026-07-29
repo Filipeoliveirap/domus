@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X } from 'lucide-react'
+import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { versiculoDoDia } from '@/lib/versiculos'
@@ -113,6 +113,7 @@ function ModalAniversariantes({
 export default function InicioPage() {
   const router = useRouter()
   const nome = useAuthStore((s) => s.nome)
+  const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
   const primeiroNome = nome?.trim().split(/\s+/)[0] ?? ''
   const versiculo = versiculoDoDia()
   const { data, isLoading, isError, refetch } = useInicio()
@@ -184,6 +185,7 @@ export default function InicioPage() {
               <div className={styles.trilhaEventos}>
                 {eventos.map((e: EventoResumo) => {
                   const d = dataEvento(e.inicio)
+                  const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
                   return (
                     <button
                       key={e.id}
@@ -207,6 +209,12 @@ export default function InicioPage() {
                             </>
                           )}
                         </span>
+                        {ehOutraIgreja && (
+                          <span className={styles.eventoIgreja}>
+                            <Building2 size={13} aria-hidden="true" />
+                            Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
+                          </span>
+                        )}
                       </div>
                       <span className={styles.eventoAcao}>Ver detalhes</span>
                     </button>

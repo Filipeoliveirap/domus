@@ -1,8 +1,11 @@
+import type { IgrejaResumo } from './evento.type'
+
 export interface EventoResumo {
   id: string
   titulo: string
   inicio: string
   local: string | null
+  igrejaOrganizadora: IgrejaResumo
 }
 
 export interface Aniversariante {

@@ -27,6 +27,10 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     Optional<InscricaoEvento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
+    @Query("SELECT i FROM InscricaoEvento i WHERE i.id = :id AND i.igreja.id IN :idsFamilia")
+    Optional<InscricaoEvento> buscarVisivelParaFamilia(@Param("id") UUID id,
+                                                        @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
+
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
         LEFT JOIN FETCH i.acompanhantes

@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,6 +38,29 @@ public class FamiliaIgrejaService {
         List<UUID> ids = new ArrayList<>();
         ids.add(igrejaId);
         ids.addAll(igrejaRepository.buscarIdsDasFilhas(igrejaId));
+        return ids;
+    }
+
+    /**
+     * Bidirecional: {@code {mãe} ∪ {todas as filhas da mãe, inclusive eu}} quando a igreja
+     * tem mãe; {@code {eu} ∪ {minhas filhas}} quando não tem (sede ou independente).
+     */
+    @Transactional(readOnly = true)
+    public Set<UUID> idsDaFamiliaCompleta(UUID igrejaId) {
+        Igreja igreja = buscar(igrejaId);
+        UUID maeId = igreja.getIgrejaMae() != null ? igreja.getIgrejaMae().getId() : null;
+
+        if (maeId == null) {
+            Set<UUID> ids = new HashSet<>();
+            ids.add(igrejaId);
+            ids.addAll(igrejaRepository.buscarIdsDasFilhas(igrejaId));
+            return ids;
+        }
+
+        Set<UUID> ids = new HashSet<>();
+        ids.add(maeId);
+        igrejaRepository.findByIgrejaMaeIdOrderByNomeAsc(maeId)
+                .forEach(filha -> ids.add(filha.getId()));
         return ids;
     }
 

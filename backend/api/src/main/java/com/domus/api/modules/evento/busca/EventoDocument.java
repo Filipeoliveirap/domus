@@ -32,6 +32,9 @@ public class EventoDocument {
     @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
     private String local;
 
+    @Field(type = FieldType.Boolean)
+    private boolean restritoPropriaIgreja;
+
     public static EventoDocument de(Evento evento) {
         EventoDocument doc = new EventoDocument();
         doc.setId(evento.getId().toString());
@@ -39,6 +42,7 @@ public class EventoDocument {
         doc.setTitulo(evento.getTitulo());
         doc.setDescricao(evento.getDescricao());
         doc.setLocal(evento.getLocalExibicao());
+        doc.setRestritoPropriaIgreja(evento.isRestritoPropriaIgreja());
         return doc;
     }
 }

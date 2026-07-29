@@ -17,6 +17,7 @@ export interface CelulaResponse {
   horario: string | null
   lideres: string[]
   totalMembros: number
+  souLiderDestaCelula: boolean
 }
 
 export interface CelulaDetalheResponse {

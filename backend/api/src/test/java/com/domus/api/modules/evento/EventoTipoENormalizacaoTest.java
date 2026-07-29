@@ -10,6 +10,7 @@ import com.domus.api.modules.evento.local.LocalEventoRepository;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -48,6 +49,7 @@ class EventoTipoENormalizacaoTest {
     PessoaRepository pessoaRepository;
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -71,9 +73,10 @@ class EventoTipoENormalizacaoTest {
         pessoaRepository = mock(PessoaRepository.class);
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository);
+                localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));
@@ -100,6 +103,9 @@ class EventoTipoENormalizacaoTest {
                     .filter(e -> e.getId().equals(id) && e.getIgreja().getId().equals(igreja))
                     .findFirst();
         });
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(any(), any(), any()))
+                .thenAnswer(inv -> eventoRepository.findByIdAndIgrejaId(inv.getArgument(0), inv.getArgument(1)));
         // Frequência real: conta quantos eventos salvos usam cada tipo, mais usado primeiro.
         when(eventoRepository.tiposUsadosPorFrequencia(any())).thenAnswer(inv -> {
             UUID igreja = inv.getArgument(0);
@@ -140,41 +146,41 @@ class EventoTipoENormalizacaoTest {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, tipo, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComLocal(UUID localId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 localId, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComAmbos() {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 UUID.randomUUID(), "Chácara", null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComResponsavel(UUID pessoaId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, pessoaId,
                 null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComIdades(Integer min, Integer max) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, null,
                 null, min, max, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     @Test
     void tipo_e_gravado_capitalizado() {
         UUID id = service.cadastrarEvento(requestComTipo("  culto   de   jovens "), igrejaId, usuarioId).id();
-        assertThat(service.buscarPorId(id, igrejaId).tipo()).isEqualTo("Culto de Jovens");
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").tipo()).isEqualTo("Culto de Jovens");
     }
 
     @Test
@@ -182,14 +188,14 @@ class EventoTipoENormalizacaoTest {
         service.cadastrarEvento(requestComTipo("Vigília"), igrejaId, usuarioId);
         UUID id = service.cadastrarEvento(requestComTipo("vigilia"), igrejaId, usuarioId).id();
         // "vigilia" (sem acento) não pode criar um segundo tipo — o filtro ficaria com dois.
-        assertThat(service.buscarPorId(id, igrejaId).tipo()).isEqualTo("Vigília");
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").tipo()).isEqualTo("Vigília");
     }
 
     @Test
     void tipos_distintos_NAO_sao_colapsados() {
         service.cadastrarEvento(requestComTipo("Culto"), igrejaId, usuarioId);
         UUID id = service.cadastrarEvento(requestComTipo("Cultinho"), igrejaId, usuarioId).id();
-        assertThat(service.buscarPorId(id, igrejaId).tipo()).isEqualTo("Cultinho");
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").tipo()).isEqualTo("Cultinho");
     }
 
     @Test
@@ -235,7 +241,7 @@ class EventoTipoENormalizacaoTest {
 
         UUID id = service.cadastrarEvento(requestComLocal(localId), igrejaId, usuarioId).id();
 
-        assertThat(service.buscarPorId(id, igrejaId).local().id()).isEqualTo(localId);
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").local().id()).isEqualTo(localId);
     }
 
     @Test
@@ -254,7 +260,7 @@ class EventoTipoENormalizacaoTest {
 
         UUID id = service.cadastrarEvento(requestComResponsavel(pessoaId), igrejaId, usuarioId).id();
 
-        EventoResponse resposta = service.buscarPorId(id, igrejaId);
+        EventoResponse resposta = service.buscarPorId(id, igrejaId, "ADMIN_IGREJA");
         assertThat(resposta.responsavel().id()).isEqualTo(pessoaId);
         assertThat(resposta.responsavel().nome()).isEqualTo("Ana");
     }
@@ -262,8 +268,8 @@ class EventoTipoENormalizacaoTest {
     @Test
     void auditoria_grava_criado_por_no_insert_e_atualizado_por_no_update() {
         UUID id = service.cadastrarEvento(requestComTipo("Culto"), igrejaId, usuarioId).id();
-        assertThat(service.buscarPorId(id, igrejaId).criadoPor().id()).isEqualTo(usuarioId);
-        assertThat(service.buscarPorId(id, igrejaId).atualizadoPor()).isNull();
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").criadoPor().id()).isEqualTo(usuarioId);
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").atualizadoPor()).isNull();
 
         UUID outroUsuarioId = UUID.randomUUID();
         Usuario outroUsuario = new Usuario();
@@ -273,6 +279,6 @@ class EventoTipoENormalizacaoTest {
 
         service.atualizarEvento(id, requestComTipo("Culto"), igrejaId, outroUsuarioId);
 
-        assertThat(service.buscarPorId(id, igrejaId).atualizadoPor().id()).isEqualTo(outroUsuarioId);
+        assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").atualizadoPor().id()).isEqualTo(outroUsuarioId);
     }
 }

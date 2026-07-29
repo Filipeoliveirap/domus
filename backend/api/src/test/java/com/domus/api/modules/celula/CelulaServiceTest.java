@@ -11,9 +11,11 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -96,30 +98,76 @@ class CelulaServiceTest {
         when(celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of(c));
         when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
 
-        List<CelulaResponse> response = service.listar(igrejaId);
+        List<CelulaResponse> response = service.listar(igrejaId, null);
 
         assertThat(response).hasSize(1);
         assertThat(response.get(0).nome()).isEqualTo("Célula Bethânia");
     }
 
     @Test
-    void excluirCelulaVaziaEhHardDelete() {
+    void excluirSempreArquiva() {
         dadoQueExiste();
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
-
-        service.excluir(celulaId, igrejaId);
-
-        verify(celulaRepository).deleteById(celulaId);
-    }
-
-    @Test
-    void excluirCelulaComMembrosEhSoftDelete() {
-        dadoQueExiste();
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(true);
 
         service.excluir(celulaId, igrejaId);
 
         verify(celulaRepository).delete(any(Celula.class));
+        verify(celulaRepository, never()).deleteById(any());
+        verify(celulaRepository, never()).hardDeleteById(any());
+    }
+
+    @Test
+    void excluirDefinitivoApagaDeVerdadeQuandoVazia() {
+        dadoQueExiste();
+        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(celulaRepository).hardDeleteById(celulaId);
+    }
+
+    @Test
+    void excluirDefinitivoRecusaQuandoTemMembro() {
+        dadoQueExiste();
+        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
+                .isInstanceOf(ConflitoNegocioException.class);
+
+        verify(celulaRepository, never()).hardDeleteById(any());
+    }
+
+    @Test
+    void atualizarPermiteAdmin() {
+        dadoQueExiste();
+
+        service.atualizar(celulaId, request("Novo nome"), igrejaId, null, null, true);
+
+        verify(celulaRepository).save(any());
+    }
+
+    @Test
+    void atualizarPermiteLiderDaCelula() {
+        dadoQueExiste();
+        UUID pessoaId = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+                .thenReturn(true);
+
+        service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false);
+
+        verify(celulaRepository).save(any());
+    }
+
+    @Test
+    void atualizarRecusaQuemNaoEAdminNemLider() {
+        dadoQueExiste();
+        UUID pessoaId = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(celulaRepository, never()).save(any());
     }
 
     @Test
@@ -189,9 +237,35 @@ class CelulaServiceTest {
                 .igreja(igreja()).build();
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
-        assertThatThrownBy(() -> service.atualizarPapel(celulaId, membro.getId(), igrejaId, true))
+        assertThatThrownBy(() -> service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("visitante");
+    }
+
+    @Test
+    void atualizarPapelPromoveParaLiderComValorExplicito() {
+        dadoQueExiste();
+        UUID pessoaId = UUID.randomUUID();
+        Pessoa pessoa = Pessoa.builder().id(pessoaId).nome("João").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(pessoa).papel(PapelCelula.MEMBRO)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+
+        assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
+    }
+
+    @Test
+    void atualizarPapelRecusaQuemNaoEAdmin() {
+        dadoQueExiste();
+
+        assertThatThrownBy(() -> service.atualizarPapel(celulaId, UUID.randomUUID(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, false))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test

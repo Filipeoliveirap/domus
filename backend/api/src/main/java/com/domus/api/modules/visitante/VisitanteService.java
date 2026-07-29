@@ -10,6 +10,7 @@ import com.domus.api.modules.visitante.DTOs.VisitanteRequest;
 import com.domus.api.modules.visitante.DTOs.VisitanteResponse;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
@@ -125,7 +126,7 @@ public class VisitanteService {
     public void excluir(UUID id, UUID igrejaId) {
         Visitante visitante = buscarDaIgrejaOuFalhar(id, igrejaId);
         if (visitanteRepository.existeCelulaMembroAtivo(id)) {
-            throw new BusinessException("VISITANTE_EM_CELULA",
+            throw new ConflitoNegocioException("VISITANTE_EM_CELULA",
                     "Não é possível excluir um visitante que está em uma célula.");
         }
         visitanteRepository.delete(visitante);

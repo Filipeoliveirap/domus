@@ -4,6 +4,7 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -28,6 +29,7 @@ class InscricaoPresencaTest {
     AcompanhanteRepository acompanhanteRepository;
     PessoaRepository pessoaRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -42,9 +44,12 @@ class InscricaoPresencaTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(List.of());
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService);
+                acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService,
+                familiaIgrejaService);
     }
 
     private Igreja igreja() {
@@ -152,6 +157,24 @@ class InscricaoPresencaTest {
                 .isInstanceOf(ConflitoNegocioException.class);
 
         assertThat(inscricao.isCompareceu()).isFalse();
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void marcarPresencaInscricao_naoEnxergaInscricaoDeOutraIgrejaDaFamilia() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento evento = evento(true);
+        InscricaoEvento inscricao = inscricao(evento);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(java.util.Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, java.util.Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.marcarPresencaInscricao(eventoId, inscricaoId, true, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ResourceNotFoundException.class);
+
         verify(inscricaoRepository, never()).save(any());
     }
 

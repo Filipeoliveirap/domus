@@ -5,6 +5,7 @@ import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
@@ -47,6 +48,7 @@ class EventoServiceCamposInscricaoTest {
     PessoaRepository pessoaRepository;
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -65,14 +67,18 @@ class EventoServiceCamposInscricaoTest {
         pessoaRepository = mock(PessoaRepository.class);
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository);
+                localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any()))
                 .thenReturn(0);
         when(eventoRepository.tiposUsadosPorFrequencia(any())).thenReturn(java.util.List.of());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(any(), any(), any()))
+                .thenAnswer(inv -> eventoRepository.findByIdAndIgrejaId(inv.getArgument(0), inv.getArgument(1)));
         Usuario usuario = new Usuario();
         usuario.setId(usuarioId);
         Pessoa pessoaDoUsuario = new Pessoa();
@@ -91,7 +97,7 @@ class EventoServiceCamposInscricaoTest {
     private EventoRequest request(Integer vagas, BigDecimal preco, Boolean exclusivoMembros) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                vagas, preco, exclusivoMembros, true, null, null);
+                vagas, preco, exclusivoMembros, true, null, null, null);
     }
 
     @Test
@@ -190,7 +196,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.AGENDADO);
     }
 
@@ -204,7 +210,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.EM_ANDAMENTO);
     }
 
@@ -218,7 +224,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThat(service.buscarPorId(eventoId, igrejaId).situacao())
+        assertThat(service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA").situacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.ENCERRADO);
     }
 
@@ -366,7 +372,7 @@ class EventoServiceCamposInscricaoTest {
         EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
                 "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                50, new BigDecimal("120.00"), true, false, true, null);
+                50, new BigDecimal("120.00"), true, false, true, null, null);
 
         assertThatThrownBy(() -> service.cadastrarEvento(
                 requestComControlaPresencaSemInscricao, igrejaId, usuarioId))
@@ -388,7 +394,7 @@ class EventoServiceCamposInscricaoTest {
         EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
                 "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                50, new BigDecimal("120.00"), true, false, true, null);
+                50, new BigDecimal("120.00"), true, false, true, null, null);
 
         assertThatThrownBy(() -> service.atualizarEvento(
                 eventoId, requestComControlaPresencaSemInscricao, igrejaId, usuarioId))

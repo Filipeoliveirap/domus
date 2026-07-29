@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 
 export function useFiltrosUrl<T extends Record<string, string>>(iniciais: T) {
@@ -19,14 +19,23 @@ export function useFiltrosUrl<T extends Record<string, string>>(iniciais: T) {
     return resultado
   })
 
+  const pathnameRef = useRef(pathname)
+  const searchParamsRef = useRef(searchParams)
+
   useEffect(() => {
-    const params = new URLSearchParams()
+    pathnameRef.current = pathname
+    searchParamsRef.current = searchParams
+  }, [pathname, searchParams])
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParamsRef.current.toString())
     for (const [chave, valor] of Object.entries(filtros)) {
       if (valor) params.set(chave, valor)
+      else params.delete(chave)
     }
     const qs = params.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [filtros, pathname, router])
+    router.replace(qs ? `${pathnameRef.current}?${qs}` : pathnameRef.current, { scroll: false })
+  }, [filtros, router])
 
   const setFiltro = useCallback((chave: keyof T, valor: string) => {
     setFiltros((prev) => ({ ...prev, [chave]: valor }))

@@ -13,6 +13,7 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
@@ -59,25 +60,32 @@ public class EventoService {
     private final PessoaRepository pessoaRepository;
     private final LocalEventoRepository localEventoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final FamiliaIgrejaService familiaIgrejaService;
 
     @Cacheable(
             value = "eventos",
-            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #tipo, #recorteEtario, #pageable)"
+            key = "T(com.domus.api.config.redis.CacheKeys).eventos(#igrejaId, #q, #tipo, #recorteEtario, #role, #pageable)"
     )
     @Transactional(readOnly = true)
     public PagedResponse<EventoResponse> listarEventos(
-            UUID igrejaId, String q, String tipo, String recorteEtario, Pageable pageable) {
+            UUID igrejaId, String q, String tipo, String recorteEtario, String role, Pageable pageable) {
+        Set<UUID> idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Page<EventoResponse> pagina = eventoRepository
-                .buscarPorIgreja(igrejaId, q, tipo, recorteEtario, java.time.LocalDateTime.now(), pageable)
-                .map(EventoResponse::from);
+                .buscarPorFamilia(igrejaId, idsFamilia.toArray(new UUID[0]), q, tipo, recorteEtario,
+                        java.time.LocalDateTime.now(), pageable)
+                .map(evento -> EventoResponse.from(evento, igrejaId,
+                        Permissoes.podeGerenciarEventos(role) && evento.getIgreja().getId().equals(igrejaId)));
         return PagedResponse.from(pagina);
     }
 
     @Transactional(readOnly = true)
-    public EventoResponse buscarPorId(UUID id, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
+    public EventoResponse buscarPorId(UUID id, UUID igrejaId, String role) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(id, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        return EventoResponse.from(evento);
+        boolean podeGerenciar = Permissoes.podeGerenciarEventos(role)
+                && evento.getIgreja().getId().equals(igrejaId);
+        return EventoResponse.from(evento, igrejaId, podeGerenciar);
     }
 
     @Transactional
@@ -118,6 +126,7 @@ public class EventoService {
                 .exclusivoMembros(Boolean.TRUE.equals(data.exclusivoMembros()))
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .controlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()))
+                .restritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()))
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
@@ -128,8 +137,8 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo);
+        evictarCacheDeEventosDaFamilia(igrejaId);
+        return EventoResponse.from(salvo, igrejaId, true);
     }
 
     @Transactional
@@ -201,6 +210,7 @@ public class EventoService {
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
         evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
+        evento.setRestritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()));
 
         // Resolve a nova foto antes de trocar; só remove a antiga depois.
         Foto fotoAntiga = evento.getFoto();
@@ -228,8 +238,8 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento atualizado. id={}, igreja_id={}", id, igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
-        return EventoResponse.from(salvo, inscricoesRemovidas);
+        evictarCacheDeEventosDaFamilia(igrejaId);
+        return EventoResponse.from(salvo, inscricoesRemovidas, igrejaId, true);
     }
 
     @Transactional
@@ -253,7 +263,7 @@ public class EventoService {
                 igrejaId
         );
         log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
-        cacheEvictor.evictPorIgreja("eventos", igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
     /**
@@ -262,7 +272,8 @@ public class EventoService {
      */
     @Transactional(readOnly = true)
     public ElegibilidadeResponse elegibilidade(UUID eventoId, UUID pessoaId, UUID igrejaId) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         Pessoa pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
@@ -378,5 +389,10 @@ public class EventoService {
             }
         }
         return sugestoes;
+    }
+
+    private void evictarCacheDeEventosDaFamilia(UUID igrejaId) {
+        familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)
+                .forEach(id -> cacheEvictor.evictPorIgreja("eventos", id));
     }
 }

@@ -8,8 +8,13 @@ import com.domus.api.modules.evento.elegibilidade.regras.RegraFaixaEtaria;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraSexo;
 import com.domus.api.modules.evento.elegibilidade.regras.RegraVinculo;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
+import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -20,7 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,12 +42,14 @@ class InscricaoServiceTest {
     AcompanhanteRepository acompanhanteRepository;
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
+    FamiliaIgrejaService familiaIgrejaService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
     UUID eventoId = UUID.randomUUID();
     UUID pessoaId = UUID.randomUUID();
     UUID usuarioId = UUID.randomUUID();
+    UUID inscricaoId = UUID.randomUUID();
 
     @BeforeEach
     void setup() {
@@ -49,13 +58,16 @@ class InscricaoServiceTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));
         // Real (não mock): as regras precisam rodar de verdade para os testes de elegibilidade
         // fazerem sentido (ex.: exclusivoMembros/Congregante via RegraVinculo).
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(java.util.List.of(
                 new RegraFaixaEtaria(), new RegraVinculo(),
                 new RegraEstadoCivil(), new RegraSexo()));
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService);
+                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService,
+                familiaIgrejaService);
     }
 
     private Igreja igreja() {
@@ -81,8 +93,40 @@ class InscricaoServiceTest {
                 .build();
     }
 
+    private Evento eventoDeOutraIgreja(UUID outraIgrejaId, boolean restritoPropriaIgreja) {
+        Igreja outraIgreja = new Igreja();
+        outraIgreja.setId(outraIgrejaId);
+        return Evento.builder()
+                .id(eventoId).igreja(outraIgreja)
+                .titulo("Retiro Compartilhado").inicioEm(LocalDateTime.now().plusDays(10))
+                .requerInscricao(true).restritoPropriaIgreja(restritoPropriaIgreja)
+                .build();
+    }
+
+    private InscricaoEvento inscricaoConfirmada(UUID igrejaOrganizadoraId, UUID daPessoaId) {
+        Igreja igrejaOrganizadora = new Igreja();
+        igrejaOrganizadora.setId(igrejaOrganizadoraId);
+        return InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igrejaOrganizadora).evento(evento(10))
+                .pessoa(Pessoa.builder().id(daPessoaId).igreja(igreja()).nome("Maria")
+                        .vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.CONFIRMADA).build();
+    }
+
+    private Pessoa pessoaComIgreja(UUID pessoaUUID, String igrejanome, String sigla) {
+        Igreja igrejaCustom = new Igreja();
+        igrejaCustom.setId(UUID.randomUUID());
+        igrejaCustom.setNome(igrejanome);
+        igrejaCustom.setSigla(sigla);
+        return Pessoa.builder()
+                .id(pessoaUUID).igreja(igrejaCustom).nome("João")
+                .vinculo(Vinculo.MEMBRO)
+                .build();
+    }
+
     private void dado(Evento e, Pessoa m, long ocupadas) {
-        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
         when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(m));
         when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId))
                 .thenReturn(Optional.empty());
@@ -153,7 +197,8 @@ class InscricaoServiceTest {
         // Diferente da auto-inscrição: inscrever OUTRA pessoa continua exigindo requerInscricao.
         Evento e = evento(10);
         e.setRequerInscricao(false);
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
@@ -166,7 +211,8 @@ class InscricaoServiceTest {
     void inscreverPessoasNomeiaQuantosJaEstavamInscritos() {
         Evento e = evento(10);
         UUID outroMembroId = UUID.randomUUID();
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
         when(inscricaoRepository.listarPessoaIdsJaInscritos(eventoId,
                 java.util.List.of(pessoaId, outroMembroId)))
                 .thenReturn(java.util.List.of(pessoaId, outroMembroId));
@@ -214,13 +260,35 @@ class InscricaoServiceTest {
         Evento e = evento(10);
         e.setInicioEm(LocalDateTime.now().minusHours(1));
         e.setFimEm(LocalDateTime.now().plusHours(1));
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
 
         assertThatThrownBy(() -> service.inscreverPessoas(
                 eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
                 "ADMIN_IGREJA", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já começou");
+    }
+
+    @Test
+    void liderDeOutraIgrejaDaFamiliaConsegueInscreverMembroDaPropriaIgrejaEmEventoCompartilhado() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, outraIgrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, outraIgrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, outraIgrejaId))
+                .thenReturn(Optional.of(membro(Vinculo.MEMBRO)));
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)).thenReturn(Optional.empty());
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.inscreverPessoas(eventoId, java.util.List.of(pessoaId), usuarioId, UUID.randomUUID(),
+                "LIDER", false, outraIgrejaId);
+
+        verify(inscricaoRepository).save(any());
     }
 
     @Test
@@ -233,11 +301,12 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
 
         assertThatThrownBy(() -> service.adicionarAcompanhante(
-                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, pessoaId,
+                "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já aconteceu");
     }
@@ -251,7 +320,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
         AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
                 .id(UUID.randomUUID()).inscricao(minha)
@@ -260,7 +329,7 @@ class InscricaoServiceTest {
 
         assertThatThrownBy(() -> service.adicionarAcompanhante(
                 minha.getId(), new AcompanhanteRequest("Carlos Outro Nome", "11999998888"),
-                usuarioId, igrejaId))
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está inscrito neste evento");
     }
@@ -273,7 +342,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
         AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
                 .id(UUID.randomUUID()).inscricao(minha)
@@ -282,7 +351,7 @@ class InscricaoServiceTest {
 
         assertThatThrownBy(() -> service.adicionarAcompanhante(
                 minha.getId(), new AcompanhanteRequest("  jose   DA silva ", null),
-                usuarioId, igrejaId))
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está inscrito neste evento");
     }
@@ -296,17 +365,18 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
         AcompanhanteInscricao existente = AcompanhanteInscricao.builder()
                 .id(UUID.randomUUID()).inscricao(minha)
                 .nome("João").telefone("11911112222").build();
         when(acompanhanteRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(existente));
         when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId))).thenReturn(Optional.of(e));
 
         service.adicionarAcompanhante(
-                minha.getId(), new AcompanhanteRequest("João", "11933334444"), usuarioId, igrejaId);
+                minha.getId(), new AcompanhanteRequest("João", "11933334444"), usuarioId, pessoaId,
+                "ACESSO_COMUM", igrejaId);
 
         verify(acompanhanteRepository).save(any(AcompanhanteInscricao.class));
     }
@@ -348,11 +418,12 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
 
         assertThatThrownBy(() -> service.adicionarAcompanhante(
-                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, pessoaId,
+                "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("não permite convidados");
     }
@@ -360,16 +431,17 @@ class InscricaoServiceTest {
     @Test
     void acompanhanteOcupaVaga() {
         Evento e = evento(2);
-        when(eventoRepository.buscarComLock(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId))).thenReturn(Optional.of(e));
         InscricaoEvento minha = InscricaoEvento.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e).pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(2L);
 
         assertThatThrownBy(() -> service.adicionarAcompanhante(
-                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, igrejaId))
+                minha.getId(), new AcompanhanteRequest("João", null), usuarioId, pessoaId,
+                "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("esgotadas");
     }
@@ -477,7 +549,7 @@ class InscricaoServiceTest {
                 .pessoa(membro(Vinculo.MEMBRO))
                 .inscritoPorUsuarioId(usuarioId)      // fui EU quem inscrevi
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(outra.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(outra));
 
         // sou MEMBRO, o membro da inscrição não sou eu
@@ -493,7 +565,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
 
         service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
@@ -512,7 +584,7 @@ class InscricaoServiceTest {
         minha.getAcompanhantes().add(
                 AcompanhanteInscricao.builder().id(UUID.randomUUID())
                         .inscricao(minha).nome("Convidado").build());
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
 
         service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
@@ -526,7 +598,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(outra.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(outra));
 
         service.cancelar(outra.getId(), usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
@@ -647,7 +719,8 @@ class InscricaoServiceTest {
                 com.domus.api.modules.evento.inscricao.AcompanhanteInscricao.builder()
                         .id(UUID.randomUUID()).inscricao(inscricao)
                         .nome("Convidado").telefone("11999998888").build());
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(e));
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of(inscricao));
 
         var participantes = service.listarParticipantes(eventoId, igrejaId);
@@ -664,7 +737,7 @@ class InscricaoServiceTest {
     void listarParticipantesSoTrazConfirmadas() {
         // listarPorEvento já filtra CONFIRMADA na query; este teste garante que o service
         // não reintroduz canceladas ao montar a resposta.
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
                 .thenReturn(Optional.of(evento(10)));
         when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
 
@@ -774,7 +847,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(minha.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(minha));
 
         assertThatThrownBy(() -> service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
@@ -793,7 +866,7 @@ class InscricaoServiceTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(e)
                 .pessoa(membro(Vinculo.MEMBRO))
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(inscricaoRepository.findByIdAndIgrejaId(outra.getId(), igrejaId))
+        when(inscricaoRepository.buscarVisivelParaFamilia(outra.getId(), Set.of(igrejaId)))
                 .thenReturn(Optional.of(outra));
 
         assertThatThrownBy(() -> service.cancelar(
@@ -846,9 +919,248 @@ class InscricaoServiceTest {
 
     @Test
     void listarParticipantesDeEventoDeOutraIgrejaEh404() {
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.empty());
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.listarParticipantes(eventoId, igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    void listarParticipantesFuncionaParaEventoCompartilhadoDeOutraIgreja() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(java.util.List.of());
+
+        var resposta = service.listarParticipantes(eventoId, igrejaId);
+
+        assertThat(resposta).isEmpty();
+    }
+
+    @Test
+    void pessoaDeOutraIgrejaDaFamiliaConseguSeInscreverEmEventoCompartilhado() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Evento compartilhado = eventoDeOutraIgreja(outraIgrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(compartilhado));
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(membro(Vinculo.MEMBRO)));
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)).thenReturn(Optional.empty());
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        MinhaInscricaoResponse response = service.inscrever(
+                eventoId, pessoaId, null, pessoaId, "ACESSO_COMUM", false, igrejaId);
+
+        assertThat(response).isNotNull();
+        verify(inscricaoRepository).save(any());
+    }
+
+    @Test
+    void pessoaDeIgrejaForaDaFamiliaNaoConseguSeInscrever() {
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)).thenReturn(Set.of(igrejaId));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.inscrever(
+                eventoId, pessoaId, null, pessoaId, "ACESSO_COMUM", false, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void cancelarPropriaInscricaoFuncionaMesmoEmEventoDeOutraIgrejaDaFamilia() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(outraIgrejaId, pessoaId);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(inscricaoRepository).save(argThat(i -> i.getStatus() == StatusInscricao.CANCELADA));
+    }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoPodeCancelarInscricaoDeTerceiro() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() -> service.cancelar(
+                inscricaoId, usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", outraIgrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("não pode cancelar");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void gestorDaMesmaIgrejaAindaPodeCancelarInscricaoDeTerceiroEmEventoCompartilhado() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+
+        service.cancelar(inscricaoId, usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoPodeRemoverAcompanhanteDeTerceiro() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(UUID.randomUUID()).inscricao(inscricaoDeTerceiro).nome("João").build();
+        when(acompanhanteRepository.findById(acompanhante.getId()))
+                .thenReturn(Optional.of(acompanhante));
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+
+        assertThatThrownBy(() -> service.removerAcompanhante(
+                acompanhante.getId(), UUID.randomUUID(), "LIDER", outraIgrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("própria inscrição");
+
+        verify(acompanhanteRepository, never()).delete(any());
+    }
+
+    @Test
+    void inscritoResponseTrazIgrejaDaPessoa() {
+        Pessoa pessoaDeOutraIgreja = pessoaComIgreja(UUID.randomUUID(), "Congregação Norte", "CN");
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).pessoa(pessoaDeOutraIgreja)
+                .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        InscritoResponse response = InscritoResponse.from(inscricao, null);
+
+        assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Norte");
+    }
+
+    @Test
+    void participanteResponseTrazIgrejaDaPessoa() {
+        Pessoa pessoaDeOutraIgreja = pessoaComIgreja(UUID.randomUUID(), "Congregação Sul", "CS");
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).pessoa(pessoaDeOutraIgreja)
+                .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        ParticipanteResponse response = ParticipanteResponse.from(inscricao);
+
+        assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Sul");
+    }
+
+    @Test
+    void donoDaInscricaoConsegueAdicionarAcompanhanteMesmoEmEventoDeOutraIgrejaDaFamilia() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricao = inscricaoConfirmada(outraIgrejaId, pessoaId);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricao.getEvento()));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.adicionarAcompanhante(inscricaoId, new AcompanhanteRequest("João", null),
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(acompanhanteRepository).save(any(AcompanhanteInscricao.class));
+    }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoPodeAdicionarAcompanhanteDeTerceiro() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(inscricaoDeTerceiro));
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+
+        assertThatThrownBy(() -> service.adicionarAcompanhante(
+                inscricaoId, new AcompanhanteRequest("João", null), usuarioId, UUID.randomUUID(),
+                "LIDER", outraIgrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("própria inscrição");
+
+        verify(acompanhanteRepository, never()).save(any());
+    }
+
+    @Test
+    void gestorDaMesmaIgrejaAindaPodeAdicionarAcompanhanteDeTerceiro() {
+        InscricaoEvento inscricaoDeTerceiro = inscricaoConfirmada(igrejaId, UUID.randomUUID());
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(inscricaoDeTerceiro));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(inscricaoDeTerceiro.getEvento()));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.adicionarAcompanhante(inscricaoId, new AcompanhanteRequest("João", null),
+                usuarioId, UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        verify(acompanhanteRepository).save(any(AcompanhanteInscricao.class));
+    }
+
+    @Test
+    void gestorDeOutraIgrejaDaFamiliaNaoContornaElegibilidadeAoSeAutoInscrever() {
+        UUID outraIgrejaId = UUID.randomUUID();
+        Igreja sedeA = new Igreja();
+        sedeA.setId(igrejaId);
+        Evento eventoDaSede = Evento.builder()
+                .id(eventoId).igreja(sedeA)
+                .titulo("Retiro de Jovens").inicioEm(LocalDateTime.now().plusDays(10))
+                .requerInscricao(true).idadeMin(12).idadeMax(17)
+                .build();
+        Pessoa gestorAdulto = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Pastor da Congregação B")
+                .vinculo(Vinculo.MEMBRO)
+                .dataNascimento(LocalDateTime.now().minusYears(40).toLocalDate())
+                .build();
+        when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
+                .thenReturn(Set.of(igrejaId, outraIgrejaId));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, outraIgrejaId, Set.of(igrejaId, outraIgrejaId)))
+                .thenReturn(Optional.of(eventoDaSede));
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, outraIgrejaId)).thenReturn(Optional.of(gestorAdulto));
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.inscrever(
+                eventoId, pessoaId, null, pessoaId, "ADMIN_IGREJA", true, outraIgrejaId))
+                .isInstanceOf(com.domus.api.modules.evento.elegibilidade.NaoElegivelException.class);
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void gestorDaMesmaIgrejaAindaContornaElegibilidadeAoSeAutoInscrever() {
+        Evento eventoRestrito = Evento.builder()
+                .id(eventoId).igreja(igreja())
+                .titulo("Retiro de Jovens").inicioEm(LocalDateTime.now().plusDays(10))
+                .requerInscricao(true).idadeMin(12).idadeMax(17)
+                .build();
+        Pessoa gestorAdulto = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Líder")
+                .vinculo(Vinculo.MEMBRO)
+                .dataNascimento(LocalDateTime.now().minusYears(40).toLocalDate())
+                .build();
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(eventoRestrito));
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(gestorAdulto));
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)).thenReturn(Optional.empty());
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, "ADMIN_IGREJA", true, igrejaId);
+
+        verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
 }

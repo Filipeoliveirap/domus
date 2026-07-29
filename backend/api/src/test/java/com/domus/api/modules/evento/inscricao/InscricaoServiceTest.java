@@ -59,8 +59,6 @@ class InscricaoServiceTest {
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
-        // Default: família = só a própria igreja. Testes de família cross-igreja sobrescrevem
-        // este stub explicitamente com o conjunto que precisam.
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));
         // Real (não mock): as regras precisam rodar de verdade para os testes de elegibilidade
         // fazerem sentido (ex.: exclusivoMembros/Congregante via RegraVinculo).
@@ -965,9 +963,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDeOutraIgrejaDaFamiliaNaoPodeCancelarInscricaoDeTerceiro() {
-        // Cancelar inscrição de OUTRA PESSOA é ação de gestão: family-wide não pode valer
-        // aqui, senão um gestor da Congregação B cancela um desconhecido inscrito num
-        // evento organizado pela Sede A só porque as igrejas são da mesma família.
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
         when(familiaIgrejaService.idsDaFamiliaCompleta(outraIgrejaId))
@@ -985,8 +980,6 @@ class InscricaoServiceTest {
 
     @Test
     void gestorDaMesmaIgrejaAindaPodeCancelarInscricaoDeTerceiroEmEventoCompartilhado() {
-        // Regressão: o gestor da PRÓPRIA igreja organizadora do evento continua podendo
-        // cancelar a inscrição de terceiros, mesmo com family-wide habilitado no lookup.
         UUID outraIgrejaId = UUID.randomUUID();
         InscricaoEvento inscricao = inscricaoConfirmada(igrejaId, UUID.randomUUID());
         when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))

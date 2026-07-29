@@ -143,6 +143,13 @@ class FamiliaIgrejaServiceTest {
         assertThat(service.ehMae(independente)).isFalse();
     }
 
+    @Test
+    void filhaEhQuemTemMae() {
+        assertThat(service.ehFilha(filhaA1)).isTrue();
+        assertThat(service.ehFilha(maeA)).isFalse();
+        assertThat(service.ehFilha(independente)).isFalse();
+    }
+
 
     @Test
     void igrejaComMaeVeMaeEIrmas() {

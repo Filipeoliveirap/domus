@@ -81,4 +81,14 @@ public class RelatorioController {
         exigirFinanceiro();
         return service.maiorLancamento(escopo(igrejaId), dataInicio, dataFim, vinculo);
     }
+
+    @GetMapping("/por-contribuinte")
+    public List<ContribuinteBreakdownResponse> porContribuinte(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            @RequestParam(required = false) UUID igrejaId,
+            @RequestParam(required = false) Vinculo vinculo) {
+        exigirFinanceiro();
+        return service.porContribuinte(escopo(igrejaId), dataInicio, dataFim, vinculo);
+    }
 }

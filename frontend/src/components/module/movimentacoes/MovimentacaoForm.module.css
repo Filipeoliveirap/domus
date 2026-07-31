@@ -378,8 +378,111 @@
   text-decoration: underline;
 }
 
+/* ─── Contribuintes ─── */
+.contribuintesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btnMeioAMeio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+.btnMeioAMeio:hover { opacity: 0.85; }
+
+.contribuintesLista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contribuinteLinha {
+  display: grid;
+  grid-template-columns: 1fr 140px auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.contribuintePessoa { min-width: 0; }
+
+.inputValorContribuinte {
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.inputValorContribuinte:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.btnRemoverContribuinte {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.btnRemoverContribuinte:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.btnAdicionarContribuinte {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-top: 4px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+}
+.btnAdicionarContribuinte:hover { background: var(--color-bg-page); }
+
+.somaContribuintes {
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+.somaOk { color: var(--color-text-muted); }
+.somaErro { color: var(--color-danger); }
+
 /* ─── Responsivo ─── */
 @media (max-width: 1024px) {
   .colunas { grid-template-columns: 1fr; }
   .colunaDireita { position: static; }
+}
+
+@media (max-width: 560px) {
+  .contribuinteLinha {
+    grid-template-columns: 1fr;
+  }
+  .inputValorContribuinte { width: 100%; }
 }

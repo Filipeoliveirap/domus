@@ -40,7 +40,7 @@ CREATE TABLE movimentacao_contribuinte (
 - Vale pros dois tipos (ENTRADA e SAÍDA) — uma saída também pode ser dividida entre duas
   pessoas (ex.: reembolso de viagem a dois, ajuda partilhada entre duas famílias).
 
-### Migração (V4)
+### Migração (V15)
 
 ```sql
 INSERT INTO movimentacao_contribuinte (movimentacao_id, pessoa_id, valor)

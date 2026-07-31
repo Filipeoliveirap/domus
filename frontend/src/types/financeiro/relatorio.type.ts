@@ -35,6 +35,14 @@ export interface PeriodoRelatorio {
   dataFim: string      
 }
 
+export interface ContribuinteBreakdown {
+  pessoaId: string
+  pessoaNome: string
+  tipo: TipoMovimentacao
+  total: string
+  percentual: string
+}
+
 export interface MaiorLancamento {
   id: string
   descricao: string | null

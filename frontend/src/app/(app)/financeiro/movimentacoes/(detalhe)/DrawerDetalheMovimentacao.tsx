@@ -74,14 +74,20 @@ export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDet
                   </div>
                 </div>
 
-                {mov.pessoaNome && (
+                {mov.contribuintes.length > 0 && (
                   <div className={styles.infoItem}>
                     <span className={styles.infoIcone}><User size={18} /></span>
                     <div>
                       <p className={styles.infoLabel}>
-                        {mov.tipo === 'ENTRADA' ? 'Contribuinte' : 'Beneficiário'}
+                        {mov.tipo === 'ENTRADA' ? 'Contribuintes' : 'Beneficiários'}
                       </p>
-                      <p className={styles.infoValor}>{mov.pessoaNome}</p>
+                      <div className={styles.contribuintesLista}>
+                        {mov.contribuintes.map((c) => (
+                          <p key={c.pessoaId} className={styles.infoValor}>
+                            {c.pessoaNome} <span className={styles.contribuinteValor}>{formatarMoeda(c.valor)}</span>
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

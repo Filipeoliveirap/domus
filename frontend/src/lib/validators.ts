@@ -175,6 +175,11 @@ export const categoriaSchema = z.object({
   tipo: z.enum(['ENTRADA', 'SAIDA', 'AMBOS'], { message: 'Selecione o tipo da categoria.' }),
 })
 
+const contribuinteSchema = z.object({
+  pessoaId: z.string().min(1, 'Selecione a pessoa.'),
+  valor: z.string().min(1, 'Informe o valor.').refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
+})
+
 export const movimentacaoSchema = z.object({
   tipo: z.enum(['ENTRADA', 'SAIDA'], { message: 'Selecione o tipo.' }),
   valor: z.string()
@@ -182,8 +187,19 @@ export const movimentacaoSchema = z.object({
     .refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
   categoriaId: z.string().min(1, 'Selecione a categoria.'),
   dataMovimentacao: z.string().min(1, 'A data é obrigatória.'),
-  pessoaId: opcional(z.string()),
+  contribuintes: z.array(contribuinteSchema),
   descricao: opcional(z.string().max(1000, 'Máximo 1000 caracteres.')),
+}).superRefine((data, ctx) => {
+  if (data.contribuintes.length === 0) return
+  const somaContribuintes = data.contribuintes.reduce((acc, c) => acc + (parseFloat(c.valor) || 0), 0)
+  const total = parseFloat(data.valor) || 0
+  if (Math.abs(somaContribuintes - total) > 0.001) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['contribuintes'],
+      message: 'A soma dos contribuintes precisa ser igual ao valor da movimentação.',
+    })
+  }
 })
 
 export const convidadoSchema = z.object({

@@ -68,7 +68,11 @@ export function SelecaoPessoa({ pessoaIdSelecionado, nomeSelecionado, onSelecion
                 key={p.id}
                 type="button"
                 className={styles.opcao}
-                onClick={() => {
+                // onMouseDown (não onClick): dispara antes do onBlur do input fechar o
+                // dropdown, evitando o "precisa clicar duas vezes" — o 1º clique fechava
+                // sem selecionar. preventDefault evita que o input perca o foco antes da hora.
+                onMouseDown={(e) => {
+                  e.preventDefault()
                   setNomeCapturado(p.nome)
                   onSelecionar(p.id, p.nome)
                   setBusca('')

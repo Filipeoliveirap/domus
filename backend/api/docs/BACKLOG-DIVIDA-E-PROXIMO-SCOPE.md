@@ -133,20 +133,18 @@
   conveniência e virou interruptor de comprometimento de sessão. Conferir com cuidado ao
   configurar produção.
 
-- **Acesso horizontal a dados de membro dentro da mesma igreja (a decidir a intenção).**
-  Hoje `GET /membros/**` permite o perfil `MEMBRO`, e `buscarPorId` escopa **só por igreja**
-  (`findByIdAndIgrejaId`), **sem checagem de dono**. Consequência: qualquer `MEMBRO` da igreja
-  vê os dados completos de qualquer outro membro (`email`, `telefone`, `endereco`,
-  `dataNascimento`, `observacoes`, etc.) — seja por `GET /membros/{id}` ou pela listagem
-  `GET /membros`. **Não é falha de sigilo de id** (o id não é segredo; a autorização é que
-  decide) — é uma decisão de controle de acesso.
-  - *Perguntar:* isso é intencional (lista de contatos aberta a toda a igreja) ou os campos
-    sensíveis (endereço, telefone, `observacoes` — possíveis notas pastorais privadas) deveriam
-    ser restritos a ADMIN/LÍDER?
-  - *Opções se for restringir:* (a) tirar `MEMBRO` do `GET /membros`; (b) filtrar campos por
-    perfil (membro vê perfil reduzido); (c) membro só vê o próprio registro.
-  - *Escopo maior:* fazer uma **revisão de autorização por perfil em todos os módulos** (quem vê
-    o quê) — não só membros. Descoberto em 2026-07-16 discutindo o risco de id em localStorage.
+- ~~**Acesso horizontal a dados de pessoa dentro da mesma igreja.**~~ **RESOLVIDO**
+  (decisão do autor em 2026-07-29): endereço e observações (possíveis notas pastorais
+  privadas) ficam restritos a quem `Permissoes.podeVerDadosSensiveisDePessoa` libera
+  (ADMIN_IGREJA ou SECRETARIO) — telefone e data de nascimento continuam abertos a
+  qualquer pessoa da igreja (decisão explícita, não é o resto ficando de fora por
+  esquecimento). A implementação (`PessoaResponse.from(..., incluirDadosSensiveis)`,
+  já usada em `GET /pessoas` e `GET /pessoas/{id}`) já existia — faltava só teste
+  provando; adicionado em `PessoaServiceTest` (`buscarPorId_semDadosSensiveis_...`).
+- **Revisão de autorização por perfil, módulo a módulo (escopo maior, ainda aberto).**
+  Nunca foi feita uma varredura sistemática de "quem vê o quê" em todos os módulos — só
+  correções pontuais conforme apareceram (esta mesma, célula, visitantes...). Vale um
+  brainstorm próprio se decidir fazer. Descoberto em 2026-07-16 discutindo o item acima.
 
 ---
 
@@ -240,8 +238,9 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
   spec já dizia. Depende de consultar o pastor primeiro. ~~**Irmãs verem eventos umas das
   outras**~~ **RESOLVIDO** (2026-07-29): eventos compartilhados entre igrejas vinculadas
   (`evento.restrito_propria_igreja`), ver spec `2026-07-28-eventos-compartilhados-design.md`.
-- **Upload do logo da igreja.** A coluna `logo_url` existe desde a V13, mas a tela só a preserva
-  (não faz upload). Entra junto com o upload de foto de membro/evento da Fase 2.
+- ~~**Upload do logo da igreja.**~~ **RESOLVIDO**: entrou junto com o upload de foto da Fase 2
+  (V2, 2026-07-22) — `<UploadFoto>` em `/configuracoes/igreja`, `igreja.logo_foto_id` é FK
+  pra `foto.id` (nota antiga desta linha estava desatualizada, escrita antes da entrega).
 - ~~**Confirmações usam `window.confirm`.**~~ **RESOLVIDO** (2026-07-19): criado
   `components/common/ModalConfirmacaoCritica`, no modelo "digite o nome para confirmar" do
   GitHub — lista o que se perde e o que se mantém, e exige digitar o nome da igreja. Usado em

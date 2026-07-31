@@ -4,6 +4,7 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useFieldArray } from 'react-hook-form'
 import { useAppForm } from '../../forms/useAppForm'
 import { movimentacaoSchema, type MovimentacaoFormInput, type MovimentacaoFormData } from '@/lib/validators'
 import { movimentacoesService } from '@/services/financeiro/movimentacao.service'
@@ -31,22 +32,26 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
       valor: '',
       categoriaId: '',
       dataMovimentacao: '',
-      pessoaId: '',
+      contribuintes: [],
       descricao: '',
     },
     requiredFields: ['tipo', 'valor', 'categoriaId', 'dataMovimentacao'],
   })
 
-  const { reset } = form
+  const { reset, control } = form
+  const contribuintesArray = useFieldArray({ control, name: 'contribuintes' })
 
   useEffect(() => {
     if (movimentacaoInicial) {
       reset({
         tipo: movimentacaoInicial.tipo,
-        valor: String(movimentacaoInicial.valor),  
+        valor: String(movimentacaoInicial.valor),
         categoriaId: movimentacaoInicial.categoriaId,
         dataMovimentacao: movimentacaoInicial.dataMovimentacao.split('T')[0],
-        pessoaId: movimentacaoInicial.pessoaId ?? '',
+        contribuintes: movimentacaoInicial.contribuintes.map((c) => ({
+          pessoaId: c.pessoaId,
+          valor: String(c.valor),
+        })),
         descricao: movimentacaoInicial.descricao ?? '',
       })
     }
@@ -61,7 +66,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: data.valor,
         categoriaId: data.categoriaId,
         dataMovimentacao: data.dataMovimentacao,
-        pessoaId: data.pessoaId || undefined,
+        contribuintes: data.contribuintes,
         descricao: data.descricao || undefined,
       }
 
@@ -84,6 +89,10 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
           form.setError('categoriaId', { type: 'server', message: e.message })
           return
         }
+        if (e?.error === 'VALOR_CONTRIBUINTES_DIVERGENTE' || e?.error === 'CONTRIBUINTE_DUPLICADO') {
+          form.setError('contribuintes', { type: 'server', message: e.message })
+          return
+        }
         setErroGeral(e?.message ?? 'Erro ao salvar movimentação. Tente novamente.')
       } else {
         setErroGeral('Erro ao salvar movimentação. Tente novamente.')
@@ -92,6 +101,6 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
       setIsLoading(false)
     }
   }
-  
-  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+
+  return { ...form, contribuintesArray, onSubmit, erroGeral, isLoading, ehEdicao }
 }

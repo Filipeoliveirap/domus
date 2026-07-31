@@ -1,16 +1,25 @@
 export type TipoMovimentacao = 'ENTRADA' | 'SAIDA'
 
+export interface ContribuinteResponse {
+  pessoaId: string
+  pessoaNome: string
+  valor: string
+}
+
+export interface ContribuinteInput {
+  pessoaId: string
+  valor: string
+}
+
 export interface MovimentacaoResponse {
   id: string
   tipo: TipoMovimentacao
-  valor: string 
-  dataMovimentacao: string        
+  valor: string
+  dataMovimentacao: string
   descricao: string | null
   categoriaId: string
   categoriaNome: string
-  pessoaId: string | null
-  // Nome vem assim da API (`MovimentacaoResponse.pessoaNome`, backend) — não renomeado por lá.
-  pessoaNome: string | null
+  contribuintes: ContribuinteResponse[]
   criadoPorNome: string
   atualizadoPorNome: string | null
 }
@@ -20,8 +29,14 @@ export interface MovimentacaoRequest {
   valor: string
   categoriaId: string
   dataMovimentacao: string
-  pessoaId?: string | null
+  contribuintes: ContribuinteInput[]
   descricao?: string | null
+}
+
+export interface MovimentacaoTotais {
+  totalEntradas: string
+  totalSaidas: string
+  quantidade: number
 }
 
 export interface MovimentacaoFiltros {
@@ -30,6 +45,7 @@ export interface MovimentacaoFiltros {
   dataInicio?: string
   dataFim?: string
   q?: string
+  pessoaId?: string
   page: number
   size?: number
 }

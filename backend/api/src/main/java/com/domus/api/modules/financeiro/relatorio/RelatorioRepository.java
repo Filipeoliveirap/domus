@@ -17,16 +17,30 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
         COALESCE(SUM(CASE WHEN m.tipo = 'SAIDA' THEN m.valor ELSE 0 END), 0) AS totalSaidas,
         COUNT(m) AS quantidade
     FROM MovimentacaoFinanceira m
-    LEFT JOIN m.pessoa p
     WHERE m.igreja.id = :igrejaId
       AND m.dataMovimentacao >= :dataInicio
       AND m.dataMovimentacao <= :dataFim
-      AND (:vinculo IS NULL OR p.vinculo = :vinculo)
 """)
     RelatorioProjections.ResumoAgregado agregarResumo(@Param("igrejaId") UUID igrejaId,
                                                       @Param("dataInicio") LocalDate dataInicio,
-                                                      @Param("dataFim") LocalDate dataFim,
-                                                      @Param("vinculo") Vinculo vinculo);
+                                                      @Param("dataFim") LocalDate dataFim);
+
+    @Query("""
+    SELECT
+        COALESCE(SUM(CASE WHEN ct.movimentacao.tipo = 'ENTRADA' THEN ct.valor ELSE 0 END), 0) AS totalEntradas,
+        COALESCE(SUM(CASE WHEN ct.movimentacao.tipo = 'SAIDA' THEN ct.valor ELSE 0 END), 0) AS totalSaidas,
+        COUNT(DISTINCT ct.movimentacao) AS quantidade
+    FROM MovimentacaoContribuinte ct
+    WHERE ct.movimentacao.igreja.id = :igrejaId
+      AND ct.movimentacao.dataMovimentacao >= :dataInicio
+      AND ct.movimentacao.dataMovimentacao <= :dataFim
+      AND ct.pessoa.vinculo = :vinculo
+""")
+    RelatorioProjections.ResumoAgregado agregarResumoPorVinculo(@Param("igrejaId") UUID igrejaId,
+                                                                @Param("dataInicio") LocalDate dataInicio,
+                                                                @Param("dataFim") LocalDate dataFim,
+                                                                @Param("vinculo") Vinculo vinculo);
+
     @Query("""
     SELECT
         c.id AS categoriaId,
@@ -35,18 +49,36 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
         SUM(m.valor) AS total
     FROM MovimentacaoFinanceira m
     JOIN m.categoria c
-    LEFT JOIN m.pessoa p
     WHERE m.igreja.id = :igrejaId
       AND m.dataMovimentacao >= :dataInicio
       AND m.dataMovimentacao <= :dataFim
-      AND (:vinculo IS NULL OR p.vinculo = :vinculo)
     GROUP BY c.id, c.nome, m.tipo
     ORDER BY SUM(m.valor) DESC
 """)
     List<RelatorioProjections.CategoriaAgregada> agregarPorCategoria(@Param("igrejaId") UUID igrejaId,
                                                                      @Param("dataInicio") LocalDate dataInicio,
-                                                                     @Param("dataFim") LocalDate dataFim,
-                                                                     @Param("vinculo") Vinculo vinculo);
+                                                                     @Param("dataFim") LocalDate dataFim);
+
+    @Query("""
+    SELECT
+        c.id AS categoriaId,
+        c.nome AS categoriaNome,
+        ct.movimentacao.tipo AS tipo,
+        SUM(ct.valor) AS total
+    FROM MovimentacaoContribuinte ct
+    JOIN ct.movimentacao.categoria c
+    WHERE ct.movimentacao.igreja.id = :igrejaId
+      AND ct.movimentacao.dataMovimentacao >= :dataInicio
+      AND ct.movimentacao.dataMovimentacao <= :dataFim
+      AND ct.pessoa.vinculo = :vinculo
+    GROUP BY c.id, c.nome, ct.movimentacao.tipo
+    ORDER BY SUM(ct.valor) DESC
+""")
+    List<RelatorioProjections.CategoriaAgregada> agregarPorCategoriaPorVinculo(@Param("igrejaId") UUID igrejaId,
+                                                                               @Param("dataInicio") LocalDate dataInicio,
+                                                                               @Param("dataFim") LocalDate dataFim,
+                                                                               @Param("vinculo") Vinculo vinculo);
+
     @Query("""
     SELECT
         CAST(EXTRACT(YEAR FROM m.dataMovimentacao) AS integer) AS ano,
@@ -54,18 +86,34 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
         COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.valor ELSE 0 END), 0) AS entradas,
         COALESCE(SUM(CASE WHEN m.tipo = 'SAIDA' THEN m.valor ELSE 0 END), 0) AS saidas
     FROM MovimentacaoFinanceira m
-    LEFT JOIN m.pessoa p
     WHERE m.igreja.id = :igrejaId
       AND m.dataMovimentacao >= :dataInicio
       AND m.dataMovimentacao <= :dataFim
-      AND (:vinculo IS NULL OR p.vinculo = :vinculo)
     GROUP BY EXTRACT(YEAR FROM m.dataMovimentacao), EXTRACT(MONTH FROM m.dataMovimentacao)
     ORDER BY EXTRACT(YEAR FROM m.dataMovimentacao), EXTRACT(MONTH FROM m.dataMovimentacao)
 """)
     List<RelatorioProjections.MesAgregado> agregarEvolucaoMensal(@Param("igrejaId") UUID igrejaId,
                                                                  @Param("dataInicio") LocalDate dataInicio,
-                                                                 @Param("dataFim") LocalDate dataFim,
-                                                                 @Param("vinculo") Vinculo vinculo);
+                                                                 @Param("dataFim") LocalDate dataFim);
+
+    @Query("""
+    SELECT
+        CAST(EXTRACT(YEAR FROM ct.movimentacao.dataMovimentacao) AS integer) AS ano,
+        CAST(EXTRACT(MONTH FROM ct.movimentacao.dataMovimentacao) AS integer) AS mes,
+        COALESCE(SUM(CASE WHEN ct.movimentacao.tipo = 'ENTRADA' THEN ct.valor ELSE 0 END), 0) AS entradas,
+        COALESCE(SUM(CASE WHEN ct.movimentacao.tipo = 'SAIDA' THEN ct.valor ELSE 0 END), 0) AS saidas
+    FROM MovimentacaoContribuinte ct
+    WHERE ct.movimentacao.igreja.id = :igrejaId
+      AND ct.movimentacao.dataMovimentacao >= :dataInicio
+      AND ct.movimentacao.dataMovimentacao <= :dataFim
+      AND ct.pessoa.vinculo = :vinculo
+    GROUP BY EXTRACT(YEAR FROM ct.movimentacao.dataMovimentacao), EXTRACT(MONTH FROM ct.movimentacao.dataMovimentacao)
+    ORDER BY EXTRACT(YEAR FROM ct.movimentacao.dataMovimentacao), EXTRACT(MONTH FROM ct.movimentacao.dataMovimentacao)
+""")
+    List<RelatorioProjections.MesAgregado> agregarEvolucaoMensalPorVinculo(@Param("igrejaId") UUID igrejaId,
+                                                                           @Param("dataInicio") LocalDate dataInicio,
+                                                                           @Param("dataFim") LocalDate dataFim,
+                                                                           @Param("vinculo") Vinculo vinculo);
 
     @Query("""
         SELECT
@@ -77,16 +125,74 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
             m.dataMovimentacao AS dataMovimentacao
         FROM MovimentacaoFinanceira m
         JOIN m.categoria c
-        LEFT JOIN m.pessoa p
         WHERE m.igreja.id = :igrejaId
           AND m.dataMovimentacao >= :dataInicio
           AND m.dataMovimentacao <= :dataFim
-          AND (:vinculo IS NULL OR p.vinculo = :vinculo)
         ORDER BY m.valor DESC
         LIMIT 1
     """)
     RelatorioProjections.MaiorLancamento buscarMaiorLancamento(@Param("igrejaId") UUID igrejaId,
                                                                @Param("dataInicio") LocalDate dataInicio,
-                                                               @Param("dataFim") LocalDate dataFim,
-                                                               @Param("vinculo") Vinculo vinculo);
+                                                               @Param("dataFim") LocalDate dataFim);
+
+    @Query("""
+        SELECT
+            m.id AS id,
+            m.descricao AS descricao,
+            c.nome AS categoriaNome,
+            ct.movimentacao.tipo AS tipo,
+            ct.valor AS valor,
+            m.dataMovimentacao AS dataMovimentacao
+        FROM MovimentacaoContribuinte ct
+        JOIN ct.movimentacao m
+        JOIN m.categoria c
+        WHERE m.igreja.id = :igrejaId
+          AND m.dataMovimentacao >= :dataInicio
+          AND m.dataMovimentacao <= :dataFim
+          AND ct.pessoa.vinculo = :vinculo
+        ORDER BY ct.valor DESC
+        LIMIT 1
+    """)
+    RelatorioProjections.MaiorLancamento buscarMaiorLancamentoPorVinculo(@Param("igrejaId") UUID igrejaId,
+                                                                         @Param("dataInicio") LocalDate dataInicio,
+                                                                         @Param("dataFim") LocalDate dataFim,
+                                                                         @Param("vinculo") Vinculo vinculo);
+
+    @Query("""
+    SELECT
+        p.id AS pessoaId,
+        p.nome AS pessoaNome,
+        ct.movimentacao.tipo AS tipo,
+        SUM(ct.valor) AS total
+    FROM MovimentacaoContribuinte ct
+    JOIN ct.pessoa p
+    WHERE ct.movimentacao.igreja.id = :igrejaId
+      AND ct.movimentacao.dataMovimentacao >= :dataInicio
+      AND ct.movimentacao.dataMovimentacao <= :dataFim
+    GROUP BY p.id, p.nome, ct.movimentacao.tipo
+    ORDER BY SUM(ct.valor) DESC
+""")
+    List<RelatorioProjections.ContribuinteAgregado> agregarPorContribuinte(@Param("igrejaId") UUID igrejaId,
+                                                                           @Param("dataInicio") LocalDate dataInicio,
+                                                                           @Param("dataFim") LocalDate dataFim);
+
+    @Query("""
+    SELECT
+        p.id AS pessoaId,
+        p.nome AS pessoaNome,
+        ct.movimentacao.tipo AS tipo,
+        SUM(ct.valor) AS total
+    FROM MovimentacaoContribuinte ct
+    JOIN ct.pessoa p
+    WHERE ct.movimentacao.igreja.id = :igrejaId
+      AND ct.movimentacao.dataMovimentacao >= :dataInicio
+      AND ct.movimentacao.dataMovimentacao <= :dataFim
+      AND p.vinculo = :vinculo
+    GROUP BY p.id, p.nome, ct.movimentacao.tipo
+    ORDER BY SUM(ct.valor) DESC
+""")
+    List<RelatorioProjections.ContribuinteAgregado> agregarPorContribuintePorVinculo(@Param("igrejaId") UUID igrejaId,
+                                                                                      @Param("dataInicio") LocalDate dataInicio,
+                                                                                      @Param("dataFim") LocalDate dataFim,
+                                                                                      @Param("vinculo") Vinculo vinculo);
 }

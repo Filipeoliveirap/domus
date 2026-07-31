@@ -40,14 +40,11 @@
     - **Limites por rota individual.** Hoje há só dois tiers (global e auth). Se algum endpoint
       específico precisar de teto próprio, generalizar a configuração.
 
-- **`X-Forwarded-For`: pegamos o PRIMEIRO elemento da lista.** `RateLimitFilter.resolverIp()`
-  faz `forwarded.split(",")[0]`. Isso só é correto se o proxy **substituir** o header
-  (`proxy_set_header X-Forwarded-For $remote_addr`). Se ele **acrescentar** (o mais comum:
-  `$proxy_add_x_forwarded_for`), a lista fica `<forjado pelo cliente>, <ip real>` e o
-  primeiro elemento é o **forjado** — um atacante escaparia do rate limiting só mandando o
-  header. Hoje é inofensivo (`trust-forwarded-for=false`), mas vira crítico no dia em que
-  for ligado. Decidir junto com a hospedagem: ou configurar o proxy para substituir, ou
-  trocar o código para pegar o **último** elemento (o mais próximo do proxy confiável).
+- ~~**`X-Forwarded-For`: pegamos o PRIMEIRO elemento da lista.**~~ **RESOLVIDO** (2026-07-29):
+  `RateLimitFilter.resolverIp()` agora pega o **último** elemento, não o primeiro — correto
+  tanto se o proxy substitui quanto se acrescenta ao header. Coberto por
+  `trustForwardedFor_usaUltimoIpDoHeader` e um teste simulando um atacante variando o
+  primeiro elemento a cada requisição (`RateLimitFilterTest`).
 
 - **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
   migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
@@ -136,20 +133,18 @@
   conveniência e virou interruptor de comprometimento de sessão. Conferir com cuidado ao
   configurar produção.
 
-- **Acesso horizontal a dados de membro dentro da mesma igreja (a decidir a intenção).**
-  Hoje `GET /membros/**` permite o perfil `MEMBRO`, e `buscarPorId` escopa **só por igreja**
-  (`findByIdAndIgrejaId`), **sem checagem de dono**. Consequência: qualquer `MEMBRO` da igreja
-  vê os dados completos de qualquer outro membro (`email`, `telefone`, `endereco`,
-  `dataNascimento`, `observacoes`, etc.) — seja por `GET /membros/{id}` ou pela listagem
-  `GET /membros`. **Não é falha de sigilo de id** (o id não é segredo; a autorização é que
-  decide) — é uma decisão de controle de acesso.
-  - *Perguntar:* isso é intencional (lista de contatos aberta a toda a igreja) ou os campos
-    sensíveis (endereço, telefone, `observacoes` — possíveis notas pastorais privadas) deveriam
-    ser restritos a ADMIN/LÍDER?
-  - *Opções se for restringir:* (a) tirar `MEMBRO` do `GET /membros`; (b) filtrar campos por
-    perfil (membro vê perfil reduzido); (c) membro só vê o próprio registro.
-  - *Escopo maior:* fazer uma **revisão de autorização por perfil em todos os módulos** (quem vê
-    o quê) — não só membros. Descoberto em 2026-07-16 discutindo o risco de id em localStorage.
+- ~~**Acesso horizontal a dados de pessoa dentro da mesma igreja.**~~ **RESOLVIDO**
+  (decisão do autor em 2026-07-29): endereço e observações (possíveis notas pastorais
+  privadas) ficam restritos a quem `Permissoes.podeVerDadosSensiveisDePessoa` libera
+  (ADMIN_IGREJA ou SECRETARIO) — telefone e data de nascimento continuam abertos a
+  qualquer pessoa da igreja (decisão explícita, não é o resto ficando de fora por
+  esquecimento). A implementação (`PessoaResponse.from(..., incluirDadosSensiveis)`,
+  já usada em `GET /pessoas` e `GET /pessoas/{id}`) já existia — faltava só teste
+  provando; adicionado em `PessoaServiceTest` (`buscarPorId_semDadosSensiveis_...`).
+- **Revisão de autorização por perfil, módulo a módulo (escopo maior, ainda aberto).**
+  Nunca foi feita uma varredura sistemática de "quem vê o quê" em todos os módulos — só
+  correções pontuais conforme apareceram (esta mesma, célula, visitantes...). Vale um
+  brainstorm próprio se decidir fazer. Descoberto em 2026-07-16 discutindo o item acima.
 
 ---
 
@@ -239,10 +234,13 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
   do módulo de eventos** — reavaliar se aparecer igreja fora de BRT.
 - **`Endereco` (`@Embeddable`) mora em `modules.membro`** e é reusado por `Igreja`. Funciona e é
   DRY, mas o lugar certo seria `shared`. Mover quando alguém encostar no módulo de membro.
-- **Listas navegáveis** (a mãe folhear membros/eventos das filhas) e **irmãs verem eventos umas
-  das outras** — continuam fora, como o spec já dizia. Depende de consultar o pastor primeiro.
-- **Upload do logo da igreja.** A coluna `logo_url` existe desde a V13, mas a tela só a preserva
-  (não faz upload). Entra junto com o upload de foto de membro/evento da Fase 2.
+- **Listas navegáveis** (a mãe folhear membros/eventos das filhas) — continua fora, como o
+  spec já dizia. Depende de consultar o pastor primeiro. ~~**Irmãs verem eventos umas das
+  outras**~~ **RESOLVIDO** (2026-07-29): eventos compartilhados entre igrejas vinculadas
+  (`evento.restrito_propria_igreja`), ver spec `2026-07-28-eventos-compartilhados-design.md`.
+- ~~**Upload do logo da igreja.**~~ **RESOLVIDO**: entrou junto com o upload de foto da Fase 2
+  (V2, 2026-07-22) — `<UploadFoto>` em `/configuracoes/igreja`, `igreja.logo_foto_id` é FK
+  pra `foto.id` (nota antiga desta linha estava desatualizada, escrita antes da entrega).
 - ~~**Confirmações usam `window.confirm`.**~~ **RESOLVIDO** (2026-07-19): criado
   `components/common/ModalConfirmacaoCritica`, no modelo "digite o nome para confirmar" do
   GitHub — lista o que se perde e o que se mantém, e exige digitar o nome da igreja. Usado em
@@ -483,14 +481,18 @@ Dois tokens distintos. Quando separar, lembrar que o backup usa os secrets do **
 Origem: em 2026-07-22 as credenciais foram rotacionadas porque vazaram numa conversa, e na
 recriação os dois usos ficaram com o mesmo token.
 
-### ⚠️ Limpeza de foto de arquivada pode falhar por FK RESTRICT (a verificar) — 2026-07-22
+### ~~⚠️ Limpeza de foto de arquivada pode falhar por FK RESTRICT~~ — 2026-07-22, **RESOLVIDO 2026-07-29**
 
-`LimpezaFotosJob.limparDeArquivadas` chama `fotoService.remover`, que faz `DELETE FROM foto`.
-Mas `pessoa.foto_id` é `ON DELETE RESTRICT` (V2) e a pessoa arquivada **ainda referencia** a
-foto — o DELETE seria recusado pelo banco. O teste do job é Mockito e não exercita a FK, então
-não pega. Falta desvincular (`pessoa.foto_id = NULL`) antes de apagar a foto. Reproduzir contra
-Postgres real (arquivar pessoa com foto, avançar o corte, rodar o job) e corrigir.
-Regra de domínio associada: o REGISTRO da pessoa nunca é apagado pela rotina — só a foto.
+`LimpezaFotosJob.limparDeArquivadas` chamava `fotoService.remover` (que faz `DELETE FROM
+foto`) sem antes soltar `pessoa.foto_id` — como essa coluna é `ON DELETE RESTRICT` (V2) e a
+pessoa arquivada ainda referenciava a foto, o DELETE era recusado pelo banco todo dia, sem
+alerta. Corrigido com `PessoaRepository.desvincularFoto` (nativa, porque `Pessoa` tem
+`@SQLRestriction` e um UPDATE via JPQL não enxergaria a pessoa arquivada), chamada antes de
+`fotoService.remover`. Provado contra Postgres real em
+`PessoaRepositoryDesvincularFotoTest` (arquiva pessoa com foto, roda o UPDATE, confirma
+`foto_id NULL` via query nativa) — exatamente o cenário que o Mockito não pegava.
+Regra de domínio associada continua valendo: o REGISTRO da pessoa nunca é apagado pela
+rotina — só a foto.
 
 ### Rótulo do módulo "Ministério" deveria ser self-service por igreja (Fase 5) — 2026-07-24
 

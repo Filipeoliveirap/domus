@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public record MovimentacaoRequestDTO(
@@ -22,7 +23,8 @@ public record MovimentacaoRequestDTO(
         @NotNull(message = "A data é obrigatória")
         LocalDate dataMovimentacao,
 
-        UUID pessoaId,          // opcional — contribuinte/beneficiário
+        @NotNull(message = "A lista de contribuintes é obrigatória (pode ser vazia)")
+        List<ContribuinteDTO> contribuintes,
 
         @Size(max = 1000, message = "A descrição deve ter no máximo 1000 caracteres")
         String descricao

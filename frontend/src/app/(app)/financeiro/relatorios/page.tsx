@@ -10,6 +10,8 @@ import { CardsResumo } from './CardsResumo'
 import { BarraProporcao } from './BarraProporcao'
 import { Destaques } from './Destaques'
 import { BreakdownCategoria } from './BreakdownCategoria'
+import { BreakdownContribuinte } from './BreakdownContribuinte'
+import { usePorContribuinte } from '@/hooks/financeiro/relatorio/usePorContribuinte'
 import { GraficoEvolucao } from './GraficoEvolucao'
 import type { PeriodoRelatorio } from '@/types/financeiro/relatorio.type'
 import { useMaiorLancamento } from '@/hooks/financeiro/relatorio/useMaiorLancamento'
@@ -104,6 +106,7 @@ export default function RelatoriosPage() {
   const categorias = usePorCategoria(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
   const evolucao = useEvolucaoMensal(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
   const maiorLanc = useMaiorLancamento(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
+  const porContribuinte = usePorContribuinte(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
 
   const consolidado = useConsolidado(periodo, autorizado && abaEfetiva === 'CONGREGACOES')
 
@@ -238,6 +241,13 @@ export default function RelatoriosPage() {
           <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => categorias.refetch()} />
 
           <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => evolucao.refetch()} />
+
+          <BreakdownContribuinte
+            data={porContribuinte.data}
+            isLoading={porContribuinte.isLoading}
+            isError={porContribuinte.isError}
+            aoTentarNovamente={() => porContribuinte.refetch()}
+          />
         </>
       )}
     </div>

@@ -1,5 +1,6 @@
 package com.domus.api.modules.foto;
 
+import com.domus.api.modules.pessoa.PessoaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ public class LimpezaFotosJob {
 
     private final FotoRepository fotoRepository;
     private final FotoService fotoService;
+    private final PessoaRepository pessoaRepository;
 
     @Value("${app.fotos.orfa-horas:24}")
     private int orfaHoras;
@@ -49,6 +51,7 @@ public class LimpezaFotosJob {
         List<Foto> deArquivadas = fotoRepository.buscarDeArquivadas(corte);
 
         for (Foto foto : deArquivadas) {
+            pessoaRepository.desvincularFoto(foto.getId());
             fotoService.remover(foto.getId());
         }
 

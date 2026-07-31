@@ -44,7 +44,7 @@ class DashboardServiceTest {
         service = new DashboardService(pessoaRepository, eventoRepository, relatorioRepository,
                 movimentacaoRepository, familiaIgrejaService);
 
-        when(relatorioRepository.agregarResumo(eq(igrejaId), any(LocalDate.class), any(LocalDate.class), isNull()))
+        when(relatorioRepository.agregarResumo(eq(igrejaId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(new RelatorioProjections.ResumoAgregado() {
                     public BigDecimal getTotalEntradas() { return BigDecimal.ZERO; }
                     public BigDecimal getTotalSaidas() { return BigDecimal.ZERO; }

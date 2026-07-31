@@ -39,10 +39,24 @@ public class MovimentacaoFinanceiraController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID pessoaId,
             @PageableDefault(size = 15) Pageable pageable) {
         exigirFinanceiro();
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return service.listar(igrejaId, tipo, categoriaId, dataInicio, dataFim, q, pageable);
+        return service.listar(igrejaId, tipo, categoriaId, dataInicio, dataFim, q, pessoaId, pageable);
+    }
+
+    @GetMapping("/totais")
+    public MovimentacaoTotaisResponse totais(
+            @RequestParam(required = false) TipoMovimentacao tipo,
+            @RequestParam(required = false) UUID categoriaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID pessoaId) {
+        exigirFinanceiro();
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return service.totais(igrejaId, tipo, categoriaId, dataInicio, dataFim, q, pessoaId);
     }
 
     @GetMapping("/{id}")

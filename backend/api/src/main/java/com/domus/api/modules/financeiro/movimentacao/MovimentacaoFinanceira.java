@@ -2,7 +2,6 @@ package com.domus.api.modules.financeiro.movimentacao;
 
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceira;
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,6 +13,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -43,9 +44,9 @@ public class MovimentacaoFinanceira {
     @JoinColumn(name = "criado_por_usuario_id", nullable = false)
     private Usuario criadoPor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pessoa_id")
-    private Pessoa pessoa;
+    @Builder.Default
+    @OneToMany(mappedBy = "movimentacao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<MovimentacaoContribuinte> contribuintes = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

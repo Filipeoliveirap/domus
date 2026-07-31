@@ -57,6 +57,14 @@ via *transactional outbox*).
   commitar depois do teste — e num commit só, coerente, em vez de vários commits parciais
   da mesma coisa. Exceção: algo que valha por si (ex.: uma correção isolada que não depende
   do resto). Isso vale para **toda a aplicação**, não só para a feature da vez.
+- **Feature grande: desenvolver em pedaços testáveis, não tudo de uma vez.** Quando o
+  trabalho for grande (várias tasks, back+front, múltiplos módulos), não construir a coisa
+  inteira e só depois despejar tudo pro autor testar no final. Entregar um pedaço coerente
+  (ex.: uma task do plano, ou um grupo pequeno de tasks relacionadas), avisar, e **esperar
+  o autor testar aquele pedaço** antes de seguir pro próximo. Motivo: testar tudo de uma vez
+  no final concentra o risco — se algo quebrar, fica difícil saber qual das N mudanças foi
+  a causa, e o retrabalho é maior. Isso não substitui a regra acima (não commitar antes do
+  teste) — as duas juntas: pedaço pequeno, teste, commit, próximo pedaço.
 - **Nunca imprimir segredo.** Não despejar `.env`, chave, token ou senha na conversa — nem via
   `cat`, nem por script que gere `export` no stdout. Segredo impresso não se apaga: fica no
   histórico e só sai por rotação, que custa ao autor. Para carregar variáveis, redirecione para
@@ -629,13 +637,9 @@ erDiagram
     - *Ficou de fora* (fora de escopo desta entrega): galeria (múltiplas fotos por
       entidade), vídeo, CDN de borda, e WebP como formato de **entrada** (ver BACKLOG).
 
-- **Endereço estruturado** *(colunas, não tabela nova)*
-    - *Decisão:* substituir `endereco VARCHAR(500)` por colunas na própria tabela `pessoa`:
-      `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, `uf`. Isso
-      **habilita filtro por bairro/cidade** sem JOIN extra.
-    - *Back:* migration Flyway (nova estrutura + migração dos dados existentes), ajuste de
-      DTOs.
-    - *Front:* formulário com **auto-preenchimento via ViaCEP** (gratuito) ao digitar o CEP.
+- [x] **Endereço estruturado** *(colunas, não tabela nova)* — **FEITO**: `pessoa` tem
+  `@Embedded Endereco` (mesmo embeddable de `Igreja`/`LocalEvento`), com auto-preenchimento
+  via ViaCEP no formulário (`useBuscaCep`, `PessoaForm.tsx`).
 
 - [x] **Inscrição de pessoa em evento + preço e vagas** — **FEITO (2026-07-21):**
   inscrição dois níveis (self + inscrever outros), acompanhantes para quem não tem
@@ -644,23 +648,16 @@ erDiagram
   comuns (sem telefone de convidado) e completa para admins/líderes, preço apenas
   informativo (cobrança decidida na Fase 6).
 
-- **Auditoria de evento (criado_por / atualizado_por)**
-    - *Reutilizar o padrão que já existe em `movimentacao_financeira`* — barato e deixa o
-      sistema consistente.
-    - *Back:* colunas `criado_por_usuario_id` e `atualizado_por_usuario_id` no evento.
-    - *Front:* exibir "criado por / atualizado por" na tela do evento.
+- [x] **Auditoria de evento (criado_por / atualizado_por)** — **FEITO**: colunas
+  `criado_por_usuario_id`/`atualizado_por_usuario_id` (padrão de `movimentacao_financeira`,
+  entregue na Spec B de eventos, V3), exibidas no drawer de detalhe do evento
+  (`DrawerDetalheEvento.tsx`).
 
-- **Convite de acesso por e-mail (novo fluxo de provisionamento)**
-    - *Motivação:* hoje o "conceder acesso" (`UsuarioService.concederAcesso`) exige que o
-      **admin defina a senha** da pessoa e escolha a role de uma vez. Novo fluxo desejado:
-      o admin **só escolhe a role e convida por e-mail**; o **próprio usuário define a sua
-      senha** depois (reusando o fluxo de reset/definir senha da Fase 1).
-    - *Back:* ao convidar, criar o `usuario` com role e **sem senha** (`senha_hash = null` —
-      já habilitado pela migration do Google OAuth) e disparar e-mail de convite com link de
-      definição de senha; o usuário convidado também pode entrar direto com Google (o e-mail
-      é a chave). Depende do e-mail transacional (Fase 1).
-    - *Front:* trocar o formulário de senha do "conceder acesso" por seleção de role + envio
-      de convite.
+- [x] **Convite de acesso por e-mail (novo fluxo de provisionamento)** — **FEITO**: admin
+  concede acesso escolhendo role, sem definir senha (`senha_hash = null`); o sistema envia
+  e-mail de convite (`UsuarioService.concederAcesso`/`enviarConvite`) com link de definição
+  de senha (reusa o fluxo de reset). Existe também reenvio de convite
+  (`POST /usuarios/{id}/reenviar-convite`) para quem ainda não aceitou.
 
 - **Validação de formato de e-mail e telefone (BR)**
     - *E-mail:* validar **formato** no cadastro de pessoa (Zod no front + defensivo no
@@ -672,7 +669,11 @@ erDiagram
 
 ### Fase 3 — Gestão de conta e configurações
 
-- **Aba de Configuração:** perfil do usuário + dados da igreja (visualizar e editar).
+- **Aba de Configuração:** perfil do usuário + dados da igreja (visualizar e editar) —
+  **PARCIAL** (2026-07-29): existe `/configuracoes/igreja` (dados da igreja, incluindo
+  upload de logo — ver Fase 2) e `/perfil` (perfil do usuário), ambos visualizando e
+  editando. Falta unificar como abas de uma mesma tela de Configurações (hoje são rotas
+  separadas) e o restante desta fase (excluir conta, arquivados, termos de uso).
 - **Excluir conta.**
 - **Lista de arquivados por módulo + exclusão definitiva** (usuários, pessoas, eventos…).
   Complementa o soft delete já existente; a exclusão definitiva atende ao **direito de
@@ -684,8 +685,9 @@ erDiagram
 
 ### Fase 4 — Dashboard / início
 
-- Dashboard **simples de propósito**: 3–4 números-chave + 1 lista (ex.: próximos
-  eventos). Nada de gráfico complexo por enquanto — dashboard é um buraco negro de tempo.
+- [x] Dashboard **simples de propósito**: 3–4 números-chave + 1 lista (ex.: próximos
+  eventos) — **FEITO**: `DashboardService`/`/dashboard` (pessoas, eventos, financeiro,
+  movimentações recentes, próximos eventos). Nada de gráfico complexo, como planejado.
 
 > **➜ A igreja entra no ar em algum ponto entre a Fase 3 e a Fase 4.**
 > As fases seguintes são a camada "vender pra igrejas externas".

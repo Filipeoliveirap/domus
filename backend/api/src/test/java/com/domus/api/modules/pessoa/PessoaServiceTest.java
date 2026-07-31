@@ -196,4 +196,40 @@ class PessoaServiceTest {
         assertThatThrownBy(() -> service.atualizarMinhaFoto(pessoaId, UUID.randomUUID(), igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
     }
+
+    private Pessoa pessoaComDadosSensiveis() {
+        return Pessoa.builder()
+                .id(pessoaId).nome("Maria").vinculo(Vinculo.MEMBRO)
+                .telefone("11999998888")
+                .dataNascimento(LocalDate.of(1990, 5, 20))
+                .observacoes("Passou por acompanhamento pastoral em 2025.")
+                .endereco(Endereco.builder().cep("01001-000").logradouro("Praça da Sé")
+                        .cidade("São Paulo").uf("SP").build())
+                .build();
+    }
+
+    @Test
+    void buscarPorId_semDadosSensiveis_escondeEnderecoEObservacoes() {
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId))
+                .thenReturn(Optional.of(pessoaComDadosSensiveis()));
+
+        PessoaResponse resposta = service.buscarPorId(pessoaId, igrejaId, false);
+
+        assertThat(resposta.endereco()).isNull();
+        assertThat(resposta.observacoes()).isNull();
+        assertThat(resposta.telefone()).isEqualTo("11999998888");
+        assertThat(resposta.dataNascimento()).isEqualTo(LocalDate.of(1990, 5, 20));
+    }
+
+    @Test
+    void buscarPorId_comDadosSensiveis_mostraTudo() {
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId))
+                .thenReturn(Optional.of(pessoaComDadosSensiveis()));
+
+        PessoaResponse resposta = service.buscarPorId(pessoaId, igrejaId, true);
+
+        assertThat(resposta.endereco()).isNotNull();
+        assertThat(resposta.endereco().cidade()).isEqualTo("São Paulo");
+        assertThat(resposta.observacoes()).isEqualTo("Passou por acompanhamento pastoral em 2025.");
+    }
 }

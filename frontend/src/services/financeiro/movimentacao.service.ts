@@ -5,21 +5,34 @@ import type {
   MovimentacaoResponse,
   MovimentacaoRequest,
   MovimentacaoFiltros,
+  MovimentacaoTotais,
 } from '@/types/financeiro/movimentacao.type'
+
+function paramsDeFiltro(filtros: Omit<MovimentacaoFiltros, 'page' | 'size'>): Record<string, string> {
+  const params: Record<string, string> = {}
+  if (filtros.tipo) params.tipo = filtros.tipo
+  if (filtros.categoriaId) params.categoriaId = filtros.categoriaId
+  if (filtros.dataInicio) params.dataInicio = filtros.dataInicio
+  if (filtros.dataFim) params.dataFim = filtros.dataFim
+  if (filtros.q) params.q = filtros.q
+  if (filtros.pessoaId) params.pessoaId = filtros.pessoaId
+  return params
+}
 
 export const movimentacoesService = {
   listar: async (filtros: MovimentacaoFiltros): Promise<PagedResponse<MovimentacaoResponse>> => {
     const params: Record<string, string | number> = {
       page: filtros.page,
       size: filtros.size ?? 15,
+      ...paramsDeFiltro(filtros),
     }
-    if (filtros.tipo) params.tipo = filtros.tipo
-    if (filtros.categoriaId) params.categoriaId = filtros.categoriaId
-    if (filtros.dataInicio) params.dataInicio = filtros.dataInicio
-    if (filtros.dataFim) params.dataFim = filtros.dataFim
-    if (filtros.q) params.q = filtros.q
 
     const { data } = await api.get(Endpoints.movimentacoes.base, { params })
+    return data
+  },
+
+  totais: async (filtros: Omit<MovimentacaoFiltros, 'page' | 'size'>): Promise<MovimentacaoTotais> => {
+    const { data } = await api.get(Endpoints.movimentacoes.totais, { params: paramsDeFiltro(filtros) })
     return data
   },
 

@@ -6,6 +6,7 @@ import type {
   EvolucaoMensal,
   PeriodoRelatorio,
   MaiorLancamento,
+  ContribuinteBreakdown,
 } from '@/types/financeiro/relatorio.type'
 import type { Vinculo } from '@/types/pessoa.type'
 
@@ -35,6 +36,11 @@ export const relatorioService = {
 
   maiorLancamento: async (periodo: PeriodoRelatorio, igrejaId?: string, vinculo?: Vinculo | ''): Promise<MaiorLancamento | null> => {
     const { data } = await api.get(Endpoints.relatorios.maiorLancamento, { params: { ...periodo, ...(igrejaId ? { igrejaId } : {}), ...(vinculo ? { vinculo } : {}) } })
+    return data
+  },
+
+  porContribuinte: async (periodo: PeriodoRelatorio, igrejaId?: string, vinculo?: Vinculo | ''): Promise<ContribuinteBreakdown[]> => {
+    const { data } = await api.get(Endpoints.relatorios.porContribuinte, { params: { ...periodo, ...(igrejaId ? { igrejaId } : {}), ...(vinculo ? { vinculo } : {}) } })
     return data
   },
 }

@@ -98,6 +98,7 @@ export const Endpoints = {
   movimentacoes: {
     base: '/movimentacoes',
     porId: (id: string) => `/movimentacoes/${id}`,
+    totais: '/movimentacoes/totais',
   },
 
   relatorios: {
@@ -105,6 +106,7 @@ export const Endpoints = {
     porCategoria: '/relatorios/por-categoria',
     evolucaoMensal: '/relatorios/evolucao-mensal',
     maiorLancamento: '/relatorios/maior-lancamento',
+    porContribuinte: '/relatorios/por-contribuinte',
     congregacoes: '/relatorios/congregacoes',
   },
 

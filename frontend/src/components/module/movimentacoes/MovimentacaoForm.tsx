@@ -1,39 +1,41 @@
 'use client'
 
 import Link from 'next/link'
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react'
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale } from 'lucide-react'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoPessoa } from './SelecaoPessoa'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { formatarMoeda, formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
-import type { UseFormReturn } from 'react-hook-form'
+import type { UseFormReturn, UseFieldArrayReturn } from 'react-hook-form'
 import type { MovimentacaoFormInput, MovimentacaoFormData } from '@/lib/validators'
 import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/categoria.type'
-import type { TipoMovimentacao } from '@/types/financeiro/movimentacao.type'
+import type { TipoMovimentacao, ContribuinteResponse } from '@/types/financeiro/movimentacao.type'
 import styles from './MovimentacaoForm.module.css'
 
 type MovimentacaoFormProps = UseFormReturn<MovimentacaoFormInput, unknown, MovimentacaoFormData> & {
+  contribuintesArray: UseFieldArrayReturn<MovimentacaoFormInput, 'contribuintes'>
   isFormIncomplete: boolean
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
   onSubmit: (data: MovimentacaoFormData) => void
-  // Nome vem assim da API (`MovimentacaoResponse.pessoaNome`, backend) — não renomeado por lá.
-  pessoaNomeInicial?: string
+  // Nomes de contribuintes já vinculados (edição) — a busca do SelecaoPessoa não sabe o nome
+  // de quem já está salvo, só o id; isso preenche a linha sem precisar buscar de novo.
+  contribuintesIniciais?: ContribuinteResponse[]
 }
 
 export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
-    formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, ehEdicao, onSubmit, pessoaNomeInicial,
+    formState: { errors, isSubmitted },
+    contribuintesArray, erroGeral, isLoading, isFormIncomplete, ehEdicao, onSubmit, contribuintesIniciais,
   } = props
 
   const tipo = watch('tipo') as TipoMovimentacao | undefined
   const categoriaId = watch('categoriaId') as string
   const valor = watch('valor') as string
-  const pessoaId = watch('pessoaId') as string | undefined
   const dataMovimentacao = (watch('dataMovimentacao') as string) ?? ''
+  const contribuintes = watch('contribuintes') ?? []
 
   const { data: categorias, isPending: categoriasCarregando } = useCategoriasSelect()
 
@@ -53,6 +55,32 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const categoriaNome = categoriasCompativeis.find((c: CategoriaResponse) => c.id === categoriaId)?.nome
 
   const valorInvalido = !valor || parseFloat(valor) <= 0
+
+  const somaContribuintes = contribuintes.reduce((acc, c) => acc + (parseFloat(c?.valor ?? '') || 0), 0)
+  const totalMovimentacao = parseFloat(valor) || 0
+  const diferenca = totalMovimentacao - somaContribuintes
+  const somaBate = contribuintes.length === 0 || Math.abs(diferenca) < 0.005
+
+  // Só mostra o erro de validação do RHF depois de uma tentativa de salvar — senão ele sobe
+  // assim que a 2ª linha é adicionada, antes da pessoa terminar de preencher os valores.
+  const erroContribuintes = isSubmitted
+    ? (errors.contribuintes as { message?: string } | undefined)?.message
+    : undefined
+
+  function nomeInicialDe(pessoaId: string): string | undefined {
+    return contribuintesIniciais?.find((c) => c.pessoaId === pessoaId)?.pessoaNome
+  }
+
+  function adicionarContribuinte() {
+    contribuintesArray.append({ pessoaId: '', valor: '' })
+  }
+
+  function dividirMeioAMeio() {
+    if (!valor || contribuintes.length !== 2) return
+    const metade = (parseFloat(valor) / 2).toFixed(2)
+    setValue(`contribuintes.0.valor`, metade, { shouldValidate: true, shouldDirty: true })
+    setValue(`contribuintes.1.valor`, metade, { shouldValidate: true, shouldDirty: true })
+  }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -109,7 +137,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     onChange={(e) => {
                     const digitos = e.target.value.replace(/\D/g, '')
                     const centavos = parseInt(digitos || '0', 10)
-                    const emReais = (centavos / 100).toFixed(2)  
+                    const emReais = (centavos / 100).toFixed(2)
                     setValue('valor', digitos === '' ? '' : emReais, { shouldValidate: true, shouldDirty: true })
                     }}
                     inputMode="numeric"
@@ -167,17 +195,71 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                 </div>
               </div>
 
-              {/* Pessoa (contribuinte/beneficiário) */}
+              {/* Contribuintes */}
               <div className={styles.campo}>
-                <label className={styles.label}>
-                  {labelPessoa} <span className={styles.opcional}>(opcional)</span>
-                </label>
-                <SelecaoPessoa
-                  pessoaIdSelecionado={pessoaId || undefined}
-                  nomeSelecionado={pessoaId ? pessoaNomeInicial : undefined}
-                  label={labelPessoa}
-                  onSelecionar={(id) => setValue('pessoaId', id ?? '', { shouldDirty: true })}
-                />
+                <div className={styles.contribuintesHeader}>
+                  <label className={styles.label}>
+                    {labelPessoa}S <span className={styles.opcional}>(opcional)</span>
+                  </label>
+                  {contribuintes.length === 2 && !!valor && (
+                    <button type="button" className={styles.btnMeioAMeio} onClick={dividirMeioAMeio}>
+                      <Scale size={14} /> Dividir 50/50
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.contribuintesLista}>
+                  {contribuintesArray.fields.map((field, index) => (
+                    <div key={field.id} className={styles.contribuinteLinha}>
+                      <div className={styles.contribuintePessoa}>
+                        <SelecaoPessoa
+                          pessoaIdSelecionado={contribuintes[index]?.pessoaId || undefined}
+                          nomeSelecionado={nomeInicialDe(contribuintes[index]?.pessoaId ?? '')}
+                          label={labelPessoa}
+                          onSelecionar={(id) =>
+                            setValue(`contribuintes.${index}.pessoaId`, id ?? '', { shouldValidate: true, shouldDirty: true })
+                          }
+                        />
+                      </div>
+                      <input
+                        className={styles.inputValorContribuinte}
+                        placeholder="R$ 0,00"
+                        value={formatarValorDigitado(contribuintes[index]?.valor ?? '')}
+                        onChange={(e) => {
+                          const digitos = e.target.value.replace(/\D/g, '')
+                          const centavos = parseInt(digitos || '0', 10)
+                          const emReais = (centavos / 100).toFixed(2)
+                          setValue(`contribuintes.${index}.valor`, digitos === '' ? '' : emReais, { shouldValidate: true, shouldDirty: true })
+                        }}
+                        inputMode="numeric"
+                      />
+                      <button
+                        type="button"
+                        className={styles.btnRemoverContribuinte}
+                        onClick={() => contribuintesArray.remove(index)}
+                        aria-label="Remover"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button type="button" className={styles.btnAdicionarContribuinte} onClick={adicionarContribuinte}>
+                  <Plus size={16} /> Adicionar {labelPessoa.toLowerCase()}
+                </button>
+
+                {contribuintes.length > 0 && (
+                  <div className={`${styles.somaContribuintes} ${somaBate ? styles.somaOk : styles.somaErro}`}>
+                    Soma dos {labelPessoa.toLowerCase()}s: {formatarMoeda(String(somaContribuintes))}
+                    {!somaBate && (
+                      diferenca > 0
+                        ? ` — ainda falta ${formatarMoeda(String(diferenca))} para completar o valor da movimentação`
+                        : ` — está passando ${formatarMoeda(String(Math.abs(diferenca)))} do valor da movimentação`
+                    )}
+                  </div>
+                )}
+                {erroContribuintes && <span className={styles.erroCampo}>{erroContribuintes}</span>}
               </div>
 
               {/* Descrição */}
@@ -230,7 +312,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
           {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
           <div className={styles.acoes}>
-            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || isLoading || semNenhumaCategoria}>
+            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || !somaBate || isLoading || semNenhumaCategoria}>
               {isLoading ? 'Salvando…' : ehEdicao ? 'Salvar alterações' : 'Salvar movimentação'}
             </button>
             <Link href="/financeiro/movimentacoes" className={styles.cancelarLink}>Cancelar</Link>

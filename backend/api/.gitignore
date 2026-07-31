@@ -64,6 +64,8 @@ jacoco.exec
 
 # ─── claude ─────────
 CLAUDE.md
+.claudeignore
+opencode.json
 
 # Dumps do banco: contêm dados de PESSOAS REAIS da igreja (nomes, contatos, hashes de senha).
 # O README e os compose vão para o git; os dados, nunca.

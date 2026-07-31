@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Pencil, Archive, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useMovimentacoes } from '@/hooks/financeiro/movimentacao/useMovimentacoes'
+import { useMovimentacaoTotais } from '@/hooks/financeiro/movimentacao/useMovimentacaoTotais'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
+import { SelecaoPessoa } from '@/components/module/movimentacoes/SelecaoPessoa'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { DrawerDetalheMovimentacao } from '@/app/(app)/financeiro/movimentacoes/(detalhe)/DrawerDetalheMovimentacao'
 import { ModalArquivarMovimentacao } from '@/app/(app)/financeiro/movimentacoes/ModalArquivarMovimentacao'
@@ -63,10 +65,14 @@ function MovimentacoesConteudo() {
     dataInicio: '',
     dataFim: '',
     q: '',
+    pessoaId: '',
   })
 
   const [pagina, setPagina] = useState(0)
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
+  // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
+  // refresh de página, o que é aceitável: o filtro continua aplicado, só perde o rótulo.
+  const [pessoaFiltroNome, setPessoaFiltroNome] = useState<string | undefined>(undefined)
 
   const qDebounced = useDebounce(filtros.q, 250)
 
@@ -77,6 +83,7 @@ function MovimentacoesConteudo() {
     dataInicio: filtros.dataInicio || undefined,
     dataFim: filtros.dataFim || undefined,
     q: qDebounced || undefined,
+    pessoaId: filtros.pessoaId || undefined,
     page: pagina,
     size: TAMANHO_PAGINA,
   }, autorizado)
@@ -85,16 +92,26 @@ function MovimentacoesConteudo() {
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
+  const { data: totais } = useMovimentacaoTotais({
+    tipo: (filtros.tipo as TipoMovimentacao) || undefined,
+    categoriaId: filtros.categoriaId || undefined,
+    dataInicio: filtros.dataInicio || undefined,
+    dataFim: filtros.dataFim || undefined,
+    q: qDebounced || undefined,
+    pessoaId: filtros.pessoaId || undefined,
+  }, autorizado)
+
   function resetarPagina() {
     setPagina(0)
   }
 
   function limparFiltros() {
-    setFiltros({ tipo: '', categoriaId: '', dataInicio: '', dataFim: '', q: '' })
+    setFiltros({ tipo: '', categoriaId: '', dataInicio: '', dataFim: '', q: '', pessoaId: '' })
+    setPessoaFiltroNome(undefined)
     setPagina(0)
   }
 
-  const temFiltro = filtros.tipo || filtros.categoriaId || filtros.dataInicio || filtros.dataFim || filtros.q
+  const temFiltro = filtros.tipo || filtros.categoriaId || filtros.dataInicio || filtros.dataFim || filtros.q || filtros.pessoaId
 
   function abrirDetalhe(mov: MovimentacaoResponse) {
     router.push(`/financeiro/movimentacoes?detalhe=${mov.id}`, { scroll: false })
@@ -195,10 +212,43 @@ function MovimentacoesConteudo() {
           />
         </div>
 
+        <div className={styles.filtroCampo} style={{ flex: 1 }}>
+          <label className={styles.filtroLabel}>CONTRIBUINTE / BENEFICIÁRIO</label>
+          <SelecaoPessoa
+            pessoaIdSelecionado={filtros.pessoaId || undefined}
+            nomeSelecionado={pessoaFiltroNome}
+            label="pessoa"
+            onSelecionar={(id, nome) => {
+              setFiltro('pessoaId', id ?? '')
+              setPessoaFiltroNome(nome)
+              resetarPagina()
+            }}
+          />
+        </div>
+
         {temFiltro && (
           <button className={styles.btnLimpar} onClick={limparFiltros}>Limpar</button>
         )}
       </div>
+
+      {temFiltro && totais && (
+        <div className={styles.totais}>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Entradas</span>
+            <span className={`${styles.totalValor} ${styles.entrada}`}>{formatarMoeda(totais.totalEntradas)}</span>
+          </div>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Saídas</span>
+            <span className={`${styles.totalValor} ${styles.saida}`}>{formatarMoeda(totais.totalSaidas)}</span>
+          </div>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Saldo</span>
+            <span className={styles.totalValor}>
+              {formatarMoeda(String(parseFloat(totais.totalEntradas) - parseFloat(totais.totalSaidas)))}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tabela */}
       <div className={styles.painel}>
@@ -234,7 +284,12 @@ function MovimentacoesConteudo() {
                 <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
                   <div className={styles.colDesc}>
                     <span className={styles.descTexto}>{mov.descricao || '—'}</span>
-                    {mov.pessoaNome && <span className={styles.descMembro}>{mov.pessoaNome}</span>}
+                    {mov.contribuintes.length > 0 && (
+                      <span className={styles.descMembro}>
+                        {mov.contribuintes[0].pessoaNome}
+                        {mov.contribuintes.length > 1 && ` +${mov.contribuintes.length - 1}`}
+                      </span>
+                    )}
                   </div>
                   <div className={styles.colCat}>{mov.categoriaNome}</div>
                   <div className={styles.colData}>{formatarData(mov.dataMovimentacao)}</div>

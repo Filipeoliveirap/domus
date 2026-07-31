@@ -26,7 +26,8 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
         JOIN FETCH m.categoria
         JOIN FETCH m.criadoPor cp
         JOIN FETCH cp.pessoa
-        LEFT JOIN FETCH m.pessoa
+        LEFT JOIN FETCH m.contribuintes ct
+        LEFT JOIN FETCH ct.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap
         LEFT JOIN FETCH ap.pessoa
         WHERE m.id = :id AND m.igreja.id = :igrejaId
@@ -39,7 +40,8 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
         JOIN FETCH m.categoria c
         JOIN FETCH m.criadoPor cp
         JOIN FETCH cp.pessoa
-        LEFT JOIN FETCH m.pessoa
+        LEFT JOIN FETCH m.contribuintes ct
+        LEFT JOIN FETCH ct.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap
         LEFT JOIN FETCH ap.pessoa
         WHERE m.igreja.id = :igrejaId
@@ -48,6 +50,10 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
           AND m.dataMovimentacao >= :dataInicio
           AND m.dataMovimentacao <= :dataFim
           AND (:q IS NULL OR LOWER(m.descricao) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+          AND (:pessoaId IS NULL OR EXISTS (
+              SELECT 1 FROM MovimentacaoContribuinte ct2
+              WHERE ct2.movimentacao = m AND ct2.pessoa.id = :pessoaId
+          ))
         ORDER BY m.dataMovimentacao DESC, m.createdAt DESC
     """)
     Page<MovimentacaoFinanceira> buscarComFiltros(@Param("igrejaId") UUID igrejaId,
@@ -56,6 +62,7 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
                                                   @Param("dataInicio") LocalDate dataInicio,
                                                   @Param("dataFim") LocalDate dataFim,
                                                   @Param("q") String q,
+                                                  @Param("pessoaId") UUID pessoaId,
                                                   Pageable pageable);
 
     @Query("""
@@ -69,8 +76,42 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
     long countByCategoriaIdAndIgrejaId(UUID categoriaId, UUID igrejaId);
 
     @Query("""
-    SELECT m.id FROM MovimentacaoFinanceira m
-    WHERE m.pessoa.id = :pessoaId AND m.igreja.id = :igrejaId
+    SELECT DISTINCT ct.movimentacao.id FROM MovimentacaoContribuinte ct
+    WHERE ct.pessoa.id = :pessoaId AND ct.movimentacao.igreja.id = :igrejaId
 """)
     List<UUID> buscarIdsPorMembro(@Param("pessoaId") UUID pessoaId, @Param("igrejaId") UUID igrejaId);
+
+    /** Totais (não paginados) dos mesmos filtros de {@link #buscarComFiltros} — usado para
+     *  mostrar a soma de entradas/saídas da lista filtrada, não só da página atual. */
+    @Query("""
+        SELECT
+            COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.valor ELSE 0 END), 0) AS totalEntradas,
+            COALESCE(SUM(CASE WHEN m.tipo = 'SAIDA' THEN m.valor ELSE 0 END), 0) AS totalSaidas,
+            COUNT(m) AS quantidade
+        FROM MovimentacaoFinanceira m
+        JOIN m.categoria c
+        WHERE m.igreja.id = :igrejaId
+          AND (:tipo IS NULL OR m.tipo = :tipo)
+          AND (:categoriaId IS NULL OR c.id = :categoriaId)
+          AND m.dataMovimentacao >= :dataInicio
+          AND m.dataMovimentacao <= :dataFim
+          AND (:q IS NULL OR LOWER(m.descricao) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+          AND (:pessoaId IS NULL OR EXISTS (
+              SELECT 1 FROM MovimentacaoContribuinte ct2
+              WHERE ct2.movimentacao = m AND ct2.pessoa.id = :pessoaId
+          ))
+    """)
+    TotaisAgregados agregarTotaisComFiltros(@Param("igrejaId") UUID igrejaId,
+                                            @Param("tipo") TipoMovimentacao tipo,
+                                            @Param("categoriaId") UUID categoriaId,
+                                            @Param("dataInicio") LocalDate dataInicio,
+                                            @Param("dataFim") LocalDate dataFim,
+                                            @Param("q") String q,
+                                            @Param("pessoaId") UUID pessoaId);
+
+    interface TotaisAgregados {
+        java.math.BigDecimal getTotalEntradas();
+        java.math.BigDecimal getTotalSaidas();
+        Long getQuantidade();
+    }
 }

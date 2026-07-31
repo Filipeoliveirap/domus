@@ -23,8 +23,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -43,10 +46,10 @@ public class MovimentacaoFinanceiraService {
     @Transactional(readOnly = true)
     public PagedResponse<MovimentacaoResponse> listar(UUID igrejaId, TipoMovimentacao tipo, UUID categoriaId,
                                                       LocalDate dataInicio, LocalDate dataFim, String q,
-                                                      Pageable pageable) {
+                                                      UUID pessoaId, Pageable pageable) {
         boolean semFiltro = tipo == null && categoriaId == null
                 && dataInicio == null && dataFim == null
-                && (q == null || q.isBlank());
+                && (q == null || q.isBlank()) && pessoaId == null;
 
         if (semFiltro) {
             return listarSemFiltro(igrejaId, pageable);
@@ -56,9 +59,19 @@ public class MovimentacaoFinanceiraService {
         LocalDate inicio = dataInicio != null ? dataInicio : LocalDate.of(1900, 1, 1);
         LocalDate fim = dataFim != null ? dataFim : LocalDate.of(2999, 12, 31);
         Page<MovimentacaoResponse> page = repository
-                .buscarComFiltros(igrejaId, tipo, categoriaId, inicio, fim, termo, pageable)
+                .buscarComFiltros(igrejaId, tipo, categoriaId, inicio, fim, termo, pessoaId, pageable)
                 .map(MovimentacaoResponse::de);
         return PagedResponse.from(page);
+    }
+
+    @Transactional(readOnly = true)
+    public MovimentacaoTotaisResponse totais(UUID igrejaId, TipoMovimentacao tipo, UUID categoriaId,
+                                             LocalDate dataInicio, LocalDate dataFim, String q, UUID pessoaId) {
+        String termo = (q == null || q.isBlank()) ? null : q.trim();
+        LocalDate inicio = dataInicio != null ? dataInicio : LocalDate.of(1900, 1, 1);
+        LocalDate fim = dataFim != null ? dataFim : LocalDate.of(2999, 12, 31);
+        var t = repository.agregarTotaisComFiltros(igrejaId, tipo, categoriaId, inicio, fim, termo, pessoaId);
+        return new MovimentacaoTotaisResponse(t.getTotalEntradas(), t.getTotalSaidas(), t.getQuantidade());
     }
 
     @Cacheable(
@@ -71,7 +84,7 @@ public class MovimentacaoFinanceiraService {
                 .buscarComFiltros(igrejaId, null, null,
                         LocalDate.of(1900, 1, 1),
                         LocalDate.of(2999, 12, 31),
-                        null, pageable)
+                        null, null, pageable)
                 .map(MovimentacaoResponse::de);
         return PagedResponse.from(page);
     }
@@ -85,22 +98,23 @@ public class MovimentacaoFinanceiraService {
 
     @Transactional
     public MovimentacaoResponse cadastrar(MovimentacaoRequestDTO dto, UUID igrejaId, UUID usuarioId) {
-        log.info("Cadastrando movimentação. tipo={}, valor={}, categoria_id={}, pessoa_id={}, criado_por={}, igreja_id={}",
-                dto.tipo(), dto.valor(), dto.categoriaId(), dto.pessoaId(), usuarioId, igrejaId);
+        log.info("Cadastrando movimentação. tipo={}, valor={}, categoria_id={}, contribuintes={}, criado_por={}, igreja_id={}",
+                dto.tipo(), dto.valor(), dto.categoriaId(), dto.contribuintes().size(), usuarioId, igrejaId);
 
         CategoriaFinanceira categoria = categoriaService.buscarEntidade(dto.categoriaId(), igrejaId);
         validarCompatibilidade(dto.tipo(), categoria);
+        validarContribuintes(dto.valor(), dto.contribuintes());
 
         MovimentacaoFinanceira mov = MovimentacaoFinanceira.builder()
                 .igreja(igrejaRepository.getReferenceById(igrejaId))
                 .categoria(categoria)
                 .criadoPor(usuarioRepository.getReferenceById(usuarioId))
-                .pessoa(resolverMembro(dto.pessoaId(), igrejaId))
                 .tipo(dto.tipo())
                 .valor(dto.valor())
                 .dataMovimentacao(dto.dataMovimentacao())
                 .descricao(dto.descricao())
                 .build();
+        mov.getContribuintes().addAll(resolverContribuintes(mov, dto.contribuintes(), igrejaId));
 
         repository.save(mov);
         outboxRegistrador.registrar(
@@ -126,9 +140,15 @@ public class MovimentacaoFinanceiraService {
 
         CategoriaFinanceira categoria = categoriaService.buscarEntidade(dto.categoriaId(), igrejaId);
         validarCompatibilidade(dto.tipo(), categoria);
+        validarContribuintes(dto.valor(), dto.contribuintes());
 
         mov.setCategoria(categoria);
-        mov.setPessoa(resolverMembro(dto.pessoaId(), igrejaId));
+        mov.getContribuintes().clear();
+        // Flush força o DELETE dos contribuintes órfãos antes do INSERT dos novos — sem isto,
+        // Hibernate executa inserts antes de deletes na mesma flush e uma pessoa que continua
+        // como contribuinte (mesmo movimentacao_id + pessoa_id) colide com a constraint UNIQUE.
+        repository.flush();
+        mov.getContribuintes().addAll(resolverContribuintes(mov, dto.contribuintes(), igrejaId));
         mov.setTipo(dto.tipo());
         mov.setValor(dto.valor());
         mov.setDataMovimentacao(dto.dataMovimentacao());
@@ -186,12 +206,43 @@ public class MovimentacaoFinanceiraService {
     }
 
     private Pessoa resolverMembro(UUID pessoaId, UUID igrejaId) {
-        if (pessoaId == null) return null;
         return membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> {
                     log.warn("Pessoa informado na movimentação não encontrado na igreja. pessoa_id={}, igreja_id={}", pessoaId, igrejaId);
                     return new ResourceNotFoundException("Pessoa não encontrado.");
                 });
+    }
+
+    private void validarContribuintes(BigDecimal valorTotal, List<ContribuinteDTO> contribuintes) {
+        if (contribuintes.isEmpty()) return;
+
+        Set<UUID> pessoas = new HashSet<>();
+        for (ContribuinteDTO c : contribuintes) {
+            if (!pessoas.add(c.pessoaId())) {
+                throw new BusinessException("CONTRIBUINTE_DUPLICADO",
+                        "A mesma pessoa não pode aparecer duas vezes na lista de contribuintes.");
+            }
+        }
+
+        BigDecimal soma = contribuintes.stream()
+                .map(ContribuinteDTO::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (soma.compareTo(valorTotal) != 0) {
+            throw new BusinessException("VALOR_CONTRIBUINTES_DIVERGENTE",
+                    "A soma dos contribuintes (" + soma + ") não bate com o valor total da movimentação (" + valorTotal + ").");
+        }
+    }
+
+    private List<MovimentacaoContribuinte> resolverContribuintes(
+            MovimentacaoFinanceira mov, List<ContribuinteDTO> dtos, UUID igrejaId) {
+        return dtos.stream()
+                .map(c -> MovimentacaoContribuinte.builder()
+                        .movimentacao(mov)
+                        .pessoa(resolverMembro(c.pessoaId(), igrejaId))
+                        .valor(c.valor())
+                        .build())
+                .toList();
     }
 
     @Transactional

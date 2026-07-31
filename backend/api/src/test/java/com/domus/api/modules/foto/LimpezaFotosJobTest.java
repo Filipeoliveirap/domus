@@ -1,6 +1,7 @@
 package com.domus.api.modules.foto;
 
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -25,6 +26,7 @@ class LimpezaFotosJobTest {
 
     FotoRepository fotoRepository;
     FotoService fotoService;
+    PessoaRepository pessoaRepository;
     LimpezaFotosJob job;
 
     @BeforeEach
@@ -32,7 +34,8 @@ class LimpezaFotosJobTest {
         MockitoAnnotations.openMocks(this);
         fotoRepository = mock(FotoRepository.class);
         fotoService = mock(FotoService.class);
-        job = new LimpezaFotosJob(fotoRepository, fotoService);
+        pessoaRepository = mock(PessoaRepository.class);
+        job = new LimpezaFotosJob(fotoRepository, fotoService, pessoaRepository);
         ReflectionTestUtils.setField(job, "orfaHoras", 24);
         ReflectionTestUtils.setField(job, "arquivadaMeses", 6);
     }
@@ -80,6 +83,20 @@ class LimpezaFotosJobTest {
         job.limparDeArquivadas();
 
         verify(fotoService).remover(foto.getId());
+    }
+
+    @Test
+    void desvinculaAPessoaAntesDeRemoverAFotoDeArquivada() {
+        // FK ON DELETE RESTRICT: pessoa.foto_id precisa ser solto ANTES do DELETE FROM foto,
+        // senão o banco recusa a remoção. Ver PessoaRepository.desvincularFoto.
+        Foto foto = fotoDe(LocalDateTime.now().minusMonths(7));
+        when(fotoRepository.buscarDeArquivadas(any())).thenReturn(List.of(foto));
+
+        job.limparDeArquivadas();
+
+        var ordem = inOrder(pessoaRepository, fotoService);
+        ordem.verify(pessoaRepository).desvincularFoto(foto.getId());
+        ordem.verify(fotoService).remover(foto.getId());
     }
 
     @Test

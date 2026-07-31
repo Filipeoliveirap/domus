@@ -116,6 +116,36 @@
   background: var(--color-bg-page);
 }
 
+/* ─── Totais (do filtro atual) ─── */
+.totais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 16px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.totalItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.totalLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.totalValor {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+.totalValor.entrada { color: var(--color-success-text); }
+.totalValor.saida { color: var(--color-danger); }
+
 /* ─── Painel ─── */
 .painel {
   min-height: 400px;
@@ -349,5 +379,10 @@
   .botaoPrimario {
     width: 100%;
     justify-content: center;
+  }
+  .totais {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 }

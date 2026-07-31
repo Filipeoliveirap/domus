@@ -10,6 +10,8 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
+import java.util.List;
+
 @Document(indexName = "movimentacoes")
 @Setting(settingPath = "elasticsearch/domus-analyzer.json")
 @Getter
@@ -30,7 +32,7 @@ public class MovimentacaoDocument {
     private String categoriaNome;
 
     @Field(type = FieldType.Text, analyzer = "domus_index", searchAnalyzer = "domus_search")
-    private String pessoaNome;
+    private List<String> pessoaNomes;
 
     @Field(type = FieldType.Keyword)
     private String tipo;
@@ -41,7 +43,9 @@ public class MovimentacaoDocument {
         doc.setIgrejaId(mov.getIgreja().getId().toString());
         doc.setDescricao(mov.getDescricao());
         doc.setCategoriaNome(mov.getCategoria() != null ? mov.getCategoria().getNome() : null);
-        doc.setPessoaNome(mov.getPessoa() != null ? mov.getPessoa().getNome() : null);
+        doc.setPessoaNomes(mov.getContribuintes().stream()
+                .map(c -> c.getPessoa().getNome())
+                .toList());
         doc.setTipo(mov.getTipo() != null ? mov.getTipo().name() : null);
         return doc;
     }

@@ -112,6 +112,16 @@
   color: var(--color-text-primary);
 }
 
+.contribuintesLista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.contribuinteValor {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-normal);
+}
+
 /* Descrição */
 .descricaoBloco {
   display: flex;

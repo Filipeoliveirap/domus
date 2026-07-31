@@ -36,6 +36,8 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+# qualquer outra variante (backups tipo .env.*.bak) — nunca commitar segredo, mesmo por acidente
+.env.*
 
 # vercel
 .vercel
@@ -53,3 +55,6 @@ next-env.d.ts
 
 # claude
 CLAUDE.md
+.gitignore
+.claudeignore
+opencode.json

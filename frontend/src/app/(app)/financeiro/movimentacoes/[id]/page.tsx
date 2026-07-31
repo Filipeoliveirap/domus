@@ -74,7 +74,7 @@ export default function EditarMovimentacaoPage() {
       <header className={styles.cabecalho}>
         <h1 className={styles.titulo}>Editar movimentação</h1>
       </header>
-      <MovimentacaoForm {...form} pessoaNomeInicial={movimentacao.pessoaNome ?? undefined} />
+      <MovimentacaoForm {...form} contribuintesIniciais={movimentacao.contribuintes} />
     </div>
   )
 }

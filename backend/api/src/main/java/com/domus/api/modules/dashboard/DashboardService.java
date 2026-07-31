@@ -51,7 +51,7 @@ public class DashboardService {
                 igrejaId, inicioSemana.atStartOfDay(), fimSemana.atTime(LocalTime.MAX));
 
         RelatorioProjections.ResumoAgregado resumo =
-                relatorioRepository.agregarResumo(igrejaId, inicioMes, fimMes, null);
+                relatorioRepository.agregarResumo(igrejaId, inicioMes, fimMes);
         BigDecimal entradas = resumo.getTotalEntradas();
         BigDecimal saidas = resumo.getTotalSaidas();
         BigDecimal saldo = entradas.subtract(saidas);

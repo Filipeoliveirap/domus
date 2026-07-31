@@ -35,4 +35,11 @@ public interface RelatorioProjections {
         BigDecimal getValor();
         LocalDate getDataMovimentacao();
     }
+
+    interface ContribuinteAgregado {
+        UUID getPessoaId();
+        String getPessoaNome();
+        TipoMovimentacao getTipo();
+        BigDecimal getTotal();
+    }
 }

@@ -13,4 +13,12 @@ public interface BalanceteProjections {
         Integer getMes();
         BigDecimal getTotal();
     }
+
+    interface LinhaMensalConsolidada {
+        String getChave();          // unaccent(lower(nome)) — casa categorias entre igrejas
+        String getNomeExibicao();
+        String getTipo();
+        Integer getMes();
+        BigDecimal getTotal();
+    }
 }

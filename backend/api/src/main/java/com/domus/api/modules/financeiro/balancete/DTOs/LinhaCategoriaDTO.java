@@ -10,7 +10,7 @@ public record LinhaCategoriaDTO(
         UUID categoriaId,
         String nomeCategoria,
         boolean arquivada,
-        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
         List<BigDecimal> valoresPorMes,
         @JsonSerialize(using = ToStringSerializer.class)
         BigDecimal totalAno

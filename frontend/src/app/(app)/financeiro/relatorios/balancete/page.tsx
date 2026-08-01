@@ -25,8 +25,8 @@ export default function BalanceteAnualPage() {
   const vinculo = useVinculoStatus(autorizado)
   const ehSede = vinculo.data?.estado === 'MAE'
 
-  const balancetePropria = useBalanceteAnual(ano, autorizado && aba === 'MINHA_IGREJA')
-  const balanceteFamilia = useBalanceteFamilia(ano, autorizado && ehSede && aba !== 'MINHA_IGREJA')
+  const balancetePropria = useBalanceteAnual(ano, !!autorizado && aba === 'MINHA_IGREJA')
+  const balanceteFamilia = useBalanceteFamilia(ano, !!autorizado && ehSede && aba !== 'MINHA_IGREJA')
 
   if (!hidratado) return null
   if (!autorizado) return <AcessoRestrito />
@@ -56,6 +56,15 @@ export default function BalanceteAnualPage() {
         </div>
       )}
 
+      {aba === 'MINHA_IGREJA' && balancetePropria.isLoading && (
+        <p className={styles.carregando}>Carregando balancete...</p>
+      )}
+      {aba === 'MINHA_IGREJA' && balancetePropria.isError && (
+        <p className={styles.erro}>
+          Não foi possível carregar o balancete.{' '}
+          <button onClick={() => balancetePropria.refetch()}>Tentar novamente</button>
+        </p>
+      )}
       {aba === 'MINHA_IGREJA' && balancetePropria.data && (
         <>
           <BalanceteTabela balancete={balancetePropria.data} />
@@ -63,6 +72,15 @@ export default function BalanceteAnualPage() {
         </>
       )}
 
+      {aba === 'CONSOLIDADO' && balanceteFamilia.isLoading && (
+        <p className={styles.carregando}>Carregando balancete...</p>
+      )}
+      {aba === 'CONSOLIDADO' && balanceteFamilia.isError && (
+        <p className={styles.erro}>
+          Não foi possível carregar o balancete.{' '}
+          <button onClick={() => balanceteFamilia.refetch()}>Tentar novamente</button>
+        </p>
+      )}
       {aba === 'CONSOLIDADO' && balanceteFamilia.data && (
         <>
           <BalanceteTabela balancete={balanceteFamilia.data.consolidado} />
@@ -70,6 +88,15 @@ export default function BalanceteAnualPage() {
         </>
       )}
 
+      {aba === 'POR_CONGREGACAO' && balanceteFamilia.isLoading && (
+        <p className={styles.carregando}>Carregando balancete...</p>
+      )}
+      {aba === 'POR_CONGREGACAO' && balanceteFamilia.isError && (
+        <p className={styles.erro}>
+          Não foi possível carregar o balancete.{' '}
+          <button onClick={() => balanceteFamilia.refetch()}>Tentar novamente</button>
+        </p>
+      )}
       {aba === 'POR_CONGREGACAO' && balanceteFamilia.data && (
         <div className={styles.listaIgrejas}>
           {balanceteFamilia.data.porIgreja.map((item) => (

@@ -22,7 +22,7 @@
 .abas {
   display: flex;
   gap: 0.5rem;
-  border-bottom: 1px solid var(--cor-borda, #e5e7eb);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
   overflow-x: auto;
 }
 
@@ -36,7 +36,7 @@
 }
 
 .abaAtiva {
-  border-bottom: 2px solid var(--cor-primaria, #2563eb);
+  border-bottom: 2px solid var(--color-primary, #2563eb);
   font-weight: 600;
 }
 
@@ -48,4 +48,24 @@
 
 .blocoIgreja h2 {
   margin-bottom: 0.5rem;
+}
+
+.carregando {
+  color: var(--color-text-muted, #64748b);
+  padding: 1rem 0;
+}
+
+.erro {
+  color: var(--color-danger, #dc2626);
+  padding: 1rem 0;
+}
+
+.erro button {
+  border: none;
+  background: none;
+  color: var(--color-primary, #2563eb);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font: inherit;
 }

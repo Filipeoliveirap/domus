@@ -11,12 +11,12 @@ public record BalanceteResponseDTO(
         BigDecimal saldoAbertura,
         List<LinhaCategoriaDTO> entradas,
         List<LinhaCategoriaDTO> saidas,
-        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
         List<BigDecimal> subtotalEntradasPorMes,
-        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
         List<BigDecimal> subtotalSaidasPorMes,
-        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
         List<BigDecimal> saldoDoMes,
-        @JsonSerialize(using = ToStringSerializer.class)
+        @JsonSerialize(contentUsing = ToStringSerializer.class)
         List<BigDecimal> saldoAcumulado
 ) {}

@@ -108,6 +108,8 @@ export const Endpoints = {
     maiorLancamento: '/relatorios/maior-lancamento',
     porContribuinte: '/relatorios/por-contribuinte',
     congregacoes: '/relatorios/congregacoes',
+    balanceteAnual: '/relatorios/balancete-anual',
+    balanceteFamilia: '/relatorios/balancete-anual/congregacoes',
   },
 
   igreja: {

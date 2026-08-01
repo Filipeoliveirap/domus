@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useResumo } from '@/hooks/financeiro/relatorio/useResumo'
 import { usePorCategoria } from '@/hooks/financeiro/relatorio/usePorCategoria'
@@ -241,6 +242,10 @@ export default function RelatoriosPage() {
           <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => categorias.refetch()} />
 
           <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => evolucao.refetch()} />
+
+          <Link href="/financeiro/relatorios/balancete" className={styles.linkBalancete}>
+            Ver balancete anual →
+          </Link>
 
           <BreakdownContribuinte
             data={porContribuinte.data}

@@ -137,6 +137,28 @@ class BalanceteServiceTest {
     }
 
     @Test
+    void categoriaAtivaComTipoAlteradoAindaMostraMovimentacoesAntigasDaOutraDirecao() {
+        // Cenário: categoria "Ofertas" era AMBOS quando recebeu entradas E saídas.
+        // O admin depois trocou o tipo dela pra ENTRADA. A categoria continua ativa,
+        // mas a query de agregação ainda traz a linha SAIDA antiga - ela não pode sumir.
+        UUID categoriaId = UUID.randomUUID();
+        when(categoriaRepository.buscarTodasPorIgreja(igrejaId))
+                .thenReturn(List.of(categoriaAtiva(categoriaId, "Ofertas", TipoCategoria.ENTRADA)));
+        var l1 = linha(categoriaId, "Ofertas", false, "ENTRADA", 1, new BigDecimal("100.00"));
+        var l2 = linha(categoriaId, "Ofertas", false, "SAIDA", 3, new BigDecimal("40.00"));
+        when(repository.agregarPorCategoriaEMes(igrejaId, 2026)).thenReturn(List.of(l1, l2));
+
+        BalanceteResponseDTO resultado = service.gerar(igrejaId, 2026);
+
+        assertThat(resultado.entradas()).hasSize(1);
+        assertThat(resultado.entradas().get(0).valoresPorMes().get(0)).isEqualByComparingTo("100.00");
+        assertThat(resultado.saidas()).hasSize(1);
+        assertThat(resultado.saidas().get(0).arquivada()).isFalse();
+        assertThat(resultado.saidas().get(0).valoresPorMes().get(2)).isEqualByComparingTo("40.00");
+        assertThat(resultado.saidas().get(0).totalAno()).isEqualByComparingTo("40.00");
+    }
+
+    @Test
     void categoriaConsolidadaSoMarcaArquivadaSeNaoAtivaEmNenhumaIgrejaDaFamilia() {
         UUID sedeId = UUID.randomUUID();
         UUID congregacaoId = UUID.randomUUID();
@@ -162,5 +184,41 @@ class BalanceteServiceTest {
         assertThat(resultado.porIgreja().get(0).ehSede()).isTrue();
         assertThat(resultado.porIgreja().get(1).ehSede()).isFalse();
         assertThat(resultado.consolidado().entradas()).isEmpty();
+    }
+
+    @Test
+    void categoriaConsolidadaAtivaEmApenasUmaIgrejaDaFamiliaNaoApareceArquivada() {
+        UUID sedeId = UUID.randomUUID();
+        UUID congregacaoId = UUID.randomUUID();
+
+        when(familiaIgrejaService.idsDaFamilia(sedeId)).thenReturn(List.of(sedeId, congregacaoId));
+        when(igrejaRepository.findAllById(List.of(sedeId, congregacaoId))).thenReturn(List.of(
+                Igreja.builder().id(sedeId).nome("Sede").build(),
+                Igreja.builder().id(congregacaoId).nome("Congregacao").igrejaMae(Igreja.builder().id(sedeId).build()).build()
+        ));
+        // "Dizimos" só está ativa na sede, não na congregação
+        when(categoriaRepository.buscarTodasPorIgreja(sedeId))
+                .thenReturn(List.of(categoriaAtiva(UUID.randomUUID(), "Dizimos", TipoCategoria.ENTRADA)));
+        when(categoriaRepository.buscarTodasPorIgreja(congregacaoId)).thenReturn(List.of());
+        when(repository.agregarPorCategoriaEMes(sedeId, 2026)).thenReturn(List.of());
+        when(repository.agregarPorCategoriaEMes(congregacaoId, 2026)).thenReturn(List.of());
+        when(repository.saldoAntesDe(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repository.saldoAntesDeVariasIgrejas(any(), any())).thenReturn(BigDecimal.ZERO);
+
+        BalanceteProjections.LinhaMensalConsolidada linhaConsolidada = mock(BalanceteProjections.LinhaMensalConsolidada.class);
+        when(linhaConsolidada.getChave()).thenReturn("dizimos");
+        when(linhaConsolidada.getNomeExibicao()).thenReturn("Dizimos");
+        when(linhaConsolidada.getTipo()).thenReturn("ENTRADA");
+        when(linhaConsolidada.getMes()).thenReturn(1);
+        when(linhaConsolidada.getTotal()).thenReturn(new BigDecimal("500.00"));
+        when(repository.agregarConsolidadoPorCategoriaEMes(List.of(sedeId, congregacaoId), 2026))
+                .thenReturn(List.of(linhaConsolidada));
+
+        BalanceteFamiliaResponseDTO resultado = service.gerarFamilia(sedeId, 2026);
+
+        assertThat(resultado.consolidado().entradas()).hasSize(1);
+        assertThat(resultado.consolidado().entradas().get(0).arquivada()).isFalse();
+        assertThat(resultado.consolidado().entradas().get(0).nomeCategoria()).isEqualTo("Dizimos");
+        assertThat(resultado.consolidado().entradas().get(0).valoresPorMes().get(0)).isEqualByComparingTo("500.00");
     }
 }

@@ -11,7 +11,7 @@
 }
 
 .card {
-  border: 1px solid var(--cor-borda, #e5e7eb);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 0.5rem;
   padding: 1rem;
 }
@@ -28,11 +28,11 @@
 }
 
 .entrada {
-  color: var(--cor-entrada, #15803d);
+  color: var(--color-success-text, #15803d);
 }
 
 .saida {
-  color: var(--cor-saida, #b91c1c);
+  color: var(--color-danger, #b91c1c);
 }
 
 .saldoAcumulado {
@@ -40,6 +40,6 @@
   justify-content: space-between;
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--cor-borda, #e5e7eb);
+  border-top: 1px solid var(--color-border, #e5e7eb);
   font-weight: 700;
 }

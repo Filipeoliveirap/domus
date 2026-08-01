@@ -1,0 +1,63 @@
+.wrapper {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tabela th,
+.tabela td {
+  padding: 0.5rem 0.75rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabela th:first-child,
+.tabela td:first-child {
+  text-align: left;
+}
+
+.secao td {
+  font-weight: 700;
+  background: var(--cor-fundo-secao, #f3f4f6);
+}
+
+.linhaZerada {
+  color: var(--cor-texto-muted, #9ca3af);
+}
+
+.seloArquivada {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--cor-fundo-badge, #e5e7eb);
+  color: var(--cor-texto-badge, #4b5563);
+}
+
+.subtotal td {
+  font-weight: 600;
+  border-top: 1px solid var(--cor-borda, #e5e7eb);
+}
+
+.saldoMes td {
+  font-weight: 600;
+}
+
+.saldoAcumulado td {
+  font-weight: 700;
+  background: var(--cor-destaque, #dbeafe);
+}
+
+.total {
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .wrapper {
+    display: none;
+  }
+}

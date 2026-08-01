@@ -1,9 +1,13 @@
 package com.domus.api.modules.financeiro.balancete;
 
+import com.domus.api.modules.financeiro.balancete.DTOs.BalanceteFamiliaResponseDTO;
 import com.domus.api.modules.financeiro.balancete.DTOs.BalanceteResponseDTO;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceira;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.categoria.TipoCategoria;
+import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +26,8 @@ class BalanceteServiceTest {
 
     BalanceteRepository repository;
     CategoriaFinanceiraRepository categoriaRepository;
+    FamiliaIgrejaService familiaIgrejaService;
+    IgrejaRepository igrejaRepository;
     BalanceteService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -30,7 +36,9 @@ class BalanceteServiceTest {
     void setup() {
         repository = mock(BalanceteRepository.class);
         categoriaRepository = mock(CategoriaFinanceiraRepository.class);
-        service = new BalanceteService(repository, categoriaRepository);
+        familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        igrejaRepository = mock(IgrejaRepository.class);
+        service = new BalanceteService(repository, categoriaRepository, familiaIgrejaService, igrejaRepository);
         when(repository.saldoAntesDe(eq(igrejaId), any())).thenReturn(BigDecimal.ZERO);
     }
 
@@ -126,5 +134,33 @@ class BalanceteServiceTest {
         assertThat(resultado.saldoAcumulado().get(0)).isEqualByComparingTo("1300.00");
         assertThat(resultado.saldoAcumulado().get(1)).isEqualByComparingTo("1500.00");
         assertThat(resultado.saldoAcumulado().get(11)).isEqualByComparingTo("1500.00"); // sem movimento depois, mantém
+    }
+
+    @Test
+    void categoriaConsolidadaSoMarcaArquivadaSeNaoAtivaEmNenhumaIgrejaDaFamilia() {
+        UUID sedeId = UUID.randomUUID();
+        UUID congregacaoId = UUID.randomUUID();
+        UUID igrejaMaeParaChamada = sedeId;
+
+        when(familiaIgrejaService.idsDaFamilia(sedeId)).thenReturn(List.of(sedeId, congregacaoId));
+        when(igrejaRepository.findAllById(List.of(sedeId, congregacaoId))).thenReturn(List.of(
+                Igreja.builder().id(sedeId).nome("Sede").build(),
+                Igreja.builder().id(congregacaoId).nome("Congregacao").igrejaMae(Igreja.builder().id(sedeId).build()).build()
+        ));
+        when(categoriaRepository.buscarTodasPorIgreja(sedeId)).thenReturn(List.of());
+        when(categoriaRepository.buscarTodasPorIgreja(congregacaoId)).thenReturn(List.of());
+        when(repository.agregarPorCategoriaEMes(sedeId, 2026)).thenReturn(List.of());
+        when(repository.agregarPorCategoriaEMes(congregacaoId, 2026)).thenReturn(List.of());
+        when(repository.saldoAntesDe(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repository.saldoAntesDeVariasIgrejas(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repository.agregarConsolidadoPorCategoriaEMes(List.of(sedeId, congregacaoId), 2026))
+                .thenReturn(List.of());
+
+        BalanceteFamiliaResponseDTO resultado = service.gerarFamilia(igrejaMaeParaChamada, 2026);
+
+        assertThat(resultado.porIgreja()).hasSize(2);
+        assertThat(resultado.porIgreja().get(0).ehSede()).isTrue();
+        assertThat(resultado.porIgreja().get(1).ehSede()).isFalse();
+        assertThat(resultado.consolidado().entradas()).isEmpty();
     }
 }

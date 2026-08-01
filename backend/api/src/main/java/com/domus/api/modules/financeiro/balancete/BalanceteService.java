@@ -51,10 +51,13 @@ public class BalanceteService {
         List<LinhaCategoriaDTO> saidas = new ArrayList<>();
 
         for (CategoriaFinanceira c : ativas) {
-            if (c.getTipo() == TipoCategoria.ENTRADA || c.getTipo() == TipoCategoria.AMBOS) {
+            Map<String, BigDecimal[]> agregadoDaCategoria = valoresPorCategoria.getOrDefault(c.getId(), Map.of());
+            if (c.getTipo() == TipoCategoria.ENTRADA || c.getTipo() == TipoCategoria.AMBOS
+                    || agregadoDaCategoria.containsKey("ENTRADA")) {
                 entradas.add(montarLinha(c.getId(), c.getNome(), false, valoresPorCategoria, "ENTRADA"));
             }
-            if (c.getTipo() == TipoCategoria.SAIDA || c.getTipo() == TipoCategoria.AMBOS) {
+            if (c.getTipo() == TipoCategoria.SAIDA || c.getTipo() == TipoCategoria.AMBOS
+                    || agregadoDaCategoria.containsKey("SAIDA")) {
                 saidas.add(montarLinha(c.getId(), c.getNome(), false, valoresPorCategoria, "SAIDA"));
             }
         }

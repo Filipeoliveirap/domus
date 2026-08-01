@@ -1,0 +1,45 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .lista {
+    display: none;
+  }
+}
+
+.card {
+  border: 1px solid var(--cor-borda, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.linha {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+.entrada {
+  color: var(--cor-entrada, #15803d);
+}
+
+.saida {
+  color: var(--cor-saida, #b91c1c);
+}
+
+.saldoAcumulado {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--cor-borda, #e5e7eb);
+  font-weight: 700;
+}

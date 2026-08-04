@@ -6,91 +6,7 @@
 // Uso: node scripts/seed-demo-producao.mjs
 // A senha é pedida no terminal (não fica em arquivo nem em variável de ambiente salva).
 
-import readline from 'node:readline'
-
-const BASE_URL = 'https://domusigreja.com.br/api'
-const EMAIL_ADMIN = 'josefilipe.dev@gmail.com'
-
-function perguntarSenhaOculta(pergunta) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const stdin = process.stdin
-    process.stdout.write(pergunta)
-    stdin.resume()
-    stdin.setRawMode?.(true)
-    let senha = ''
-    const onData = (buf) => {
-      const codigo = buf[0]
-      if (codigo === 13 || codigo === 10) {
-        stdin.setRawMode?.(false)
-        stdin.pause()
-        stdin.removeListener('data', onData)
-        process.stdout.write('\n')
-        rl.close()
-        resolve(senha)
-      } else if (codigo === 3) {
-        process.exit(1)
-      } else if (codigo === 8 || codigo === 127) {
-        senha = senha.slice(0, -1)
-      } else {
-        senha += buf.toString('utf8')
-      }
-    }
-    stdin.on('data', onData)
-  })
-}
-
-class Sessao {
-  constructor() {
-    this.cookies = new Map()
-  }
-
-  guardarCookies(resposta) {
-    const setCookie = resposta.headers.getSetCookie?.() ?? []
-    for (const linha of setCookie) {
-      const [par] = linha.split(';')
-      const idx = par.indexOf('=')
-      const nome = par.slice(0, idx)
-      const valor = par.slice(idx + 1)
-      this.cookies.set(nome, valor)
-    }
-  }
-
-  headerCookie() {
-    return [...this.cookies.entries()].map(([k, v]) => `${k}=${v}`).join('; ')
-  }
-
-  csrfHeader() {
-    const token = this.cookies.get('XSRF-TOKEN')
-    return token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}
-  }
-
-  async requisitar(metodo, path, corpo) {
-    const resposta = await fetch(`${BASE_URL}${path}`, {
-      method: metodo,
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: this.headerCookie(),
-        ...this.csrfHeader(),
-      },
-      body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
-    })
-    this.guardarCookies(resposta)
-    if (!resposta.ok) {
-      const texto = await resposta.text().catch(() => '')
-      throw new Error(`${metodo} ${path} -> ${resposta.status}: ${texto}`)
-    }
-    const ct = resposta.headers.get('content-type') ?? ''
-    return ct.includes('application/json') ? resposta.json() : undefined
-  }
-
-  async login(email, senha) {
-    // Primeiro GET pra receber o cookie XSRF-TOKEN antes do login (login está isento de
-    // CSRF, mas o cookie só é emitido quando o CsrfFilter processa uma request).
-    await this.requisitar('GET', '/eventos/tipos').catch(() => {})
-    return this.requisitar('POST', '/auth/login', { email, senha })
-  }
-}
+import { BASE_URL, EMAIL_ADMIN, Sessao, perguntarSenhaOculta } from './lib/sessao-producao.mjs'
 
 const NOMES = [
   'Ana Paula Souza', 'Carlos Eduardo Lima', 'Beatriz Fernandes', 'Daniel Rocha',
@@ -145,18 +61,20 @@ async function main() {
     })
     celulas.push(celula)
   }
-  for (const celula of celulas) {
-    const membros = pessoas.filter(() => Math.random() < 0.35)
-    let primeiro = true
-    for (const pessoa of membros) {
-      const membro = await sessao.requisitar('POST', `/celulas/${celula.id}/membros`, {
-        pessoaId: pessoa.id,
-      })
-      if (primeiro) {
-        await sessao.requisitar('PUT', `/celulas/${celula.id}/membros/${membro.id}/papel`, {
+  for (const celula of celulas.filter(Boolean)) {
+    // POST /celulas/{id}/membros devolve 201 sem corpo — precisa buscar o detalhe depois
+    // pra descobrir o id do vínculo (membroId) de cada pessoa adicionada.
+    const membrosEscolhidos = pessoas.filter(() => Math.random() < 0.35)
+    for (const pessoa of membrosEscolhidos) {
+      await sessao.requisitar('POST', `/celulas/${celula.id}/membros`, { pessoaId: pessoa.id })
+    }
+    if (membrosEscolhidos.length > 0) {
+      const detalhe = await sessao.requisitar('GET', `/celulas/${celula.id}`)
+      const primeiroMembro = detalhe.membros.find((m) => m.pessoaId === membrosEscolhidos[0].id)
+      if (primeiroMembro) {
+        await sessao.requisitar('PUT', `/celulas/${celula.id}/membros/${primeiroMembro.id}/papel`, {
           papel: 'LIDER',
         })
-        primeiro = false
       }
     }
   }
@@ -193,7 +111,15 @@ async function main() {
   ]
   const categoriasCriadas = []
   for (const c of categorias) {
-    categoriasCriadas.push(await sessao.requisitar('POST', '/categorias', c))
+    try {
+      categoriasCriadas.push(await sessao.requisitar('POST', '/categorias', c))
+    } catch (erro) {
+      if (!erro.message.includes('CATEGORIA_DUPLICADA')) throw erro
+      const existentes = await sessao.requisitar('GET', `/categorias?q=${encodeURIComponent(c.nome)}`)
+      const existente = existentes.content.find((x) => x.nome === c.nome)
+      if (!existente) throw erro
+      categoriasCriadas.push(existente)
+    }
   }
   for (let i = 0; i < 30; i++) {
     const categoria = aleatorio(categoriasCriadas)

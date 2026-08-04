@@ -57,7 +57,9 @@ export class Sessao {
     return token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}
   }
 
-  async requisitar(metodo, path, corpo) {
+  async requisitar(metodo, path, corpo, tentativa = 0) {
+    // Espaça as chamadas pra não estourar o RateLimitFilter (por IP, global).
+    await new Promise((r) => setTimeout(r, 250))
     const resposta = await fetch(`${BASE_URL}${path}`, {
       method: metodo,
       headers: {
@@ -68,6 +70,12 @@ export class Sessao {
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
     })
     this.guardarCookies(resposta)
+    if (resposta.status === 429 && tentativa < 5) {
+      const espera = 2000 * (tentativa + 1)
+      console.warn(`  rate limit em ${metodo} ${path}, aguardando ${espera}ms...`)
+      await new Promise((r) => setTimeout(r, espera))
+      return this.requisitar(metodo, path, corpo, tentativa + 1)
+    }
     const texto = await resposta.text()
     if (!resposta.ok) {
       throw new Error(`${metodo} ${path} -> ${resposta.status}: ${texto}`)

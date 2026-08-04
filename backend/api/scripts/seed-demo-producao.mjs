@@ -111,7 +111,15 @@ async function main() {
   ]
   const categoriasCriadas = []
   for (const c of categorias) {
-    categoriasCriadas.push(await sessao.requisitar('POST', '/categorias', c))
+    try {
+      categoriasCriadas.push(await sessao.requisitar('POST', '/categorias', c))
+    } catch (erro) {
+      if (!erro.message.includes('CATEGORIA_DUPLICADA')) throw erro
+      const existentes = await sessao.requisitar('GET', `/categorias?q=${encodeURIComponent(c.nome)}`)
+      const existente = existentes.content.find((x) => x.nome === c.nome)
+      if (!existente) throw erro
+      categoriasCriadas.push(existente)
+    }
   }
   for (let i = 0; i < 30; i++) {
     const categoria = aleatorio(categoriasCriadas)

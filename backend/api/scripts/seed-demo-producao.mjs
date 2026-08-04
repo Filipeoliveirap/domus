@@ -76,12 +76,17 @@ class Sessao {
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
     })
     this.guardarCookies(resposta)
+    const texto = await resposta.text()
     if (!resposta.ok) {
-      const texto = await resposta.text().catch(() => '')
       throw new Error(`${metodo} ${path} -> ${resposta.status}: ${texto}`)
     }
-    const ct = resposta.headers.get('content-type') ?? ''
-    return ct.includes('application/json') ? resposta.json() : undefined
+    if (!texto) return undefined
+    try {
+      return JSON.parse(texto)
+    } catch {
+      console.warn(`  aviso: resposta de ${metodo} ${path} não é JSON: ${texto.slice(0, 200)}`)
+      return undefined
+    }
   }
 
   async login(email, senha) {
@@ -145,7 +150,7 @@ async function main() {
     })
     celulas.push(celula)
   }
-  for (const celula of celulas) {
+  for (const celula of celulas.filter(Boolean)) {
     const membros = pessoas.filter(() => Math.random() < 0.35)
     let primeiro = true
     for (const pessoa of membros) {

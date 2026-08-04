@@ -62,17 +62,19 @@ async function main() {
     celulas.push(celula)
   }
   for (const celula of celulas.filter(Boolean)) {
-    const membros = pessoas.filter(() => Math.random() < 0.35)
-    let primeiro = true
-    for (const pessoa of membros) {
-      const membro = await sessao.requisitar('POST', `/celulas/${celula.id}/membros`, {
-        pessoaId: pessoa.id,
-      })
-      if (primeiro) {
-        await sessao.requisitar('PUT', `/celulas/${celula.id}/membros/${membro.id}/papel`, {
+    // POST /celulas/{id}/membros devolve 201 sem corpo — precisa buscar o detalhe depois
+    // pra descobrir o id do vínculo (membroId) de cada pessoa adicionada.
+    const membrosEscolhidos = pessoas.filter(() => Math.random() < 0.35)
+    for (const pessoa of membrosEscolhidos) {
+      await sessao.requisitar('POST', `/celulas/${celula.id}/membros`, { pessoaId: pessoa.id })
+    }
+    if (membrosEscolhidos.length > 0) {
+      const detalhe = await sessao.requisitar('GET', `/celulas/${celula.id}`)
+      const primeiroMembro = detalhe.membros.find((m) => m.pessoaId === membrosEscolhidos[0].id)
+      if (primeiroMembro) {
+        await sessao.requisitar('PUT', `/celulas/${celula.id}/membros/${primeiroMembro.id}/papel`, {
           papel: 'LIDER',
         })
-        primeiro = false
       }
     }
   }

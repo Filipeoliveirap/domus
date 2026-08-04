@@ -102,8 +102,17 @@ public class ReindexacaoService {
 
     private long reindexarMovimentacoes() {
         recriarIndice(MovimentacaoDocument.class);
+        // Uma movimentação com FK de categoria quebrada (categoria apagada por fora do
+        // fluxo normal) não pode derrubar a reindexação de todo o sistema — pula só ela.
         var docs = movimentacaoRepository.findAll().stream()
-                .map(MovimentacaoDocument::de)
+                .<MovimentacaoDocument>mapMulti((m, consumer) -> {
+                    try {
+                        consumer.accept(MovimentacaoDocument.de(m));
+                    } catch (jakarta.persistence.EntityNotFoundException e) {
+                        log.warn("Movimentação {} com categoria inexistente, pulando na reindexação.",
+                                m.getId());
+                    }
+                })
                 .toList();
         movimentacaoSearchRepository.saveAll(docs);
         log.info("Reindexadas {} movimentações.", docs.size());

@@ -1,24 +1,26 @@
-import readline from 'node:readline'
-
 export const BASE_URL = 'https://domusigreja.com.br/api'
 export const EMAIL_ADMIN = 'josefilipe.dev@gmail.com'
 
+// Sem readline: readline.createInterface ecoa a entrada mesmo com stdin em raw mode
+// (foi o que expôs a senha em texto puro numa tentativa anterior). Lê byte a byte direto
+// do stdin e nunca escreve o que foi digitado de volta no terminal.
 export function perguntarSenhaOculta(pergunta) {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     const stdin = process.stdin
     process.stdout.write(pergunta)
     stdin.resume()
-    stdin.setRawMode?.(true)
+    if (!stdin.isTTY) {
+      throw new Error('stdin não é um TTY — não dá pra esconder a senha com segurança aqui.')
+    }
+    stdin.setRawMode(true)
     let senha = ''
     const onData = (buf) => {
       const codigo = buf[0]
       if (codigo === 13 || codigo === 10) {
-        stdin.setRawMode?.(false)
+        stdin.setRawMode(false)
         stdin.pause()
         stdin.removeListener('data', onData)
         process.stdout.write('\n')
-        rl.close()
         resolve(senha)
       } else if (codigo === 3) {
         process.exit(1)

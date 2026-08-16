@@ -32,6 +32,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
 
   const entradas = formatarVariacao(data.comparacao.entradasVariacao)
   const saidas = formatarVariacao(data.comparacao.saidasVariacao)
+  const saldoVar = formatarVariacao(data.comparacao.saldoVariacao)
 
   return (
     <div className={styles.grid}>
@@ -47,6 +48,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
           {entradas.sinal === 'negativo' && <ArrowDown size={14} />}
           <span>{entradas.texto} vs período anterior</span>
         </div>
+        <span className={styles.cardSub}>Anterior: {formatarMoeda(data.entradasAnterior)}</span>
       </div>
 
       {/* Saídas */}
@@ -61,6 +63,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
           {saidas.sinal === 'negativo' && <ArrowDown size={14} />}
           <span>{saidas.texto} vs período anterior</span>
         </div>
+        <span className={styles.cardSub}>Anterior: {formatarMoeda(data.saidasAnterior)}</span>
       </div>
 
       {/* Saldo — card destacado */}
@@ -70,6 +73,14 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
           <span className={styles.cardIconeClaro}><Wallet size={20} /></span>
         </div>
         <p className={styles.cardValorClaro}>{formatarMoeda(data.saldo)}</p>
+        <div className={`${styles.variacao} ${styles[saldoVar.sinal]}`}>
+          {saldoVar.sinal === 'positivo' && <ArrowUp size={14} />}
+          {saldoVar.sinal === 'negativo' && <ArrowDown size={14} />}
+          <span>{saldoVar.texto} vs período anterior</span>
+        </div>
+        <span className={styles.cardSubClaro}>
+          Saldo anterior: {formatarMoeda(data.saldoAnterior)}
+        </span>
         <span className={styles.cardSubClaro}>
           {data.quantidadeMovimentacoes} movimentaç{data.quantidadeMovimentacoes === 1 ? 'ão' : 'ões'} no período
         </span>

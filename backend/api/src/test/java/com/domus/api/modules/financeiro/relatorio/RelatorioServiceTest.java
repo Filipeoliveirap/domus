@@ -62,6 +62,24 @@ class RelatorioServiceTest {
     }
 
     @Test
+    void saldoAnteriorReflitoTotalDoPeriodoImediatamenteAnterior() {
+        var atual = resumo(new BigDecimal("500.00"), new BigDecimal("200.00"), 3);
+        var anterior = resumo(new BigDecimal("300.00"), new BigDecimal("100.00"), 2);
+
+        when(repository.agregarResumo(igrejaId, dataInicio, dataFim)).thenReturn(atual);
+        when(repository.agregarResumo(igrejaId, LocalDate.of(2026, 5, 31), LocalDate.of(2026, 6, 30)))
+                .thenReturn(anterior);
+
+        var response = service.resumoPorPeriodo(igrejaId, dataInicio, dataFim, null);
+
+        assertThat(response.saldo()).isEqualByComparingTo("300.00");
+        assertThat(response.entradasAnterior()).isEqualByComparingTo("300.00");
+        assertThat(response.saidasAnterior()).isEqualByComparingTo("100.00");
+        assertThat(response.saldoAnterior()).isEqualByComparingTo("200.00");
+        assertThat(response.comparacao().saldoVariacao()).isEqualByComparingTo("50.0");
+    }
+
+    @Test
     void porContribuinteAgregaTotalPorPessoaComPercentual() {
         RelatorioProjections.ContribuinteAgregado a = mock(RelatorioProjections.ContribuinteAgregado.class);
         UUID pessoaId = UUID.randomUUID();

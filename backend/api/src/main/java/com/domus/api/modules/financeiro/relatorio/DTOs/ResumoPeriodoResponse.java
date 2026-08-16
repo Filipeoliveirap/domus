@@ -6,6 +6,9 @@ public record ResumoPeriodoResponse(
         BigDecimal totalEntradas,
         BigDecimal totalSaidas,
         BigDecimal saldo,
+        BigDecimal entradasAnterior,
+        BigDecimal saidasAnterior,
+        BigDecimal saldoAnterior,
         long quantidadeMovimentacoes,
         VariacaoPercentual comparacao
 ) {

@@ -10,6 +10,9 @@ export interface ResumoPeriodo {
   totalEntradas: string
   totalSaidas: string
   saldo: string
+  entradasAnterior: string
+  saidasAnterior: string
+  saldoAnterior: string
   quantidadeMovimentacoes: number
   comparacao: VariacaoPercentual
 }

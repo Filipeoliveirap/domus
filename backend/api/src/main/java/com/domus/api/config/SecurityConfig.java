@@ -52,10 +52,7 @@ public class SecurityConfig {
                                 "/auth/google/registrar",
                                 "/auth/forgot-password",
                                 "/auth/reset-password",
-                                "/igrejas/registrar",
-                                // TEMPORÁRIO (remover após a demo do TCC, ver PROD-TEMP-2026-08):
-                                // liberado sem login pra demonstração ao vivo.
-                                "/admin/reindexacao"))
+                                "/igrejas/registrar"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -70,7 +67,6 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/admin/reindexacao").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 

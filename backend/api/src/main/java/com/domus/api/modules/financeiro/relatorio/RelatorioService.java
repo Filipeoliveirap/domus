@@ -40,13 +40,18 @@ public class RelatorioService {
                 ? repository.agregarResumo(igrejaId, inicioAnterior, fimAnterior)
                 : repository.agregarResumoPorVinculo(igrejaId, inicioAnterior, fimAnterior, vinculo);
 
+        BigDecimal entradasAnterior = anterior.getTotalEntradas();
+        BigDecimal saidasAnterior = anterior.getTotalSaidas();
+        BigDecimal saldoAnterior = entradasAnterior.subtract(saidasAnterior);
+
         var comparacao = new ResumoPeriodoResponse.VariacaoPercentual(
-                calcularVariacao(anterior.getTotalEntradas(), entradas),
-                calcularVariacao(anterior.getTotalSaidas(), saidas),
-                calcularVariacao(anterior.getTotalEntradas().subtract(anterior.getTotalSaidas()), saldo)
+                calcularVariacao(entradasAnterior, entradas),
+                calcularVariacao(saidasAnterior, saidas),
+                calcularVariacao(saldoAnterior, saldo)
         );
 
-        return new ResumoPeriodoResponse(entradas, saidas, saldo, atual.getQuantidade(), comparacao);
+        return new ResumoPeriodoResponse(entradas, saidas, saldo, entradasAnterior, saidasAnterior, saldoAnterior,
+                atual.getQuantidade(), comparacao);
     }
 
     @Transactional(readOnly = true)

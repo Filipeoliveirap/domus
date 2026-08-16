@@ -1,6 +1,21 @@
-
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: domus-postgres
+    environment:
+      POSTGRES_DB: domus
+      POSTGRES_USER: domus
+      POSTGRES_PASSWORD: domus123
+    ports:
+      - "5432:5432"
+    volumes:
+      - domus-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: domus-redis
@@ -9,6 +24,11 @@ services:
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
@@ -39,5 +59,6 @@ services:
         condition: service_healthy
 
 volumes:
+  domus-db-data:
   redis-data:
   elastic-data:

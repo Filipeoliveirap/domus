@@ -51,6 +51,11 @@
   line-height: 1.1;
 }
 
+.cardSub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .variacao {
   display: inline-flex;
   align-items: center;
@@ -93,6 +98,12 @@
 }
 .cardSubClaro {
   font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cardSaldo .positivo,
+.cardSaldo .negativo,
+.cardSaldo .neutro {
   color: rgba(255, 255, 255, 0.85);
 }
 

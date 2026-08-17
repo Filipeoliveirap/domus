@@ -15,6 +15,7 @@ import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.usuario.*;
 import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;

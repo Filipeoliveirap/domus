@@ -1,7 +1,7 @@
 package com.domus.api.modules.visitante;
 
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.pessoa.EstadoCivil;
 import com.domus.api.modules.pessoa.Sexo;
 import com.domus.api.modules.usuario.Usuario;

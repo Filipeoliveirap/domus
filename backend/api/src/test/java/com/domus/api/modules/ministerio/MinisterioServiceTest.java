@@ -4,7 +4,7 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.ministerio.DTOs.MinisterioRequest;
 import com.domus.api.modules.ministerio.DTOs.MinisterioResponse;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.ministerio.Papel;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;

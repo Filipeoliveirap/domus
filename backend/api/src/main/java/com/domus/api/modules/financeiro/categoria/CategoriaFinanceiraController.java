@@ -71,6 +71,26 @@ public class CategoriaFinanceiraController {
         service.arquivar(id, igrejaId);
     }
 
+    @GetMapping("/arquivadas")
+    public List<CategoriaResponse> arquivadas() {
+        exigirFinanceiro();
+        return service.listarArquivadas(usuarioAutenticado.getIgrejaId());
+    }
+
+    @PostMapping("/{id}/restaurar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void restaurar(@PathVariable UUID id) {
+        exigirFinanceiro();
+        service.restaurar(id, usuarioAutenticado.getIgrejaId());
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluirDefinitivo(@PathVariable UUID id) {
+        exigirFinanceiro();
+        service.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+    }
+
     /** A11: contagem de lançamentos da categoria, para o front decidir se pede confirmação
      *  antes de salvar a edição. Não bloqueia nada aqui — é só informação. */
     @GetMapping("/{id}/contagem-movimentacoes")

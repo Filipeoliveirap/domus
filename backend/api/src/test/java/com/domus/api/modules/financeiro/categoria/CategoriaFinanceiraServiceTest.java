@@ -85,4 +85,63 @@ class CategoriaFinanceiraServiceTest {
         assertThatThrownBy(() -> service.contarMovimentacoes(categoriaId, igrejaId))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test
+    void excluirDefinitivoApagaDeVerdadeQuandoSemMovimentacao() {
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId))
+                .thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(0L);
+
+        service.excluirDefinitivo(categoriaId, igrejaId);
+
+        org.mockito.Mockito.verify(repository).hardDeleteById(categoriaId);
+    }
+
+    @Test
+    void excluirDefinitivoBloqueiaQuandoTemMovimentacao() {
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId))
+                .thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(3L);
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(categoriaId, igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ConflitoNegocioException.class);
+
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).hardDeleteById(any());
+    }
+
+    @Test
+    void restaurarFalhaQuandoIdNaoPertenceAEssaIgreja() {
+        when(repository.restaurarPorId(categoriaId, igrejaId)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.restaurar(categoriaId, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void restaurarFuncionaEReindexaNaBusca() {
+        when(repository.restaurarPorId(categoriaId, igrejaId)).thenReturn(1);
+
+        service.restaurar(categoriaId, igrejaId);
+
+        org.mockito.Mockito.verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.CATEGORIA,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
+                categoriaId, igrejaId);
+    }
+
+    @Test
+    void listarArquivadasMarcaTemVinculoConformeMovimentacao() {
+        when(repository.findArquivadasPorIgreja(igrejaId)).thenReturn(java.util.List.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(5L);
+
+        var arquivadas = service.listarArquivadas(igrejaId);
+
+        assertThat(arquivadas).hasSize(1);
+        assertThat(arquivadas.get(0).temVinculo()).isTrue();
+    }
+
+    private static <T> T any() { return org.mockito.ArgumentMatchers.any(); }
 }

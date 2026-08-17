@@ -71,9 +71,21 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
 """)
     List<UUID> buscarIdsPorCategoria(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
 
-    /** A11: quantos lançamentos usam a categoria — um COUNT só, sob demanda (ver Javadoc de
-     *  {@code ContagemMovimentacoesResponse}), não durante a listagem de categorias. */
-    long countByCategoriaIdAndIgrejaId(UUID categoriaId, UUID igrejaId);
+    /**
+     * A11: quantos lançamentos usam a categoria — um COUNT só, sob demanda (ver Javadoc de
+     * {@code ContagemMovimentacoesResponse}), não durante a listagem de categorias.
+     *
+     * <p>Nativa de propósito: uma derived query aqui (`categoria.id = ...`) navega a
+     * associação `categoria`, e o @SQLRestriction("deleted_at IS NULL") de CategoriaFinanceira
+     * vaza pro JOIN implícito — categoria ARQUIVADA com movimentações reais contaria 0,
+     * deixando excluirDefinitivo liberar um hard delete que deveria estar bloqueado (mesmo
+     * bug já corrigido em CelulaMembroRepository/MinisterioMembroRepository).
+     */
+    @Query(value = """
+        SELECT COUNT(*) FROM movimentacao_financeira
+        WHERE categoria_id = :categoriaId AND igreja_id = :igrejaId AND deleted_at IS NULL
+        """, nativeQuery = true)
+    long countByCategoriaIdAndIgrejaId(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
 
     @Query("""
     SELECT DISTINCT ct.movimentacao.id FROM MovimentacaoContribuinte ct

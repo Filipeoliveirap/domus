@@ -21,11 +21,13 @@ export function useExcluirCelulaDefinitivamente(celula: CelulaResponse, onClose:
       notificar.sucesso(`${celula.nome} foi excluída definitivamente.`)
       onClose()
     } catch (error: unknown) {
-      if (axios.isAxiosError<ApiError>(error)) {
-        setErroGeral(error.response?.data?.message ?? 'Erro ao excluir. Tente novamente.')
-      } else {
-        setErroGeral('Erro ao excluir. Tente novamente.')
-      }
+      const mensagem = axios.isAxiosError<ApiError>(error)
+        ? error.response?.data?.message ?? 'Erro ao excluir. Tente novamente.'
+        : 'Erro ao excluir. Tente novamente.'
+      // erroGeral é exibido inline pelo ModalConfirmacaoCritica; o toast garante que o
+      // erro também aparece quando quem chama é o ModalConfirmacao simples (sem esse slot).
+      setErroGeral(mensagem)
+      notificar.erro(mensagem)
     } finally {
       setIsLoading(false)
     }

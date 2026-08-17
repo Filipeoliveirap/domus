@@ -16,11 +16,9 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
-import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -136,30 +134,36 @@ public class CelulaService {
 
     @Transactional
     public void excluirDefinitivo(UUID id, UUID igrejaId) {
-        // buscarDaIgrejaOuFalhar usa findByIdAndIgrejaId, que o @SQLRestriction filtra
-        // pra sempre "não arquivada" — esse endpoint precisa achar também a já arquivada
-        // (é o caminho principal chamado a partir da tela de Arquivados).
+        // findByIdAndIgrejaIdIncluindoArquivadas (não buscarDaIgrejaOuFalhar) porque esse
+        // endpoint precisa achar também uma célula já arquivada — é o caminho principal
+        // chamado a partir da tela de Arquivados.
         celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Célula não encontrada."));
-        if (membroRepository.existsByCelulaId(id)) {
-            throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
-                    "Não é possível apagar uma célula que tem membros.");
-        }
-        // A checagem acima é só UX (mensagem melhor, evita ir ao banco à toa) — a fonte
-        // da verdade é a própria FK. Sem isso, uma corrida entre "checar" e "apagar" (ex.:
-        // membro adicionado por outra aba entre as duas chamadas) vira 500 em vez de 409.
-        try {
-            celulaRepository.hardDeleteById(id);
-        } catch (DataIntegrityViolationException e) {
-            throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
-                    "Não é possível apagar uma célula que tem membros.");
-        }
+
+        // Vínculo de célula é só "essa pessoa está nesse grupo" — apagar a célula não
+        // apaga a pessoa/visitante, só o vínculo. Por isso, diferente de Evento/Categoria
+        // (onde o vínculo é histórico financeiro/inscrição de outra pessoa), aqui tem
+        // membro NÃO bloqueia: desvincula todo mundo e segue com a exclusão.
+        List<CelulaMembro> membros = membroRepository.findByCelulaIdOrderByPapelAsc(id);
+        List<UUID> visitantesAfetados = membros.stream()
+                .filter(m -> m.getVisitante() != null)
+                .map(m -> m.getVisitante().getId())
+                .toList();
+        membroRepository.deleteAll(membros);
+
+        celulaRepository.hardDeleteById(id);
         outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
+        // VisitanteDocument.celulaId precisa voltar a null pra quem estava nessa célula.
+        visitantesAfetados.forEach(visitanteId -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, visitanteId, igrejaId));
     }
 
     @Transactional(readOnly = true)
     public CelulaDetalheResponse detalhe(UUID celulaId, UUID igrejaId, UUID pessoaLogadaId) {
-        Celula celula = buscarDaIgrejaOuFalhar(celulaId, igrejaId);
+        // Precisa enxergar arquivada também — dá pra abrir o detalhe de uma célula
+        // arquivada a partir da tela de Arquivados, igual uma célula ativa.
+        Celula celula = celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Célula não encontrada."));
         boolean souLider = pessoaLogadaId != null && ehLiderDaCelula(celulaId, pessoaLogadaId);
 
         List<CelulaMembro> todos = membroRepository.findByCelulaIdOrderByPapelAsc(celulaId);

@@ -2,6 +2,9 @@ package com.domus.api.modules.celula;
 
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.Vinculo;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CelulaRepositoryTest {
 
     @Autowired CelulaRepository celulaRepository;
+    @Autowired CelulaMembroRepository celulaMembroRepository;
     @Autowired IgrejaRepository igrejaRepository;
+    @Autowired PessoaRepository pessoaRepository;
     @Autowired EntityManager entityManager;
 
     @Test
@@ -77,5 +82,32 @@ class CelulaRepositoryTest {
 
         assertThat(linhas).isEqualTo(0);
         assertThat(celulaRepository.findById(id)).isEmpty(); // continua arquivada
+    }
+
+    @Test
+    void hardDeleteByIdFuncionaAposApagarMembrosNaMesmaTransacao() {
+        // Reproduz o bug real: hardDeleteById é SQL nativo e não enxerga o delete de
+        // celula_membro feito via JPA na mesma transação sem um flush explícito no meio.
+        Igreja igreja = igrejaRepository.save(
+                Igreja.builder().nome("Igreja Teste").emailContato("hd-" + UUID.randomUUID() + "@teste.com").build());
+        Celula celula = celulaRepository.save(
+                Celula.builder().igreja(igreja).nome("Com membro " + UUID.randomUUID()).build());
+        Pessoa pessoa = pessoaRepository.save(
+                Pessoa.builder().igreja(igreja).nome("Fulano").vinculo(Vinculo.MEMBRO).build());
+        celulaMembroRepository.save(
+                CelulaMembro.builder().igreja(igreja).celula(celula).pessoa(pessoa).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        // Igual ao CelulaService: busca fresca (não a mesma referência que salvou) e
+        // deleteAll — sem clear() no meio, exatamente a sequência real do serviço.
+        List<CelulaMembro> membros = celulaMembroRepository.findByCelulaIdOrderByPapelAsc(celula.getId());
+        celulaMembroRepository.deleteAll(membros);
+        // SEM FLUSH (teste de sanidade)
+        celulaRepository.hardDeleteById(celula.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(celulaRepository.findById(celula.getId())).isEmpty();
     }
 }

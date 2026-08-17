@@ -150,6 +150,11 @@ public class CelulaService {
                 .map(m -> m.getVisitante().getId())
                 .toList();
         membroRepository.deleteAll(membros);
+        // hardDeleteById é SQL nativo — o Hibernate não sabe que ele depende do delete
+        // acima (só entidades gerenciadas por JPQL disparam auto-flush) e roda direto
+        // contra o banco, achando membro que já devia ter sumido. flush() força a
+        // sincronização antes.
+        membroRepository.flush();
 
         celulaRepository.hardDeleteById(id);
         outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.REMOVIDO, id, igrejaId);

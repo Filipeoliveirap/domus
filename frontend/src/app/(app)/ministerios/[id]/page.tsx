@@ -141,38 +141,42 @@ export default function MinisterioDetalhePage() {
               <li key={membro.pessoaId} className={styles.itemMembro}
                 onClick={() => setPessoaDetalheId(membro.pessoaId)}
               >
-                {urlFoto(membro.fotoId, 'THUMB') ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                  <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
-                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
-                ) : (
-                  <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
-                )}
-                <span className={styles.nomeMembro}>
-                  {membro.nome}
-                  {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
-                </span>
-                {membro.papel === 'LIDER' && (
-                  <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
-                )}
-                {isAdmin && (
-                  <button type="button" className={styles.botaoPromover}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      atualizarPapel.mutate({
-                        pessoaId: membro.pessoaId,
-                        papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
-                      })
-                    }}>
-                    {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
-                  </button>
-                )}
-                {podeGerenciarMembros && (
-                  <button type="button" className={styles.botaoRemover}
-                    onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
-                    <UserMinus size={16} />
-                  </button>
-                )}
+                <div className={styles.itemMembroInfo}>
+                  {urlFoto(membro.fotoId, 'THUMB') ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                    <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
+                      onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
+                  ) : (
+                    <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
+                  )}
+                  <span className={styles.nomeMembro}>
+                    {membro.nome}
+                    {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
+                  </span>
+                  {membro.papel === 'LIDER' && (
+                    <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
+                  )}
+                </div>
+                <div className={styles.itemMembroAcoes}>
+                  {isAdmin && (
+                    <button type="button" className={styles.botaoPromover}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        atualizarPapel.mutate({
+                          pessoaId: membro.pessoaId,
+                          papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
+                        })
+                      }}>
+                      {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
+                    </button>
+                  )}
+                  {podeGerenciarMembros && (
+                    <button type="button" className={styles.botaoRemover}
+                      onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
+                      <UserMinus size={16} />
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

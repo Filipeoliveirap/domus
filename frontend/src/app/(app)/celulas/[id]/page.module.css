@@ -351,6 +351,13 @@
   .membro {
     flex-wrap: wrap;
   }
+  .membroInfo {
+    flex-basis: 100%;
+  }
+  .membroAcoes {
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .viewerOverlay {
@@ -396,6 +403,7 @@
 .avisoArquivada {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 12px 16px;
   border-radius: var(--radius-md);

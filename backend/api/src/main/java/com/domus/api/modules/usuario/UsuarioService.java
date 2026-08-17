@@ -71,7 +71,7 @@ public class UsuarioService {
                     "Este membro já teve acesso, que foi arquivado. Deseja reativar?");
         }
 
-        String email = garantirEmailDoMembro(membro, data.email());
+        String email = garantirEmailDoMembro(membro, data.email(), igrejaId);
 
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
@@ -107,7 +107,7 @@ public class UsuarioService {
                 .filter(u -> u.getDeleteAt() != null)
                 .orElseThrow(() -> new BusinessException("Nenhum acesso arquivado encontrado."));
 
-        String email = garantirEmailDoMembro(membro, data.email());
+        String email = garantirEmailDoMembro(membro, data.email(), igrejaId);
 
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
@@ -155,7 +155,7 @@ public class UsuarioService {
     }
 
     /** Garante e-mail no membro (o convite depende dele). Se não tem, valida unicidade e grava. */
-    private String garantirEmailDoMembro(Pessoa membro, String emailFornecido) {
+    private String garantirEmailDoMembro(Pessoa membro, String emailFornecido, UUID igrejaId) {
         if (membro.getEmail() != null && !membro.getEmail().isBlank()) {
             return membro.getEmail();
         }
@@ -169,6 +169,7 @@ public class UsuarioService {
         }
         membro.setEmail(email);
         membroRepository.save(membro);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.ATUALIZADO, membro.getId(), igrejaId);
         return email;
     }
 

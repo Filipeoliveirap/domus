@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, X, Users, Calendar, UserCog, Wallet, Tag, Loader2 } from 'lucide-react'
+import { useRouter, usePathname } from 'next/navigation'
+import { Search, X, Users, Calendar, UserCog, Wallet, Tag, Loader2, Home, UserPlus, Network } from 'lucide-react'
 import { useBuscaGlobal, type ResultadoBusca } from '@/hooks/busca/useBuscaGlobal'
 import styles from './BuscaGlobal.module.css'
 
@@ -16,14 +16,20 @@ const TIPO_CONFIG: Record<ResultadoBusca['tipo'], {
   USUARIO:      { label: 'Usuários',      icon: UserCog,  rota: (r) => `/usuarios?q=${encodeURIComponent(r.titulo)}` },
   MOVIMENTACAO: { label: 'Movimentações', icon: Wallet,   rota: (r) => `/financeiro/movimentacoes?q=${encodeURIComponent(r.titulo)}` },
   CATEGORIA:    { label: 'Categorias',    icon: Tag,      rota: (r) => `/financeiro/categorias?q=${encodeURIComponent(r.titulo)}` },
+  CELULA:       { label: 'Células',       icon: Home,     rota: (r) => `/celulas?q=${encodeURIComponent(r.titulo)}` },
+  VISITANTE:    { label: 'Visitantes',    icon: UserPlus, rota: (r) => r.celulaId
+                    ? `/celulas/${r.celulaId}?visitante=${r.id}`
+                    : `/pessoas/visitantes?q=${encodeURIComponent(r.titulo)}` },
+  MINISTERIO:   { label: 'Redes',         icon: Network,  rota: (r) => `/ministerios?q=${encodeURIComponent(r.titulo)}` },
 }
 
-const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['PESSOA', 'EVENTO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
+const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['PESSOA', 'EVENTO', 'VISITANTE', 'CELULA', 'MINISTERIO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
 
 export function BuscaGlobal() {
   const [termo, setTermo] = useState('')
   const [aberto, setAberto] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const { data: resultados, isFetching } = useBuscaGlobal(termo)
@@ -48,9 +54,18 @@ export function BuscaGlobal() {
 
   function selecionar(r: ResultadoBusca) {
     const rota = TIPO_CONFIG[r.tipo].rota(r)
+    const [novoPathname] = rota.split('?')
     setTermo('')
     setAberto(false)
-    router.push(rota)
+    if (novoPathname === pathname) {
+      // Já estando na mesma rota, router.push só troca a querystring — as páginas são
+      // client-side (estado lido uma vez na montagem, ex.: useState(() => searchParams...)),
+      // então nada reage. router.refresh() também não ajuda (só refaz Server Components).
+      // Só um reload de verdade remonta a página com o novo termo.
+      window.location.href = rota
+    } else {
+      router.push(rota)
+    }
   }
 
   return (

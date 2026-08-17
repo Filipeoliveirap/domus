@@ -4,6 +4,9 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest;
 import com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest;
 import com.domus.api.modules.ministerio.DTOs.MembroResponse;
@@ -36,6 +39,7 @@ public class MinisterioService {
     private final UsuarioRepository usuarioRepository;
     private final PessoaRepository pessoaRepository;
     private final FotoService fotoService;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listar(UUID igrejaId) {
@@ -72,7 +76,9 @@ public class MinisterioService {
                 .atualizadoPor(usuario)
                 .build();
 
-        return MinisterioResponse.from(ministerioRepository.save(ministerio));
+        Ministerio salvo = ministerioRepository.save(ministerio);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.CRIADO, salvo.getId(), igrejaId);
+        return MinisterioResponse.from(salvo);
     }
 
     @Transactional
@@ -91,6 +97,7 @@ public class MinisterioService {
         Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
         ministerio.setFoto(fotoNova);
         MinisterioResponse response = MinisterioResponse.from(ministerioRepository.save(ministerio));
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.ATUALIZADO, ministerio.getId(), igrejaId);
         if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null, fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
             fotoService.remover(fotoAntiga.getId());
         }
@@ -101,6 +108,7 @@ public class MinisterioService {
     public void arquivar(UUID id, UUID igrejaId) {
         Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
         ministerioRepository.delete(ministerio);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
     Ministerio buscarDaIgrejaOuFalhar(UUID id, UUID igrejaId) {

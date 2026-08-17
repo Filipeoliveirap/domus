@@ -4,9 +4,12 @@ import { api } from '@/lib/api'
 
 export interface ResultadoBusca {
   id: string
-  tipo: 'PESSOA' | 'EVENTO' | 'USUARIO' | 'MOVIMENTACAO' | 'CATEGORIA'
+  tipo: 'PESSOA' | 'EVENTO' | 'USUARIO' | 'MOVIMENTACAO' | 'CATEGORIA' | 'CELULA' | 'VISITANTE' | 'MINISTERIO'
   titulo: string
   subtitulo: string
+  // Só vem preenchido pra VISITANTE que está numa célula (não aparece mais na
+  // listagem de visitantes) — nesse caso a rota é a célula, não a lista.
+  celulaId?: string | null
 }
 
 export function useBuscaGlobal(termo: string) {

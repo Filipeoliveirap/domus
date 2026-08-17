@@ -12,7 +12,6 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
-import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,6 +77,8 @@ class CelulaServiceTest {
     private void dadoQueExiste() {
         when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
     }
 
     @Test
@@ -122,7 +123,7 @@ class CelulaServiceTest {
     void excluirDefinitivoApagaDeVerdadeQuandoVazia() {
         when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
 
         service.excluirDefinitivo(celulaId, igrejaId);
 
@@ -130,29 +131,36 @@ class CelulaServiceTest {
     }
 
     @Test
-    void excluirDefinitivoRecusaQuandoTemMembro() {
+    void excluirDefinitivoFuncionaMesmoComMembros_desvinculaEmVezDeBloquear() {
+        // Vínculo de célula é só "pessoa está nesse grupo" — não é dado pessoal de
+        // terceiro (diferente de Evento/Categoria). Apagar a célula não bloqueia,
+        // só remove os vínculos (a pessoa/visitante continua existindo).
+        Pessoa pessoa = Pessoa.builder().id(UUID.randomUUID()).build();
+        CelulaMembro membroPessoa = CelulaMembro.builder().id(UUID.randomUUID()).pessoa(pessoa).build();
         when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(true);
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of(membroPessoa));
 
-        assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
-                .isInstanceOf(ConflitoNegocioException.class);
+        service.excluirDefinitivo(celulaId, igrejaId);
 
-        verify(celulaRepository, never()).hardDeleteById(any());
+        verify(membroRepository).deleteAll(List.of(membroPessoa));
+        verify(celulaRepository).hardDeleteById(celulaId);
     }
 
     @Test
-    void excluirDefinitivoConvertFkViolationEmConflitoNegocio() {
-        // Corrida: existsByCelulaId disse "sem membro", mas entre a checagem e o DELETE
-        // alguém vinculou um membro — o banco recusa por FK, e isso não pode virar 500.
+    void excluirDefinitivoReindexaVisitantesDesvinculados() {
+        Visitante visitante = Visitante.builder().id(UUID.randomUUID()).build();
+        CelulaMembro membroVisitante = CelulaMembro.builder().id(UUID.randomUUID()).visitante(visitante).build();
         when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
-        doThrow(new org.springframework.dao.DataIntegrityViolationException("FK violation"))
-                .when(celulaRepository).hardDeleteById(celulaId);
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of(membroVisitante));
 
-        assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
-                .isInstanceOf(ConflitoNegocioException.class);
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.VISITANTE,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
+                visitante.getId(), igrejaId);
     }
 
     @Test
@@ -162,7 +170,7 @@ class CelulaServiceTest {
         // findByIdAndIgrejaIdIncluindoArquivadas.
         when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
 
         service.excluirDefinitivo(celulaId, igrejaId);
 

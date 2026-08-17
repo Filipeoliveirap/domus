@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Archive, RotateCcw, Trash2, Grid3X3 } from 'lucide-react'
 import { useCelulasArquivadas } from '@/hooks/celula/useCelulasArquivadas'
 import { useRestaurarCelula } from '@/hooks/celula/useRestaurarCelula'
 import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -18,6 +20,7 @@ import styles from './arquivados.module.css'
 export default function CelulasArquivadasPage() {
   const { data: celulas, isLoading, isError, refetch } = useCelulasArquivadas()
   const role = useAuthStore((s) => s.role)
+  const router = useRouter()
   const podeGerenciar = podeGerenciarCelulas(role)
   const { restaurar, isLoading: restaurando } = useRestaurarCelula()
   const [excluindo, setExcluindo] = useState<CelulaResponse | null>(null)
@@ -46,7 +49,7 @@ export default function CelulasArquivadasPage() {
     <>
       <div className={styles.lista}>
         {celulas.map((c) => (
-          <div key={c.id} className={styles.linha}>
+          <div key={c.id} className={styles.linha} onClick={() => router.push(`/celulas/${c.id}`)}>
             <div className={styles.info}>
               <div className={styles.icone}><Grid3X3 size={18} /></div>
               <div>
@@ -58,7 +61,7 @@ export default function CelulasArquivadasPage() {
                 )}
               </div>
             </div>
-            <div className={styles.acoes}>
+            <div className={styles.acoes} onClick={e => e.stopPropagation()}>
               <button
                 className={styles.botaoRestaurar}
                 disabled={restaurando}
@@ -68,8 +71,6 @@ export default function CelulasArquivadasPage() {
               </button>
               <button
                 className={styles.botaoExcluir}
-                disabled={c.temVinculo}
-                title={c.temVinculo ? 'Tem membro vinculado — remova todos antes de excluir.' : undefined}
                 onClick={() => setExcluindo(c)}
               >
                 <Trash2 size={14} /> Excluir definitivamente
@@ -88,16 +89,37 @@ export default function CelulasArquivadasPage() {
 
 function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; onClose: () => void }) {
   const { confirmar, isLoading, erroGeral } = useExcluirCelulaDefinitivamente(celula, onClose)
+
+  // Sem ninguém vinculado: confirmação simples basta. Com gente vinculada, a pessoa
+  // precisa ler antes de confirmar — daí o "digite o nome" (ModalConfirmacaoCritica).
+  if (!celula.temVinculo) {
+    return (
+      <ModalConfirmacao
+        titulo="Excluir célula definitivamente?"
+        mensagem={<>Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.</>}
+        textoConfirmar="Excluir"
+        perigo
+        isLoading={isLoading}
+        onConfirmar={confirmar}
+        onClose={onClose}
+      />
+    )
+  }
+
   return (
     <ModalConfirmacaoCritica
       titulo="Excluir célula definitivamente?"
       mensagem={
         <>
-          Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.
+          <strong>{celula.nome}</strong> tem {celula.totalMembros} {celula.totalMembros === 1 ? 'pessoa vinculada' : 'pessoas vinculadas'}.
+          Isso não vai apagar essas pessoas nem o histórico delas em outros lugares do
+          sistema — só remove o vínculo delas com esta célula específica. A célula em si
+          some de vez. Não tem como desfazer.
         </>
       }
       consequencias={[
-        { tipo: 'perde', texto: 'A célula deixa de existir em qualquer lugar do sistema' },
+        { tipo: 'perde', texto: `Todos os ${celula.totalMembros} vínculos com esta célula são removidos` },
+        { tipo: 'mantem', texto: 'As pessoas e visitantes continuam existindo normalmente no sistema' },
       ]}
       palavraConfirmacao={celula.nome}
       textoConfirmar="Excluir definitivamente"

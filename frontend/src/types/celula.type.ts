@@ -29,6 +29,7 @@ export interface CelulaDetalheResponse {
   horario: string | null
   membros: MembroCelulaResponse[]
   souLiderDestaCelula: boolean
+  arquivada: boolean
 }
 
 export interface MembroCelulaResponse {

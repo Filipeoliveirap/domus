@@ -5,7 +5,7 @@ import { Plus, Pencil, Archive, Grid3X3, Crown, X, Trash2 } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
-import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -248,16 +248,16 @@ export default function CelulasPage() {
 }
 
 function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; onClose: () => void }) {
-  const { confirmar, isLoading, erroGeral } = useExcluirCelulaDefinitivamente(celula, onClose)
+  // Esse botão só aparece quando a célula não tem ninguém vinculado (senão o menu
+  // mostra "Arquivar") — confirmação simples basta, sem precisar digitar o nome.
+  const { confirmar, isLoading } = useExcluirCelulaDefinitivamente(celula, onClose)
   return (
-    <ModalConfirmacaoCritica
+    <ModalConfirmacao
       titulo="Excluir célula definitivamente?"
       mensagem={<>Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.</>}
-      consequencias={[{ tipo: 'perde', texto: 'A célula deixa de existir em qualquer lugar do sistema' }]}
-      palavraConfirmacao={celula.nome}
-      textoConfirmar="Excluir definitivamente"
+      textoConfirmar="Excluir"
+      perigo
       isLoading={isLoading}
-      erro={erroGeral}
       onConfirmar={confirmar}
       onClose={onClose}
     />

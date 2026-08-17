@@ -18,6 +18,7 @@ export interface CelulaResponse {
   lideres: string[]
   totalMembros: number
   souLiderDestaCelula: boolean
+  temVinculo: boolean
 }
 
 export interface CelulaDetalheResponse {

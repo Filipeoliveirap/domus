@@ -57,6 +57,19 @@ public class CelulaController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/arquivados")
+    public ResponseEntity<List<CelulaResponse>> arquivados() {
+        exigirAdmin();
+        return ResponseEntity.ok(celulaService.listarArquivadas(usuarioAutenticado.getIgrejaId()));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        exigirAdmin();
+        celulaService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}/definitivo")
     public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
         exigirAdmin();

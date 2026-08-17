@@ -1,5 +1,6 @@
 HELP.md
 target/
+.dev-tools/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -49,9 +50,6 @@ log/
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# ─── Arquivos de configuração local do Maven ───────────────────
-.mvn/wrapper/maven-wrapper.properties
 
 # ─── Arquivos temporários ──────────────────────────────────────
 *.tmp

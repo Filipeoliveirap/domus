@@ -2,7 +2,7 @@ package com.domus.api.modules.evento.local.DTOs;
 
 import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.igreja.Igreja;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import java.util.UUID;
 
 public record LocalEventoResponse(

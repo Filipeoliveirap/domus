@@ -17,12 +17,13 @@ public record CelulaResponse(
         List<String> lideres,
         int totalMembros,
         UUID fotoId,
-        boolean souLiderDestaCelula
+        boolean souLiderDestaCelula,
+        boolean temVinculo
 ) {
     public static CelulaResponse from(Celula celula) {
         return new CelulaResponse(celula.getId(), celula.getNome(),
                 celula.getDiaSemana(), celula.getHorario(), List.of(), 0,
-                celula.getFoto() != null ? celula.getFoto().getId() : null, false);
+                celula.getFoto() != null ? celula.getFoto().getId() : null, false, false);
     }
 
     public static CelulaResponse comResumo(Celula celula, List<CelulaMembro> membros, UUID pessoaLogadaId) {
@@ -35,6 +36,7 @@ public record CelulaResponse(
                         && m.getPessoa() != null && pessoaLogadaId.equals(m.getPessoa().getId()));
         return new CelulaResponse(celula.getId(), celula.getNome(),
                 celula.getDiaSemana(), celula.getHorario(), lideres, membros.size(),
-                celula.getFoto() != null ? celula.getFoto().getId() : null, souLider);
+                celula.getFoto() != null ? celula.getFoto().getId() : null, souLider,
+                !membros.isEmpty());
     }
 }

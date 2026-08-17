@@ -20,6 +20,7 @@ import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -144,7 +145,15 @@ public class CelulaService {
             throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
                     "Não é possível apagar uma célula que tem membros.");
         }
-        celulaRepository.hardDeleteById(id);
+        // A checagem acima é só UX (mensagem melhor, evita ir ao banco à toa) — a fonte
+        // da verdade é a própria FK. Sem isso, uma corrida entre "checar" e "apagar" (ex.:
+        // membro adicionado por outra aba entre as duas chamadas) vira 500 em vez de 409.
+        try {
+            celulaRepository.hardDeleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
+                    "Não é possível apagar uma célula que tem membros.");
+        }
         outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 

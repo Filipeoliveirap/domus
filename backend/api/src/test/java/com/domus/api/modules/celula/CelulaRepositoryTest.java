@@ -110,4 +110,28 @@ class CelulaRepositoryTest {
 
         assertThat(celulaRepository.findById(celula.getId())).isEmpty();
     }
+
+    @Test
+    void findByCelulaIdOrderByPapelAscEnxergaMembroDeCelulaArquivada() {
+        // O bug relatado: entrar numa célula arquivada mostra "sem membros" mesmo tendo.
+        // Suspeita: @SQLRestriction("deleted_at IS NULL") da Celula vazando pro JOIN
+        // implícito de findByCelulaIdOrderByPapelAsc (celula_membro -> celula).
+        Igreja igreja = igrejaRepository.save(
+                Igreja.builder().nome("Igreja Teste").emailContato("membro-" + UUID.randomUUID() + "@teste.com").build());
+        Celula celula = celulaRepository.save(
+                Celula.builder().igreja(igreja).nome("Vai arquivar " + UUID.randomUUID()).build());
+        Pessoa pessoa = pessoaRepository.save(
+                Pessoa.builder().igreja(igreja).nome("Fulano").vinculo(Vinculo.MEMBRO).build());
+        celulaMembroRepository.save(CelulaMembro.builder().igreja(igreja).celula(celula).pessoa(pessoa).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        celulaRepository.delete(celula); // arquiva (soft delete)
+        entityManager.flush();
+        entityManager.clear();
+
+        List<CelulaMembro> membros = celulaMembroRepository.findByCelulaIdOrderByPapelAsc(celula.getId());
+
+        assertThat(membros).hasSize(1);
+    }
 }

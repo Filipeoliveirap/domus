@@ -200,7 +200,7 @@ class CelulaServiceTest {
     void atualizarPermiteLiderDaCelula() {
         dadoQueExiste();
         UUID pessoaId = UUID.randomUUID();
-        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, "LIDER"))
                 .thenReturn(true);
 
         service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false);
@@ -212,7 +212,7 @@ class CelulaServiceTest {
     void atualizarRecusaQuemNaoEAdminNemLider() {
         dadoQueExiste();
         UUID pessoaId = UUID.randomUUID();
-        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, "LIDER"))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false))

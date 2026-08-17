@@ -173,19 +173,11 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       </nav>
 
       {celula?.arquivada && (
-        <div className={styles.avisoArquivada}>
-          <Link href="/celulas/arquivados" className={styles.voltarArquivadas}>
-            <ArrowLeft size={16} /> Voltar pra Arquivadas
-          </Link>
-          <div className={styles.avisoTexto}>
-            <Archive size={16} />
-            <span>
-              Esta célula está arquivada. Restaure na aba{' '}
-              <Link href="/celulas/arquivados" className={styles.avisoLink}>Arquivadas</Link>
-              {' '}pra voltar a usá-la normalmente.
-            </span>
-          </div>
-        </div>
+        <Link href="/celulas/arquivados" className={styles.avisoArquivada}>
+          <ArrowLeft size={16} className={styles.avisoSeta} />
+          <Archive size={16} />
+          <span>Esta célula está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+        </Link>
       )}
 
       {isLoading ? (

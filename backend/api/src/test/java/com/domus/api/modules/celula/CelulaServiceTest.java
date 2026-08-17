@@ -142,6 +142,20 @@ class CelulaServiceTest {
     }
 
     @Test
+    void excluirDefinitivoConvertFkViolationEmConflitoNegocio() {
+        // Corrida: existsByCelulaId disse "sem membro", mas entre a checagem e o DELETE
+        // alguém vinculou um membro — o banco recusa por FK, e isso não pode virar 500.
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("FK violation"))
+                .when(celulaRepository).hardDeleteById(celulaId);
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
+                .isInstanceOf(ConflitoNegocioException.class);
+    }
+
+    @Test
     void excluirDefinitivoFunciona_MesmoJaArquivada() {
         // O caso de uso principal: célula já arquivada, chamando pela tela de Arquivados.
         // buscarDaIgrejaOuFalhar (usado por outros métodos) não acharia — precisa do

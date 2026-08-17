@@ -27,7 +27,16 @@ public interface CelulaRepository extends JpaRepository<Celula, UUID> {
         """, nativeQuery = true)
     List<Celula> findArquivadasPorIgreja(@Param("igrejaId") UUID igrejaId);
 
+    /**
+     * Igual a {@link #findByIdAndIgrejaId}, mas enxerga arquivados também — usado por
+     * excluirDefinitivo, que precisa ser chamável tanto na listagem normal (sem vínculo,
+     * nunca foi arquivada) quanto na tela de Arquivados (já arquivada).
+     */
+    @Query(value = "SELECT * FROM celula WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    Optional<Celula> findByIdAndIgrejaIdIncluindoArquivadas(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    /** Retorna 0 se o id não pertence a essa igreja — nunca confiar em "id" sozinho. */
     @Modifying
-    @Query(value = "UPDATE celula SET deleted_at = NULL WHERE id = :id", nativeQuery = true)
-    void restaurarPorId(@Param("id") UUID id);
+    @Query(value = "UPDATE celula SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 }

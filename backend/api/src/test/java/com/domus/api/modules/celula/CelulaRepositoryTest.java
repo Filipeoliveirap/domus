@@ -50,10 +50,32 @@ class CelulaRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        celulaRepository.restaurarPorId(id);
+        int linhas = celulaRepository.restaurarPorId(id, igreja.getId());
         entityManager.flush();
         entityManager.clear();
 
+        assertThat(linhas).isEqualTo(1);
         assertThat(celulaRepository.findById(id)).isPresent();
+    }
+
+    @Test
+    void restaurarPorIdNaoAfetaCelulaDeOutraIgreja() {
+        Igreja igrejaDona = igrejaRepository.save(
+                Igreja.builder().nome("Igreja Dona").emailContato("dona-" + UUID.randomUUID() + "@teste.com").build());
+        Igreja igrejaInvasora = igrejaRepository.save(
+                Igreja.builder().nome("Igreja Invasora").emailContato("invasora-" + UUID.randomUUID() + "@teste.com").build());
+        Celula celula = celulaRepository.save(
+                Celula.builder().igreja(igrejaDona).nome("Não é sua " + UUID.randomUUID()).build());
+        UUID id = celula.getId();
+        celulaRepository.delete(celula);
+        entityManager.flush();
+        entityManager.clear();
+
+        int linhas = celulaRepository.restaurarPorId(id, igrejaInvasora.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(linhas).isEqualTo(0);
+        assertThat(celulaRepository.findById(id)).isEmpty(); // continua arquivada
     }
 }

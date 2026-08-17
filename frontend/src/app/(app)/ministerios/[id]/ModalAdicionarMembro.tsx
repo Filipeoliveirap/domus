@@ -22,8 +22,10 @@ interface Props {
  * useDebounce), mas de seleção única e sem paginação — é um "quick pick", não um navegador
  * completo (por isso `page: 0` fixo, sem UI de próxima página).
  *
- * useAdicionarMembro já dispara notificar.sucesso/erro sozinho (Task 9) — aqui só fecha o
- * modal em caso de sucesso; em erro, o modal continua aberto (toast já informou o motivo).
+ * useAdicionarMembro já dispara notificar.sucesso/erro sozinho (Task 9) — o modal fica
+ * aberto depois de adicionar (dá pra adicionar várias pessoas seguidas sem reabrir); a
+ * pessoa some da lista sozinha porque membrosAtuaisIds vem de ministerio.membros, que a
+ * mutation já invalida.
  */
 export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }: Props) {
   const [busca, setBusca] = useState('')
@@ -35,7 +37,8 @@ export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }
   async function selecionar(pessoaId: string) {
     try {
       await adicionar.mutateAsync(pessoaId)
-      onClose()
+      // Sem onClose(): fica aberto pra adicionar mais gente. A pessoa some da lista
+      // sozinha (membrosAtuaisIds é recalculado quando ministerio.membros atualiza).
     } catch {
       // erro já notificado pela mutation.
     }

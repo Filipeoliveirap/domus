@@ -179,7 +179,7 @@ public class CelulaService {
     }
 
     public boolean ehLiderDaCelula(UUID celulaId, UUID pessoaId) {
-        return membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER);
+        return membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER.name());
     }
 
     private void exigirAdminOuLider(UUID celulaId, UUID atorPessoaId, boolean isAdmin) {

@@ -20,6 +20,15 @@ export const ministerioService = {
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.ministerios.BY_ID(id)).then(() => undefined),
 
+  listarArquivadas: (): Promise<MinisterioResponse[]> =>
+    api.get<MinisterioResponse[]>(Endpoints.ministerios.ARQUIVADOS).then(res => res.data),
+
+  restaurar: (id: string): Promise<void> =>
+    api.post(Endpoints.ministerios.RESTAURAR(id)).then(() => undefined),
+
+  excluirDefinitivo: (id: string): Promise<void> =>
+    api.delete(Endpoints.ministerios.DEFINITIVO(id)).then(() => undefined),
+
   adicionarMembro: (id: string, pessoaId: string): Promise<void> =>
     api.post(Endpoints.ministerios.MEMBROS(id), { pessoaId }).then(() => undefined),
 

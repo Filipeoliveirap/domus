@@ -60,6 +60,7 @@ const AFETADAS: Record<Entidade, string[][]> = {
   ],
   ministerio: [
     ['ministerios'],
+    ['ministerios-arquivados'],
     ['pessoas'],
   ],
   visitante: [

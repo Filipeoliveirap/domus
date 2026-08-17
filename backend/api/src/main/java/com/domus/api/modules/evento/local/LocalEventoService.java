@@ -1,6 +1,7 @@
 package com.domus.api.modules.evento.local;
 
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.EventoService;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoRequest;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
 import com.domus.api.modules.igreja.Igreja;
@@ -22,6 +23,7 @@ public class LocalEventoService {
     private final LocalEventoRepository localEventoRepository;
     private final IgrejaRepository igrejaRepository;
     private final EventoRepository eventoRepository;
+    private final EventoService eventoService;
 
     @Transactional(readOnly = true)
     public List<LocalEventoResponse> listar(UUID igrejaId) {
@@ -63,9 +65,11 @@ public class LocalEventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
 
         String nome = TextoUtil.capitalizar(data.nome());
+        boolean nomeMudou = !TextoUtil.normalizarParaComparacao(nome)
+                .equals(TextoUtil.normalizarParaComparacao(local.getNome()));
         // Só valida duplicata se o nome mudou de verdade — senão o próprio local bateria
         // consigo mesmo na comparação normalizada.
-        if (!TextoUtil.normalizarParaComparacao(nome).equals(TextoUtil.normalizarParaComparacao(local.getNome()))) {
+        if (nomeMudou) {
             validarNaoDuplicado(nome, igrejaId);
         }
 
@@ -75,6 +79,13 @@ public class LocalEventoService {
         local.setComplementoBairroCidadeUf(data.complementoBairroCidadeUf());
 
         LocalEvento salvo = localEventoRepository.save(local);
+
+        // EventoDocument.local reflete o nome do local — todo evento vinculado precisa
+        // reindexar quando ele muda (via evento.getLocalExibicao()).
+        if (nomeMudou) {
+            eventoService.reindexarPorLocal(id, igrejaId);
+        }
+
         return LocalEventoResponse.from(salvo);
     }
 
@@ -82,6 +93,10 @@ public class LocalEventoService {
     public void arquivar(UUID id, UUID igrejaId) {
         LocalEvento local = localEventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
+
+        // Reindexa antes de desvincular: depois disso local_id vira NULL e a query de
+        // busca por local não encontra mais os eventos afetados.
+        eventoService.reindexarPorLocal(id, igrejaId);
 
         // Soft delete do LocalEvento não dispara ON DELETE SET NULL da FK evento.local_id.
         // Sem desvincular, o proxy LAZY de local dispararia EntityNotFoundException ao ler

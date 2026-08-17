@@ -6,7 +6,8 @@ import com.domus.api.modules.celula.CelulaMembroRepository;
 import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.pessoa.EstadoCivil;
 import com.domus.api.modules.pessoa.Sexo;
 import com.domus.api.modules.usuario.UsuarioRepository;
@@ -41,6 +42,7 @@ class VisitanteServiceTest {
     UsuarioRepository usuarioRepository;
     CelulaRepository celulaRepository;
     CelulaMembroRepository celulaMembroRepository;
+    OutboxRegistrador outboxRegistrador;
     VisitanteService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -53,8 +55,9 @@ class VisitanteServiceTest {
         usuarioRepository = mock(UsuarioRepository.class);
         celulaRepository = mock(CelulaRepository.class);
         celulaMembroRepository = mock(CelulaMembroRepository.class);
+        outboxRegistrador = mock(OutboxRegistrador.class);
         service = new VisitanteService(visitanteRepository, igrejaRepository, usuarioRepository,
-                celulaRepository, celulaMembroRepository);
+                celulaRepository, celulaMembroRepository, outboxRegistrador);
 
         when(igrejaRepository.findById(igrejaId))
                 .thenReturn(Optional.of(igreja()));

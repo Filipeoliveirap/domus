@@ -395,4 +395,19 @@ public class EventoService {
         familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)
                 .forEach(id -> cacheEvictor.evictPorIgreja("eventos", id));
     }
+
+    /** EventoDocument.local vem do nome do LocalEvento; renomear/arquivar o local muda a busca de todo evento vinculado. */
+    @Transactional
+    public void reindexarPorLocal(UUID localId, UUID igrejaId) {
+        List<Evento> eventos = eventoRepository.findByLocalIdAndIgrejaId(localId, igrejaId);
+        if (eventos.isEmpty()) return;
+        log.info("Reindexando {} eventos por alteração no local. local_id={}, igreja_id={}",
+                eventos.size(), localId, igrejaId);
+        eventos.forEach(evento -> outboxRegistrador.registrar(
+                TipoEntidadeOutbox.EVENTO,
+                TipoEventoOutbox.ATUALIZADO,
+                evento.getId(),
+                igrejaId
+        ));
+    }
 }

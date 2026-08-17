@@ -360,9 +360,11 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {modalAdicionarAberto && (
+      {modalAdicionarAberto && celula && (
         <ModalAdicionarMembro
           celulaId={id}
+          membrosPessoaIds={new Set(celula.membros.filter(m => m.pessoaId).map(m => m.pessoaId!))}
+          membrosVisitanteIds={new Set(celula.membros.filter(m => m.visitanteId).map(m => m.visitanteId!))}
           onClose={() => setModalAdicionarAberto(false)}
           onCadastrarExterno={() => {
             setModalAdicionarAberto(false)

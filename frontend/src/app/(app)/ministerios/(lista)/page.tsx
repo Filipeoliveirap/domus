@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Pencil, Archive, Users, Crown, X } from 'lucide-react'
+import { Pencil, Archive, Users, Crown, X, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
+import { useExcluirMinisterioDefinitivamente } from '@/hooks/ministerio/useExcluirMinisterioDefinitivamente'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
@@ -35,6 +36,7 @@ export default function MinisteriosPage() {
   // `null` = fechado; `'novo'` = criar; objeto = editar (mesma convenção de /eventos/locais).
   const [formAberto, setFormAberto] = useState<'novo' | MinisterioResponse | null>(null)
   const [arquivando, setArquivando] = useState<MinisterioResponse | null>(null)
+  const [excluindoDefinitivo, setExcluindoDefinitivo] = useState<MinisterioResponse | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
   if (!hidratado || isLoading) {
@@ -58,12 +60,6 @@ export default function MinisteriosPage() {
 
   return (
     <div className={styles.pagina}>
-      <nav className={styles.breadcrumb} aria-label="breadcrumb">
-        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>{ROTULO_MINISTERIO_PLURAL}</span>
-      </nav>
-
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>
@@ -93,7 +89,9 @@ export default function MinisteriosPage() {
           {ministerios.map((ministerio) => {
             const acoes: ItemAcao[] = [
               { label: 'Editar', icone: Pencil, onClick: () => setFormAberto(ministerio) },
-              { label: 'Arquivar', icone: Archive, onClick: () => setArquivando(ministerio), perigo: true, separadorAntes: true },
+              ministerio.temVinculo
+                ? { label: 'Arquivar', icone: Archive, onClick: () => setArquivando(ministerio), perigo: true, separadorAntes: true }
+                : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(ministerio), perigo: true, separadorAntes: true },
             ]
             return (
               <div
@@ -144,6 +142,9 @@ export default function MinisteriosPage() {
       {arquivando && (
         <ModalArquivarMinisterio ministerio={arquivando} onClose={() => setArquivando(null)} />
       )}
+      {excluindoDefinitivo && (
+        <ModalExcluirDefinitivo ministerio={excluindoDefinitivo} onClose={() => setExcluindoDefinitivo(null)} />
+      )}
       {fotoVisualizando && (
         <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
           <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
@@ -155,5 +156,22 @@ export default function MinisteriosPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function ModalExcluirDefinitivo({ ministerio, onClose }: { ministerio: MinisterioResponse; onClose: () => void }) {
+  // Esse botão só aparece quando não tem ninguém vinculado (senão o menu mostra
+  // "Arquivar") — confirmação simples basta, sem precisar digitar o nome.
+  const { confirmar, isLoading } = useExcluirMinisterioDefinitivamente(ministerio, onClose)
+  return (
+    <ModalConfirmacao
+      titulo={`Excluir ${ROTULO_MINISTERIO.toLowerCase()} definitivamente?`}
+      mensagem={<>Isso vai apagar <strong>{ministerio.nome}</strong> de vez. Não tem como desfazer.</>}
+      textoConfirmar="Excluir"
+      perigo
+      isLoading={isLoading}
+      onConfirmar={confirmar}
+      onClose={onClose}
+    />
   )
 }

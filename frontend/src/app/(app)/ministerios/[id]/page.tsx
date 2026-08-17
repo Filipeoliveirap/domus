@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users } from 'lucide-react'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
@@ -70,6 +70,14 @@ export default function MinisterioDetalhePage() {
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>{ministerio.nome}</span>
       </nav>
+
+      {ministerio.arquivada && (
+        <Link href="/ministerios/arquivados" className={styles.avisoArquivada}>
+          <ArrowLeft size={16} />
+          <Archive size={16} />
+          <span>Esta {ROTULO_MINISTERIO.toLowerCase()} está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+        </Link>
+      )}
 
       <header className={styles.cabecalho}>
         <div className={styles.fotoDetalhe}>

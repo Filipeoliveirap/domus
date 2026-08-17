@@ -15,13 +15,15 @@ import styles from './ModalAdicionarMembro.module.css'
 
 interface ModalAdicionarMembroProps {
   celulaId: string
+  membrosPessoaIds: Set<string>
+  membrosVisitanteIds: Set<string>
   onClose: () => void
   onCadastrarExterno: () => void
 }
 
 type Tab = 'pessoas' | 'visitantes'
 
-export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: ModalAdicionarMembroProps) {
+export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisitanteIds, onClose, onCadastrarExterno }: ModalAdicionarMembroProps) {
   const [tab, setTab] = useState<Tab>('pessoas')
   const [busca, setBusca] = useState('')
   const queryClient = useQueryClient()
@@ -31,8 +33,10 @@ export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: 
     q: tab === 'visitantes' ? busca : '', page: 0, size: 50,
   })
 
-  const pessoas = pessoasData?.content ?? []
-  const visitantes = visitantesData?.content ?? []
+  // Já vinculado à célula some da lista — evita adicionar de novo e dá o feedback
+  // visual de que funcionou, sem fechar o modal (dá pra adicionar vários seguidos).
+  const pessoas = (pessoasData?.content ?? []).filter(p => !membrosPessoaIds.has(p.id))
+  const visitantes = (visitantesData?.content ?? []).filter(v => !membrosVisitanteIds.has(v.id))
 
   async function handleAdicionarPessoa(pessoaId: string) {
     try {

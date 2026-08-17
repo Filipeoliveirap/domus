@@ -5,6 +5,9 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -38,6 +41,7 @@ public class CelulaService {
     private final PessoaRepository pessoaRepository;
     private final VisitanteRepository visitanteRepository;
     private final FotoService fotoService;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional(readOnly = true)
     public List<CelulaResponse> listar(UUID igrejaId, UUID pessoaLogadaId) {
@@ -69,7 +73,9 @@ public class CelulaService {
                 .criadoPor(usuario).atualizadoPor(usuario)
                 .build();
 
-        return CelulaResponse.from(celulaRepository.save(celula));
+        Celula salva = celulaRepository.save(celula);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.CRIADO, salva.getId(), igrejaId);
+        return CelulaResponse.from(salva);
     }
 
     @Transactional
@@ -94,6 +100,7 @@ public class CelulaService {
         celula.setFoto(fotoNova);
 
         CelulaResponse response = CelulaResponse.from(celulaRepository.save(celula));
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.ATUALIZADO, celula.getId(), igrejaId);
 
         if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null,
                 fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
@@ -107,6 +114,7 @@ public class CelulaService {
     public void excluir(UUID id, UUID igrejaId) {
         Celula celula = buscarDaIgrejaOuFalhar(id, igrejaId);
         celulaRepository.delete(celula);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
     @Transactional
@@ -117,6 +125,7 @@ public class CelulaService {
                     "Não é possível apagar uma célula que tem membros.");
         }
         celulaRepository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
     @Transactional(readOnly = true)
@@ -191,13 +200,15 @@ public class CelulaService {
         if (existente != null) {
             existente.setCelula(celula);
             membroRepository.save(existente);
-            return;
+        } else {
+            Usuario usuario = usuarioId != null ? usuarioRepository.findById(usuarioId).orElse(null) : null;
+            membroRepository.save(CelulaMembro.builder()
+                    .igreja(celula.getIgreja()).celula(celula).visitante(visitante)
+                    .criadoPor(usuario).atualizadoPor(usuario).build());
         }
 
-        Usuario usuario = usuarioId != null ? usuarioRepository.findById(usuarioId).orElse(null) : null;
-        membroRepository.save(CelulaMembro.builder()
-                .igreja(celula.getIgreja()).celula(celula).visitante(visitante)
-                .criadoPor(usuario).atualizadoPor(usuario).build());
+        // VisitanteDocument.celulaId muda — busca precisa reindexar.
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, visitanteId, igrejaId);
     }
 
     @Transactional
@@ -208,7 +219,13 @@ public class CelulaService {
 
         CelulaMembro membro = membroRepository.findById(membroId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+        UUID visitanteId = membro.getVisitante() != null ? membro.getVisitante().getId() : null;
         membroRepository.delete(membro);
+
+        // VisitanteDocument.celulaId volta a null — busca precisa reindexar.
+        if (visitanteId != null) {
+            outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, visitanteId, igrejaId);
+        }
     }
 
     @Transactional
@@ -257,6 +274,9 @@ public class CelulaService {
 
         v.setConvertidoPessoaId(pessoa.getId());
         visitanteRepository.save(v);
+
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.CRIADO, pessoa.getId(), igrejaId);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, v.getId(), igrejaId);
 
         return pessoa;
     }

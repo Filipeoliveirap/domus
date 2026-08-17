@@ -1,6 +1,7 @@
 package com.domus.api.modules.celula;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,4 +22,8 @@ public interface CelulaMembroRepository extends JpaRepository<CelulaMembro, UUID
     List<CelulaMembro> findByCelulaIdAndVisitanteIdIsNotNull(UUID celulaId);
 
     List<CelulaMembro> findByCelulaIdAndPessoaIdIsNotNull(UUID celulaId);
+
+    /** Pra reindexação em lote: evita N+1 consultando visitante->célula um a um. */
+    @Query("SELECT cm.visitante.id, cm.celula.id FROM CelulaMembro cm WHERE cm.visitante IS NOT NULL")
+    List<Object[]> buscarCelulaIdPorVisitanteId();
 }

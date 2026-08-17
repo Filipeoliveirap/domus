@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
@@ -45,6 +46,7 @@ const DIA_OPTIONS = [
 
 export default function CelulaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
   const { data: celula, isLoading, isError, refetch } = useCelula(id)
   const queryClient = useQueryClient()
   const role = useAuthStore(s => s.role)
@@ -55,7 +57,9 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const [editando, setEditando] = useState(false)
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
-  const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(null)
+  const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(
+    () => searchParams.get('visitante')
+  )
   const [convertendoId, setConvertendoId] = useState<string | null>(null)
   const [cadastrarExterno, setCadastrarExterno] = useState(false)
   const [fotoId, setFotoId] = useState<string | null>(null)

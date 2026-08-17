@@ -9,10 +9,13 @@ import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -45,6 +48,7 @@ public class IgrejaService {
     private final PessoaRepository  membroRepository;
     private final CacheManager cacheManager;
     private final FotoService fotoService;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
@@ -109,6 +113,7 @@ public class IgrejaService {
                 .vinculo(Vinculo.MEMBRO)
                 .build();
         membroRepository.save(membroAdmin);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.CRIADO, membroAdmin.getId(), igreja.getId());
 
         Usuario admin = Usuario.builder()
                 .igreja(igreja)
@@ -120,6 +125,7 @@ public class IgrejaService {
                 .build();
         admin.registrarLogin();
         usuarioRepository.save(admin);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.CRIADO, admin.getId(), igreja.getId());
         log.info("Igreja + admin criados. usuario_id={}, igreja_id={}", admin.getId(), igreja.getId());
         return admin;
     }

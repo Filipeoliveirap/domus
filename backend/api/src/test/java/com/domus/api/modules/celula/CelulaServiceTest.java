@@ -4,6 +4,7 @@ import com.domus.api.modules.celula.DTOs.*;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -36,6 +37,7 @@ class CelulaServiceTest {
     PessoaRepository pessoaRepository;
     VisitanteRepository visitanteRepository;
     FotoService fotoService;
+    OutboxRegistrador outboxRegistrador;
     CelulaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -50,8 +52,9 @@ class CelulaServiceTest {
         pessoaRepository = mock(PessoaRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
         fotoService = mock(FotoService.class);
+        outboxRegistrador = mock(OutboxRegistrador.class);
         service = new CelulaService(celulaRepository, membroRepository, igrejaRepository,
-                usuarioRepository, pessoaRepository, visitanteRepository, fotoService);
+                usuarioRepository, pessoaRepository, visitanteRepository, fotoService, outboxRegistrador);
 
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
         when(celulaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

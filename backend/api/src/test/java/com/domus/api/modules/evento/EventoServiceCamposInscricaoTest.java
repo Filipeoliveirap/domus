@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -232,9 +233,11 @@ class EventoServiceCamposInscricaoTest {
     void semFimDeclaradoEhEmAndamentoNoMesmoDiaEEncerradoNoDiaSeguinte() {
         // Fronteira do null fimEm: considerado em andamento até o fim do PRÓPRIO dia de
         // início, encerrado a partir do dia seguinte.
+        // Início do dia (não now().minusHours(2)): perto da meia-noite, "now - 2h" cai no
+        // dia anterior e o teste vira flaky, mesmo com getSituacao() correto.
         Evento comecouHoje = Evento.builder()
                 .id(eventoId).igreja(igreja()).titulo("Culto")
-                .inicioEm(LocalDateTime.now().minusHours(2))
+                .inicioEm(LocalDate.now().atStartOfDay())
                 .build();
         assertThat(comecouHoje.getSituacao())
                 .isEqualTo(com.domus.api.modules.evento.SituacaoEvento.EM_ANDAMENTO);

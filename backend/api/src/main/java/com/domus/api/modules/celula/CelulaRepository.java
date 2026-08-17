@@ -18,4 +18,16 @@ public interface CelulaRepository extends JpaRepository<Celula, UUID> {
     @Modifying
     @Query(value = "DELETE FROM celula WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
+
+    /** @SQLRestriction esconde arquivados de qualquer find derivado/JPQL — precisa de SQL nativo. */
+    @Query(value = """
+        SELECT * FROM celula
+        WHERE igreja_id = :igrejaId AND deleted_at IS NOT NULL
+        ORDER BY nome ASC
+        """, nativeQuery = true)
+    List<Celula> findArquivadasPorIgreja(@Param("igrejaId") UUID igrejaId);
+
+    @Modifying
+    @Query(value = "UPDATE celula SET deleted_at = NULL WHERE id = :id", nativeQuery = true)
+    void restaurarPorId(@Param("id") UUID id);
 }

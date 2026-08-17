@@ -120,7 +120,8 @@ class CelulaServiceTest {
 
     @Test
     void excluirDefinitivoApagaDeVerdadeQuandoVazia() {
-        dadoQueExiste();
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
         when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
 
         service.excluirDefinitivo(celulaId, igrejaId);
@@ -130,13 +131,38 @@ class CelulaServiceTest {
 
     @Test
     void excluirDefinitivoRecusaQuandoTemMembro() {
-        dadoQueExiste();
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
         when(membroRepository.existsByCelulaId(celulaId)).thenReturn(true);
 
         assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
                 .isInstanceOf(ConflitoNegocioException.class);
 
         verify(celulaRepository, never()).hardDeleteById(any());
+    }
+
+    @Test
+    void excluirDefinitivoFunciona_MesmoJaArquivada() {
+        // O caso de uso principal: célula já arquivada, chamando pela tela de Arquivados.
+        // buscarDaIgrejaOuFalhar (usado por outros métodos) não acharia — precisa do
+        // findByIdAndIgrejaIdIncluindoArquivadas.
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(celulaRepository).hardDeleteById(celulaId);
+        verify(celulaRepository, never()).findByIdAndIgrejaId(any(), any());
+    }
+
+    @Test
+    void excluirDefinitivoFalhaQuandoNaoEncontrada() {
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -294,13 +320,27 @@ class CelulaServiceTest {
 
     @Test
     void restaurarTiraDoArquivoEReindexaNaBusca() {
+        when(celulaRepository.restaurarPorId(celulaId, igrejaId)).thenReturn(1);
+
         service.restaurar(celulaId, igrejaId);
 
-        verify(celulaRepository).restaurarPorId(celulaId);
+        verify(celulaRepository).restaurarPorId(celulaId, igrejaId);
         verify(outboxRegistrador).registrar(
                 com.domus.api.modules.outbox.TipoEntidadeOutbox.CELULA,
-                com.domus.api.modules.outbox.TipoEventoOutbox.CRIADO,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
                 celulaId, igrejaId);
+    }
+
+    @Test
+    void restaurarFalhaQuandoIdNaoPertenceAEssaIgreja() {
+        // 0 linhas afetadas = ou não existe, ou é de outra igreja — a query nativa já
+        // filtra por igreja_id, então isso é a defesa contra restaurar célula de outro tenant.
+        when(celulaRepository.restaurarPorId(celulaId, igrejaId)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.restaurar(celulaId, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(outboxRegistrador, never()).registrar(any(), any(), any(), any());
     }
 
     @Test

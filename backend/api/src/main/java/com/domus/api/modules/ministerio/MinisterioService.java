@@ -111,6 +111,44 @@ public class MinisterioService {
         outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
+    @Transactional(readOnly = true)
+    public List<MinisterioResponse> listarArquivadas(UUID igrejaId) {
+        return ministerioRepository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = ministerioRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Ministério não encontrado.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+    }
+
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        // findByIdAndIgrejaIdIncluindoArquivadas (não buscarDaIgrejaOuFalhar) porque esse
+        // endpoint precisa achar também um ministério já arquivado — é o caminho principal
+        // chamado a partir da tela de Arquivados.
+        ministerioRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
+
+        // Vínculo de ministério é só "essa pessoa está nesse grupo" — apagar o ministério
+        // não apaga a pessoa, só o vínculo. Por isso, diferente de Evento/Categoria (onde o
+        // vínculo é histórico financeiro/inscrição de outra pessoa), aqui ter membro não
+        // bloqueia: desvincula todo mundo (inclusive pedidos pendentes) e segue.
+        List<MinisterioMembro> membros = membroRepository.findByMinisterioIdOrderByPapelAsc(id);
+        membroRepository.deleteAll(membros);
+        // hardDeleteById é SQL nativo — precisa do delete acima já refletido no banco
+        // antes de rodar (mesmo motivo do fix em CelulaService.excluirDefinitivo).
+        membroRepository.flush();
+
+        ministerioRepository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
+    }
+
     Ministerio buscarDaIgrejaOuFalhar(UUID id, UUID igrejaId) {
         return ministerioRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
@@ -128,7 +166,10 @@ public class MinisterioService {
 
     @Transactional(readOnly = true)
     public MinisterioDetalheResponse detalhe(UUID ministerioId, UUID igrejaId, UUID pessoaLogadaId, boolean isAdmin) {
-        Ministerio ministerio = buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
+        // Precisa enxergar arquivado também — dá pra abrir o detalhe de um ministério
+        // arquivado a partir da tela de Arquivados, igual um ministério ativo.
+        Ministerio ministerio = ministerioRepository.findByIdAndIgrejaIdIncluindoArquivadas(ministerioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
         boolean souLider = isAdmin || (pessoaLogadaId != null && ehLiderDoMinisterio(ministerioId, pessoaLogadaId));
 
         List<MinisterioMembro> todos = membroRepository.findByMinisterioIdOrderByPapelAsc(ministerioId);
@@ -156,7 +197,7 @@ public class MinisterioService {
 
     public boolean ehLiderDoMinisterio(UUID ministerioId, UUID pessoaId) {
         return membroRepository.existsByMinisterioIdAndPessoaIdAndPapelAndStatus(
-                ministerioId, pessoaId, Papel.LIDER, StatusMembro.ATIVO);
+                ministerioId, pessoaId, Papel.LIDER.name(), StatusMembro.ATIVO.name());
     }
 
     private void exigirAdminOuLider(UUID ministerioId, UUID atorPessoaId, boolean isAdmin) {

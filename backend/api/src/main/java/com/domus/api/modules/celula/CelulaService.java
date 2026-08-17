@@ -50,6 +50,19 @@ public class CelulaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<CelulaResponse> listarArquivadas(UUID igrejaId) {
+        return celulaRepository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(c -> CelulaResponse.comResumo(c, membrosAtivosDe(c.getId()), null))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        celulaRepository.restaurarPorId(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.CRIADO, id, igrejaId);
+    }
+
     private List<CelulaMembro> membrosAtivosDe(UUID celulaId) {
         return membroRepository.findByCelulaIdOrderByPapelAsc(celulaId);
     }

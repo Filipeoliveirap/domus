@@ -278,4 +278,51 @@ class CelulaServiceTest {
         assertThatThrownBy(() -> service.detalhe(celulaId, igrejaId, null))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test
+    void listarArquivadasRetornaSoAsArquivadas() {
+        Celula arquivada = celula();
+        when(celulaRepository.findArquivadasPorIgreja(igrejaId)).thenReturn(List.of(arquivada));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
+
+        List<CelulaResponse> response = service.listarArquivadas(igrejaId);
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).nome()).isEqualTo("Célula Bethânia");
+        verify(celulaRepository, never()).findByIgrejaIdOrderByNomeAsc(any());
+    }
+
+    @Test
+    void restaurarTiraDoArquivoEReindexaNaBusca() {
+        service.restaurar(celulaId, igrejaId);
+
+        verify(celulaRepository).restaurarPorId(celulaId);
+        verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.CELULA,
+                com.domus.api.modules.outbox.TipoEventoOutbox.CRIADO,
+                celulaId, igrejaId);
+    }
+
+    @Test
+    void listarMarcaTemVinculoQuandoTemMembro() {
+        Celula c = celula();
+        when(celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of(c));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId))
+                .thenReturn(List.of(CelulaMembro.builder().build()));
+
+        List<CelulaResponse> response = service.listar(igrejaId, null);
+
+        assertThat(response.get(0).temVinculo()).isTrue();
+    }
+
+    @Test
+    void listarMarcaSemVinculoQuandoVazia() {
+        Celula c = celula();
+        when(celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of(c));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
+
+        List<CelulaResponse> response = service.listar(igrejaId, null);
+
+        assertThat(response.get(0).temVinculo()).isFalse();
+    }
 }

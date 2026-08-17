@@ -59,8 +59,11 @@ public class CelulaService {
 
     @Transactional
     public void restaurar(UUID id, UUID igrejaId) {
-        celulaRepository.restaurarPorId(id);
-        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.CRIADO, id, igrejaId);
+        int linhas = celulaRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Célula não encontrada.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CELULA, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
     }
 
     private List<CelulaMembro> membrosAtivosDe(UUID celulaId) {
@@ -132,7 +135,11 @@ public class CelulaService {
 
     @Transactional
     public void excluirDefinitivo(UUID id, UUID igrejaId) {
-        buscarDaIgrejaOuFalhar(id, igrejaId);
+        // buscarDaIgrejaOuFalhar usa findByIdAndIgrejaId, que o @SQLRestriction filtra
+        // pra sempre "não arquivada" — esse endpoint precisa achar também a já arquivada
+        // (é o caminho principal chamado a partir da tela de Arquivados).
+        celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Célula não encontrada."));
         if (membroRepository.existsByCelulaId(id)) {
             throw new ConflitoNegocioException("CELULA_COM_MEMBROS",
                     "Não é possível apagar uma célula que tem membros.");

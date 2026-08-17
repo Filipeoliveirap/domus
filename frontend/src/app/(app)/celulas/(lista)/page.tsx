@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { ChevronRight, Plus, Pencil, Archive, Grid3X3, Crown, X } from 'lucide-react'
+import { Plus, Pencil, Archive, Grid3X3, Crown, X } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useExcluirCelula } from '@/hooks/celula/useExcluirCelula'
@@ -97,12 +96,6 @@ export default function CelulasPage() {
 
   return (
     <div className={styles.pagina}>
-      <nav className={styles.breadcrumb}>
-        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Células</span>
-      </nav>
-
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>

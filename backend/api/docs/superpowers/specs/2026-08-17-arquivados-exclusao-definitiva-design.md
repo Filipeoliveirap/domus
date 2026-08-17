@@ -24,18 +24,29 @@ quando há vínculo.
 
 | Módulo | "Tem vínculo" quando... | Sem vínculo | Com vínculo |
 |---|---|---|---|
-| Célula | tem `CelulaMembro` | Excluir direto | Arquivar → lista → bloqueado até esvaziar |
-| Ministério | tem `MinisterioMembro` | Excluir direto | Arquivar → lista → bloqueado até esvaziar |
+| Célula | tem `CelulaMembro` | Excluir direto (confirmação simples) | Excluir direto, permitido — desvincula todo mundo (confirmação escrita + aviso detalhado) |
+| Ministério | tem `MinisterioMembro` | Excluir direto (confirmação simples) | Excluir direto, permitido — desvincula todo mundo (confirmação escrita + aviso detalhado) |
 | Categoria Financeira | tem `MovimentacaoFinanceira` | Excluir direto | Arquivar → lista → bloqueado até esvaziar |
 | Evento | tem `InscricaoEvento` | Excluir direto | Arquivar → lista → bloqueado até esvaziar |
 | Pessoa | tem `Usuario`, `InscricaoEvento`, `MovimentacaoFinanceira`, é `Evento.responsavel_pessoa_id`, `CelulaMembro` ou `MinisterioMembro` | Excluir direto | Arquivar → lista → **anonimizar permitido** |
 | Usuário | é `criado_por`/`atualizado_por` em qualquer tabela de domínio | Excluir direto | Arquivar → lista → **anonimizar permitido** |
 
-Por que só Pessoa/Usuário anonimizam: são os únicos que *são* dado pessoal. Evento,
-Ministério e Categoria são entidades organizacionais — se têm vínculo, apagá-las de
-verdade destruiria histórico legítimo de outras pessoas (ex.: movimentação financeira
-de alguém, inscrição de alguém em evento) sem nenhum motivo de LGPD. Por isso ficam
-só bloqueadas, com o aviso do que está vinculado — igual Célula já faz hoje.
+Duas categorias de vínculo, tratadas diferente:
+
+- **Vínculo de associação/pertencimento** (Célula↔`CelulaMembro`, Ministério↔`MinisterioMembro`):
+  é só "essa pessoa está nesse grupo" — não é dado pessoal de terceiro nem histórico
+  financeiro. Apagar o grupo não apaga a pessoa, só o vínculo. Por isso **não bloqueia**:
+  excluir de vez sempre é permitido, com confirmação simples quando vazio e confirmação
+  escrita + aviso detalhado ("isso desvincula N pessoas, mas elas continuam existindo")
+  quando tem gente.
+- **Vínculo de histórico de terceiro** (Evento↔`InscricaoEvento`, Categoria↔`MovimentacaoFinanceira`):
+  apagar destruiria o histórico de inscrição/movimentação de outra pessoa, sem
+  nenhum motivo de LGPD. Por isso ficam bloqueadas, com aviso do que está vinculado —
+  igual Célula fazia antes desta revisão.
+
+Por que só Pessoa/Usuário anonimizam: são os únicos que *são* dado pessoal — daí o
+direito de eliminação da LGPD se aplicar de verdade a eles, mesmo com histórico
+vinculado (anonimiza em vez de bloquear ou desvincular).
 
 ## Fluxo no front
 
@@ -59,10 +70,15 @@ restaurar depois.
 - **Restaurar** — sempre disponível, desfaz o soft delete.
 - **Excluir definitivamente** — comportamento depende do vínculo **reavaliado na hora**
   (pode ter mudado desde que foi arquivado):
-  - Evento/Ministério/Categoria/Célula com vínculo → botão desabilitado, com tooltip/aviso
-    explicando o que está vinculado (ex.: "3 inscrições vinculadas").
-  - Pessoa/Usuário com vínculo → botão habilitado, mas o modal de confirmação explica
-    a consequência real: "isso vai remover o nome, e-mail e telefone desta pessoa; o
+  - Evento/Categoria com vínculo → botão desabilitado, com tooltip/aviso explicando o
+    que está vinculado (ex.: "3 inscrições vinculadas").
+  - Célula/Ministério → botão sempre habilitado. Sem vínculo, confirmação simples
+    (`ModalConfirmacao`). Com vínculo, confirmação escrita (`ModalConfirmacaoCritica`,
+    "digite o nome") com aviso detalhado de quantas pessoas serão desvinculadas — mas
+    a exclusão é permitida, porque desvincular não é o mesmo que apagar histórico de
+    terceiro.
+  - Pessoa/Usuário com vínculo → botão habilitado, confirmação escrita explica a
+    consequência real: "isso vai remover o nome, e-mail e telefone desta pessoa; o
     histórico financeiro e de eventos permanece, sem identificação" — e só quem tem
     permissão de gerenciar aquele módulo (mesma checagem de hoje) consegue confirmar.
 

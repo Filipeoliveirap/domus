@@ -157,16 +157,19 @@ export default function MinisterioDetalhePage() {
                 )}
                 {isAdmin && (
                   <button type="button" className={styles.botaoPromover}
-                    onClick={() => atualizarPapel.mutate({
-                      pessoaId: membro.pessoaId,
-                      papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
-                    })}>
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      atualizarPapel.mutate({
+                        pessoaId: membro.pessoaId,
+                        papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
+                      })
+                    }}>
                     {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
                   </button>
                 )}
                 {podeGerenciarMembros && (
                   <button type="button" className={styles.botaoRemover}
-                    onClick={() => removerMembro.mutate(membro.pessoaId)}>
+                    onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
                     <UserMinus size={16} />
                   </button>
                 )}

@@ -1,6 +1,7 @@
 package com.domus.api.modules.pessoa;
 
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.shared.dominio.Endereco;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

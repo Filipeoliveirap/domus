@@ -48,7 +48,7 @@ public record PessoaResponse(
         );
     }
 
-    private static EnderecoDTO enderecoDe(com.domus.api.modules.pessoa.Endereco e) {
+    private static EnderecoDTO enderecoDe(com.domus.api.shared.dominio.Endereco e) {
         if (e == null) return null;
         return new EnderecoDTO(e.getCep(), e.getLogradouro(), e.getNumero(),
                 e.getComplemento(), e.getBairro(), e.getCidade(), e.getUf());

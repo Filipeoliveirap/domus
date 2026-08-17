@@ -1,4 +1,4 @@
-package com.domus.api.modules.pessoa;
+package com.domus.api.shared.dominio;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -11,9 +11,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Endereço da pessoa como objeto de valor. É {@code @Embeddable}: as 7 colunas vivem na
- * própria tabela {@code pessoa} (sem JOIN), mas o código trata endereço como um conceito só.
- * Tudo nulável — um membro pode ter endereço parcial ou nenhum.
+ * Endereço como objeto de valor, reusado por Pessoa, Igreja, LocalEvento e Visitante.
+ * É {@code @Embeddable}: as 7 colunas vivem na própria tabela de quem o incorpora (sem
+ * JOIN), mas o código trata endereço como um conceito só. Tudo nulável.
  */
 @Embeddable
 @Getter

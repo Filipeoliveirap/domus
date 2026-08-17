@@ -1,10 +1,6 @@
 package com.domus.api.modules.igreja;
 
-import com.domus.api.modules.evento.Evento;
-import com.domus.api.modules.financeiro.categoria.CategoriaFinanceira;
-import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceira;
-import com.domus.api.modules.pessoa.Endereco;
-import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -87,19 +83,4 @@ public class Igreja {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Usuario> usuarios;
-
-    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Pessoa> membros;
-
-    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Evento> eventos;
-
-    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CategoriaFinanceira> categorias;
-
-    @OneToMany(mappedBy = "igreja", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MovimentacaoFinanceira> movimentacoes;
 }

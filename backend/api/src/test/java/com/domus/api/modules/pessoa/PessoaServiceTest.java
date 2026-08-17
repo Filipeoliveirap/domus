@@ -11,6 +11,7 @@ import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.usuario.UsuarioService;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

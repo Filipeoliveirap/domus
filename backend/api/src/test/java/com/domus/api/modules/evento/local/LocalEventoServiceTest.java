@@ -8,7 +8,7 @@ import com.domus.api.modules.evento.local.DTOs.LocalEventoRequest;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import jakarta.persistence.EntityManager;

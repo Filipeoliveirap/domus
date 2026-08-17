@@ -113,6 +113,7 @@
   justify-content: space-between;
   padding: 10px;
   border-radius: var(--radius-md);
+  cursor: pointer;
   transition: background var(--transition-fast);
 }
 

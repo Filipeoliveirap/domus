@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Archive, Grid3X3, Crown, X } from 'lucide-react'
+import { Plus, Pencil, Archive, Grid3X3, Crown, X, Trash2 } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
-import { useExcluirCelula } from '@/hooks/celula/useExcluirCelula'
+import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
+import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -45,6 +46,7 @@ export default function CelulasPage() {
   const [fotoId, setFotoId] = useState<string | null>(null)
   const [arquivando, setArquivando] = useState<string | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
+  const [excluindoDefinitivo, setExcluindoDefinitivo] = useState<CelulaResponse | null>(null)
   const queryClient = useQueryClient()
 
   const form = useCelulaForm()
@@ -149,7 +151,11 @@ export default function CelulasPage() {
                 setEditando(c)
                 setModalAberto(true)
               }}] : []),
-              ...(podeGerenciar ? [{ label: 'Arquivar', icone: Archive, onClick: () => handleToggleArquivar(c.id), perigo: true, separadorAntes: true }] : []),
+              ...(podeGerenciar ? [
+                c.temVinculo
+                  ? { label: 'Arquivar', icone: Archive, onClick: () => handleToggleArquivar(c.id), perigo: true, separadorAntes: true }
+                  : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(c), perigo: true, separadorAntes: true }
+              ] : []),
             ]
             return (
               <div key={c.id} className={styles.card}
@@ -233,6 +239,27 @@ export default function CelulasPage() {
           </div>
         </div>
       )}
+
+      {excluindoDefinitivo && (
+        <ModalExcluirDefinitivo celula={excluindoDefinitivo} onClose={() => setExcluindoDefinitivo(null)} />
+      )}
     </div>
+  )
+}
+
+function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; onClose: () => void }) {
+  const { confirmar, isLoading, erroGeral } = useExcluirCelulaDefinitivamente(celula, onClose)
+  return (
+    <ModalConfirmacaoCritica
+      titulo="Excluir célula definitivamente?"
+      mensagem={<>Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.</>}
+      consequencias={[{ tipo: 'perde', texto: 'A célula deixa de existir em qualquer lugar do sistema' }]}
+      palavraConfirmacao={celula.nome}
+      textoConfirmar="Excluir definitivamente"
+      isLoading={isLoading}
+      erro={erroGeral}
+      onConfirmar={confirmar}
+      onClose={onClose}
+    />
   )
 }

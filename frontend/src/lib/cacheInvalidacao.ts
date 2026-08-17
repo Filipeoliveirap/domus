@@ -68,6 +68,7 @@ const AFETADAS: Record<Entidade, string[][]> = {
   ],
   celula: [
     ['celulas'],
+    ['celulas-arquivadas'],
     ['visitantes'],
   ],
 }

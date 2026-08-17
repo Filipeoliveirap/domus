@@ -7,6 +7,7 @@ import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentac
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
@@ -38,8 +39,12 @@ public class CategoriaFinanceiraService {
     @Cacheable(value = "categorias", key = "T(com.domus.api.config.redis.CacheKeys).categorias(#igrejaId, #q, #pageable)")
     public PagedResponse<CategoriaResponse> listar(UUID igrejaId, String q, Pageable pageable) {
         Page<CategoriaResponse> page = repository.buscarPorIgreja(igrejaId, q, pageable)
-                .map(CategoriaResponse::de);
+                .map(c -> CategoriaResponse.de(c, temMovimentacao(c.getId(), igrejaId)));
         return PagedResponse.from(page);
+    }
+
+    private boolean temMovimentacao(UUID categoriaId, UUID igrejaId) {
+        return movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId) > 0;
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +126,43 @@ public class CategoriaFinanceiraService {
                 igrejaId
         );
         log.info("Categoria arquivada. id={}, igreja_id={}", id, igrejaId);
+        cacheEvictor.evictPorIgreja("categorias", igrejaId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoriaResponse> listarArquivadas(UUID igrejaId) {
+        return repository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(c -> CategoriaResponse.de(c, temMovimentacao(c.getId(), igrejaId)))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = repository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Categoria não encontrada.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CATEGORIA, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        cacheEvictor.evictPorIgreja("categorias", igrejaId);
+    }
+
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        // findByIdAndIgrejaIdIncluindoArquivadas (não buscarEntidade) porque esse endpoint
+        // precisa achar também uma categoria já arquivada — é o caminho principal chamado
+        // a partir da tela de Arquivadas.
+        repository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada."));
+
+        // Diferente de Célula/Ministério: vínculo de categoria é histórico financeiro de
+        // movimentações (possivelmente de outras pessoas) — apagar destruiria esse
+        // histórico sem nenhum motivo de LGPD. Por isso BLOQUEIA, não desvincula.
+        if (temMovimentacao(id, igrejaId)) {
+            throw new ConflitoNegocioException("CATEGORIA_COM_MOVIMENTACAO",
+                    "Não é possível apagar uma categoria que tem movimentações.");
+        }
+        repository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.CATEGORIA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
         cacheEvictor.evictPorIgreja("categorias", igrejaId);
     }
 

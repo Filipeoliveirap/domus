@@ -13,8 +13,11 @@ import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ModalMinisterioForm } from './ModalMinisterioForm'
-import { ModalArquivarMinisterio } from './ModalArquivarMinisterio'
 import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { ministerioService } from '@/services/ministerio.service'
+import { notificar } from '@/components/common/Notificacao/notificar'
+import { invalidarCache } from '@/lib/cacheInvalidacao'
+import { useQueryClient } from '@tanstack/react-query'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ministerios.module.css'
 
@@ -33,11 +36,28 @@ export default function MinisteriosPage() {
   const podeGerenciar = podeGerenciarCadastroMinisterios(role)
 
   const { data: ministerios = [], isLoading } = useMinisterios()
+  const queryClient = useQueryClient()
   // `null` = fechado; `'novo'` = criar; objeto = editar (mesma convenção de /eventos/locais).
   const [formAberto, setFormAberto] = useState<'novo' | MinisterioResponse | null>(null)
-  const [arquivando, setArquivando] = useState<MinisterioResponse | null>(null)
   const [excluindoDefinitivo, setExcluindoDefinitivo] = useState<MinisterioResponse | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
+  const [arquivandoId, setArquivandoId] = useState<string | null>(null)
+
+  // Arquivar é reversível (dá pra restaurar na aba Arquivadas) — ação direta, sem
+  // confirmação, mesmo padrão de Célula. Confirmação escrita fica só pra excluir de vez.
+  async function handleArquivar(ministerio: MinisterioResponse) {
+    if (arquivandoId) return
+    setArquivandoId(ministerio.id)
+    try {
+      await ministerioService.arquivar(ministerio.id)
+      invalidarCache(queryClient, 'ministerio')
+      notificar.sucesso(`${ministerio.nome} foi arquivada.`)
+    } catch {
+      notificar.erro(`Erro ao arquivar ${ROTULO_MINISTERIO.toLowerCase()}.`)
+    } finally {
+      setArquivandoId(null)
+    }
+  }
 
   if (!hidratado || isLoading) {
     return (
@@ -90,7 +110,7 @@ export default function MinisteriosPage() {
             const acoes: ItemAcao[] = [
               { label: 'Editar', icone: Pencil, onClick: () => setFormAberto(ministerio) },
               ministerio.temVinculo
-                ? { label: 'Arquivar', icone: Archive, onClick: () => setArquivando(ministerio), perigo: true, separadorAntes: true }
+                ? { label: 'Arquivar', icone: Archive, onClick: () => handleArquivar(ministerio), perigo: true, separadorAntes: true }
                 : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(ministerio), perigo: true, separadorAntes: true },
             ]
             return (
@@ -138,9 +158,6 @@ export default function MinisteriosPage() {
 
       {formAberto && (
         <ModalMinisterioForm ministerio={formAberto === 'novo' ? null : formAberto} onClose={() => setFormAberto(null)} />
-      )}
-      {arquivando && (
-        <ModalArquivarMinisterio ministerio={arquivando} onClose={() => setArquivando(null)} />
       )}
       {excluindoDefinitivo && (
         <ModalExcluirDefinitivo ministerio={excluindoDefinitivo} onClose={() => setExcluindoDefinitivo(null)} />

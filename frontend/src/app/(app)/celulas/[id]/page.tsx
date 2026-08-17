@@ -3,7 +3,7 @@
 import { use, useState, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X, Archive } from 'lucide-react'
+import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X, Archive, ArrowLeft } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useQueryClient } from '@tanstack/react-query'
@@ -174,8 +174,17 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
 
       {celula?.arquivada && (
         <div className={styles.avisoArquivada}>
-          <Archive size={16} />
-          <span>Esta célula está arquivada. Restaure na aba "Arquivadas" pra voltar a usá-la normalmente.</span>
+          <Link href="/celulas/arquivados" className={styles.voltarArquivadas}>
+            <ArrowLeft size={16} /> Voltar pra Arquivadas
+          </Link>
+          <div className={styles.avisoTexto}>
+            <Archive size={16} />
+            <span>
+              Esta célula está arquivada. Restaure na aba{' '}
+              <Link href="/celulas/arquivados" className={styles.avisoLink}>Arquivadas</Link>
+              {' '}pra voltar a usá-la normalmente.
+            </span>
+          </div>
         </div>
       )}
 

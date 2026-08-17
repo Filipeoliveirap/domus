@@ -22,6 +22,15 @@ export const celulaService = {
   excluir: (id: string): Promise<void> =>
     api.delete(Endpoints.celulas.BY_ID(id)).then(() => undefined),
 
+  listarArquivadas: (): Promise<CelulaResponse[]> =>
+    api.get<CelulaResponse[]>(Endpoints.celulas.ARQUIVADOS).then(res => res.data),
+
+  restaurar: (id: string): Promise<void> =>
+    api.post(Endpoints.celulas.RESTAURAR(id)).then(() => undefined),
+
+  excluirDefinitivo: (id: string): Promise<void> =>
+    api.delete(Endpoints.celulas.DEFINITIVO(id)).then(() => undefined),
+
   adicionarMembro: (celulaId: string, data: AdicionarMembroCelulaRequest): Promise<void> =>
     api.post(Endpoints.celulas.MEMBROS(celulaId), data).then(() => undefined),
 

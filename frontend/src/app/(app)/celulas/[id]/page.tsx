@@ -76,7 +76,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     lideres: [] as string[],
     totalMembros: celula.membros.length,
     souLiderDestaCelula: celula.souLiderDestaCelula,
-  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula])
+    temVinculo: celula.membros.length > 0,
+  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula, celula?.membros.length])
 
   const form = useCelulaForm({ celulaId: id, celulaInicial })
   const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form

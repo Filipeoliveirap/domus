@@ -17,12 +17,24 @@ import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.busca.PessoaSearchRepository;
+import com.domus.api.modules.evento.busca.EventoSearchRepository;
+import com.domus.api.modules.usuario.busca.UsuarioSearchRepository;
+import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository;
+import com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepository;
+import com.domus.api.modules.celula.busca.CelulaSearchRepository;
+import com.domus.api.modules.ministerio.busca.MinisterioSearchRepository;
+import com.domus.api.modules.visitante.busca.VisitanteSearchRepository;
+import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.shared.email.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PurgaIgrejaServiceTest {
@@ -43,6 +55,15 @@ class PurgaIgrejaServiceTest {
     IgrejaRepository igrejaRepository;
     UsuarioRepository usuarioRepository;
     PessoaRepository pessoaRepository;
+    PessoaSearchRepository pessoaSearchRepository;
+    EventoSearchRepository eventoSearchRepository;
+    UsuarioSearchRepository usuarioSearchRepository;
+    MovimentacaoSearchRepository movimentacaoSearchRepository;
+    CategoriaSearchRepository categoriaSearchRepository;
+    CelulaSearchRepository celulaSearchRepository;
+    MinisterioSearchRepository ministerioSearchRepository;
+    VisitanteSearchRepository visitanteSearchRepository;
+    EmailService emailService;
     PurgaIgrejaService service;
     UUID igrejaId = UUID.randomUUID();
 
@@ -64,11 +85,23 @@ class PurgaIgrejaServiceTest {
         igrejaRepository = mock(IgrejaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
+        pessoaSearchRepository = mock(PessoaSearchRepository.class);
+        eventoSearchRepository = mock(EventoSearchRepository.class);
+        usuarioSearchRepository = mock(UsuarioSearchRepository.class);
+        movimentacaoSearchRepository = mock(MovimentacaoSearchRepository.class);
+        categoriaSearchRepository = mock(CategoriaSearchRepository.class);
+        celulaSearchRepository = mock(CelulaSearchRepository.class);
+        ministerioSearchRepository = mock(MinisterioSearchRepository.class);
+        visitanteSearchRepository = mock(VisitanteSearchRepository.class);
+        emailService = mock(EmailService.class);
         service = new PurgaIgrejaService(movimentacaoRepository, categoriaRepository, inscricaoRepository,
                 eventoRepository, visitanteRepository, localEventoRepository,
                 celulaMembroRepository, celulaRepository, ministerioMembroRepository, ministerioRepository,
                 usuarioCapacidadeRepository, fotoRepository, fotoService, igrejaRepository,
-                usuarioRepository, pessoaRepository);
+                usuarioRepository, pessoaRepository,
+                pessoaSearchRepository, eventoSearchRepository, usuarioSearchRepository,
+                movimentacaoSearchRepository, categoriaSearchRepository, celulaSearchRepository,
+                ministerioSearchRepository, visitanteSearchRepository, emailService);
     }
 
     @Test
@@ -163,5 +196,41 @@ class PurgaIgrejaServiceTest {
         service.purgar(igrejaId);
 
         verify(igrejaRepository, never()).desvincularFamiliaEmLote(any());
+    }
+
+    @Test
+    void purgaApagaDocumentosDeTodosOsIndicesDoElasticsearch() {
+        service.purgar(igrejaId);
+
+        String id = igrejaId.toString();
+        verify(pessoaSearchRepository).deleteByIgrejaId(id);
+        verify(eventoSearchRepository).deleteByIgrejaId(id);
+        verify(usuarioSearchRepository).deleteByIgrejaId(id);
+        verify(movimentacaoSearchRepository).deleteByIgrejaId(id);
+        verify(categoriaSearchRepository).deleteByIgrejaId(id);
+        verify(celulaSearchRepository).deleteByIgrejaId(id);
+        verify(ministerioSearchRepository).deleteByIgrejaId(id);
+        verify(visitanteSearchRepository).deleteByIgrejaId(id);
+    }
+
+    @Test
+    void purgaNaoTravaSeElasticsearchFalhar() {
+        doThrow(new RuntimeException("ES fora do ar")).when(pessoaSearchRepository).deleteByIgrejaId(anyString());
+
+        service.purgar(igrejaId);
+
+        verify(igrejaRepository).deleteById(igrejaId);
+    }
+
+    @Test
+    void purgaEnviaEmailFinalAntesDeApagarALinhaDaIgreja() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Igreja X").emailContato("x@x.com").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+
+        service.purgar(igrejaId);
+
+        var ordem = inOrder(emailService, igrejaRepository);
+        ordem.verify(emailService).enviar(eq("x@x.com"), contains("excluída"), anyString());
+        ordem.verify(igrejaRepository).deleteById(igrejaId);
     }
 }

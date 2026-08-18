@@ -15,6 +15,9 @@ export interface IgrejaDetalhe {
   /** Alimentam o card "Logs de atividade". Nulos enquanto ninguém tiver editado. */
   atualizadoEm: string | null
   atualizadoPorNome: string | null
+  /** Preenchidos só quando há exclusão agendada (carência de 10 dias). */
+  exclusaoAgendadaEm: string | null
+  diasRestantes: number | null
 }
 
 export interface AtualizarIgrejaRequest {

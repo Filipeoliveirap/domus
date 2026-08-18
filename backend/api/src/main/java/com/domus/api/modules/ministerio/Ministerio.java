@@ -38,9 +38,15 @@ public class Ministerio {
     @JoinColumn(name = "criado_por_usuario_id")
     private Usuario criadoPor;
 
+    @Column(name = "criado_por_texto")
+    private String criadoPorTexto;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;
+
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

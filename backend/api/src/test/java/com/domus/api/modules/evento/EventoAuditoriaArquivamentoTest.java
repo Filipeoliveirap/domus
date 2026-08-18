@@ -27,22 +27,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Prova os dois achados CRITICAL da revisão pós-Task-5: arquivar a PESSOA responsável, ou o
- * USUÁRIO que cadastrou/atualizou um evento, nunca pode derrubar {@code GET /eventos}.
- *
- * <p>{@code Pessoa} e {@code Usuario} usam soft delete (@SQLDelete + @SQLRestriction), então o
- * {@code ON DELETE SET NULL} das FKs {@code responsavel_pessoa_id}/{@code criado_por_usuario_id}/
- * {@code atualizado_por_usuario_id} NUNCA dispara de verdade. Sem o desvínculo feito em
- * {@code PessoaService.arquivarMembro}/{@code UsuarioService.arquivarPorMembro} (via
- * {@code EventoRepository.desvincularResponsavel}/{@code desvincularUsuario}), a FK ficaria
- * apontando para uma linha escondida pelo {@code @SQLRestriction} — resolver o proxy LAZY ao
- * montar {@code EventoResponse} estouraria {@code EntityNotFoundException}, e como isso
- * acontece dentro do {@code .map()} da página, a listagem INTEIRA de eventos quebraria (não
- * só o evento afetado).
- *
- * <p>Roda contra Postgres de verdade (não mock) e sempre {@code flush()}+{@code clear()} antes
- * de listar — sem isso a instância já gerenciada na sessão continuaria com o proxy antigo em
- * memória e o teste passaria mesmo com a FK suja (mesmo cuidado de {@code LocalEventoServiceTest}).
+ * Arquivar a PESSOA responsável ou o USUÁRIO que cadastrou/atualizou um evento nunca pode derrubar {@code GET /eventos}:
+ * como {@code Pessoa}/{@code Usuario} usam soft delete, o {@code ON DELETE SET NULL} das FKs nunca dispara de verdade —
+ * sem o desvínculo explícito, o proxy LAZY apontaria pra linha escondida e estouraria {@code EntityNotFoundException}
+ * dentro do {@code .map()} da página, quebrando a listagem inteira.
  */
 @SpringBootTest
 @Transactional
@@ -156,10 +144,7 @@ class EventoAuditoriaArquivamentoTest {
         evento = eventoRepository.save(evento);
         UUID eventoId = evento.getId();
 
-        // Arquivando a PESSOA (não o usuário direto): é o caminho MAIS grave da revisão —
-        // arquivarMembro cascateia para usuarioService.arquivarPorMembro, e criado_por é
-        // preenchido em TODO evento (não é opcional como o responsável). Precisa de outro
-        // admin ativo para não esbarrar em ULTIMO_ADMIN.
+        // Arquiva a PESSOA (cascateia para arquivarPorMembro); outro admin evita ULTIMO_ADMIN.
         novoUsuario(novaPessoa("Outro Admin"), "ADMIN_IGREJA");
 
         pessoaService.arquivarMembro(pessoaDoCriador.getId(), igrejaId);

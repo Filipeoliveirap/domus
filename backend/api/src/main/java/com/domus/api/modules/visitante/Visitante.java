@@ -72,9 +72,15 @@ public class Visitante {
     @JoinColumn(name = "criado_por_usuario_id")
     private Usuario criadoPor;
 
+    @Column(name = "criado_por_texto")
+    private String criadoPorTexto;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;
+
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -89,4 +95,9 @@ public class Visitante {
 
     @Column(name = "convertido_pessoa_id")
     private UUID convertidoPessoaId;
+
+    /** Distingue "nunca converteu" (convertidoPessoaId nulo, este false) de "converteu, pessoa excluída depois". */
+    @Column(name = "convertido_pessoa_removida", nullable = false)
+    @Builder.Default
+    private boolean convertidoPessoaRemovida = false;
 }

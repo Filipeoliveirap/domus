@@ -1,12 +1,6 @@
 package com.domus.api.modules.evento.DTOs;
 
-/**
- * Relatório individual de um evento (modal de detalhe). {@code inscritos} e
- * {@code percentualIgrejaInscritos} SEMPRE vêm preenchidos (não dependem de controle de
- * presença). {@code compareceram} e {@code percentualIgreja} são {@code null} quando
- * {@code evento.controlaPresenca=false} — a seção de presença some inteira no front, nunca
- * aparece zerada (ver EventoRelatorioService).
- */
+/** {@code compareceram}/{@code percentualIgreja} são {@code null} (nunca zerados) quando controlaPresenca=false. */
 public record RelatorioEventoResponse(
         Inscritos inscritos,
         /** % de pessoas CADASTRADAS da igreja (nunca convidados) que se inscreveram, sobre o total de pessoas ativas. */

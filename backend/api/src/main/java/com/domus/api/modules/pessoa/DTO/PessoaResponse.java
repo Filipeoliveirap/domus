@@ -23,7 +23,8 @@ public record PessoaResponse(
         String observacoes,
         LocalDateTime createdAt,
         LocalDate dataBatismo,
-        String avisoTelefoneDuplicado
+        String avisoTelefoneDuplicado,
+        boolean arquivada
 ) {
     public static PessoaResponse from(Pessoa m) {
         return from(m, null);
@@ -44,7 +45,8 @@ public record PessoaResponse(
                 m.getFoto() != null ? m.getFoto().getId() : null,
                 incluirDadosSensiveis ? m.getObservacoes() : null,
                 m.getCreatedAt(),
-                m.getDataBatismo(), avisoTelefoneDuplicado
+                m.getDataBatismo(), avisoTelefoneDuplicado,
+                m.getDeletedAt() != null
         );
     }
 

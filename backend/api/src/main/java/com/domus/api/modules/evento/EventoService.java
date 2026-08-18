@@ -1,11 +1,13 @@
 package com.domus.api.modules.evento;
 
 import com.domus.api.config.redis.CacheEvictor;
+import com.domus.api.modules.evento.DTOs.EventoArquivadoResponse;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.DTOs.ImpactoRestricaoResponse;
 import com.domus.api.modules.evento.elegibilidade.DTOs.ElegibilidadeResponse;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
@@ -55,6 +57,7 @@ public class EventoService {
     private final CacheEvictor cacheEvictor;
     private final OutboxRegistrador outboxRegistrador;
     private final InscricaoService inscricaoService;
+    private final InscricaoRepository inscricaoRepository;
     private final FotoService fotoService;
     private final ElegibilidadeService elegibilidadeService;
     private final PessoaRepository pessoaRepository;
@@ -81,7 +84,12 @@ public class EventoService {
     @Transactional(readOnly = true)
     public EventoResponse buscarPorId(UUID id, UUID igrejaId, String role) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        // Arquivado não aparece em buscarVisivelParaFamilia (@SQLRestriction) — precisa
+        // enxergar arquivado também, pra abrir o detalhe a partir da tela de Arquivados
+        // (igual célula/ministério). Fallback restrito à própria igreja, não à família
+        // inteira: a tela de Arquivados também só lista da própria igreja.
         Evento evento = eventoRepository.buscarVisivelParaFamilia(id, igrejaId, idsFamilia)
+                .or(() -> eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId))
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean podeGerenciar = Permissoes.podeGerenciarEventos(role)
                 && evento.getIgreja().getId().equals(igrejaId);
@@ -146,11 +154,7 @@ public class EventoService {
         return atualizarEvento(id, data, igrejaId, usuarioId, false);
     }
 
-    /**
-     * @param cancelarNaoElegiveis Se {@code true}, remove inscritos que não atendem
-     *                             às novas restrições. O padrão ({@code false}) nunca
-     *                             cancela ninguém sozinho.
-     */
+    /** @param cancelarNaoElegiveis padrão {@code false} nunca cancela ninguém sozinho. */
     @Transactional
     public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
                                           boolean cancelarNaoElegiveis) {
@@ -266,10 +270,39 @@ public class EventoService {
         evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
-    /**
-     * Prévia de elegibilidade para a tela decidir o que mostrar antes da inscrição.
-     * O {@code InscricaoService} reavalia durante o POST como defesa real.
-     */
+    @Transactional(readOnly = true)
+    public List<EventoArquivadoResponse> listarArquivados(UUID igrejaId) {
+        return eventoRepository.findArquivadosPorIgreja(igrejaId).stream()
+                .map(e -> EventoArquivadoResponse.de(e, inscricaoRepository.countByEventoId(e.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = eventoRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Evento não encontrado.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
+    }
+
+    /** Desvincula (apaga inscrições) em vez de bloquear, como Célula/Ministério — não Categoria. */
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        var inscricoes = inscricaoRepository.findByEventoId(id);
+        inscricaoRepository.deleteAll(inscricoes);
+        inscricaoRepository.flush();
+
+        eventoRepository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
+        evictarCacheDeEventosDaFamilia(igrejaId);
+    }
+
+    /** Prévia de UX — o {@code InscricaoService} reavalia durante o POST como defesa real. */
     @Transactional(readOnly = true)
     public ElegibilidadeResponse elegibilidade(UUID eventoId, UUID pessoaId, UUID igrejaId) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
@@ -280,10 +313,7 @@ public class EventoService {
         return ElegibilidadeResponse.from(elegibilidadeService.avaliar(evento, pessoa));
     }
 
-    /**
-     * Prévia (não grava nada) de quem ficaria de fora se as restrições de {@code data}
-     * fossem aplicadas. Só {@link Permissoes#podeGerenciarEventos(String)} pode chamar.
-     */
+    /** Prévia (não grava nada) de quem ficaria de fora sob as restrições de {@code data}. */
     @Transactional(readOnly = true)
     public ImpactoRestricaoResponse calcularImpacto(UUID eventoId, EventoRequest data, UUID igrejaId, String role) {
         if (!Permissoes.podeGerenciarEventos(role)) {
@@ -355,10 +385,7 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
     }
 
-    /**
-     * Capitaliza o tipo, mas reusa grafia já existente da igreja se a forma normalizada
-     * bater — evita que "Vigília" e "vigilia" virem dois tipos diferentes no filtro.
-     */
+    /** Reusa grafia já existente da igreja se a forma normalizada bater — evita "Vigília"/"vigilia" duplicados. */
     private String resolverTipo(String tipoInformado, UUID igrejaId) {
         String capitalizado = TextoUtil.capitalizar(tipoInformado);
         if (capitalizado == null) return null;
@@ -370,10 +397,6 @@ public class EventoService {
                 .orElse(capitalizado);
     }
 
-    /**
-     * Sugestões de tipo: primeiro os usados pela igreja (por frequência),
-     * depois as sementes ainda não usadas.
-     */
     @Transactional(readOnly = true)
     public List<String> tiposSugeridos(UUID igrejaId) {
         List<String> usados = eventoRepository.tiposUsadosPorFrequencia(igrejaId);

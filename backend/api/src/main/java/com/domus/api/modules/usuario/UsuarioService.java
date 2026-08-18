@@ -293,7 +293,9 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public UsuarioResponseDTO buscarPorId(UUID id, UUID igrejaId) {
-        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+        // IncluindoArquivados: a tela de Arquivados também abre o detalhe de um usuário
+        // arquivado (pra só olhar), igual pessoa/célula/ministério/evento/movimentação.
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
         return enriquecerComCapacidades(UsuarioResponseDTO.from(usuario));
     }
@@ -303,7 +305,7 @@ public class UsuarioService {
                 .stream().map(UsuarioCapacidade::getCapacidade).toList();
         return new UsuarioResponseDTO(dto.id(), dto.nome(), dto.email(), dto.role(),
                 dto.ativo(), dto.ultimoLoginEm(), dto.convitePendente(), dto.criadoEm(),
-                dto.fotoId(), capacidades);
+                dto.fotoId(), capacidades, dto.arquivado());
     }
 
     @Transactional

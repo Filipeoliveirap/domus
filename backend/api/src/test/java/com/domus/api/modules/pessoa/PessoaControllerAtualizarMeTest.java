@@ -17,12 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-/**
- * Achado 1 da revisão final: e-mail tem que ser IMUTÁVEL em PUT /pessoas/me, mesmo quando
- * quem edita é ADMIN_IGREJA (branch que chama {@code atualizarMembro}, o único que de fato
- * grava o campo email). Prova que o controller força o e-mail já persistido antes de repassar
- * pro service, independente do que vier no corpo da requisição.
- */
+/** E-mail é imutável em PUT /pessoas/me mesmo via ADMIN_IGREJA — controller força o e-mail já persistido antes de repassar pro service. */
 @ExtendWith(MockitoExtension.class)
 class PessoaControllerAtualizarMeTest {
 
@@ -46,7 +41,7 @@ class PessoaControllerAtualizarMeTest {
 
         PessoaResponse pessoaAtual = new PessoaResponse(
                 pessoaId, "Fulano", "email.real@igreja.com", "11999999999",
-                null, null, Vinculo.MEMBRO, null, null, null, null, null, null, null, null
+                null, null, Vinculo.MEMBRO, null, null, null, null, null, null, null, null, false
         );
         when(pessoaService.buscarPorId(eq(pessoaId), eq(igrejaId), eq(true))).thenReturn(pessoaAtual);
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle, Building2 } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle, Building2, Archive } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -96,6 +96,12 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
           />
         ) : (
           <div className={styles.conteudo}>
+            {evento.arquivado && (
+              <Link href="/eventos/arquivados" className={styles.avisoArquivado} onClick={onClose}>
+                <Archive size={16} />
+                <span>Este evento está arquivado. Toque para restaurá-lo na lista de arquivados.</span>
+              </Link>
+            )}
             {/* Cabeçalho */}
             <header className={styles.header}>
               {selo && (
@@ -107,7 +113,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               <div className={styles.tituloLinha}>
                 <h2 className={styles.titulo}>{evento.titulo}</h2>
                 {/* A6/rodada 3: mesma affordance do modal do início — só quem gerencia, e só enquanto editável. */}
-                {podeGerenciar && podeEditarEvento(evento.situacao) && (
+                {podeGerenciar && !evento.arquivado && podeEditarEvento(evento.situacao) && (
                   <Link href={`/eventos/${evento.id}`} className={styles.botaoEditar} aria-label="Editar evento">
                     <Pencil size={16} />
                   </Link>

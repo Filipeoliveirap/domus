@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase } from 'lucide-react'
+import Link from 'next/link'
+import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
 import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
@@ -60,6 +61,12 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
         ) : (
           <>
             <div className={styles.conteudo}>
+              {pessoa.arquivada && (
+                <Link href="/pessoas/arquivados" className={styles.avisoArquivada} onClick={onClose}>
+                  <Archive size={16} />
+                  <span>Esta pessoa está arquivada. Toque para restaurá-la na lista de arquivados.</span>
+                </Link>
+              )}
               <div className={styles.topo}>
                 {/*
                   Vira <button> só quando HÁ foto. Sem foto o avatar mostra iniciais, e

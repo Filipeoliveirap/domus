@@ -23,7 +23,8 @@ public record MovimentacaoResponse(
         String categoriaNome,
         List<ContribuinteResponse> contribuintes,
         String criadoPorNome,
-        String atualizadoPorNome
+        String atualizadoPorNome,
+        boolean arquivada
 ) {
     /**
      * @param categoriaNome        resolvido à parte, em lote — nunca m.getCategoria().getNome()
@@ -52,7 +53,8 @@ public record MovimentacaoResponse(
                         })
                         .toList(),
                 m.getCriadoPor() != null ? m.getCriadoPor().getNome() : m.getCriadoPorTexto(),
-                m.getAtualizadoPor() != null ? m.getAtualizadoPor().getNome() : m.getAtualizadoPorTexto()
+                m.getAtualizadoPor() != null ? m.getAtualizadoPor().getNome() : m.getAtualizadoPorTexto(),
+                m.getDeletedAt() != null
         );
     }
 }

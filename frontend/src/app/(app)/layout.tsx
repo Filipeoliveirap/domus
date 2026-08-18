@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import styles from './layout.module.css'
 import { FaixaOffline } from '@/components/common/FaixaOffline/FaixaOffline'
+import { BannerExclusaoAgendada } from '@/components/common/BannerExclusaoAgendada/BannerExclusaoAgendada'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 
 export default function AppLayout({
@@ -12,6 +13,7 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <FaixaOffline />
+      <BannerExclusaoAgendada />
       <Sidebar />
       <TopBar />
       <main className={styles.main}>

@@ -1,11 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { inscricoesService } from '@/services/inscricao.service'
 
-/**
- * Lista completa de inscritos (telefone dos convidados, quem inscreveu quem). Restrita a
- * ADMIN/LÍDER no backend — um MEMBRO recebe 401. `enabled` existe justamente para o
- * componente decidir, pela role em sessão, se deve nem disparar a query.
- */
+// Restrita a ADMIN/LÍDER no backend (MEMBRO recebe 401); `enabled` deixa o componente decidir se dispara pela role em sessão.
 export function useListaInscritos(
   eventoId: string | undefined, enabled = true, busca = '', page = 0, size?: number,
 ) {

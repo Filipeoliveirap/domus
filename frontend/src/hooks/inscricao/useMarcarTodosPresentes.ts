@@ -7,13 +7,7 @@ import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 import type { ListaInscritosResponse } from '@/types/inscricao.type'
 
-/**
- * Botão "marcar todos vieram" — presença em lote de todo inscrito confirmado + acompanhantes.
- * Atualização otimista (mesmo motivo do botão individual, ver Javadoc de
- * `useMarcarPresencaInscricao`): o sucesso NÃO reinvalida `['inscricoes','lista']` — fazer
- * isso disparava um refetch em cima do próprio patch otimista e os botões "piscavam" de
- * volta pra "Marcar presença" por um instante antes de assentar.
- */
+// Sucesso não reinvalida ['inscricoes','lista'], senão os botões piscam de volta pra "Marcar presença".
 export function useMarcarTodosPresentes(eventoId: string) {
   const queryClient = useQueryClient()
 

@@ -11,9 +11,14 @@ import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.ministerio.MinisterioMembroRepository;
 import com.domus.api.modules.ministerio.MinisterioRepository;
 import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoRepository;
+import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.igreja.IgrejaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -31,6 +36,9 @@ class PurgaIgrejaServiceTest {
     MinisterioMembroRepository ministerioMembroRepository;
     MinisterioRepository ministerioRepository;
     UsuarioCapacidadeRepository usuarioCapacidadeRepository;
+    FotoRepository fotoRepository;
+    FotoService fotoService;
+    IgrejaRepository igrejaRepository;
     PurgaIgrejaService service;
     UUID igrejaId = UUID.randomUUID();
 
@@ -47,10 +55,13 @@ class PurgaIgrejaServiceTest {
         ministerioMembroRepository = mock(MinisterioMembroRepository.class);
         ministerioRepository = mock(MinisterioRepository.class);
         usuarioCapacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        fotoRepository = mock(FotoRepository.class);
+        fotoService = mock(FotoService.class);
+        igrejaRepository = mock(IgrejaRepository.class);
         service = new PurgaIgrejaService(movimentacaoRepository, categoriaRepository, inscricaoRepository,
                 eventoRepository, visitanteRepository, localEventoRepository,
                 celulaMembroRepository, celulaRepository, ministerioMembroRepository, ministerioRepository,
-                usuarioCapacidadeRepository);
+                usuarioCapacidadeRepository, fotoRepository, fotoService, igrejaRepository);
     }
 
     @Test
@@ -88,5 +99,33 @@ class PurgaIgrejaServiceTest {
         verify(eventoRepository).deleteAllByIgrejaId(igrejaId);
         verify(visitanteRepository).deleteAllByIgrejaId(igrejaId);
         verify(localEventoRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaRemoveFotosUmaAUmaViaFotoService() {
+        UUID fotoId1 = UUID.randomUUID();
+        UUID fotoId2 = UUID.randomUUID();
+        Foto foto1 = Foto.builder().id(fotoId1).build();
+        Foto foto2 = Foto.builder().id(fotoId2).build();
+        when(fotoRepository.findByIgrejaId(igrejaId)).thenReturn(List.of(foto1, foto2));
+
+        service.purgar(igrejaId);
+
+        verify(fotoService).remover(fotoId1);
+        verify(fotoService).remover(fotoId2);
+    }
+
+    @Test
+    void purgaDeFotoContinuaMesmoSeUmaFalhar() {
+        UUID fotoId1 = UUID.randomUUID();
+        UUID fotoId2 = UUID.randomUUID();
+        Foto foto1 = Foto.builder().id(fotoId1).build();
+        Foto foto2 = Foto.builder().id(fotoId2).build();
+        when(fotoRepository.findByIgrejaId(igrejaId)).thenReturn(List.of(foto1, foto2));
+        doThrow(new RuntimeException("falha no R2")).when(fotoService).remover(fotoId1);
+
+        service.purgar(igrejaId);
+
+        verify(fotoService).remover(fotoId2);
     }
 }

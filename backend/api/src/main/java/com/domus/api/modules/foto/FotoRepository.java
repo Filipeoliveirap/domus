@@ -13,6 +13,8 @@ public interface FotoRepository extends JpaRepository<Foto, UUID> {
 
     Optional<Foto> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
+    List<Foto> findByIgrejaId(UUID igrejaId);
+
     /** Órfãs: sem referência nas três tabelas — acontece quando o upload é abandonado sem salvar. */
     @Query("""
         SELECT f FROM Foto f

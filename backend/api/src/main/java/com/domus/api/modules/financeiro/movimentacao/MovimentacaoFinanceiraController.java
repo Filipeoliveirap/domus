@@ -90,4 +90,24 @@ public class MovimentacaoFinanceiraController {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         service.arquivar(id, igrejaId);
     }
+
+    @GetMapping("/arquivadas")
+    public java.util.List<MovimentacaoArquivadaResponse> arquivadas() {
+        exigirFinanceiro();
+        return service.listarArquivadas(usuarioAutenticado.getIgrejaId());
+    }
+
+    @PostMapping("/{id}/restaurar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void restaurar(@PathVariable UUID id) {
+        exigirFinanceiro();
+        service.restaurar(id, usuarioAutenticado.getIgrejaId());
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluirDefinitivo(@PathVariable UUID id) {
+        exigirFinanceiro();
+        service.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+    }
 }

@@ -24,8 +24,8 @@ public class MovimentacaoContribuinte {
     @JoinColumn(name = "movimentacao_id", nullable = false)
     private MovimentacaoFinanceira movimentacao;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pessoa_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pessoa_id")
     private Pessoa pessoa;
 
     @Column(nullable = false, precision = 15, scale = 2)

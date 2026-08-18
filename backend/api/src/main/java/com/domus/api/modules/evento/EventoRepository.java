@@ -192,6 +192,10 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query(value = "DELETE FROM evento WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
 
+    @Modifying
+    @Query(value = "DELETE FROM evento WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") java.util.UUID igrejaId);
+
     /** @SQLRestriction esconde arquivados de qualquer find derivado/JPQL — precisa de SQL nativo. */
     @Query(value = """
         SELECT * FROM evento

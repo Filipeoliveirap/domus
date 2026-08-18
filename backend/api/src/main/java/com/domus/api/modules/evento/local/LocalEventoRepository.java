@@ -30,4 +30,8 @@ public interface LocalEventoRepository extends JpaRepository<LocalEvento, UUID> 
     @Modifying
     @Query(value = "DELETE FROM local_evento WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
+
+    @Modifying
+    @Query(value = "DELETE FROM local_evento WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") java.util.UUID igrejaId);
 }

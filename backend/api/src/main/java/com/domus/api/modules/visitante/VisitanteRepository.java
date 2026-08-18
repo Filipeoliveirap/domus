@@ -60,4 +60,8 @@ public interface VisitanteRepository extends JpaRepository<Visitante, UUID> {
          WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
         """, nativeQuery = true)
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    @Modifying
+    @Query(value = "DELETE FROM visitante WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

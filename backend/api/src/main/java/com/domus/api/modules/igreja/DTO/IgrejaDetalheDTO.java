@@ -20,10 +20,20 @@ public record IgrejaDetalheDTO(
         EnderecoDTO endereco,
         // Alimenta o card "Logs de atividade".
         LocalDateTime atualizadoEm,
-        String atualizadoPorNome) {
+        String atualizadoPorNome,
+        LocalDateTime exclusaoAgendadaEm,
+        Integer diasRestantes) {
 
     public static IgrejaDetalheDTO from(Igreja igreja, String atualizadoPorNome) {
         var e = igreja.getEndereco();
+
+        Integer diasRestantes = null;
+        if (igreja.getExclusaoAgendadaEm() != null) {
+            long decorridos = java.time.temporal.ChronoUnit.DAYS.between(
+                    igreja.getExclusaoAgendadaEm(), LocalDateTime.now());
+            diasRestantes = (int) Math.max(0, 10 - decorridos);
+        }
+
         return new IgrejaDetalheDTO(
                 igreja.getId(),
                 igreja.getNome(),
@@ -38,6 +48,8 @@ public record IgrejaDetalheDTO(
                         e.getCep(), e.getLogradouro(), e.getNumero(), e.getComplemento(),
                         e.getBairro(), e.getCidade(), e.getUf()),
                 igreja.getUpdatedAt(),
-                atualizadoPorNome);
+                atualizadoPorNome,
+                igreja.getExclusaoAgendadaEm(),
+                diasRestantes);
     }
 }

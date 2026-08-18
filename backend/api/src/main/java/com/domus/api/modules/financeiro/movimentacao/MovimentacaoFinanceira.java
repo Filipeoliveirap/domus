@@ -40,9 +40,12 @@ public class MovimentacaoFinanceira {
     @JoinColumn(name = "categoria_id", nullable = false)
     private CategoriaFinanceira categoria;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "criado_por_usuario_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "criado_por_usuario_id")
     private Usuario criadoPor;
+
+    @Column(name = "criado_por_texto")
+    private String criadoPorTexto;
 
     @Builder.Default
     @OneToMany(mappedBy = "movimentacao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -75,4 +78,7 @@ public class MovimentacaoFinanceira {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;
+
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
 }

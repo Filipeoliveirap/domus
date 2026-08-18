@@ -3,17 +3,17 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
 import { useEventos } from '@/hooks/evento/useEventos'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarEventos } from '@/lib/permissoes'
 import { EventoCard } from '@/components/module/eventos/EventoCard'
-import { DrawerDetalheEvento } from '@/app/(app)/eventos/(detalhe)/DrawerDetalheEvento'
+import { DrawerDetalheEvento } from '@/app/(app)/eventos/(lista)/(detalhe)/DrawerDetalheEvento'
 import { ModalArquivarEvento } from './ModalArquivarEvento'
 import { EventoResponse } from '@/types/evento.type'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { RECORTES_ETARIOS } from '@/components/module/eventos/BlocoParaQuemE'
 import styles from './Page.module.css'
@@ -36,7 +36,7 @@ function EventosConteudo() {
   const role = useAuthStore((s) => s.role)
   const podeGerenciar = podeGerenciarEventos(role)
 
-  const [pagina, setPagina] = useState(0)
+  const { pagina, setPagina } = usePaginaUrl()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
   const { filtros, setFiltros } = useFiltrosUrl({ tipo: '', recorteEtario: '' })
 
@@ -96,12 +96,6 @@ function EventosConteudo() {
 
   return (
     <div className={styles.pagina}>
-      <nav className={styles.breadcrumb} aria-label="breadcrumb">
-        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Eventos</span>
-      </nav>
-
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>

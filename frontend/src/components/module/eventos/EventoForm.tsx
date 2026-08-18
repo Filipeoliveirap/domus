@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2 } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { Input } from '@/components/common/input/Input'
@@ -34,6 +34,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
 }
 
 export function EventoForm(props: EventoFormProps) {
+  const router = useRouter()
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
@@ -394,7 +395,7 @@ export function EventoForm(props: EventoFormProps) {
             >
               {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}
             </Button>
-            <Link href="/eventos" className={styles.cancelarLink}>Cancelar</Link>
+            <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
           </div>
         </div>
       </div>

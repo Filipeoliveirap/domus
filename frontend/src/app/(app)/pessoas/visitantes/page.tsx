@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronRight, Pencil, Trash2, Phone as PhoneIcon, Grid3x3 } from 'lucide-react'
 import { useVisitantes } from '@/hooks/visitante/useVisitantes'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
+import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
@@ -58,7 +59,7 @@ const GRUPOS_FILTRO: GrupoFiltro[] = [
 function VisitantesConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ contato: '', visita: '', acompanhamento: '' })
-  const [pagina, setPagina] = useState(0)
+  const { pagina, setPagina } = usePaginaUrl()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)

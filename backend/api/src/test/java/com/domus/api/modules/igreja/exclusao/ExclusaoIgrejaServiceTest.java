@@ -1,5 +1,6 @@
 package com.domus.api.modules.igreja.exclusao;
 
+import com.domus.api.modules.auth.GoogleAuthService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.igreja.exclusao.DTO.ResumoExclusaoResponse;
@@ -8,12 +9,14 @@ import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.ministerio.MinisterioRepository;
+import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.email.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class ExclusaoIgrejaServiceTest {
@@ -34,6 +38,8 @@ class ExclusaoIgrejaServiceTest {
     MinisterioRepository ministerioRepository;
     UsuarioRepository usuarioRepository;
     EmailService emailService;
+    PasswordEncoder passwordEncoder;
+    GoogleAuthService googleAuthService;
     ExclusaoIgrejaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -49,8 +55,11 @@ class ExclusaoIgrejaServiceTest {
         ministerioRepository = mock(MinisterioRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         emailService = mock(EmailService.class);
+        passwordEncoder = mock(PasswordEncoder.class);
+        googleAuthService = mock(GoogleAuthService.class);
         service = new ExclusaoIgrejaService(igrejaRepository, pessoaRepository, eventoRepository,
-                movimentacaoRepository, celulaRepository, ministerioRepository, usuarioRepository, emailService);
+                movimentacaoRepository, celulaRepository, ministerioRepository, usuarioRepository, emailService,
+                passwordEncoder, googleAuthService);
     }
 
     private Igreja igreja() {
@@ -60,9 +69,12 @@ class ExclusaoIgrejaServiceTest {
     @Test
     void agendaExclusaoQuandoNomeConfere() {
         Igreja igreja = igreja();
+        Usuario usuario = Usuario.builder().id(usuarioId).senhaHash("hash-bcrypt").googleSub(null).build();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha-correta", "hash-bcrypt")).thenReturn(true);
 
-        service.agendar(igrejaId, usuarioId, "Igreja Batista Central");
+        service.agendar(igrejaId, usuarioId, "Igreja Batista Central", "senha-correta", null);
 
         verify(igrejaRepository).marcarExclusaoAgendada(eq(igrejaId), eq(usuarioId), any());
         verify(emailService).enviar(eq("contato@igreja.com"), anyString(), anyString());
@@ -72,7 +84,7 @@ class ExclusaoIgrejaServiceTest {
     void recusaAgendarQuandoNomeNaoConfere() {
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
 
-        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Nome Errado"))
+        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Nome Errado", "senha-correta", null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("nome");
 
@@ -83,8 +95,72 @@ class ExclusaoIgrejaServiceTest {
     void recusaAgendarSeIgrejaNaoExiste() {
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Qualquer"))
+        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Qualquer", "senha-correta", null))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void agendaComSenhaCorretaParaLoginNativo() {
+        Igreja igreja = igreja();
+        Usuario usuario = Usuario.builder().id(usuarioId).senhaHash("hash-bcrypt").googleSub(null).build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha-correta", "hash-bcrypt")).thenReturn(true);
+
+        service.agendar(igrejaId, usuarioId, "Igreja Batista Central", "senha-correta", null);
+
+        verify(igrejaRepository).marcarExclusaoAgendada(eq(igrejaId), eq(usuarioId), any());
+    }
+
+    @Test
+    void recusaAgendarComSenhaErrada() {
+        Igreja igreja = igreja();
+        Usuario usuario = Usuario.builder().id(usuarioId).senhaHash("hash-bcrypt").googleSub(null).build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha-errada", "hash-bcrypt")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Igreja Batista Central", "senha-errada", null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Senha");
+
+        verify(igrejaRepository, never()).marcarExclusaoAgendada(any(), any(), any());
+    }
+
+    @Test
+    void agendaComGoogleQuandoSubBateComOCadastrado() {
+        Igreja igreja = igreja();
+        Usuario usuario = Usuario.builder().id(usuarioId).senhaHash(null).googleSub("google-sub-123").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(googleAuthService.reautenticarPorGoogle("token-valido")).thenReturn("google-sub-123");
+
+        service.agendar(igrejaId, usuarioId, "Igreja Batista Central", null, "token-valido");
+
+        verify(igrejaRepository).marcarExclusaoAgendada(eq(igrejaId), eq(usuarioId), any());
+    }
+
+    @Test
+    void recusaAgendarComGoogleQuandoSubNaoBate() {
+        Igreja igreja = igreja();
+        Usuario usuario = Usuario.builder().id(usuarioId).senhaHash(null).googleSub("google-sub-123").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(googleAuthService.reautenticarPorGoogle("token-de-outra-conta")).thenReturn("google-sub-999");
+
+        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Igreja Batista Central", null, "token-de-outra-conta"))
+                .isInstanceOf(BusinessException.class);
+
+        verify(igrejaRepository, never()).marcarExclusaoAgendada(any(), any(), any());
+    }
+
+    @Test
+    void recusaAgendarSemSenhaNemGoogleToken() {
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(Usuario.builder().id(usuarioId).build()));
+
+        assertThatThrownBy(() -> service.agendar(igrejaId, usuarioId, "Igreja Batista Central", null, null))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

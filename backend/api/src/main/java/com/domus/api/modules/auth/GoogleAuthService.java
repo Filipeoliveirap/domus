@@ -114,6 +114,11 @@ public class GoogleAuthService {
         );
     }
 
+    /** Reautenticação (step-up auth) fora do fluxo de login — ex.: confirmar exclusão de igreja. */
+    public String reautenticarPorGoogle(String idToken) {
+        return verificar(idToken).getSubject();
+    }
+
     /**
      * Valida o ID token contra o Google (assinatura, aud, validade) e exige e-mail verificado.
      * Lança TOKEN_GOOGLE_INVALIDO em qualquer falha.

@@ -15,6 +15,8 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoRepository;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +41,8 @@ class PurgaIgrejaServiceTest {
     FotoRepository fotoRepository;
     FotoService fotoService;
     IgrejaRepository igrejaRepository;
+    UsuarioRepository usuarioRepository;
+    PessoaRepository pessoaRepository;
     PurgaIgrejaService service;
     UUID igrejaId = UUID.randomUUID();
 
@@ -58,10 +62,13 @@ class PurgaIgrejaServiceTest {
         fotoRepository = mock(FotoRepository.class);
         fotoService = mock(FotoService.class);
         igrejaRepository = mock(IgrejaRepository.class);
+        usuarioRepository = mock(UsuarioRepository.class);
+        pessoaRepository = mock(PessoaRepository.class);
         service = new PurgaIgrejaService(movimentacaoRepository, categoriaRepository, inscricaoRepository,
                 eventoRepository, visitanteRepository, localEventoRepository,
                 celulaMembroRepository, celulaRepository, ministerioMembroRepository, ministerioRepository,
-                usuarioCapacidadeRepository, fotoRepository, fotoService, igrejaRepository);
+                usuarioCapacidadeRepository, fotoRepository, fotoService, igrejaRepository,
+                usuarioRepository, pessoaRepository);
     }
 
     @Test
@@ -127,5 +134,34 @@ class PurgaIgrejaServiceTest {
         service.purgar(igrejaId);
 
         verify(fotoService).remover(fotoId2);
+    }
+
+    @Test
+    void purgaApagaUsuarioDepoisPessoa() {
+        service.purgar(igrejaId);
+
+        var ordem = inOrder(usuarioRepository, pessoaRepository);
+        ordem.verify(usuarioRepository).deleteAllByIgrejaId(igrejaId);
+        ordem.verify(pessoaRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaDesvinculaFilhasQuandoIgrejaEhMae() {
+        UUID filha1 = UUID.randomUUID();
+        UUID filha2 = UUID.randomUUID();
+        when(igrejaRepository.buscarIdsDasFilhas(igrejaId)).thenReturn(List.of(filha1, filha2));
+
+        service.purgar(igrejaId);
+
+        verify(igrejaRepository).desvincularFamiliaEmLote(List.of(filha1, filha2));
+    }
+
+    @Test
+    void purgaNaoChamaDesvinculoQuandoIgrejaNaoEhMae() {
+        when(igrejaRepository.buscarIdsDasFilhas(igrejaId)).thenReturn(List.of());
+
+        service.purgar(igrejaId);
+
+        verify(igrejaRepository, never()).desvincularFamiliaEmLote(any());
     }
 }

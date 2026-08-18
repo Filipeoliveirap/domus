@@ -14,11 +14,14 @@ import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.foto.FotoRepository;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Purga tabela-por-tabela da igreja: uma transação, uma linha de DELETE por tabela, ordem
@@ -43,6 +46,8 @@ public class PurgaIgrejaService {
     private final FotoRepository fotoRepository;
     private final FotoService fotoService;
     private final IgrejaRepository igrejaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PessoaRepository pessoaRepository;
 
     @Transactional
     public void purgar(UUID igrejaId) {
@@ -71,5 +76,14 @@ public class PurgaIgrejaService {
                         foto.getId(), igrejaId, e);
             }
         }
+
+        List<UUID> idsFilhas = igrejaRepository.buscarIdsDasFilhas(igrejaId);
+        if (!idsFilhas.isEmpty()) {
+            igrejaRepository.desvincularFamiliaEmLote(idsFilhas);
+            log.info("Igrejas vinculadas desvinculadas da família. igreja_mae_id={}, filhas={}", igrejaId, idsFilhas.size());
+        }
+
+        usuarioRepository.deleteAllByIgrejaId(igrejaId);
+        pessoaRepository.deleteAllByIgrejaId(igrejaId);
     }
 }

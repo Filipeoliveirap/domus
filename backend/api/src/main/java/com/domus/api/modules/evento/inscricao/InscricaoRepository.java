@@ -147,4 +147,9 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     @Modifying
     @Query(value = "UPDATE inscricao_evento SET inscrito_por_usuario_id = NULL WHERE inscrito_por_usuario_id = :usuarioId", nativeQuery = true)
     void desvincularInscritoPor(@Param("usuarioId") UUID usuarioId);
+
+    /** Purga da igreja: acompanhante_inscricao cascadeia sozinho via ON DELETE CASCADE. */
+    @Modifying
+    @Query(value = "DELETE FROM inscricao_evento WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

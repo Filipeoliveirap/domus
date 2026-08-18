@@ -105,14 +105,7 @@ class BalanceteRepositoryTest {
         CategoriaFinanceira categoria = categoria("Doacao Especial " + UUID.randomUUID(), TipoCategoria.ENTRADA);
         movimentacao(categoria, TipoMovimentacao.ENTRADA, new BigDecimal("200.00"), LocalDate.of(2026, 3, 5));
         entityManager.flush();
-        entityManager.clear(); // limpa o contexto de persistência antes do soft delete da
-                                // categoria: sem isso, a movimentação já persistida continua
-                                // gerenciada na sessão e, no flush seguinte, o Hibernate revalida
-                                // a FK não-nula categoria_id contra a categoria (agora marcada
-                                // como removida pelo @SQLDelete) e lança TransientObjectException
-                                // por engano — é um efeito colateral conhecido de @SQLDelete
-                                // (DELETE vira UPDATE, mas o estado da entidade na sessão continua
-                                // "removido") combinado com @SQLRestriction.
+        entityManager.clear(); // sem limpar antes do soft delete, o Hibernate revalida a FK categoria_id contra a categoria já marcada como removida e lança TransientObjectException por engano
         categoria = categoriaRepository.findById(categoria.getId()).orElseThrow();
         categoriaRepository.delete(categoria); // soft delete via @SQLDelete
         entityManager.flush();

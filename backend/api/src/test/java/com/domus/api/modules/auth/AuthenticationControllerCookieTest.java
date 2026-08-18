@@ -120,14 +120,7 @@ class AuthenticationControllerCookieTest {
         verify(authService).logout("refresh-vivo");
     }
 
-    /**
-     * O /auth/me NÃO pode ler campos do principal além do id.
-     *
-     * <p>O principal é uma entidade desanexada (carregada no SecurityFilter, que roda antes
-     * do open-in-view), e `igreja` é LAZY: lê-la de lá lança LazyInitializationException em
-     * produção. Este teste trava o contrato — o principal entra só com o id, e a sessão vem
-     * de uma consulta.
-     */
+    /** Principal é entidade desanexada e `igreja` é LAZY — ler além do id estoura LazyInitializationException em produção. */
     @Test
     void meDeveBuscarASessaoPeloIdSemTocarNoPrincipalDesanexado() {
         UUID id = UUID.randomUUID();

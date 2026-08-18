@@ -23,13 +23,7 @@ public class RelatorioController {
     private final FamiliaIgrejaService familiaService;
     private final UsuarioAutenticado usuarioAutenticado;
 
-    /**
-     * Resolve em qual igreja o relatório será escopado.
-     *
-     * <p>{@code igrejaId} ausente → minha igreja (comportamento de sempre). Presente → só passa
-     * se pertencer à minha família. O id de quem <b>pergunta</b> vem do JWT; o id de quem se
-     * quer <b>ver</b> vem da requisição e nunca é usado sem validação — senão é IDOR.
-     */
+    /** {@code igrejaId} ausente = minha igreja; presente, só passa se pertencer à minha família (senão é IDOR). */
     private UUID escopo(UUID igrejaId) {
         return familiaService.resolverEscopo(usuarioAutenticado.getIgrejaId(), igrejaId);
     }

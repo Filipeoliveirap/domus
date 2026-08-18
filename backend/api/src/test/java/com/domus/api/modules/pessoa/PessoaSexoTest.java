@@ -5,11 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * `sexo` é NULÁVEL de propósito: pessoas já cadastradas não têm valor, e o
- * cadastro tem que continuar válido sem ele. Serve só pra restringir
- * inscrição em evento (ver {@code RegraSexo}), não pra descrever identidade.
- */
+/** `sexo` é nulável de propósito — serve só pra restringir inscrição em evento (RegraSexo), não pra descrever identidade. */
 class PessoaSexoTest {
 
     @Test

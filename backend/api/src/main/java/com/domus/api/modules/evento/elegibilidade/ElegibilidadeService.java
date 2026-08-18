@@ -13,12 +13,8 @@ import java.util.Optional;
 public class ElegibilidadeService {
 
     /**
-     * O Spring injeta TODAS as implementações. Adicionar uma restrição nova = criar um
-     * arquivo com @Component. Nenhuma linha daqui muda — é o "estenda sem editar" do CLAUDE.md.
-     *
-     * ⚠️ RegraVagas NÃO entra aqui. A contagem autoritativa de vagas vive no InscricaoService,
-     * dentro da transação com lock pessimista. Duplicá-la reabriria a corrida que a Spec A
-     * fechou.
+     * Spring injeta todas as implementações — restrição nova é só um novo @Component.
+     * RegraVagas não entra aqui: a contagem autoritativa vive no InscricaoService, sob lock pessimista.
      */
     private final List<RegraElegibilidade> regras;
 

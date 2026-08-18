@@ -123,6 +123,26 @@ public class PessoaController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/arquivados")
+    public ResponseEntity<java.util.List<com.domus.api.modules.pessoa.DTO.PessoaArquivadaResponse>> arquivados() {
+        exigirGestaoPessoas();
+        return ResponseEntity.ok(pessoaService.listarArquivadas(usuarioAutenticado.getIgrejaId()));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        exigirGestaoPessoas();
+        pessoaService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        exigirGestaoPessoas();
+        pessoaService.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/ministerios")
     public ResponseEntity<java.util.List<com.domus.api.modules.ministerio.DTOs.MinisterioResponse>> ministerios(
             @PathVariable UUID id) {

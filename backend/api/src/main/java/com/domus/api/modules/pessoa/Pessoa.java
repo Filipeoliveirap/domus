@@ -12,11 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * {@code @BatchSize} na CLASSE: agrupa a resolução de proxies LAZY pendentes deste tipo num
- * único {@code SELECT ... WHERE id IN (...)}, em vez de um SELECT por linha — resolve o N+1
- * de {@code Evento.responsavel} na listagem paginada de eventos (query nativa, sem JOIN FETCH).
- */
+/** {@code @BatchSize} na classe evita N+1 ao resolver {@code Evento.responsavel} (LAZY, sem JOIN FETCH) na listagem paginada. */
 @Entity
 @Table(name = "pessoa")
 @SQLDelete(sql = "UPDATE pessoa SET deleted_at = NOW() WHERE id = ?")

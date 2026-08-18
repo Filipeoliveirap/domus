@@ -140,20 +140,14 @@ public class CelulaService {
         celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Célula não encontrada."));
 
-        // Vínculo de célula é só "essa pessoa está nesse grupo" — apagar a célula não
-        // apaga a pessoa/visitante, só o vínculo. Por isso, diferente de Evento/Categoria
-        // (onde o vínculo é histórico financeiro/inscrição de outra pessoa), aqui tem
-        // membro NÃO bloqueia: desvincula todo mundo e segue com a exclusão.
+        // Diferente de Evento/Categoria, vínculo de célula não é histórico — ter membro não bloqueia a exclusão.
         List<CelulaMembro> membros = membroRepository.findByCelulaIdOrderByPapelAsc(id);
         List<UUID> visitantesAfetados = membros.stream()
                 .filter(m -> m.getVisitante() != null)
                 .map(m -> m.getVisitante().getId())
                 .toList();
         membroRepository.deleteAll(membros);
-        // hardDeleteById é SQL nativo — o Hibernate não sabe que ele depende do delete
-        // acima (só entidades gerenciadas por JPQL disparam auto-flush) e roda direto
-        // contra o banco, achando membro que já devia ter sumido. flush() força a
-        // sincronização antes.
+        // hardDeleteById é SQL nativo e não dispara auto-flush; sem flush() acharia membro que já devia ter sumido.
         membroRepository.flush();
 
         celulaRepository.hardDeleteById(id);

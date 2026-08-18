@@ -1,6 +1,7 @@
 package com.domus.api.modules.ministerio;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,12 +13,7 @@ public interface MinisterioMembroRepository extends JpaRepository<MinisterioMemb
 
     Optional<MinisterioMembro> findByMinisterioIdAndPessoaId(UUID ministerioId, UUID pessoaId);
 
-    /**
-     * Nativa de propósito: uma derived query aqui (`ministerio.id = ...`) navega a
-     * associação `ministerio`, e o @SQLRestriction("deleted_at IS NULL") da entidade
-     * Ministerio vaza pro JOIN implícito — os membros de um ministério ARQUIVADO somem
-     * da consulta mesmo existindo (mesmo bug já corrigido em CelulaMembroRepository).
-     */
+    /** Nativa de propósito: derived query aqui vazaria o @SQLRestriction de Ministerio e esconderia membros de ministério arquivado. */
     @Query(value = "SELECT * FROM ministerio_membro WHERE ministerio_id = :ministerioId ORDER BY papel ASC", nativeQuery = true)
     List<MinisterioMembro> findByMinisterioIdOrderByPapelAsc(@Param("ministerioId") UUID ministerioId);
 
@@ -34,4 +30,20 @@ public interface MinisterioMembroRepository extends JpaRepository<MinisterioMemb
     boolean existsByMinisterioIdAndPessoaIdAndPapelAndStatus(
             @Param("ministerioId") UUID ministerioId, @Param("pessoaId") UUID pessoaId,
             @Param("papel") String papel, @Param("status") String status);
+
+    /** Exclusão definitiva de pessoa: sai da lista de membros de todos os ministérios. */
+    @Modifying
+    @Query(value = "DELETE FROM ministerio_membro WHERE pessoa_id = :pessoaId", nativeQuery = true)
+    void deleteByPessoaId(@Param("pessoaId") UUID pessoaId);
+
+    @Modifying
+    @Query(value = """
+        UPDATE ministerio_membro
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 }

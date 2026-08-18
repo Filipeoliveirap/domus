@@ -61,11 +61,7 @@ class CategoriaFinanceiraRepositoryTest {
 
     @Test
     void countByCategoriaIdAndIgrejaId_enxergaMovimentacaoDeCategoriaArquivada() {
-        // Regressão do mesmo bug já corrigido em CelulaMembroRepository/
-        // MinisterioMembroRepository: @SQLRestriction("deleted_at IS NULL") de
-        // CategoriaFinanceira vazando pro JOIN implícito, fazendo a contagem mentir que
-        // uma categoria arquivada está "vazia" mesmo tendo movimentação de verdade —
-        // o que deixaria excluirDefinitivo apagar uma categoria com histórico financeiro.
+        // Mesmo bug de CelulaMembroRepository/MinisterioMembroRepository: @SQLRestriction vaza pro JOIN implícito e faz a contagem mentir que categoria arquivada está vazia.
         CategoriaFinanceira categoria = categoriaRepository.save(
                 CategoriaFinanceira.builder().igreja(igreja).nome("Dízimo " + UUID.randomUUID())
                         .tipo(TipoCategoria.ENTRADA).build());

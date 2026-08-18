@@ -129,16 +129,11 @@ public class MinisterioService {
 
     @Transactional
     public void excluirDefinitivo(UUID id, UUID igrejaId) {
-        // findByIdAndIgrejaIdIncluindoArquivadas (não buscarDaIgrejaOuFalhar) porque esse
-        // endpoint precisa achar também um ministério já arquivado — é o caminho principal
-        // chamado a partir da tela de Arquivados.
+        // Inclui arquivados: chamado a partir da tela de Arquivados.
         ministerioRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
 
-        // Vínculo de ministério é só "essa pessoa está nesse grupo" — apagar o ministério
-        // não apaga a pessoa, só o vínculo. Por isso, diferente de Evento/Categoria (onde o
-        // vínculo é histórico financeiro/inscrição de outra pessoa), aqui ter membro não
-        // bloqueia: desvincula todo mundo (inclusive pedidos pendentes) e segue.
+        // Vínculo é só "pessoa está no grupo", não histórico — ter membro não bloqueia a exclusão.
         List<MinisterioMembro> membros = membroRepository.findByMinisterioIdOrderByPapelAsc(id);
         membroRepository.deleteAll(membros);
         // hardDeleteById é SQL nativo — precisa do delete acima já refletido no banco

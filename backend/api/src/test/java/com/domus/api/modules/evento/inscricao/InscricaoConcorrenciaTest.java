@@ -15,17 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Prova que duas inscrições simultâneas na ÚLTIMA vaga não passam as duas.
- *
- * <p>Testes com Mockito não conseguem provar nada sobre concorrência: um mock não tem
- * transação nem conexão de banco de verdade, então não existe corrida para observar.
- * Este teste precisa de Postgres real (Neon) e de DUAS conexões/transações de verdade
- * disputando a mesma linha de {@code evento}.
- *
- * <p><b>Importante:</b> o cenário (igreja/evento/membros) é criado e COMMITADO antes de
- * as threads começarem, fora de qualquer transação do próprio teste. Se o setup rodasse
- * dentro de uma transação do método de teste, as threads (conexões separadas) não
- * enxergariam nada ainda — dando erro de "não encontrado" em vez de uma corrida real.
+ * Prova que duas inscrições simultâneas na última vaga não passam as duas. Precisa de Postgres real (Neon) com duas conexões disputando a mesma linha — mock não expõe corrida.
+ * O cenário é criado e commitado antes das threads começarem, fora da transação do teste, senão as outras conexões não enxergam o setup ainda.
  */
 @SpringBootTest
 class InscricaoConcorrenciaTest {
@@ -142,12 +133,7 @@ class InscricaoConcorrenciaTest {
         return resultado[0];
     }
 
-    /**
-     * Executa um bloco em uma transação própria, à parte da transação do método de
-     * teste (que aqui nem existe — o teste não é {@code @Transactional} de propósito),
-     * e COMMITA no final. Usa um EntityManager próprio para não vazar para o contexto
-     * de persistência do teste.
-     */
+    /** EntityManager próprio pra não vazar pro contexto de persistência do teste; commita de verdade. */
     private void executarCommitado(java.util.function.Consumer<EntityManager> acao) {
         EntityManager em = emf.createEntityManager();
         try {

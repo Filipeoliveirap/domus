@@ -116,4 +116,31 @@ public class EventoController {
         eventoService.arquivarEvento(id, igrejaId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/arquivados")
+    public ResponseEntity<List<com.domus.api.modules.evento.DTOs.EventoArquivadoResponse>> arquivados() {
+        exigirGerenciar();
+        return ResponseEntity.ok(eventoService.listarArquivados(usuarioAutenticado.getIgrejaId()));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        exigirGerenciar();
+        eventoService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        exigirGerenciar();
+        eventoService.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    private void exigirGerenciar() {
+        if (!com.domus.api.shared.security.Permissoes.podeGerenciarEventos(usuarioAutenticado.getRole())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Só administradores e líderes gerenciam eventos.");
+        }
+    }
 }

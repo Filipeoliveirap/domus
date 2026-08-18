@@ -9,11 +9,7 @@ import java.util.UUID;
 
 public interface AcompanhanteRepository extends JpaRepository<AcompanhanteInscricao, UUID> {
 
-    /**
-     * Todos os convidados já adicionados a inscrições CONFIRMADAS do evento — usada por
-     * {@code InscricaoService.validarConvidadoNaoDuplicado} (B1) para bloquear o mesmo
-     * convidado duas vezes NO MESMO EVENTO (por telefone, com nome como reserva).
-     */
+    /** Usada por validarConvidadoNaoDuplicado para bloquear o mesmo convidado duas vezes no mesmo evento. */
     @Query("""
         SELECT a FROM AcompanhanteInscricao a
         WHERE a.inscricao.evento.id = :eventoId

@@ -3,6 +3,7 @@ package com.domus.api.modules.evento.inscricao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,16 +26,29 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     Optional<InscricaoEvento> findByEventoIdAndPessoaId(UUID eventoId, UUID pessoaId);
 
+    /** Nativa: JPQL aqui herda o @SQLRestriction de Evento e some com evento arquivado. */
+    @Query(value = "SELECT * FROM inscricao_evento WHERE evento_id = :eventoId", nativeQuery = true)
+    List<InscricaoEvento> findByEventoId(@Param("eventoId") UUID eventoId);
+
+    /** Mesmo motivo de {@link #findByEventoId}. */
+    @Query(value = "SELECT COUNT(*) FROM inscricao_evento WHERE evento_id = :eventoId", nativeQuery = true)
+    long countByEventoId(@Param("eventoId") UUID eventoId);
+
     Optional<InscricaoEvento> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
     @Query("SELECT i FROM InscricaoEvento i WHERE i.id = :id AND i.igreja.id IN :idsFamilia")
     Optional<InscricaoEvento> buscarVisivelParaFamilia(@Param("id") UUID id,
                                                         @Param("idsFamilia") java.util.Set<UUID> idsFamilia);
 
+    // Sem FETCH em i.pessoa de propósito: pessoa arquivada (mas não excluída) precisa
+    // continuar mostrando os dados reais, não só "não sumir" — um JOIN (mesmo LEFT) herda o
+    // @SQLRestriction de Pessoa e não tem como distinguir "arquivada" de "de vez". O chamador
+    // resolve pessoa em lote via PessoaRepository#findByIdInIncluindoArquivadas (bypassa a
+    // restrição por ser SQL nativo). i.getPessoa().getId() continua seguro (não inicializa o
+    // proxy); nunca chamar outro getter em i.getPessoa() aqui.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
         LEFT JOIN FETCH i.acompanhantes
-        JOIN FETCH i.pessoa
         WHERE i.evento.id = :eventoId AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
         ORDER BY i.createdAt ASC
     """)
@@ -42,9 +56,11 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     // CAST(:busca AS string) é necessário: sem ele, o PostgreSQL infere bytea quando o
     // parâmetro é null e lower(bytea) não existe.
+    // LEFT JOIN: pessoa excluída definitivamente não pode sumir da paginação, só não bate
+    // busca por nome (não tem nome pra buscar).
     @Query(value = """
         SELECT i.id FROM InscricaoEvento i
-        JOIN i.pessoa p
+        LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
@@ -52,7 +68,7 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         """,
         countQuery = """
         SELECT COUNT(i) FROM InscricaoEvento i
-        JOIN i.pessoa p
+        LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
@@ -61,10 +77,10 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
                                            @Param("busca") String busca,
                                            Pageable pageable);
 
+    // Sem FETCH em i.pessoa — mesmo motivo de listarPorEvento.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
         LEFT JOIN FETCH i.acompanhantes
-        JOIN FETCH i.pessoa
         WHERE i.id IN :ids
         ORDER BY i.createdAt ASC
         """)
@@ -120,4 +136,15 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
           AND i.compareceu = true
     """)
     long contarParticipantesUnicos(@Param("eventoIds") List<UUID> eventoIds);
+
+    /** Exclusão definitiva de pessoa: mantém a inscrição (e a contagem no relatório do evento),
+     *  mostra "Pessoa removida do sistema". */
+    @Modifying
+    @Query(value = "UPDATE inscricao_evento SET pessoa_id = NULL WHERE pessoa_id = :pessoaId", nativeQuery = true)
+    void desvincularPessoa(@Param("pessoaId") UUID pessoaId);
+
+    /** Já é NULL = auto-inscrição no fluxo normal; aqui só cobre o caso do usuário ter sido excluído. */
+    @Modifying
+    @Query(value = "UPDATE inscricao_evento SET inscrito_por_usuario_id = NULL WHERE inscrito_por_usuario_id = :usuarioId", nativeQuery = true)
+    void desvincularInscritoPor(@Param("usuarioId") UUID usuarioId);
 }

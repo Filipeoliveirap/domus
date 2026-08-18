@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Repository;
@@ -24,11 +25,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     Optional<Usuario> findByGoogleSub(String googleSub);
     Optional<Usuario> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
-    /**
-     * Projeção para {@code GET /auth/me}. Evita LazyInitializationException: o
-     * SecurityFilter roda antes do open-in-view, então a entidade chega desanexada ao
-     * controller. A projeção monta o DTO direto no banco.
-     */
+    /** Projeção evita LazyInitializationException: entidade chega desanexada ao controller (SecurityFilter roda antes do open-in-view). */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
         u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome,
@@ -84,4 +81,23 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
         WHERE u.id IN :ids
     """)
     List<RegistranteResumo> buscarRegistrantes(@Param("ids") Collection<UUID> ids);
+
+    @Modifying
+    @Query(value = "DELETE FROM usuario WHERE id = :id", nativeQuery = true)
+    void hardDeleteById(@Param("id") UUID id);
+
+    @Query(value = """
+        SELECT * FROM usuario
+        WHERE igreja_id = :igrejaId AND delete_at IS NOT NULL
+        ORDER BY updated_at DESC
+        """, nativeQuery = true)
+    List<Usuario> findArquivadosPorIgreja(@Param("igrejaId") UUID igrejaId);
+
+    /** Igual a {@link #findByIdAndIgrejaId}, mas enxerga arquivados também — tela de Arquivados. */
+    @Query(value = "SELECT * FROM usuario WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    Optional<Usuario> findByIdAndIgrejaIdIncluindoArquivados(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    @Modifying
+    @Query(value = "UPDATE usuario SET delete_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 }

@@ -205,21 +205,50 @@ public class MovimentacaoFinanceiraService {
 
     @Transactional
     public void arquivar(UUID id, UUID igrejaId) {
-        MovimentacaoFinanceira mov = repository.buscarPorIdComRelacoes(id, igrejaId)
-                .orElseThrow(() -> {
-                    log.warn("Tentativa de arquivar movimentação inexistente. id={}, igreja_id={}", id, igrejaId);
-                    return new ResourceNotFoundException("Movimentação não encontrada.");
-                });
-        log.info("Arquivando movimentação. id={}, tipo={}, valor={}, igreja_id={}",
-                id, mov.getTipo(), mov.getValor(), igrejaId);
-        repository.delete(mov);
+        log.info("Arquivando movimentação. id={}, igreja_id={}", id, igrejaId);
+        int linhas = repository.arquivarPorId(id, igrejaId);
+        if (linhas == 0) {
+            log.warn("Tentativa de arquivar movimentação inexistente. id={}, igreja_id={}", id, igrejaId);
+            throw new ResourceNotFoundException("Movimentação não encontrada.");
+        }
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.MOVIMENTACAO,
                 TipoEventoOutbox.REMOVIDO,
-                mov.getId(),
+                id,
                 igrejaId
         );
         log.info("Movimentação arquivada. id={}, igreja_id={}", id, igrejaId);
+        cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimentacaoArquivadaResponse> listarArquivadas(UUID igrejaId) {
+        return repository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(m -> MovimentacaoArquivadaResponse.de(m, repository.contarContribuintes(m.getId()) > 0))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = repository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Movimentação não encontrada.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MOVIMENTACAO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
+    }
+
+    /**
+     * Diferente de Categoria: é a própria linha financeira, não uma referência de terceiro —
+     * nunca bloqueia. Contribuintes são filhos dela (ON DELETE CASCADE) e somem junto; o aviso
+     * já avisa isso antes de confirmar.
+     */
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        repository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Movimentação não encontrada."));
+        repository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MOVIMENTACAO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
         cacheEvictor.evictPorIgreja("movimentacoes", igrejaId);
     }
 

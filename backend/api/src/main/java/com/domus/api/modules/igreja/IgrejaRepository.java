@@ -63,4 +63,8 @@ public interface IgrejaRepository extends JpaRepository<Igreja, UUID> {
          WHERE id = :igrejaId
         """, nativeQuery = true)
     void cancelarExclusaoAgendada(@Param("igrejaId") UUID igrejaId);
+
+    @Modifying
+    @Query(value = "UPDATE igreja SET logo_foto_id = NULL WHERE id = :igrejaId", nativeQuery = true)
+    void limparLogoFoto(@Param("igrejaId") UUID igrejaId);
 }

@@ -11,6 +11,9 @@ import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.ministerio.MinisterioMembroRepository;
 import com.domus.api.modules.ministerio.MinisterioRepository;
 import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
+import com.domus.api.modules.foto.FotoRepository;
+import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.igreja.IgrejaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,9 @@ public class PurgaIgrejaService {
     private final MinisterioMembroRepository ministerioMembroRepository;
     private final MinisterioRepository ministerioRepository;
     private final UsuarioCapacidadeRepository usuarioCapacidadeRepository;
+    private final FotoRepository fotoRepository;
+    private final FotoService fotoService;
+    private final IgrejaRepository igrejaRepository;
 
     @Transactional
     public void purgar(UUID igrejaId) {
@@ -55,5 +61,15 @@ public class PurgaIgrejaService {
         eventoRepository.deleteAllByIgrejaId(igrejaId);
         visitanteRepository.deleteAllByIgrejaId(igrejaId);
         localEventoRepository.deleteAllByIgrejaId(igrejaId);
+
+        igrejaRepository.limparLogoFoto(igrejaId);
+        for (var foto : fotoRepository.findByIgrejaId(igrejaId)) {
+            try {
+                fotoService.remover(foto.getId());
+            } catch (Exception e) {
+                log.error("Falha ao remover foto na purga da igreja — seguindo para as demais. foto_id={}, igreja_id={}",
+                        foto.getId(), igrejaId, e);
+            }
+        }
     }
 }

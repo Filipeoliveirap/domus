@@ -31,6 +31,10 @@ public interface CategoriaFinanceiraRepository extends JpaRepository<CategoriaFi
     @Query(value = "SELECT * FROM categoria_financeira WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     Optional<CategoriaFinanceira> findByIdAndIgrejaIdIncluindoArquivadas(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
+    /** Igual a {@link #findByIdAndIgrejaIdIncluindoArquivadas}, mas em lote. */
+    @Query(value = "SELECT * FROM categoria_financeira WHERE id IN (:ids) AND igreja_id = :igrejaId", nativeQuery = true)
+    List<CategoriaFinanceira> findByIdInAndIgrejaIdIncluindoArquivadas(@Param("ids") List<UUID> ids, @Param("igrejaId") UUID igrejaId);
+
     /** Retorna 0 se o id não pertence a essa igreja — nunca confiar em "id" sozinho. */
     @Modifying
     @Query(value = "UPDATE categoria_financeira SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)

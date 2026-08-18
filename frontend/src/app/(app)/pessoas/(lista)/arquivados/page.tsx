@@ -7,6 +7,7 @@ import { useRestaurarPessoa } from '@/hooks/pessoa/useRestaurarPessoa'
 import { useExcluirPessoaDefinitivamente } from '@/hooks/pessoa/useExcluirPessoaDefinitivamente'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
@@ -22,6 +23,7 @@ export default function PessoasArquivadasPage() {
   const podeGerenciar = podeGerenciarPessoas(role, capacidadesExtras)
   const { restaurar, isLoading: restaurando } = useRestaurarPessoa()
   const [excluindo, setExcluindo] = useState<PessoaArquivadaResponse | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null)
 
   if (!podeGerenciar) {
     return <EstadoErro titulo="Sem acesso" mensagem="Só administradores e secretários veem pessoas arquivadas." />
@@ -47,7 +49,7 @@ export default function PessoasArquivadasPage() {
     <>
       <div className={styles.lista}>
         {pessoas.map((p) => (
-          <div key={p.id} className={styles.linha}>
+          <div key={p.id} className={styles.linha} onClick={() => setDetalheId(p.id)}>
             <div className={styles.info}>
               <div className={styles.icone}><User size={18} /></div>
               <div>
@@ -55,7 +57,7 @@ export default function PessoasArquivadasPage() {
                 {p.email && <p className={styles.detalhe}>{p.email}</p>}
               </div>
             </div>
-            <div className={styles.acoes}>
+            <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>
               <button
                 className={styles.botaoRestaurar}
                 disabled={restaurando}
@@ -73,6 +75,10 @@ export default function PessoasArquivadasPage() {
 
       {excluindo && (
         <ModalExcluirDefinitivo pessoa={excluindo} onClose={() => setExcluindo(null)} />
+      )}
+
+      {detalheId && (
+        <DrawerDetalhePessoa pessoaId={detalheId} onClose={() => setDetalheId(null)} />
       )}
     </>
   )

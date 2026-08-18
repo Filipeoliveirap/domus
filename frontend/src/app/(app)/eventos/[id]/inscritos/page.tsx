@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X } from 'lucide-react'
+import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X, Archive } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
@@ -152,6 +152,13 @@ export default function InscritosPage() {
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>Inscritos</span>
       </nav>
+
+      {evento?.arquivado && (
+        <Link href="/eventos/arquivados" className={styles.avisoArquivado}>
+          <Archive size={16} />
+          <span>Este evento está arquivado. Toque para restaurá-lo na lista de arquivados.</span>
+        </Link>
+      )}
 
       <header className={styles.cabecalho}>
         <div className={styles.cabecalhoTextos}>

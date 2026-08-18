@@ -31,16 +31,21 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     // Este método resolve o vínculo antes de arquivar o local.
     List<Evento> findByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
 
-    // Seta local_texto e zera local_id em eventos (inclusive arquivados).
+    /** Local associado a algum evento ativo? Front usa pra pedir confirmação por escrito
+     *  só quando arquivar o local de fato tira o lugar de um evento (fica sem local). */
+    long countByLocalIdAndIgrejaId(UUID localId, UUID igrejaId);
+
+    // Zera local_id E local_texto (inclusive em eventos arquivados) — o evento fica sem
+    // local, não vira texto livre com o nome do local arquivado (decisão explícita: um
+    // local arquivado não é endereço válido pra continuar aparecendo).
     // Nativo porque @SQLRestriction esconde os arquivados do JPQL.
-    // CHECK (local_id IS NULL OR local_texto IS NULL) é por linha ao fim da instrução — não separe em dois UPDATEs.
     @Modifying(clearAutomatically = true)
     @Query(value = """
         UPDATE evento
-           SET local_texto = :nomeLocal, local_id = NULL
+           SET local_texto = NULL, local_id = NULL
          WHERE local_id = :localId
         """, nativeQuery = true)
-    int desvincularLocal(@Param("localId") UUID localId, @Param("nomeLocal") String nomeLocal);
+    int desvincularLocal(@Param("localId") UUID localId);
 
     // Mesmo padrão de desvincularLocal: responsavel_pessoa_id ON DELETE SET NULL nunca dispara (Pessoa usa soft delete).
     @Modifying(clearAutomatically = true)
@@ -182,4 +187,25 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     Optional<Evento> findFirstByIgrejaIdAndTipoAndInicioEmLessThanOrderByInicioEmDesc(
             UUID igrejaId, String tipo, LocalDateTime inicioEm);
+
+    @Modifying
+    @Query(value = "DELETE FROM evento WHERE id = :id", nativeQuery = true)
+    void hardDeleteById(@Param("id") UUID id);
+
+    /** @SQLRestriction esconde arquivados de qualquer find derivado/JPQL — precisa de SQL nativo. */
+    @Query(value = """
+        SELECT * FROM evento
+        WHERE igreja_id = :igrejaId AND deleted_at IS NOT NULL
+        ORDER BY inicio_em DESC
+        """, nativeQuery = true)
+    List<Evento> findArquivadosPorIgreja(@Param("igrejaId") UUID igrejaId);
+
+    /** Igual a {@link #findByIdAndIgrejaId}, mas enxerga arquivados também. */
+    @Query(value = "SELECT * FROM evento WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    Optional<Evento> findByIdAndIgrejaIdIncluindoArquivados(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    /** Retorna 0 se o id não pertence a essa igreja — nunca confiar em "id" sozinho. */
+    @Modifying
+    @Query(value = "UPDATE evento SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 }

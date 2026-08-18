@@ -1,26 +1,74 @@
 'use client'
 
-import { ModalArquivar } from '@/components/common/modalArquivar/ModalArquivar'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
+import { ModalConfirmacaoCritica, type Consequencia } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 import { useArquivarEvento } from '@/hooks/evento/useArquivarEvento'
+import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { EventoResponse } from '@/types/evento.type'
 
+/**
+ * Confirmação por escrito só quando arquivar tem consequência real pra alguém: o evento já
+ * tem gente inscrita (some da agenda/listagens dela) ou já aconteceu (histórico). Sem isso,
+ * é atrito à toa — confirmação simples basta. Reversível nos dois casos (restaurar volta
+ * tudo ao normal, inscrições e presença ficam intactas).
+ */
 export function ModalArquivarEvento({ evento, onClose }: { evento: EventoResponse; onClose: () => void }) {
   const { confirmar, isLoading, erroGeral } = useArquivarEvento(evento, onClose)
+  const podePedirCount = evento.requerInscricao
+  const { data: lista } = useListaInscritos(evento.id, podePedirCount, '', 0, 1)
+  const totalInscritos = lista?.totalPessoas ?? 0
+  const jaEncerrado = evento.situacao === 'ENCERRADO'
+
+  if (totalInscritos === 0 && !jaEncerrado) {
+    return (
+      <ModalConfirmacao
+        titulo="Arquivar evento?"
+        mensagem={<>Isso vai arquivar <strong>{evento.titulo}</strong>. Ele deixa de aparecer na agenda, mas pode ser restaurado depois.</>}
+        textoConfirmar="Arquivar"
+        perigo
+        isLoading={isLoading}
+        onConfirmar={confirmar}
+        onClose={onClose}
+      />
+    )
+  }
+
+  const consequencias: Consequencia[] = []
+  if (totalInscritos > 0) {
+    consequencias.push({
+      tipo: 'perde',
+      texto: `Some da agenda e das listagens enquanto estiver arquivado — inclusive pra ${totalInscritos === 1 ? 'quem já se inscreveu' : `as ${totalInscritos} pessoas já inscritas`}`,
+    })
+    consequencias.push({ tipo: 'mantem', texto: 'As inscrições (e a presença já marcada) continuam vinculadas, só não aparecem enquanto arquivado' })
+  } else {
+    consequencias.push({ tipo: 'perde', texto: 'Some da agenda e de qualquer relatório/histórico que dependa do evento estar ativo, enquanto estiver arquivado' })
+  }
+  consequencias.push({ tipo: 'mantem', texto: 'É reversível: ao restaurar, volta a aparecer normalmente' })
 
   return (
-    <ModalArquivar
+    <ModalConfirmacaoCritica
       titulo="Arquivar evento?"
       mensagem={
         <>
-          Ao arquivar <strong>{evento.titulo}</strong>, ele deixará de aparecer na agenda da igreja.
-          Os dados serão preservados e poderão ser restaurados por um administrador a qualquer momento.
+          {totalInscritos > 0 ? (
+            <>
+              <strong>{evento.titulo}</strong> tem {totalInscritos === 1 ? '1 pessoa inscrita' : `${totalInscritos} pessoas inscritas`}.
+            </>
+          ) : (
+            <>
+              <strong>{evento.titulo}</strong> já aconteceu.
+            </>
+          )}
+          {' '}Ao arquivar, ele some da agenda e das listagens enquanto estiver arquivado.
         </>
       }
-      aviso="O arquivamento não remove registros históricos vinculados a este evento."
-      onConfirmar={confirmar}
-      onClose={onClose}
+      consequencias={consequencias}
+      palavraConfirmacao={evento.titulo}
+      textoConfirmar="Arquivar evento"
       isLoading={isLoading}
       erro={erroGeral}
+      onConfirmar={confirmar}
+      onClose={onClose}
     />
   )
 }

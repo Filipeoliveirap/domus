@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, History } from 'lucide-react'
+import Link from 'next/link'
+import { X, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, History, Archive } from 'lucide-react'
 import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './DrawerDetalheMovimentacao.module.css'
@@ -47,6 +48,12 @@ export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDet
         ) : (
           <>
             <div className={styles.conteudo}>
+              {mov.arquivada && (
+                <Link href="/financeiro/movimentacoes/arquivadas" className={styles.avisoArquivada} onClick={onClose}>
+                  <Archive size={16} />
+                  <span>Esta movimentação está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+                </Link>
+              )}
               <div className={styles.topo}>
                 <span className={`${styles.selo} ${styles[varianteTipo(mov.tipo)]}`}>
                   {mov.tipo === 'ENTRADA' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}

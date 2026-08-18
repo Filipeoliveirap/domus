@@ -89,4 +89,11 @@ public class Igreja {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "exclusao_agendada_em")
+    private LocalDateTime exclusaoAgendadaEm;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exclusao_agendada_por_usuario_id")
+    private Usuario exclusaoAgendadaPor;
 }

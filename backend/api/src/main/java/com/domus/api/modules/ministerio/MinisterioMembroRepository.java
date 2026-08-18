@@ -46,4 +46,9 @@ public interface MinisterioMembroRepository extends JpaRepository<MinisterioMemb
          WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
         """, nativeQuery = true)
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    /** Purga definitiva da igreja: apaga direto por igreja_id própria, antes do ministério pai. */
+    @Modifying
+    @Query(value = "DELETE FROM ministerio_membro WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

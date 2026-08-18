@@ -49,4 +49,9 @@ public interface MinisterioRepository extends JpaRepository<Ministerio, UUID> {
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 
     long countByIgrejaId(UUID igrejaId);
+
+    /** Purga definitiva da igreja: em lote, depois de ministerio_membro. */
+    @Modifying
+    @Query(value = "DELETE FROM ministerio WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

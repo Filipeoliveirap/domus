@@ -3,6 +3,11 @@ package com.domus.api.modules.igreja.exclusao;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.celula.CelulaMembroRepository;
+import com.domus.api.modules.celula.CelulaRepository;
+import com.domus.api.modules.ministerio.MinisterioMembroRepository;
+import com.domus.api.modules.ministerio.MinisterioRepository;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +20,11 @@ class PurgaIgrejaServiceTest {
     MovimentacaoFinanceiraRepository movimentacaoRepository;
     CategoriaFinanceiraRepository categoriaRepository;
     InscricaoRepository inscricaoRepository;
+    CelulaMembroRepository celulaMembroRepository;
+    CelulaRepository celulaRepository;
+    MinisterioMembroRepository ministerioMembroRepository;
+    MinisterioRepository ministerioRepository;
+    UsuarioCapacidadeRepository usuarioCapacidadeRepository;
     PurgaIgrejaService service;
     UUID igrejaId = UUID.randomUUID();
 
@@ -23,7 +33,14 @@ class PurgaIgrejaServiceTest {
         movimentacaoRepository = mock(MovimentacaoFinanceiraRepository.class);
         categoriaRepository = mock(CategoriaFinanceiraRepository.class);
         inscricaoRepository = mock(InscricaoRepository.class);
-        service = new PurgaIgrejaService(movimentacaoRepository, categoriaRepository, inscricaoRepository);
+        celulaMembroRepository = mock(CelulaMembroRepository.class);
+        celulaRepository = mock(CelulaRepository.class);
+        ministerioMembroRepository = mock(MinisterioMembroRepository.class);
+        ministerioRepository = mock(MinisterioRepository.class);
+        usuarioCapacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        service = new PurgaIgrejaService(movimentacaoRepository, categoriaRepository, inscricaoRepository,
+                celulaMembroRepository, celulaRepository, ministerioMembroRepository, ministerioRepository,
+                usuarioCapacidadeRepository);
     }
 
     @Test
@@ -34,5 +51,23 @@ class PurgaIgrejaServiceTest {
         ordem.verify(inscricaoRepository).deleteAllByIgrejaId(igrejaId);
         ordem.verify(movimentacaoRepository).deleteAllByIgrejaId(igrejaId);
         ordem.verify(categoriaRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaApagaCelulaEMinisterioAntesDosCadastrosPais() {
+        service.purgar(igrejaId);
+
+        var ordem = inOrder(celulaMembroRepository, celulaRepository, ministerioMembroRepository, ministerioRepository);
+        ordem.verify(celulaMembroRepository).deleteAllByIgrejaId(igrejaId);
+        ordem.verify(celulaRepository).deleteAllByIgrejaId(igrejaId);
+        ordem.verify(ministerioMembroRepository).deleteAllByIgrejaId(igrejaId);
+        ordem.verify(ministerioRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaApagaCapacidadesDeUsuario() {
+        service.purgar(igrejaId);
+
+        verify(usuarioCapacidadeRepository).deleteAllByUsuarioIgrejaId(igrejaId);
     }
 }

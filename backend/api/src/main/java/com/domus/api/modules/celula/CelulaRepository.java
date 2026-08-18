@@ -49,4 +49,9 @@ public interface CelulaRepository extends JpaRepository<Celula, UUID> {
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 
     long countByIgrejaId(UUID igrejaId);
+
+    /** Purga definitiva da igreja: em lote, depois de celula_membro. */
+    @Modifying
+    @Query(value = "DELETE FROM celula WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

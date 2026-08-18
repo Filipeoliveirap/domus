@@ -16,6 +16,15 @@ import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.pessoa.busca.PessoaSearchRepository;
+import com.domus.api.modules.evento.busca.EventoSearchRepository;
+import com.domus.api.modules.usuario.busca.UsuarioSearchRepository;
+import com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository;
+import com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepository;
+import com.domus.api.modules.celula.busca.CelulaSearchRepository;
+import com.domus.api.modules.ministerio.busca.MinisterioSearchRepository;
+import com.domus.api.modules.visitante.busca.VisitanteSearchRepository;
+import com.domus.api.shared.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +57,15 @@ public class PurgaIgrejaService {
     private final IgrejaRepository igrejaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PessoaRepository pessoaRepository;
+    private final PessoaSearchRepository pessoaSearchRepository;
+    private final EventoSearchRepository eventoSearchRepository;
+    private final UsuarioSearchRepository usuarioSearchRepository;
+    private final MovimentacaoSearchRepository movimentacaoSearchRepository;
+    private final CategoriaSearchRepository categoriaSearchRepository;
+    private final CelulaSearchRepository celulaSearchRepository;
+    private final MinisterioSearchRepository ministerioSearchRepository;
+    private final VisitanteSearchRepository visitanteSearchRepository;
+    private final EmailService emailService;
 
     @Transactional
     public void purgar(UUID igrejaId) {
@@ -85,5 +103,30 @@ public class PurgaIgrejaService {
 
         usuarioRepository.deleteAllByIgrejaId(igrejaId);
         pessoaRepository.deleteAllByIgrejaId(igrejaId);
+
+        String idTexto = igrejaId.toString();
+        for (Runnable limpezaIndice : List.<Runnable>of(
+                () -> pessoaSearchRepository.deleteByIgrejaId(idTexto),
+                () -> eventoSearchRepository.deleteByIgrejaId(idTexto),
+                () -> usuarioSearchRepository.deleteByIgrejaId(idTexto),
+                () -> movimentacaoSearchRepository.deleteByIgrejaId(idTexto),
+                () -> categoriaSearchRepository.deleteByIgrejaId(idTexto),
+                () -> celulaSearchRepository.deleteByIgrejaId(idTexto),
+                () -> ministerioSearchRepository.deleteByIgrejaId(idTexto),
+                () -> visitanteSearchRepository.deleteByIgrejaId(idTexto)
+        )) {
+            try {
+                limpezaIndice.run();
+            } catch (Exception e) {
+                log.error("Falha ao limpar índice do Elasticsearch na purga da igreja — seguindo. igreja_id={}", igrejaId, e);
+            }
+        }
+
+        igrejaRepository.findById(igrejaId).ifPresent(igreja ->
+                emailService.enviar(igreja.getEmailContato(), "Sua igreja foi excluída",
+                        "A exclusão definitiva de \"" + igreja.getNome() + "\" foi concluída. Todos os dados foram removidos."));
+
+        igrejaRepository.deleteById(igrejaId);
+        log.warn("Purga definitiva da igreja concluída. igreja_id={}", igrejaId);
     }
 }

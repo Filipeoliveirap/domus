@@ -44,6 +44,8 @@ public class ExclusaoIgrejaJob {
                         "Falta 1 dia para a exclusão definitiva de \"" + igreja.getNome() + "\". "
                                 + "Cancele em Configurações → Sistema, se quiser manter sua conta.");
                 lembretes++;
+            } else if (faltam <= 0) {
+                purgaIgrejaService.purgar(igreja.getId());
             }
         }
 

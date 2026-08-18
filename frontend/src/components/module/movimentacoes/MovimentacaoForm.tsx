@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale } from 'lucide-react'
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale, UserX } from 'lucide-react'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoPessoa } from './SelecaoPessoa'
 import { CampoData } from '@/components/common/CampoData/CampoData'
@@ -71,6 +72,28 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
 
   function nomeInicialDe(pessoaId: string): string | undefined {
     return contribuintesIniciais?.find((c) => c.pessoaId === pessoaId)?.pessoaNome
+  }
+
+  // Contribuinte com pessoa excluída definitivamente: pessoaId chega null, vira '' no form
+  // (igual a uma linha nova vazia) — sem isto não dá pra distinguir as duas. Mapeado por
+  // field.id (chave estável do react-hook-form, não pela posição) uma única vez, logo
+  // após o reset() inicial preencher as linhas — sobrevive a remover/adicionar outras linhas.
+  const [removidosPorFieldId, setRemovidosPorFieldId] = useState<Record<string, string>>({})
+  const [contribuintesIniciaisProcessados, setContribuintesIniciaisProcessados] = useState<ContribuinteResponse[] | undefined>(undefined)
+  // Padrão recomendado pelo React pra "ajustar estado a partir de props que chegam depois"
+  // (setState durante o render, não num efeito) — dispara só uma vez por referência nova de
+  // contribuintesIniciais, guardado pela comparação abaixo.
+  if (contribuintesIniciais && contribuintesIniciais !== contribuintesIniciaisProcessados
+      && contribuintesArray.fields.length === contribuintesIniciais.length) {
+    const mapa: Record<string, string> = {}
+    contribuintesArray.fields.forEach((field, i) => {
+      const inicial = contribuintesIniciais[i]
+      if (inicial && inicial.pessoaId === null) {
+        mapa[field.id] = inicial.pessoaNome
+      }
+    })
+    setRemovidosPorFieldId(mapa)
+    setContribuintesIniciaisProcessados(contribuintesIniciais)
   }
 
   function adicionarContribuinte() {
@@ -211,17 +234,25 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                 </div>
 
                 <div className={styles.contribuintesLista}>
-                  {contribuintesArray.fields.map((field, index) => (
+                  {contribuintesArray.fields.map((field, index) => {
+                    const nomeRemovido = removidosPorFieldId[field.id]
+                    return (
                     <div key={field.id} className={styles.contribuinteLinha}>
                       <div className={styles.contribuintePessoa}>
-                        <SelecaoPessoa
-                          pessoaIdSelecionado={contribuintes[index]?.pessoaId || undefined}
-                          nomeSelecionado={nomeInicialDe(contribuintes[index]?.pessoaId ?? '')}
-                          label={labelPessoa}
-                          onSelecionar={(id) =>
-                            setValue(`contribuintes.${index}.pessoaId`, id ?? '', { shouldValidate: true, shouldDirty: true })
-                          }
-                        />
+                        {nomeRemovido ? (
+                          <span className={styles.pessoaRemovida} title="Essa pessoa foi excluída definitivamente do sistema — não dá mais para vincular a ela.">
+                            <UserX size={16} /> Pessoa removida do sistema
+                          </span>
+                        ) : (
+                          <SelecaoPessoa
+                            pessoaIdSelecionado={contribuintes[index]?.pessoaId || undefined}
+                            nomeSelecionado={nomeInicialDe(contribuintes[index]?.pessoaId ?? '')}
+                            label={labelPessoa}
+                            onSelecionar={(id) =>
+                              setValue(`contribuintes.${index}.pessoaId`, id ?? '', { shouldValidate: true, shouldDirty: true })
+                            }
+                          />
+                        )}
                       </div>
                       <input
                         className={styles.inputValorContribuinte}
@@ -244,7 +275,8 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                         <X size={16} />
                       </button>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <button type="button" className={styles.btnAdicionarContribuinte} onClick={adicionarContribuinte}>

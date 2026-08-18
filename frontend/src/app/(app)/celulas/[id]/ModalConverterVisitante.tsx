@@ -29,12 +29,7 @@ export function ModalConverterVisitante({ celulaId, visitanteId, visitanteNome, 
       const pessoa = await celulaService.converterVisitante(celulaId, visitanteId, { vinculo })
       invalidarCache(queryClient, 'celula')
       notificar.sucesso(`${visitanteNome} convertido. Redirecionando...`)
-      // Fecha o modal (limpa o estado de "convertendo" na página) antes de navegar — evitando
-      // deixá-lo montado, re-renderizando contra dados de célula que mudaram por baixo dele
-      // por causa do invalidarCache logo acima. Navegação client-side (router.push), não
-      // window.location.href: um reload completo aqui corria contra o refetch em andamento
-      // da célula, cortando a página no meio de um estado transitório — parecia um erro
-      // piscando na tela, mas era só a corrida entre o reload e o React ainda re-renderizando.
+      // window.location.href aqui corria contra o refetch da célula em andamento (invalidarCache acima) e piscava erro na tela.
       onClose()
       router.push(`/pessoas/${pessoa.id}`)
     } catch {

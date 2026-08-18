@@ -162,4 +162,6 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
          WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
         """, nativeQuery = true)
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    long countByIgrejaId(UUID igrejaId);
 }

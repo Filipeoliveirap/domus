@@ -208,4 +208,6 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Modifying
     @Query(value = "UPDATE evento SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    long countByIgrejaId(UUID igrejaId);
 }

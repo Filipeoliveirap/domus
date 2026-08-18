@@ -20,6 +20,8 @@ import com.domus.api.modules.financeiro.movimentacao.MovimentacaoContribuinte;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceira;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
+import com.domus.api.modules.foto.Foto;
+import com.domus.api.modules.foto.FotoRepository;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.ministerio.Ministerio;
@@ -74,6 +76,7 @@ class PurgaIgrejaIntegrationTest {
     @Autowired MinisterioRepository ministerioRepository;
     @Autowired MinisterioMembroRepository ministerioMembroRepository;
     @Autowired VisitanteRepository visitanteRepository;
+    @Autowired FotoRepository fotoRepository;
     @Autowired EntityManager entityManager;
 
     @Test
@@ -126,6 +129,15 @@ class PurgaIgrejaIntegrationTest {
         Visitante visitante = visitanteRepository.save(Visitante.builder()
                 .igreja(igreja).nome("Visitante de Teste").build());
 
+        // Anexada como logo da igreja (não via FotoService.enviar — não precisa de storage real: o
+        // bucket só é tocado depois do commit, e este teste faz rollback, então nunca chega lá).
+        // Exercita especificamente igrejaRepository.limparLogoFoto, o passo de ordenação mais
+        // delicado da purga (precisa liberar a FK da logo antes de apagar a linha da foto).
+        Foto foto = fotoRepository.save(Foto.builder()
+                .igreja(igreja).chave("fotos/teste/" + igreja.getId()).tipo("image/jpeg").bytes(123L).build());
+        igreja.setLogoFoto(foto);
+        igreja = igrejaRepository.save(igreja);
+
         entityManager.flush();
         entityManager.clear();
 
@@ -144,5 +156,6 @@ class PurgaIgrejaIntegrationTest {
         assertThat(celulaRepository.findByIdAndIgrejaId(celula.getId(), igreja.getId())).isEmpty();
         assertThat(ministerioRepository.findByIdAndIgrejaId(ministerio.getId(), igreja.getId())).isEmpty();
         assertThat(visitanteRepository.findByIdAndIgrejaId(visitante.getId(), igreja.getId())).isEmpty();
+        assertThat(fotoRepository.findById(foto.getId())).isEmpty();
     }
 }

@@ -164,4 +164,9 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 
     long countByIgrejaId(UUID igrejaId);
+
+    /** Purga da igreja: movimentacao_contribuinte cascadeia sozinho via ON DELETE CASCADE. */
+    @Modifying
+    @Query(value = "DELETE FROM movimentacao_financeira WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

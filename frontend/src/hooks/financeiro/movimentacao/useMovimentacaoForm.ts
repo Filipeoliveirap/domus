@@ -48,8 +48,10 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: String(movimentacaoInicial.valor),
         categoriaId: movimentacaoInicial.categoriaId,
         dataMovimentacao: movimentacaoInicial.dataMovimentacao.split('T')[0],
+        // pessoaId nulo (pessoa excluída definitivamente) vira campo vazio — precisa
+        // escolher alguém de novo pra editar essa linha, não dá pra recuperar quem era.
         contribuintes: movimentacaoInicial.contribuintes.map((c) => ({
-          pessoaId: c.pessoaId,
+          pessoaId: c.pessoaId ?? '',
           valor: String(c.valor),
         })),
         descricao: movimentacaoInicial.descricao ?? '',
@@ -81,7 +83,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
-      router.push('/financeiro/movimentacoes')
+      router.back()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

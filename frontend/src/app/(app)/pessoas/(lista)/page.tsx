@@ -2,10 +2,11 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Pencil, KeyRound, Archive } from 'lucide-react'
+import { Pencil, KeyRound, Archive } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
@@ -43,7 +44,7 @@ function PessoasConteudo() {
   const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
-  const [pagina, setPagina] = useState(0)
+  const { pagina, setPagina } = usePaginaUrl()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -99,12 +100,6 @@ function PessoasConteudo() {
 
   return (
     <div className={styles.pagina}>
-      <nav className={styles.breadcrumb} aria-label="breadcrumb">
-        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Pessoas</span>
-      </nav>
-
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>

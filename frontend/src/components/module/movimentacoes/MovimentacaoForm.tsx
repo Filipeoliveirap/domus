@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale } from 'lucide-react'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoPessoa } from './SelecaoPessoa'
@@ -25,6 +26,7 @@ type MovimentacaoFormProps = UseFormReturn<MovimentacaoFormInput, unknown, Movim
 }
 
 export function MovimentacaoForm(props: MovimentacaoFormProps) {
+  const router = useRouter()
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors, isSubmitted },
@@ -315,7 +317,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
             <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || !somaBate || isLoading || semNenhumaCategoria}>
               {isLoading ? 'Salvando…' : ehEdicao ? 'Salvar alterações' : 'Salvar movimentação'}
             </button>
-            <Link href="/financeiro/movimentacoes" className={styles.cancelarLink}>Cancelar</Link>
+            <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
           </div>
         </div>
       </div>

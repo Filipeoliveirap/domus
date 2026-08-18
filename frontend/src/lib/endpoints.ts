@@ -135,6 +135,11 @@ export const Endpoints = {
 
   igreja: {
     MINHA: '/igrejas/minha',
+    exclusao: {
+      RESUMO: '/igrejas/exclusao/resumo',
+      AGENDAR: '/igrejas/exclusao/agendar',
+      CANCELAR: '/igrejas/exclusao/cancelar',
+    },
   },
 
   igrejasVinculadas: {

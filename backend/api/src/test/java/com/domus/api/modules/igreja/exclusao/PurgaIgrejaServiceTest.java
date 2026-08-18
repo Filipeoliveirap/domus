@@ -215,10 +215,21 @@ class PurgaIgrejaServiceTest {
 
     @Test
     void purgaNaoTravaSeElasticsearchFalhar() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Igreja X").emailContato("x@x.com").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
         doThrow(new RuntimeException("ES fora do ar")).when(pessoaSearchRepository).deleteByIgrejaId(anyString());
 
         service.purgar(igrejaId);
 
+        String id = igrejaId.toString();
+        verify(eventoSearchRepository).deleteByIgrejaId(id);
+        verify(usuarioSearchRepository).deleteByIgrejaId(id);
+        verify(movimentacaoSearchRepository).deleteByIgrejaId(id);
+        verify(categoriaSearchRepository).deleteByIgrejaId(id);
+        verify(celulaSearchRepository).deleteByIgrejaId(id);
+        verify(ministerioSearchRepository).deleteByIgrejaId(id);
+        verify(visitanteSearchRepository).deleteByIgrejaId(id);
+        verify(emailService).enviar(eq("x@x.com"), anyString(), anyString());
         verify(igrejaRepository).deleteById(igrejaId);
     }
 

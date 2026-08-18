@@ -9,6 +9,7 @@ import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgrej
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { ModalExcluirIgreja } from '@/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
@@ -66,6 +67,12 @@ export default function DadosDaIgrejaPage() {
     try {
       await api.post(Endpoints.igreja.exclusao.CANCELAR)
       atualizarExclusaoAgendada(null, null)
+      notificar.sucesso('Exclusão cancelada', 'A igreja não será mais excluída.')
+    } catch (erro: unknown) {
+      const mensagem =
+        (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Tente novamente em alguns instantes.'
+      notificar.erro('Não foi possível cancelar a exclusão', mensagem)
     } finally {
       setCancelandoExclusao(false)
     }

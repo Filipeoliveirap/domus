@@ -14,12 +14,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
 
-/**
- * Cloudflare R2 — compatível com a API do S3, então o SDK da AWS serve sem adaptação.
- *
- * <p>Bucket PRIVADO e diferente do bucket de backup (aquele é write-only por desenho).
- * Ninguém lê daqui a não ser o próprio Domus, servindo em GET /fotos/{id}.
- */
+/** Cloudflare R2 via SDK da AWS (compatível com S3). Bucket privado, diferente do de backup (write-only) — só o Domus lê, via GET /fotos/{id}. */
 @Component
 @ConditionalOnProperty(name = "app.fotos.armazenamento", havingValue = "r2", matchIfMissing = true)
 @Slf4j

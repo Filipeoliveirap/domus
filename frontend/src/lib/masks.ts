@@ -19,12 +19,7 @@ export function formatarCep(value: string): string {
   return digitos.replace(/(\d{5})(\d{0,3})/, '$1-$2')
 }
 
-/**
- * Máscara de data digitada (dd/mm/aaaa). Existe porque `<input type="date">` renderiza no
- * formato do IDIOMA/SO DO NAVEGADOR, não no da página — um usuário com o Chrome em en-US
- * via o campo em mm/dd/yyyy mesmo com toda a UI em pt-BR (bug relatado pelo dono do produto).
- * Digitar sempre em dd/mm/aaaa, em qualquer navegador, elimina a ambiguidade.
- */
+// Existe porque <input type="date"> renderiza no formato do SO/idioma do navegador, não da página (bug real com Chrome en-US).
 export function formatarDataDigitada(value: string): string {
   const digitos = value.replace(/\D/g, '').slice(0, 8)
   if (digitos.length <= 2) return digitos

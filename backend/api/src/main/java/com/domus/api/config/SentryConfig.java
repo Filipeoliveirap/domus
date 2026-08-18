@@ -4,11 +4,7 @@ import io.sentry.SentryOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Endurecimento do Sentry para não vazar dado sensível (LGPD). O starter registra
- * automaticamente beans do tipo {@link SentryOptions.BeforeSendCallback}, então este
- * callback roda em todo evento antes de ser enviado, limpando o que for sensível.
- */
+/** Scrub de headers sensíveis antes do envio ao Sentry (LGPD). */
 @Configuration
 public class SentryConfig {
 

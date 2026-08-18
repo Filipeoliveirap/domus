@@ -15,10 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Autorização da hierarquia de igrejas (sede↔congregação).
- * Enxerga só para baixo: a filha nunca vê a mãe nem as irmãs.
- */
+/** Autorização da hierarquia de igrejas; enxerga só pra baixo — a filha nunca vê a mãe nem as irmãs. */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -47,10 +44,7 @@ public class FamiliaIgrejaService {
         return ids;
     }
 
-    /**
-     * Bidirecional: {@code {mãe} ∪ {todas as filhas da mãe, inclusive eu}} quando a igreja
-     * tem mãe; {@code {eu} ∪ {minhas filhas}} quando não tem (sede ou independente).
-     */
+    /** Com mãe: {@code {mãe} ∪ {todas as filhas dela, inclusive eu}}. Sem mãe: {@code {eu} ∪ {minhas filhas}}. */
     @Transactional(readOnly = true)
     public Set<UUID> idsDaFamiliaCompleta(UUID igrejaId) {
         Igreja igreja = buscar(igrejaId);
@@ -82,10 +76,7 @@ public class FamiliaIgrejaService {
                 .orElse(false);
     }
 
-    /**
-     * Resolve o escopo de um endpoint que aceita {@code igrejaId} opcional.
-     * Ausente → minha igreja. Presente → só passa se pertencer à minha família.
-     */
+    /** {@code igrejaId} ausente = minha igreja; presente, só passa se pertencer à minha família. */
     @Transactional(readOnly = true)
     public UUID resolverEscopo(UUID igrejaSolicitanteId, UUID igrejaAlvoId) {
         if (igrejaAlvoId == null) {

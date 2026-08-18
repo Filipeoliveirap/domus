@@ -11,10 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Rotinas de limpeza de fotos órfãs (upload abandonado) e de pessoas arquivadas.
- * A FK ON DELETE RESTRICT impede remoção acidental de foto referenciada.
- */
+/** Limpeza de fotos órfãs e de pessoas arquivadas; FK ON DELETE RESTRICT impede apagar foto ainda referenciada. */
 @Component
 @Slf4j
 @RequiredArgsConstructor

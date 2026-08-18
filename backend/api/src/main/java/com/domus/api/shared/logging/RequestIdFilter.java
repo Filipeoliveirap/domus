@@ -13,15 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Carimba um {@code request_id} único no MDC (o "post-it" por thread) no começo de cada
- * requisição, para que TODA linha de log daquela requisição saia com esse id — permitindo
- * correlacionar logs entre si e ligar um erro do Sentry ao seu conjunto de logs.
- *
- * <p>Roda como filtro mais externo (ordem mais alta): assim o {@code request_id} já existe
- * quando qualquer outro filtro (rate limit, segurança) loga. Limpa o MDC no {@code finally}
- * porque a thread é reutilizada entre requisições — deixar contexto vazado seria um bug.
- */
+/** Carimba request_id no MDC antes de qualquer outro filtro logar; limpa no finally porque a thread é reutilizada. */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {

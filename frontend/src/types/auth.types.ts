@@ -11,12 +11,7 @@ export interface GoogleRegistrarRequest {
     telefoneContato: string;
 }
 
-/**
- * O que o backend devolve sobre a sessão — em /auth/login, /auth/google/*,
- * /igrejas/registrar e /auth/me.
- *
- * Sem token de propósito: eles viajam em cookie httpOnly e o JavaScript nunca os vê.
- */
+// Sem token de propósito: viajam em cookie httpOnly, JavaScript nunca os vê.
 export interface Sessao {
     id: string;
     nome: string;

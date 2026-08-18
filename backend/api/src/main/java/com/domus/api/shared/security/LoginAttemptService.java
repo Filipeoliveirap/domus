@@ -6,12 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
-/**
- * Anti-força-bruta por conta. Conta falhas de login por e-mail no Redis (sobrevive a
- * reinícios) e bloqueia após {@link #MAX_TENTATIVAS} erros. Duas chaves:
- * {@code login:attempt:<email>} (contador) e {@code login:block:<email>} (marca com TTL
- * para desbloqueio automático).
- */
+/** Anti-força-bruta por conta, contadores no Redis (sobrevive a reinício); bloqueio via chave com TTL, desbloqueia sozinho. */
 @Slf4j
 @Service
 public class LoginAttemptService {

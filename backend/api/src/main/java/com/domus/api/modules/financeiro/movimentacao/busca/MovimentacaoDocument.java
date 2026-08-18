@@ -37,14 +37,25 @@ public class MovimentacaoDocument {
     @Field(type = FieldType.Keyword)
     private String tipo;
 
-    public static MovimentacaoDocument de(MovimentacaoFinanceira mov) {
+    /**
+     * @param categoriaNome        resolvido à parte pelo chamador (bypass do @SQLRestriction
+     *                              quando a categoria está arquivada) — nunca usar
+     *                              mov.getCategoria().getNome() aqui.
+     * @param nomesPorPessoa        idem, pra cada contribuinte — pessoa arquivada (mas não
+     *                              excluída) precisa continuar indexando o nome real.
+     */
+    public static MovimentacaoDocument de(MovimentacaoFinanceira mov, String categoriaNome,
+                                           java.util.Map<java.util.UUID, String> nomesPorPessoa) {
         MovimentacaoDocument doc = new MovimentacaoDocument();
         doc.setId(mov.getId().toString());
         doc.setIgrejaId(mov.getIgreja().getId().toString());
         doc.setDescricao(mov.getDescricao());
-        doc.setCategoriaNome(mov.getCategoria() != null ? mov.getCategoria().getNome() : null);
+        doc.setCategoriaNome(categoriaNome);
         doc.setPessoaNomes(mov.getContribuintes().stream()
-                .map(c -> c.getPessoa().getNome())
+                .map(c -> c.getPessoa())
+                .filter(p -> p != null)
+                .map(p -> nomesPorPessoa.get(p.getId()))
+                .filter(nome -> nome != null)
                 .toList());
         doc.setTipo(mov.getTipo() != null ? mov.getTipo().name() : null);
         return doc;

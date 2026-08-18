@@ -58,10 +58,38 @@ public class MovimentacaoFinanceiraService {
 
         LocalDate inicio = dataInicio != null ? dataInicio : LocalDate.of(1900, 1, 1);
         LocalDate fim = dataFim != null ? dataFim : LocalDate.of(2999, 12, 31);
-        Page<MovimentacaoResponse> page = repository
-                .buscarComFiltros(igrejaId, tipo, categoriaId, inicio, fim, termo, pessoaId, pageable)
-                .map(MovimentacaoResponse::de);
+        Page<MovimentacaoFinanceira> pageEntidades = repository
+                .buscarComFiltros(igrejaId, tipo, categoriaId, inicio, fim, termo, pessoaId, pageable);
+        var nomesPorCategoria = nomesDeCategoria(pageEntidades.getContent(), igrejaId);
+        var pessoasContribuintes = resolverPessoasContribuintes(pageEntidades.getContent());
+        Page<MovimentacaoResponse> page = pageEntidades
+                .map(m -> MovimentacaoResponse.de(m, nomesPorCategoria.get(m.getCategoria().getId()), pessoasContribuintes));
         return PagedResponse.from(page);
+    }
+
+    private java.util.Map<UUID, String> nomesDeCategoria(List<MovimentacaoFinanceira> movimentacoes, UUID igrejaId) {
+        List<UUID> ids = movimentacoes.stream()
+                .map(m -> m.getCategoria().getId())
+                .distinct()
+                .toList();
+        return categoriaService.mapaNomesIncluindoArquivadas(ids, igrejaId);
+    }
+
+    /** Em lote, via bypass do @SQLRestriction — contribuinte cuja pessoa está arquivada (mas
+     *  não excluída) continua mostrando os dados reais, não "Pessoa removida do sistema". */
+    private java.util.Map<UUID, Pessoa> resolverPessoasContribuintes(List<MovimentacaoFinanceira> movimentacoes) {
+        List<UUID> ids = movimentacoes.stream()
+                .flatMap(m -> m.getContribuintes().stream())
+                .map(c -> c.getPessoa())
+                .filter(p -> p != null)
+                .map(Pessoa::getId)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return membroRepository.findByIdInIncluindoArquivadas(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Pessoa::getId, p -> p));
     }
 
     @Transactional(readOnly = true)
@@ -80,12 +108,15 @@ public class MovimentacaoFinanceiraService {
     )
     @Transactional(readOnly = true)
     public PagedResponse<MovimentacaoResponse> listarSemFiltro(UUID igrejaId, Pageable pageable) {
-        Page<MovimentacaoResponse> page = repository
+        Page<MovimentacaoFinanceira> pageEntidades = repository
                 .buscarComFiltros(igrejaId, null, null,
                         LocalDate.of(1900, 1, 1),
                         LocalDate.of(2999, 12, 31),
-                        null, null, pageable)
-                .map(MovimentacaoResponse::de);
+                        null, null, pageable);
+        var nomesPorCategoria = nomesDeCategoria(pageEntidades.getContent(), igrejaId);
+        var pessoasContribuintes = resolverPessoasContribuintes(pageEntidades.getContent());
+        Page<MovimentacaoResponse> page = pageEntidades
+                .map(m -> MovimentacaoResponse.de(m, nomesPorCategoria.get(m.getCategoria().getId()), pessoasContribuintes));
         return PagedResponse.from(page);
     }
 
@@ -93,7 +124,11 @@ public class MovimentacaoFinanceiraService {
     public MovimentacaoResponse buscarPorId(UUID id, UUID igrejaId) {
         MovimentacaoFinanceira m = repository.buscarPorIdComRelacoes(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movimentação não encontrada."));
-        return MovimentacaoResponse.de(m);
+        String categoriaNome = categoriaService
+                .mapaNomesIncluindoArquivadas(List.of(m.getCategoria().getId()), igrejaId)
+                .get(m.getCategoria().getId());
+        var pessoasContribuintes = resolverPessoasContribuintes(List.of(m));
+        return MovimentacaoResponse.de(m, categoriaNome, pessoasContribuintes);
     }
 
     @Transactional

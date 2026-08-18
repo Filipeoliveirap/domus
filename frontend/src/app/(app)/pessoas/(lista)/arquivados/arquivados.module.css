@@ -14,7 +14,10 @@
   border-radius: var(--radius-lg);
   background: var(--color-bg-white);
   flex-wrap: wrap;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
+.linha:hover { background: var(--color-bg-hover); }
 
 .info {
   display: flex;

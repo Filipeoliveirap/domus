@@ -6,6 +6,7 @@ import { useUsuariosArquivados } from '@/hooks/usuario/useUsuariosArquivados'
 import { useRestaurarUsuario } from '@/hooks/usuario/useRestaurarUsuario'
 import { useExcluirUsuarioDefinitivamente } from '@/hooks/usuario/useExcluirUsuarioDefinitivamente'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
+import { ModalDetalheUsuario } from '@/components/module/usuarios/ModalDetalheUsuario'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
@@ -22,6 +23,7 @@ export default function UsuariosArquivadosPage() {
   const autorizado = podeGerenciarUsuarios(role)
   const { restaurar, isLoading: restaurando } = useRestaurarUsuario()
   const [excluindo, setExcluindo] = useState<UsuarioArquivadoResponse | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null)
 
   if (!autorizado) {
     return <AcessoRestrito />
@@ -47,7 +49,7 @@ export default function UsuariosArquivadosPage() {
     <>
       <div className={styles.lista}>
         {usuarios.map((u) => (
-          <div key={u.id} className={styles.linha}>
+          <div key={u.id} className={styles.linha} onClick={() => setDetalheId(u.id)}>
             <div className={styles.info}>
               <div className={styles.icone}><User size={18} /></div>
               <div>
@@ -55,7 +57,7 @@ export default function UsuariosArquivadosPage() {
                 <p className={styles.detalhe}>{u.email ?? 'sem e-mail'} · {rotuloRole(u.role)}</p>
               </div>
             </div>
-            <div className={styles.acoes}>
+            <div className={styles.acoes} onClick={(e) => e.stopPropagation()}>
               <button
                 className={styles.botaoRestaurar}
                 disabled={restaurando}
@@ -73,6 +75,10 @@ export default function UsuariosArquivadosPage() {
 
       {excluindo && (
         <ModalExcluirDefinitivo usuario={excluindo} onClose={() => setExcluindo(null)} />
+      )}
+
+      {detalheId && (
+        <ModalDetalheUsuario usuarioId={detalheId} onClose={() => setDetalheId(null)} />
       )}
     </>
   )

@@ -25,10 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * M5: data de batismo só faz sentido para vínculo MEMBRO (ver design doc). M6: perder o
- * vínculo MEMBRO cancela as inscrições em eventos exclusivos, reusando o InscricaoService.
- */
+/** Data de batismo só faz sentido para vínculo MEMBRO; perder o vínculo MEMBRO cancela inscrições em eventos exclusivos. */
 class PessoaServiceTest {
 
     PessoaRepository pessoaRepository;
@@ -40,6 +37,11 @@ class PessoaServiceTest {
     ReindexacaoMovimentacaoService reindexacaoMovimentacaoService;
     FotoService fotoService;
     com.domus.api.modules.evento.EventoRepository eventoRepository;
+    com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
+    com.domus.api.modules.celula.CelulaMembroRepository celulaMembroRepository;
+    com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
+    com.domus.api.modules.financeiro.movimentacao.MovimentacaoContribuinteRepository movimentacaoContribuinteRepository;
+    com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
     PessoaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -56,9 +58,15 @@ class PessoaServiceTest {
         reindexacaoMovimentacaoService = mock(ReindexacaoMovimentacaoService.class);
         fotoService = mock(FotoService.class);
         eventoRepository = mock(com.domus.api.modules.evento.EventoRepository.class);
+        inscricaoRepository = mock(com.domus.api.modules.evento.inscricao.InscricaoRepository.class);
+        celulaMembroRepository = mock(com.domus.api.modules.celula.CelulaMembroRepository.class);
+        ministerioMembroRepository = mock(com.domus.api.modules.ministerio.MinisterioMembroRepository.class);
+        movimentacaoContribuinteRepository = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoContribuinteRepository.class);
+        visitanteRepository = mock(com.domus.api.modules.visitante.VisitanteRepository.class);
         service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
                 inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService,
-                fotoService, eventoRepository);
+                fotoService, eventoRepository, inscricaoRepository, celulaMembroRepository,
+                ministerioMembroRepository, movimentacaoContribuinteRepository, visitanteRepository);
 
         Igreja igreja = new Igreja();
         igreja.setId(igrejaId);
@@ -123,10 +131,7 @@ class PessoaServiceTest {
         verify(inscricaoService, never()).cancelarInscricoesEmEventosExclusivos(any());
     }
 
-    /**
-     * Trocar a foto (id antigo → id novo) precisa remover a foto ANTIGA — senão o bucket
-     * acumula arquivo órfão para sempre, já que nada mais aponta para ele.
-     */
+    /** Trocar a foto precisa remover a antiga, senão o bucket acumula arquivo órfão pra sempre. */
     @Test
     void atualizarRemoveFotoAntigaQuandoFotoMuda() {
         UUID fotoAntigaId = UUID.randomUUID();
@@ -148,10 +153,7 @@ class PessoaServiceTest {
         verify(fotoService).remover(fotoAntigaId);
     }
 
-    /**
-     * Sem troca de foto (mesmo id, ou os dois nulos), NADA deve ser removido — a foto atual
-     * continua sendo a mesma referenciada pela pessoa.
-     */
+    /** Sem troca de foto (mesmo id, ou os dois nulos), nada deve ser removido. */
     @Test
     void atualizarNaoRemoveFotoQuandoNaoMuda() {
         UUID fotoId = UUID.randomUUID();
@@ -211,7 +213,7 @@ class PessoaServiceTest {
 
     @Test
     void buscarPorId_semDadosSensiveis_escondeEnderecoEObservacoes() {
-        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId))
+        when(pessoaRepository.findByIdAndIgrejaIdIncluindoArquivadas(pessoaId, igrejaId))
                 .thenReturn(Optional.of(pessoaComDadosSensiveis()));
 
         PessoaResponse resposta = service.buscarPorId(pessoaId, igrejaId, false);
@@ -224,7 +226,7 @@ class PessoaServiceTest {
 
     @Test
     void buscarPorId_comDadosSensiveis_mostraTudo() {
-        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId))
+        when(pessoaRepository.findByIdAndIgrejaIdIncluindoArquivadas(pessoaId, igrejaId))
                 .thenReturn(Optional.of(pessoaComDadosSensiveis()));
 
         PessoaResponse resposta = service.buscarPorId(pessoaId, igrejaId, true);

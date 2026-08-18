@@ -396,7 +396,9 @@ public class InscricaoService {
     /** {@code busca} e a paginação afetam só {@code inscritos} — total/vagas restantes contam TODAS as confirmadas. */
     @Transactional(readOnly = true)
     public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId, String busca, Pageable pageable) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        // IncluindoArquivados: a tela de Arquivados também abre a lista de inscritos de um
+        // evento arquivado (pra só olhar) — arquivar não desvincula ninguém.
+        Evento evento = eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         // JOIN FETCH de coleção paginaria em memória no Hibernate — ids paginados primeiro, detalhes por IN depois.
@@ -427,7 +429,10 @@ public class InscricaoService {
     @Transactional(readOnly = true)
     public List<ParticipanteResponse> listarParticipantes(UUID eventoId, UUID igrejaId) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        // IncluindoArquivados: mesma razão do buscarPorId — abrir o detalhe de um evento
+        // arquivado (tela de Arquivados) também carrega essa lista reduzida.
         eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
+                .or(() -> eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);

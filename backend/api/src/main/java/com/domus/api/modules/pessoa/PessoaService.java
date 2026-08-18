@@ -332,7 +332,9 @@ public class PessoaService {
 
     @Transactional(readOnly = true)
     public PessoaResponse buscarPorId(UUID id, UUID igrejaId, boolean podeVerDadosSensiveis) {
-        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+        // IncluindoArquivadas: a tela de Arquivados também abre o detalhe de uma pessoa
+        // arquivada (pra só olhar), igual célula/ministério/evento.
+        Pessoa membro = membroRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
         return PessoaResponse.from(membro, null, podeVerDadosSensiveis);
     }

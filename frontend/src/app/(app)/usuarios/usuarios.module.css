@@ -309,6 +309,7 @@
 
 .linhaInativa { background: var(--color-bg-table-head); }
 .linhaInativa td:not(.colunaAcoes) { opacity: 0.5; }
+.linhaClicavel { cursor: pointer; }
 
 .acoesCell {
   display: flex;

@@ -167,16 +167,26 @@ public class CategoriaFinanceiraService {
     }
 
     /**
-     * A11: quantos lançamentos usam esta categoria hoje. O front consulta isto só ao abrir a
-     * edição de UMA categoria (não na listagem) e decide se pede confirmação antes de salvar —
-     * a decisão de bloquear ou não a atualização é do front; o backend nunca recusa o
-     * {@code atualizar} por causa disso.
+     * Front decide se pede confirmação com base nisso; backend nunca recusa {@code atualizar}
+     * por causa da contagem. IncluindoArquivadas: a tela de Arquivadas também usa este
+     * endpoint pra explicar por que o excluir definitivo está bloqueado.
      */
     @Transactional(readOnly = true)
     public ContagemMovimentacoesResponse contarMovimentacoes(UUID id, UUID igrejaId) {
-        buscarEntidade(id, igrejaId); // 404 se a categoria não existir/for de outra igreja
+        repository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada."));
         long total = movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(id, igrejaId);
         return new ContagemMovimentacoesResponse(total);
+    }
+
+    /** Nomes de categoria por id, enxergando arquivadas. */
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, String> mapaNomesIncluindoArquivadas(List<UUID> ids, UUID igrejaId) {
+        if (ids.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return repository.findByIdInAndIgrejaIdIncluindoArquivadas(ids, igrejaId).stream()
+                .collect(java.util.stream.Collectors.toMap(CategoriaFinanceira::getId, CategoriaFinanceira::getNome));
     }
 
     @Transactional(readOnly = true)

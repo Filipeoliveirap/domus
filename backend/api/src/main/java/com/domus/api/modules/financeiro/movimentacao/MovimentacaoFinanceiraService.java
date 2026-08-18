@@ -122,7 +122,11 @@ public class MovimentacaoFinanceiraService {
 
     @Transactional(readOnly = true)
     public MovimentacaoResponse buscarPorId(UUID id, UUID igrejaId) {
-        MovimentacaoFinanceira m = repository.buscarPorIdComRelacoes(id, igrejaId)
+        // IncluindoArquivadas: a tela de Arquivadas também abre o detalhe de uma movimentação
+        // arquivada (pra só olhar) — os relacionamentos acessados abaixo (categoria por id,
+        // contribuintes, criadoPor/atualizadoPor) já são seguros com lazy-load normal, sem
+        // precisar do JOIN FETCH de buscarPorIdComRelacoes.
+        MovimentacaoFinanceira m = repository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movimentação não encontrada."));
         String categoriaNome = categoriaService
                 .mapaNomesIncluindoArquivadas(List.of(m.getCategoria().getId()), igrejaId)

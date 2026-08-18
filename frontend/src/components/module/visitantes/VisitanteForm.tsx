@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { User, MapPin, FileText, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
@@ -59,6 +59,7 @@ type VisitanteFormProps = UseFormReturn<VisitanteFormData> & {
 }
 
 export function VisitanteForm(props: VisitanteFormProps) {
+  const router = useRouter()
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
@@ -195,7 +196,7 @@ export function VisitanteForm(props: VisitanteFormProps) {
               isLoading={isLoading} disabled={isFormIncomplete || isLoading} style={{ width: '100%' }}>
               {ehEdicao ? 'Salvar alterações' : 'Salvar visitante'}
             </Button>
-            <Link href="/pessoas/visitantes" className={styles.cancelarLink}>Cancelar</Link>
+            <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
           </div>
         </div>
       </div>

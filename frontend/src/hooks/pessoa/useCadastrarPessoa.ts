@@ -113,7 +113,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         notificar.erro('Pessoa salva, mas não foi possível atualizar as redes dela.')
       }
 
-      router.push('/pessoas')
+      router.back()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

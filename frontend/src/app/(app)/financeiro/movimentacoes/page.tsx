@@ -17,6 +17,7 @@ import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/
 import styles from './movimentacoes.module.css'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
 import { podeVerFinanceiro } from '@/lib/permissoes'
@@ -68,7 +69,7 @@ function MovimentacoesConteudo() {
     pessoaId: '',
   })
 
-  const [pagina, setPagina] = useState(0)
+  const { pagina, setPagina } = usePaginaUrl()
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
   // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
   // refresh de página, o que é aceitável: o filtro continua aplicado, só perde o rótulo.

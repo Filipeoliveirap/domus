@@ -114,4 +114,8 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
         boolean getTemCelula();
         boolean getTemMinisterio();
     }
+
+    @Modifying
+    @Query(value = "DELETE FROM pessoa WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

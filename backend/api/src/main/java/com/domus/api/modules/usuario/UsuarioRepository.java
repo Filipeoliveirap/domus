@@ -102,4 +102,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
     long countByIgrejaId(UUID igrejaId);
+
+    @Modifying
+    @Query(value = "DELETE FROM usuario WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

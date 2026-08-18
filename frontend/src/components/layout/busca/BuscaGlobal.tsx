@@ -58,10 +58,7 @@ export function BuscaGlobal() {
     setTermo('')
     setAberto(false)
     if (novoPathname === pathname) {
-      // Já estando na mesma rota, router.push só troca a querystring — as páginas são
-      // client-side (estado lido uma vez na montagem, ex.: useState(() => searchParams...)),
-      // então nada reage. router.refresh() também não ajuda (só refaz Server Components).
-      // Só um reload de verdade remonta a página com o novo termo.
+      // Mesma rota: router.push só troca querystring e a página não reage (estado lido uma vez na montagem); precisa de reload de verdade.
       window.location.href = rota
     } else {
       router.push(rota)

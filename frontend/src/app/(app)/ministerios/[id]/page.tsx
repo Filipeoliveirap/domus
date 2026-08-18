@@ -14,7 +14,7 @@ import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
-import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(detalhe)/DrawerDetalhePessoa'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import styles from './detalhe.module.css'
 

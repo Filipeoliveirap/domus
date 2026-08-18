@@ -17,16 +17,7 @@ interface Props {
   onClose: () => void
 }
 
-/**
- * Busca + seleção única de pessoa, mesmo padrão de `ModalInscreverPessoas.tsx` (usePessoas +
- * useDebounce), mas de seleção única e sem paginação — é um "quick pick", não um navegador
- * completo (por isso `page: 0` fixo, sem UI de próxima página).
- *
- * useAdicionarMembro já dispara notificar.sucesso/erro sozinho (Task 9) — o modal fica
- * aberto depois de adicionar (dá pra adicionar várias pessoas seguidas sem reabrir); a
- * pessoa some da lista sozinha porque membrosAtuaisIds vem de ministerio.membros, que a
- * mutation já invalida.
- */
+// "Quick pick" sem paginação de propósito: page: 0 fixo, sem UI de próxima página.
 export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }: Props) {
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)

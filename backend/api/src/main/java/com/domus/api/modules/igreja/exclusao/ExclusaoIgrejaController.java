@@ -27,8 +27,8 @@ public class ExclusaoIgrejaController {
     @PostMapping("/agendar")
     public ResponseEntity<Void> agendar(@RequestBody @Valid AgendarExclusaoRequest data) {
         exigirAdmin();
-        exclusaoIgrejaService.agendar(
-                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(), data.nomeConfirmacao());
+        exclusaoIgrejaService.agendar(usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                data.nomeConfirmacao(), data.senha(), data.googleIdToken());
         return ResponseEntity.ok().build();
     }
 

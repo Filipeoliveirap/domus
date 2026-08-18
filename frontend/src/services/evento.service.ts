@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type {
-  EventoRequest, EventoResponse, ImpactoRestricaoResponse,
+  EventoArquivadoResponse, EventoRequest, EventoResponse, ImpactoRestricaoResponse,
   RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros,
 } from '@/types/evento.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
@@ -40,6 +40,15 @@ export const eventosService = {
 
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.eventos.BY_ID(id)).then(() => undefined),
+
+  listarArquivados: (): Promise<EventoArquivadoResponse[]> =>
+    api.get<EventoArquivadoResponse[]>(Endpoints.eventos.ARQUIVADOS).then(res => res.data),
+
+  restaurar: (id: string): Promise<void> =>
+    api.post(Endpoints.eventos.RESTAURAR(id)).then(() => undefined),
+
+  excluirDefinitivo: (id: string): Promise<void> =>
+    api.delete(Endpoints.eventos.DEFINITIVO(id)).then(() => undefined),
 
   // Prévia PURA de impacto (Task 6/9): devolve quem ficaria de fora se `data` fosse salvo,
   // sem gravar nada — só chamada em edição, para decidir se abre o <ModalImpactoRestricao>.

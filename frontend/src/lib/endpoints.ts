@@ -28,6 +28,9 @@ export const Endpoints = {
     REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
     CAPACIDADE: (id: string) => `/usuarios/${id}/capacidades`,
     CAPACIDADE_ESPECIFICA: (id: string, cap: string) => `/usuarios/${id}/capacidades/${cap}`,
+    ARQUIVADOS: '/usuarios/arquivados',
+    RESTAURAR: (id: string) => `/usuarios/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/usuarios/${id}/definitivo`,
   },
   pessoas: {
     LISTAR: '/pessoas',
@@ -37,6 +40,9 @@ export const Endpoints = {
     BAIRROS: '/pessoas/bairros',
     ME: '/pessoas/me',
     PESSOA_MINISTERIOS: (pessoaId: string) => `/pessoas/${pessoaId}/ministerios`,
+    ARQUIVADOS: '/pessoas/arquivados',
+    RESTAURAR: (id: string) => `/pessoas/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/pessoas/${id}/definitivo`,
   },
 
   eventos: {
@@ -48,12 +54,18 @@ export const Endpoints = {
     ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
     RELATORIO: (id: string) => `/eventos/${id}/relatorio`,
     RELATORIO_GERAL: '/eventos/relatorio-geral',
+    ARQUIVADOS: '/eventos/arquivados',
+    RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
   },
 
   locaisEvento: {
     LISTAR: '/locais-evento',
     CRIAR: '/locais-evento',
     BY_ID: (id: string) => `/locais-evento/${id}`,
+    ARQUIVADOS: '/locais-evento/arquivados',
+    RESTAURAR: (id: string) => `/locais-evento/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/locais-evento/${id}/definitivo`,
   },
 
   ministerios: {
@@ -96,12 +108,18 @@ export const Endpoints = {
     todas: '/categorias/todas',
     porId: (id: string) => `/categorias/${id}`,
     contagemMovimentacoes: (id: string) => `/categorias/${id}/contagem-movimentacoes`,
+    arquivadas: '/categorias/arquivadas',
+    restaurar: (id: string) => `/categorias/${id}/restaurar`,
+    definitivo: (id: string) => `/categorias/${id}/definitivo`,
   },
 
   movimentacoes: {
     base: '/movimentacoes',
     porId: (id: string) => `/movimentacoes/${id}`,
     totais: '/movimentacoes/totais',
+    arquivadas: '/movimentacoes/arquivadas',
+    restaurar: (id: string) => `/movimentacoes/${id}/restaurar`,
+    definitivo: (id: string) => `/movimentacoes/${id}/definitivo`,
   },
 
   relatorios: {

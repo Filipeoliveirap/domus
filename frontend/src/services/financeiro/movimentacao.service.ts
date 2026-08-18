@@ -6,6 +6,7 @@ import type {
   MovimentacaoRequest,
   MovimentacaoFiltros,
   MovimentacaoTotais,
+  MovimentacaoArquivadaResponse,
 } from '@/types/financeiro/movimentacao.type'
 
 function paramsDeFiltro(filtros: Omit<MovimentacaoFiltros, 'page' | 'size'>): Record<string, string> {
@@ -53,5 +54,18 @@ export const movimentacoesService = {
 
   arquivar: async (id: string): Promise<void> => {
     await api.delete(Endpoints.movimentacoes.porId(id))
+  },
+
+  listarArquivadas: async (): Promise<MovimentacaoArquivadaResponse[]> => {
+    const { data } = await api.get(Endpoints.movimentacoes.arquivadas)
+    return data
+  },
+
+  restaurar: async (id: string): Promise<void> => {
+    await api.post(Endpoints.movimentacoes.restaurar(id))
+  },
+
+  excluirDefinitivo: async (id: string): Promise<void> => {
+    await api.delete(Endpoints.movimentacoes.definitivo(id))
   },
 }

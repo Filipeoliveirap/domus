@@ -5,6 +5,7 @@ type Entidade = 'evento' | 'pessoa' | 'movimentacao' | 'categoria' | 'usuario' |
 const AFETADAS: Record<Entidade, string[][]> = {
   evento: [
     ['eventos'],
+    ['eventos-arquivados'],
     // `['eventos']` não cobre `['evento', id]` (detalhe) — o TanStack invalida por prefixo.
     ['evento'],
     ['inicio'],
@@ -15,6 +16,7 @@ const AFETADAS: Record<Entidade, string[][]> = {
   ],
   pessoa: [
     ['pessoas'],
+    ['pessoas-arquivadas'],
     // `['pessoas']` não cobre `['pessoa', id]` (detalhe).
     ['pessoa'],
     ['usuarios'],
@@ -25,12 +27,14 @@ const AFETADAS: Record<Entidade, string[][]> = {
   ],
   movimentacao: [
     ['movimentacoes'],
+    ['movimentacoes-arquivadas'],
     ['relatorios'],
     ['dashboard'],
     ['busca-global'],
   ],
   categoria: [
     ['categorias'],
+    ['categorias-arquivadas'],
     ['movimentacoes'],
     ['relatorios'],
     ['dashboard'],
@@ -38,6 +42,7 @@ const AFETADAS: Record<Entidade, string[][]> = {
   ],
   usuario: [
     ['usuarios'],
+    ['usuarios-arquivados'],
     ['busca-global'],
   ],
   igreja: [
@@ -57,6 +62,7 @@ const AFETADAS: Record<Entidade, string[][]> = {
   localEvento: [
     ['eventos'],
     ['evento'],
+    ['locais-evento-arquivados'],
   ],
   ministerio: [
     ['ministerios'],

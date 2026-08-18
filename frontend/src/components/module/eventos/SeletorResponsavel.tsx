@@ -15,23 +15,10 @@ interface SeletorResponsavelProps {
   onChange: (pessoaId: string | undefined, nome: string | undefined) => void
 }
 
-/**
- * Busca uma pessoa pelo nome e a define como responsável do evento. Reusa o mesmo
- * `usePessoas` + debounce do <ModalInscreverPessoas> — não é uma segunda forma de listar
- * pessoas, é a mesma.
- *
- * <p>Enquanto há um responsável escolhido, mostra só o "chip" dele com um X; a busca só
- * reaparece ao remover. Assim a tela não fica com uma lista aberta o tempo todo.
- */
 export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResponsavelProps) {
   const [busca, setBusca] = useState('')
-  // Nome a exibir no chip. Começa com o do evento em edição e passa a refletir a última
-  // escolha — sem isto, escolher uma pessoa nova mostraria o nome inicial (ou um texto
-  // genérico), porque o pai só devolve o id de volta.
   const [nomeEscolhido, setNomeEscolhido] = useState<string | undefined>(nomeInicial)
   const buscaDebounced = useDebounce(busca, 300)
-  // Só busca quando não há ninguém escolhido E o termo tem substância: uma letra traria
-  // meia igreja e nenhuma utilidade.
   const habilitado = !valor && buscaDebounced.trim().length >= 2
   const { data, isLoading } = usePessoas({
     q: habilitado ? buscaDebounced : '',

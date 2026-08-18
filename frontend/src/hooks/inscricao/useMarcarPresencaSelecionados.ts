@@ -12,13 +12,7 @@ export interface ItemSelecionado {
   tipo: 'inscricao' | 'acompanhante'
 }
 
-/**
- * Presença em lote de um SUBCONJUNTO escolhido manualmente na lista (modo seleção) —
- * diferente de `useMarcarTodosPresentes`, que marca todo mundo de uma vez. Dispara as
- * mutações em paralelo. Atualização otimista, mesmo motivo de `useMarcarTodosPresentes`
- * (ver Javadoc lá): o sucesso NÃO reinvalida `['inscricoes','lista']`, senão os botões
- * piscavam de volta pra "Marcar presença" antes de assentar no valor certo.
- */
+// Sucesso não reinvalida ['inscricoes','lista'], senão os botões piscam de volta pra "Marcar presença".
 export function useMarcarPresencaSelecionados(eventoId: string) {
   const queryClient = useQueryClient()
 

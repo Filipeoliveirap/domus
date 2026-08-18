@@ -10,14 +10,7 @@ import type {
 } from '@/types/financeiro/relatorio.type'
 import type { Vinculo } from '@/types/pessoa.type'
 
-/**
- * `igrejaId` opcional: ausente = minha igreja (comportamento de sempre); presente = uma
- * congregação da minha família. Quem valida se eu posso vê-la é o backend — o front só
- * repassa a escolha do seletor.
- *
- * `vinculo` opcional: filtra as contribuições pelo vínculo de quem contribuiu (Membros
- * ou Congregantes). Ausente = sem filtro, mesmo comportamento de sempre.
- */
+// igrejaId ausente = minha igreja; presente = congregação da família (backend valida o acesso).
 export const relatorioService = {
   resumo: async (periodo: PeriodoRelatorio, igrejaId?: string, vinculo?: Vinculo | ''): Promise<ResumoPeriodo> => {
     const { data } = await api.get(Endpoints.relatorios.resumo, { params: { ...periodo, ...(igrejaId ? { igrejaId } : {}), ...(vinculo ? { vinculo } : {}) } })

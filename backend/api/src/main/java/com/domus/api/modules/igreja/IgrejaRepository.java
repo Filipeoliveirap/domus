@@ -41,4 +41,26 @@ public interface IgrejaRepository extends JpaRepository<Igreja, UUID> {
          WHERE atualizado_por_usuario_id = :usuarioId OR vinculado_por_usuario_id = :usuarioId
         """, nativeQuery = true)
     int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    /** Toda igreja com exclusão agendada — o job varre esta lista todo dia. */
+    @Query("SELECT i FROM Igreja i WHERE i.exclusaoAgendadaEm IS NOT NULL")
+    List<Igreja> buscarComExclusaoAgendada();
+
+    @Modifying
+    @Query(value = """
+        UPDATE igreja
+           SET exclusao_agendada_em = :agora, exclusao_agendada_por_usuario_id = :usuarioId
+         WHERE id = :igrejaId
+        """, nativeQuery = true)
+    void marcarExclusaoAgendada(@Param("igrejaId") UUID igrejaId,
+                                 @Param("usuarioId") UUID usuarioId,
+                                 @Param("agora") java.time.LocalDateTime agora);
+
+    @Modifying
+    @Query(value = """
+        UPDATE igreja
+           SET exclusao_agendada_em = NULL, exclusao_agendada_por_usuario_id = NULL
+         WHERE id = :igrejaId
+        """, nativeQuery = true)
+    void cancelarExclusaoAgendada(@Param("igrejaId") UUID igrejaId);
 }

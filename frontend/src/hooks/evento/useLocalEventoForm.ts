@@ -7,11 +7,6 @@ import { locaisEventoService } from '@/services/localEvento.service'
 import type { LocalEventoRequest, LocalEventoResponse } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
 
-/**
- * Criação e edição de local de evento — mesmo formulário serve para os dois casos
- * (`local` presente = edição). Só quem gerencia eventos chega aqui (a tela de locais
- * já barra o acesso), mas quem decide de verdade continua sendo o backend.
- */
 export function useLocalEventoForm(local: LocalEventoResponse | null, onClose: () => void) {
   const queryClient = useQueryClient()
   const [erroGeral, setErroGeral] = useState<string | null>(null)

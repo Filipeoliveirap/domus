@@ -7,11 +7,7 @@ import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 import type { ListaInscritosResponse } from '@/types/inscricao.type'
 
-/**
- * Mesma correção pontual de `useMarcarPresencaInscricao`, só que para UM convidado — mesma
- * atualização otimista e mesmo motivo pra NÃO reinvalidar `['inscricoes','lista']` no
- * sucesso (ver Javadoc lá).
- */
+// Não reinvalida ['inscricoes','lista'] no sucesso, senão o patch otimista pisca de volta (mesmo motivo de useMarcarPresencaInscricao).
 export function useMarcarPresencaAcompanhante(eventoId: string) {
   const queryClient = useQueryClient()
 

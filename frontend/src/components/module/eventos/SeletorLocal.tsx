@@ -6,8 +6,7 @@ import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputCo
 import { useLocaisEvento } from '@/hooks/evento/useLocaisEvento'
 import styles from './SeletorLocal.module.css'
 
-// Sentinela de UI só para distinguir "escolher um local cadastrado" de "digitar local
-// ad-hoc" no <select> — nunca é enviado ao backend (localId/localTexto são o par real).
+// Sentinela de UI, nunca enviado ao backend (localId/localTexto são o par real).
 const OUTRO_LOCAL = '__outro__'
 
 interface SeletorLocalProps {
@@ -16,11 +15,6 @@ interface SeletorLocalProps {
   error?: string
   onChangeLocalId: (id: string | undefined) => void
   onChangeLocalTexto: (texto: string | undefined) => void
-  /**
-   * Disparado quando o local escolhido tem capacidade cadastrada. Quem usa este
-   * componente decide o que fazer — no formulário de evento, a regra é "só preenche
-   * Vagas se estiver vazio", nunca sobrescrever o que a pessoa já digitou.
-   */
   onCapacidadeSugerida?: (capacidade: number) => void
 }
 

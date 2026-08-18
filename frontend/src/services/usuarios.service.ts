@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import { Endpoints } from "@/lib/endpoints";
-import { UsuarioResponse} from "@/types/usuario.types";
+import { UsuarioResponse, UsuarioArquivadoResponse } from "@/types/usuario.types";
 import { PagedResponse } from "@/types/pagedResponse.type";
 import type { Role } from "@/types/usuario.types";
 
@@ -38,5 +38,14 @@ export const usuarioService = {
 
     revogarCapacidade: (id: string, capacidade: string): Promise<void> =>
         api.delete(Endpoints.usuarios.CAPACIDADE_ESPECIFICA(id, capacidade)).then(() => undefined),
-}   
+
+    listarArquivados: (): Promise<UsuarioArquivadoResponse[]> =>
+        api.get<UsuarioArquivadoResponse[]>(Endpoints.usuarios.ARQUIVADOS).then(res => res.data),
+
+    restaurar: (id: string): Promise<void> =>
+        api.post(Endpoints.usuarios.RESTAURAR(id)).then(() => undefined),
+
+    excluirDefinitivo: (id: string): Promise<void> =>
+        api.delete(Endpoints.usuarios.DEFINITIVO(id)).then(() => undefined),
+}
 

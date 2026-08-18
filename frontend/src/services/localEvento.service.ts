@@ -14,4 +14,13 @@ export const locaisEventoService = {
 
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.locaisEvento.BY_ID(id)).then(() => undefined),
+
+  listarArquivados: (): Promise<LocalEventoResponse[]> =>
+    api.get<LocalEventoResponse[]>(Endpoints.locaisEvento.ARQUIVADOS).then(res => res.data),
+
+  restaurar: (id: string): Promise<void> =>
+    api.post(Endpoints.locaisEvento.RESTAURAR(id)).then(() => undefined),
+
+  excluirDefinitivo: (id: string): Promise<void> =>
+    api.delete(Endpoints.locaisEvento.DEFINITIVO(id)).then(() => undefined),
 }

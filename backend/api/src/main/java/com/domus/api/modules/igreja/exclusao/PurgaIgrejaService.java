@@ -3,6 +3,11 @@ package com.domus.api.modules.igreja.exclusao;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.celula.CelulaMembroRepository;
+import com.domus.api.modules.celula.CelulaRepository;
+import com.domus.api.modules.ministerio.MinisterioMembroRepository;
+import com.domus.api.modules.ministerio.MinisterioRepository;
+import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +26,11 @@ public class PurgaIgrejaService {
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
     private final CategoriaFinanceiraRepository categoriaRepository;
     private final InscricaoRepository inscricaoRepository;
+    private final CelulaMembroRepository celulaMembroRepository;
+    private final CelulaRepository celulaRepository;
+    private final MinisterioMembroRepository ministerioMembroRepository;
+    private final MinisterioRepository ministerioRepository;
+    private final UsuarioCapacidadeRepository usuarioCapacidadeRepository;
 
     @Transactional
     public void purgar(UUID igrejaId) {
@@ -29,5 +39,11 @@ public class PurgaIgrejaService {
         inscricaoRepository.deleteAllByIgrejaId(igrejaId);
         movimentacaoRepository.deleteAllByIgrejaId(igrejaId);
         categoriaRepository.deleteAllByIgrejaId(igrejaId);
+
+        celulaMembroRepository.deleteAllByIgrejaId(igrejaId);
+        celulaRepository.deleteAllByIgrejaId(igrejaId);
+        ministerioMembroRepository.deleteAllByIgrejaId(igrejaId);
+        ministerioRepository.deleteAllByIgrejaId(igrejaId);
+        usuarioCapacidadeRepository.deleteAllByUsuarioIgrejaId(igrejaId);
     }
 }

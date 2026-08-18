@@ -22,4 +22,9 @@ public interface UsuarioCapacidadeRepository extends JpaRepository<UsuarioCapaci
     @Modifying
     @Query(value = "UPDATE usuario_capacidade SET concedido_por_usuario_id = NULL WHERE concedido_por_usuario_id = :usuarioId", nativeQuery = true)
     void desvincularConcedidoPor(@Param("usuarioId") UUID usuarioId);
+
+    /** Purga definitiva da igreja: usuario_capacidade não tem igreja_id própria, então filtra por subquery em usuario. */
+    @Modifying
+    @Query(value = "DELETE FROM usuario_capacidade WHERE usuario_id IN (SELECT id FROM usuario WHERE igreja_id = :igrejaId)", nativeQuery = true)
+    void deleteAllByUsuarioIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

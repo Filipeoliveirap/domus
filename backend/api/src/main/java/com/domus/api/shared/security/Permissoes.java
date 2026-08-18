@@ -65,4 +65,7 @@ public final class Permissoes {
 
     /** Criar, arquivar células e promover líderes de célula. */
     public static boolean podeGerenciarCelulas(String role) { return tem(role, SO_ADMIN); }
+
+    /** Agendar ou cancelar a exclusão definitiva da igreja — a ação de maior risco do sistema. */
+    public static boolean podeExcluirIgreja(String role) { return tem(role, SO_ADMIN); }
 }

@@ -17,13 +17,15 @@ class ExclusaoIgrejaJobTest {
 
     IgrejaRepository igrejaRepository;
     EmailService emailService;
+    PurgaIgrejaService purgaIgrejaService;
     ExclusaoIgrejaJob job;
 
     @BeforeEach
     void setup() {
         igrejaRepository = mock(IgrejaRepository.class);
         emailService = mock(EmailService.class);
-        job = new ExclusaoIgrejaJob(igrejaRepository, emailService, null);
+        purgaIgrejaService = mock(PurgaIgrejaService.class);
+        job = new ExclusaoIgrejaJob(igrejaRepository, emailService, purgaIgrejaService);
     }
 
     private Igreja igrejaAgendadaHa(int dias) {
@@ -38,6 +40,7 @@ class ExclusaoIgrejaJobTest {
         job.verificarPrazos();
 
         verify(emailService).enviar(eq("x@x.com"), contains("5 dias"), anyString());
+        verify(purgaIgrejaService, never()).purgar(any());
     }
 
     @Test
@@ -47,6 +50,7 @@ class ExclusaoIgrejaJobTest {
         job.verificarPrazos();
 
         verify(emailService).enviar(eq("x@x.com"), contains("1 dia"), anyString());
+        verify(purgaIgrejaService, never()).purgar(any());
     }
 
     @Test
@@ -61,10 +65,8 @@ class ExclusaoIgrejaJobTest {
     @Test
     void executaPurgaQuandoPrazoVenceu() {
         when(igrejaRepository.buscarComExclusaoAgendada()).thenReturn(List.of(igrejaAgendadaHa(10)));
-        PurgaIgrejaService purgaIgrejaService = mock(PurgaIgrejaService.class);
-        ExclusaoIgrejaJob jobComPurga = new ExclusaoIgrejaJob(igrejaRepository, emailService, purgaIgrejaService);
 
-        jobComPurga.verificarPrazos();
+        job.verificarPrazos();
 
         verify(purgaIgrejaService).purgar(any());
     }

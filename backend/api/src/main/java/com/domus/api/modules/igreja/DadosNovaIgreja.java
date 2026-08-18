@@ -1,12 +1,6 @@
 package com.domus.api.modules.igreja;
 
-/**
- * Pacote de dados para criar uma igreja com seu admin inicial.
- *
- * Usado pelos dois fluxos de cadastro (nativo e Google). A diferença entre eles fica só
- * nos dois últimos campos: no nativo, senhaHashOuNull vem preenchido e googleSubOuNull é null;
- * no Google, o inverso.
- */
+/** Usado pelos dois fluxos de cadastro: no nativo senhaHashOuNull vem preenchido, no Google é googleSubOuNull. */
 public record DadosNovaIgreja(
         String nomeIgreja,
         String emailContato,

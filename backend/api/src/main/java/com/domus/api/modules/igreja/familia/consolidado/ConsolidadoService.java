@@ -20,10 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Monta a visão geral da família: 3 consultas agregadas + montagem em memória.
- * Financeiro respeita o período escolhido; membros e eventos são fotografia de agora.
- */
+/** Financeiro respeita o período escolhido; membros e eventos são fotografia de agora. */
 @Service
 @Slf4j
 @RequiredArgsConstructor

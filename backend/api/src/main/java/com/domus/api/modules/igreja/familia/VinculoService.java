@@ -93,20 +93,7 @@ public class VinculoService {
                     "Você não pode vincular sua igreja a ela mesma.");
         }
 
-        /*
-         * TRAVA AS DUAS LINHAS ANTES DE VALIDAR.
-         *
-         * Sem isto há uma corrida que quebra a regra dos 2 níveis: se A e B trocarem códigos
-         * e os dois admins clicarem "entrar" ao mesmo tempo, cada transação lê o estado antigo
-         * da outra, as quatro validações passam nas duas, e o commit deixa A.mae=B E B.mae=A.
-         *
-         * O ciclo não trava nada (a consulta não é recursiva), mas destrói a autorização:
-         * pertenceAFamilia() passa a aprovar NOS DOIS SENTIDOS e cada igreja lê o financeiro
-         * da outra — exatamente o que esta feature existe para impedir.
-         *
-         * A ordem por UUID é o que evita deadlock: duas transações que travam as mesmas duas
-         * linhas em ordens opostas se bloqueiam mutuamente. Ordenando, elas serializam.
-         */
+        // Trava as duas linhas antes de validar: sem isso, dois vínculos concorrentes (A entra em B e B entra em A ao mesmo tempo) passam validação nos dois sentidos e quebram a regra dos 2 níveis. Ordem por UUID evita deadlock.
         UUID primeiro = igrejaId.compareTo(maeId) <= 0 ? igrejaId : maeId;
         UUID segundo  = igrejaId.compareTo(maeId) <= 0 ? maeId : igrejaId;
         travar(primeiro);

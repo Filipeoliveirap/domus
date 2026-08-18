@@ -4,11 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Cadastro de igreja via Google. Nome/e-mail do dono NÃO entram aqui: vêm sempre do
- * ID token validado (fonte da verdade da identidade). Só carregamos os dados da igreja,
- * que o Google não fornece.
- */
+/** Nome/e-mail do dono não entram aqui — vêm sempre do ID token validado. */
 public record GoogleRegistrarDTO(
         @NotBlank(message = "idToken é obrigatório")
         String idToken,

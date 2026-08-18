@@ -14,16 +14,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
- * Valida e transforma a imagem enviada. Três riscos são mitigados aqui:
- * <ol>
- *   <li>Arquivo que não é imagem: valida pelo conteúdo, nunca pela extensão.</li>
- *   <li>Bomba de descompressão: lê a dimensão do cabeçalho antes de decodificar pixels,
- *       evitando que um PNG de 5 MB vire gigabytes de bitmap.</li>
- *   <li>EXIF: descarta metadados (incluindo coordenada de GPS) e aplica a orientação
- *       antes de regravar para que fotos de celular não saiam deitadas.</li>
- * </ol>
- * <p>WebP não é aceito — o ImageIO do Java 21 não lê sem dependência extra, e celular/desktop
- * entrega JPEG ou PNG na prática. A saída é sempre JPEG.
+ * Valida por conteúdo (nunca extensão), lê dimensão do cabeçalho antes de decodificar pixels
+ * (evita bomba de descompressão) e descarta EXIF/GPS. WebP não é aceito (ImageIO não lê sem dependência extra); saída sempre JPEG.
  */
 @Component
 public class ProcessadorImagem {

@@ -28,13 +28,7 @@ public class FotoController {
                 .body(fotoService.enviar(arquivo, usuarioAutenticado.getIgrejaId()));
     }
 
-    /**
-     * O id de uma foto NUNCA é reaproveitado — trocar a foto cria outro. Por isso a resposta
-     * pode ser marcada como imutável, e o navegador busca cada imagem UMA vez.
-     *
-     * <p>É o que torna viável servir imagem pela API: sem isto, uma lista com 20 avatares
-     * bateria no servidor a cada visita.
-     */
+    /** Id de foto nunca é reaproveitado (troca cria outro), então a resposta pode ser marcada imutável. */
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> ler(
             @PathVariable UUID id,

@@ -16,10 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Envio e leitura de fotos. Os bytes vivem no bucket privado; aqui só o metadado.
- * Toda foto gera três versões: original (nunca servido), display (1200px) e thumb (200px).
- */
+/** Envio e leitura de fotos; toda foto gera original (nunca servido), display (1200px) e thumb (200px). */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -29,11 +26,7 @@ public class FotoService {
     private final ArmazenamentoFotos armazenamentoFotos;
     private final ProcessadorImagem processadorImagem;
 
-    /**
-     * Guarda os bytes no bucket antes de gravar a linha no banco. Se o storage falhar,
-     * não sobra linha órfã; se o banco falhar depois, a rotina de limpeza resolve os
-     * órfãos do bucket.
-     */
+    /** Grava no bucket antes do banco: se o storage falhar não sobra linha órfã. */
     @Transactional
     public FotoResponse enviar(MultipartFile arquivo, UUID igrejaId) {
         byte[] conteudo = lerBytes(arquivo);
@@ -58,10 +51,7 @@ public class FotoService {
         return FotoResponse.from(foto);
     }
 
-    /**
-     * Lê os bytes de uma versão. Foto de outra igreja retorna 404 (não 403) —
-     * "não existe" em vez de "existe, mas não é sua".
-     */
+    /** Foto de outra igreja retorna 404 (não 403) — "não existe" em vez de "não é sua". */
     @Transactional(readOnly = true)
     public byte[] ler(UUID id, TamanhoFoto tamanho, UUID igrejaId) {
         Foto foto = fotoRepository.findByIdAndIgrejaId(id, igrejaId)
@@ -69,11 +59,7 @@ public class FotoService {
         return armazenamentoFotos.ler(foto.getChave() + "/" + tamanho.sufixo());
     }
 
-    /**
-     * Resolve um id de foto para vincula-la a uma entidade (pessoa/evento/igreja).
-     * Valida que pertence à igreja do solicitante. Retorna {@code null} quando o id é
-     * {@code null} — "sem foto" é uma escolha válida.
-     */
+    /** Retorna {@code null} quando o id é {@code null} — "sem foto" é uma escolha válida. */
     @Transactional(readOnly = true)
     public Foto buscarParaVincular(UUID fotoId, UUID igrejaId) {
         if (fotoId == null) return null;
@@ -82,12 +68,7 @@ public class FotoService {
                         "Foto não encontrada ou não pertence a esta igreja."));
     }
 
-    /**
-     * Remove a linha do banco na transação corrente e agenda o apagamento dos arquivos
-     * para depois do commit. O bucket não participa de transação: se os bytes sumirem
-     * antes do commit e houver rollback, a linha volta mas a foto fica quebrada para sempre.
-     * Sem transação ativa (ex.: job de limpeza), apaga tudo na hora.
-     */
+    /** Apagamento dos arquivos é agendado pra depois do commit — bucket não participa da transação. */
     @Transactional
     public void remover(UUID id) {
         Foto foto = fotoRepository.findById(id)

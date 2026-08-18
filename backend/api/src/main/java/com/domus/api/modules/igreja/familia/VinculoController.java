@@ -11,14 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Path próprio (não {@code /igrejas/**}) de propósito: o matcher {@code GET /igrejas/*} do
- * {@code SecurityConfig} era {@code permitAll} quando esta feature foi escrita, e o status
- * da família teria caído nessa regra. Hoje aquele matcher exige autenticação, mas o path
- * separado continua certo: são recursos diferentes, com regras de acesso diferentes.
- *
- * <p>Papel exigido (ADMIN_IGREJA) fica no {@code SecurityConfig}, como todo o resto do projeto.
- */
+/** Path próprio (não {@code /igrejas/**}) porque são recursos com regras de acesso diferentes; papel exigido fica no {@code SecurityConfig}. */
 @RestController
 @RequestMapping("/igrejas-vinculadas")
 @RequiredArgsConstructor

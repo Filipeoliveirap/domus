@@ -4,11 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * A tabela consolidada da aba "Congregações": o somatório da família no topo e a linha
- * de cada igreja embaixo. A mãe é uma igreja operante, então ela entra na soma e também
- * aparece como linha.
- */
+/** Somatório da família no topo + linha por igreja; a mãe é operante, entra na soma e também aparece como linha. */
 public record ConsolidadoResponse(
         Totais familia,
         List<LinhaIgreja> porIgreja) {

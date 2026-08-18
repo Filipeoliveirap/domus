@@ -104,16 +104,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return ROTAS_AUTH.stream().anyMatch(uri::startsWith);
     }
 
-    /**
-     * Por padrão usa o IP do socket. Só confia em headers com proxy confiável
-     * (trust-forwarded-for=true) — sem isso, qualquer um forjaria o IP.
-     * Atrás da Cloudflare, prefere CF-Connecting-IP (ela sempre SUBSTITUI, nunca acrescenta).
-     *
-     * <p>Fallback em X-Forwarded-For: pega o ÚLTIMO elemento, não o primeiro — proxies
-     * costumam ACRESCENTAR nesse header em vez de substituir, e o primeiro elemento é
-     * controlado por quem faz a requisição (driblaria o rate limit variando esse valor).
-     * O último é o que o proxy confiável mais próximo escreveu, fora do alcance do cliente.
-     */
+    /** X-Forwarded-For: usa o ÚLTIMO elemento (escrito pelo proxy confiável), não o primeiro (forjável pelo cliente). */
     private String resolverIp(HttpServletRequest request) {
         if (trustForwardedFor) {
             String cf = request.getHeader("CF-Connecting-IP");

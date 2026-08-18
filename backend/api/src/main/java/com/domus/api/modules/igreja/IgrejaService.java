@@ -130,10 +130,7 @@ public class IgrejaService {
         return admin;
     }
 
-    /**
-     * Detalhe da própria igreja, cacheado. O igrejaId vem do JWT — não do corpo —
-     * então não há como acessar a igreja de outro tenant. Invalidado em {@link #atualizar}.
-     */
+    /** Cacheado; invalidado em {@link #atualizar}. */
     @Cacheable(value = "igreja", key = "#igrejaId")
     @Transactional(readOnly = true)
     public IgrejaDetalheDTO buscarDetalhe(UUID igrejaId) {

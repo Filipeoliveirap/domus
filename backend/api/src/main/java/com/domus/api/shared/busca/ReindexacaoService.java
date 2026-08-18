@@ -42,11 +42,7 @@ public class ReindexacaoService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    /**
-     * Recria o índice (delete + create com o mapping/settings atuais do Document).
-     * Necessário quando o analyzer muda: mapping de índice é imutável, então re-salvar
-     * num índice antigo não aplicaria o novo analyzer (asciifolding/edge_ngram).
-     */
+    /** Delete + create: mapping de índice é imutável, re-salvar não aplicaria um analyzer novo. */
     private void recriarIndice(Class<?> docClass) {
         IndexOperations ops = elasticsearchOperations.indexOps(docClass);
         if (ops.exists()) {
@@ -127,7 +123,22 @@ public class ReindexacaoService {
         var docs = movimentacaoRepository.findAll().stream()
                 .<MovimentacaoDocument>mapMulti((m, consumer) -> {
                     try {
-                        consumer.accept(MovimentacaoDocument.de(m));
+                        String categoriaNome = categoriaRepository
+                                .findByIdAndIgrejaIdIncluindoArquivadas(m.getCategoria().getId(), m.getIgreja().getId())
+                                .map(c -> c.getNome())
+                                .orElse(null);
+                        var idsPessoa = m.getContribuintes().stream()
+                                .map(c -> c.getPessoa())
+                                .filter(p -> p != null)
+                                .map(com.domus.api.modules.pessoa.Pessoa::getId)
+                                .distinct()
+                                .toList();
+                        var nomesPorPessoa = idsPessoa.isEmpty() ? java.util.Map.<java.util.UUID, String>of()
+                                : pessoaRepository.findByIdInIncluindoArquivadas(idsPessoa).stream()
+                                        .collect(java.util.stream.Collectors.toMap(
+                                                com.domus.api.modules.pessoa.Pessoa::getId,
+                                                com.domus.api.modules.pessoa.Pessoa::getNome));
+                        consumer.accept(MovimentacaoDocument.de(m, categoriaNome, nomesPorPessoa));
                     } catch (jakarta.persistence.EntityNotFoundException e) {
                         log.warn("Movimentação {} com categoria inexistente, pulando na reindexação.",
                                 m.getId());

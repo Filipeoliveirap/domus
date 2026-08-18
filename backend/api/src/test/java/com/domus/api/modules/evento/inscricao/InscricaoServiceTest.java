@@ -1043,7 +1043,7 @@ class InscricaoServiceTest {
                 .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
                 .build();
 
-        InscritoResponse response = InscritoResponse.from(inscricao, null);
+        InscritoResponse response = InscritoResponse.from(inscricao, pessoaDeOutraIgreja, null);
 
         assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Norte");
     }
@@ -1056,7 +1056,7 @@ class InscricaoServiceTest {
                 .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
                 .build();
 
-        ParticipanteResponse response = ParticipanteResponse.from(inscricao);
+        ParticipanteResponse response = ParticipanteResponse.from(inscricao, pessoaDeOutraIgreja);
 
         assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Sul");
     }

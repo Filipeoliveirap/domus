@@ -59,6 +59,9 @@ public class Igreja {
     @JoinColumn(name = "atualizado_por_usuario_id")
     private Usuario atualizadoPor;
 
+    @Column(name = "atualizado_por_texto")
+    private String atualizadoPorTexto;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "igreja_mae_id")
     private Igreja igrejaMae;
@@ -75,6 +78,9 @@ public class Igreja {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vinculado_por_usuario_id")
     private Usuario vinculadoPor;
+
+    @Column(name = "vinculado_por_texto")
+    private String vinculadoPorTexto;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)

@@ -7,6 +7,7 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
 import com.domus.api.modules.foto.FotoService;
@@ -29,14 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Trava os campos de inscrição (vagas, preço e a restrição de exclusividade) nos dois
- * caminhos de escrita.
- *
- * <p>Existe por causa do modo de falha específico deste tipo de mudança: um campo ligado só no
- * cadastro faz a API <b>aceitar</b> a edição e <b>descartar</b> em silêncio. Não quebra teste
- * nenhum, não aparece em log — o usuário só descobre quando reabre a tela e o valor voltou.
- */
+/** Campo ligado só no cadastro faz a edição ser aceita e descartada em silêncio — sem erro, sem log. */
 class EventoServiceCamposInscricaoTest {
 
     EventoRepository eventoRepository;
@@ -44,6 +38,7 @@ class EventoServiceCamposInscricaoTest {
     CacheEvictor cacheEvictor;
     OutboxRegistrador outboxRegistrador;
     InscricaoService inscricaoService;
+    InscricaoRepository inscricaoRepository;
     FotoService fotoService;
     ElegibilidadeService elegibilidadeService;
     PessoaRepository pessoaRepository;
@@ -63,6 +58,7 @@ class EventoServiceCamposInscricaoTest {
         cacheEvictor = mock(CacheEvictor.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         inscricaoService = mock(InscricaoService.class);
+        inscricaoRepository = mock(InscricaoRepository.class);
         fotoService = mock(FotoService.class);
         elegibilidadeService = mock(ElegibilidadeService.class);
         pessoaRepository = mock(PessoaRepository.class);
@@ -70,8 +66,8 @@ class EventoServiceCamposInscricaoTest {
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
-                outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository, familiaIgrejaService);
+                outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
+                pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any()))
@@ -231,10 +227,8 @@ class EventoServiceCamposInscricaoTest {
 
     @Test
     void semFimDeclaradoEhEmAndamentoNoMesmoDiaEEncerradoNoDiaSeguinte() {
-        // Fronteira do null fimEm: considerado em andamento até o fim do PRÓPRIO dia de
-        // início, encerrado a partir do dia seguinte.
-        // Início do dia (não now().minusHours(2)): perto da meia-noite, "now - 2h" cai no
-        // dia anterior e o teste vira flaky, mesmo com getSituacao() correto.
+        // fimEm nulo: em andamento até o fim do dia de início, encerrado no dia seguinte.
+        // atStartOfDay() em vez de now().minusHours(2): perto da meia-noite isso cairia no dia anterior e o teste ficaria flaky.
         Evento comecouHoje = Evento.builder()
                 .id(eventoId).igreja(igreja()).titulo("Culto")
                 .inicioEm(LocalDate.now().atStartOfDay())

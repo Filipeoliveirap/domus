@@ -36,4 +36,15 @@ public interface MinisterioRepository extends JpaRepository<Ministerio, UUID> {
     @Modifying
     @Query(value = "UPDATE ministerio SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    @Modifying
+    @Query(value = """
+        UPDATE ministerio
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 }

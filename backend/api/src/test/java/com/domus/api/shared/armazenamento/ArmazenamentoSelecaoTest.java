@@ -7,14 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Prova que o TESTE usa armazenamento em memória, não o R2 real.
- *
- * <p>Existe por um erro achado na revisão: a seleção usava {@code @Profile("test")}, mas o
- * projeto nunca ativa esse perfil — então o bean ativo durante os testes era o R2, que
- * tentaria rede e credencial de verdade. Sem este teste, quem mexer na configuração de novo
- * quebraria isso sem perceber.
- */
+/** Seleção usava @Profile("test"), mas o projeto nunca ativa esse perfil — o bean ativo nos testes era o R2 de verdade. */
 @SpringBootTest
 class ArmazenamentoSelecaoTest {
 

@@ -15,18 +15,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * B4: prova que a ordenação por situação (EM_ANDAMENTO -> hoje -> futuro -> ENCERRADO) é feita
- * no BANCO (dentro do próprio {@code ORDER BY} da paginação), não em memória depois de buscar a
- * página. Roda contra o Postgres de testes de verdade (replace = NONE), dentro da transação que
- * o {@code @DataJpaTest} sempre desfaz ao fim do teste — não deixa linha nenhuma no banco.
- *
- * <p>O teste cria 5 eventos, um de cada "posição" (incluindo dois futuros para testar a ordem
- * relativa dentro do próprio bucket) e pede a listagem em páginas de 2. Se a ordenação fosse
- * feita em memória sobre a página já carregada (o erro que este teste existe para pegar), cada
- * página manteria a ordem antiga (por {@code inicio_em} bruto) e o EM_ANDAMENTO nasceria na
- * página errada sempre que não coincidisse com a ordem cronológica pura.
- */
+/** Prova que a ordenação por situação é feita no ORDER BY do banco, não em memória sobre a página já paginada. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class EventoRepositoryOrdenacaoTest {

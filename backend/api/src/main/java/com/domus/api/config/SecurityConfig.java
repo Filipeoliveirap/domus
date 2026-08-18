@@ -112,6 +112,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/eventos/tipos")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
 
+                        .requestMatchers(HttpMethod.GET, "/eventos/arquivados")
+                        .hasAnyRole(ADMIN, LIDER)
+
                         .requestMatchers(HttpMethod.GET, "/eventos/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/eventos/**")

@@ -27,11 +27,7 @@ public interface CelulaRepository extends JpaRepository<Celula, UUID> {
         """, nativeQuery = true)
     List<Celula> findArquivadasPorIgreja(@Param("igrejaId") UUID igrejaId);
 
-    /**
-     * Igual a {@link #findByIdAndIgrejaId}, mas enxerga arquivados também — usado por
-     * excluirDefinitivo, que precisa ser chamável tanto na listagem normal (sem vínculo,
-     * nunca foi arquivada) quanto na tela de Arquivados (já arquivada).
-     */
+    /** Igual a {@link #findByIdAndIgrejaId}, mas enxerga arquivados — usado por excluirDefinitivo. */
     @Query(value = "SELECT * FROM celula WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     Optional<Celula> findByIdAndIgrejaIdIncluindoArquivadas(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
@@ -39,4 +35,16 @@ public interface CelulaRepository extends JpaRepository<Celula, UUID> {
     @Modifying
     @Query(value = "UPDATE celula SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    /** Rede de segurança pra excluir um usuário de vez (mesmo padrão de EventoRepository#desvincularUsuario). */
+    @Modifying
+    @Query(value = """
+        UPDATE celula
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
 }

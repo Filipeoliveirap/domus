@@ -43,10 +43,7 @@ public record EventoRequest(
         java.math.BigDecimal preco,
         Boolean exclusivoMembros,
         Boolean requerInscricao,
-        /**
-         * Só pode ser {@code true} quando {@code requerInscricao} também é — ver
-         * {@link com.domus.api.modules.evento.EventoService#validarControlaPresenca}.
-         */
+        /** Só pode ser {@code true} quando {@code requerInscricao} também é. */
         Boolean controlaPresenca,
 
         Boolean restritoPropriaIgreja,

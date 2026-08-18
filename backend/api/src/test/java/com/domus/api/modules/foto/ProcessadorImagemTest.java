@@ -64,10 +64,7 @@ class ProcessadorImagemTest {
 
     @Test
     void aplicaOrientacaoDoExifEDescartaOsMetadados() throws IOException {
-        // A fixture e DEITADA (400x200) com Orientation=6 ("gire 90"), como sai de um
-        // celular fotografando em pe. Se apagarmos o EXIF sem aplicar a rotacao, ela
-        // aparece deitada para sempre — e nenhum teste com imagem gerada por codigo
-        // pegaria isso, porque essas nunca tem EXIF.
+        // Fixture deitada (400x200) com Orientation=6: se apagar o EXIF sem aplicar a rotação, fica deitada pra sempre — imagem gerada por código nunca tem EXIF pra pegar isso.
         try (InputStream in = getClass().getResourceAsStream("/fotos/com-exif-girada.jpg")) {
             assertThat(in).as("fixture com EXIF precisa existir").isNotNull();
             var r = processador.validarEProcessar(in.readAllBytes());

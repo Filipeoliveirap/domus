@@ -5,4 +5,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UsuarioSearchRepository extends ElasticsearchRepository<UsuarioDocument, String> {
+    void deleteByIgrejaId(String igrejaId);
 }

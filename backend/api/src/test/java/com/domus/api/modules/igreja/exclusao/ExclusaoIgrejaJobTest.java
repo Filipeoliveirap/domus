@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -26,7 +27,7 @@ class ExclusaoIgrejaJobTest {
     }
 
     private Igreja igrejaAgendadaHa(int dias) {
-        return Igreja.builder().nome("Igreja X").emailContato("x@x.com")
+        return Igreja.builder().id(UUID.randomUUID()).nome("Igreja X").emailContato("x@x.com")
                 .exclusaoAgendadaEm(LocalDateTime.now().minusDays(dias)).build();
     }
 
@@ -55,5 +56,16 @@ class ExclusaoIgrejaJobTest {
         job.verificarPrazos();
 
         verify(emailService, never()).enviar(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void executaPurgaQuandoPrazoVenceu() {
+        when(igrejaRepository.buscarComExclusaoAgendada()).thenReturn(List.of(igrejaAgendadaHa(10)));
+        PurgaIgrejaService purgaIgrejaService = mock(PurgaIgrejaService.class);
+        ExclusaoIgrejaJob jobComPurga = new ExclusaoIgrejaJob(igrejaRepository, emailService, purgaIgrejaService);
+
+        jobComPurga.verificarPrazos();
+
+        verify(purgaIgrejaService).purgar(any());
     }
 }

@@ -3,6 +3,9 @@ package com.domus.api.modules.igreja.exclusao;
 import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.local.LocalEventoRepository;
+import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.modules.celula.CelulaMembroRepository;
 import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.ministerio.MinisterioMembroRepository;
@@ -26,6 +29,9 @@ public class PurgaIgrejaService {
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
     private final CategoriaFinanceiraRepository categoriaRepository;
     private final InscricaoRepository inscricaoRepository;
+    private final EventoRepository eventoRepository;
+    private final VisitanteRepository visitanteRepository;
+    private final LocalEventoRepository localEventoRepository;
     private final CelulaMembroRepository celulaMembroRepository;
     private final CelulaRepository celulaRepository;
     private final MinisterioMembroRepository ministerioMembroRepository;
@@ -45,5 +51,9 @@ public class PurgaIgrejaService {
         ministerioMembroRepository.deleteAllByIgrejaId(igrejaId);
         ministerioRepository.deleteAllByIgrejaId(igrejaId);
         usuarioCapacidadeRepository.deleteAllByUsuarioIgrejaId(igrejaId);
+
+        eventoRepository.deleteAllByIgrejaId(igrejaId);
+        visitanteRepository.deleteAllByIgrejaId(igrejaId);
+        localEventoRepository.deleteAllByIgrejaId(igrejaId);
     }
 }

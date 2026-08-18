@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Landmark, Info, ShieldCheck, Save, RotateCcw } from 'lucide-react'
+import { Landmark, Info, ShieldCheck, Save, RotateCcw, AlertTriangle } from 'lucide-react'
 import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { ModalExcluirIgreja } from '@/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja'
+import { useAuthStore } from '@/store/authStore'
+import { api } from '@/lib/api'
+import { Endpoints } from '@/lib/endpoints'
 import { SkeletonIgrejaConfig } from './SkeletonIgrejaConfig'
 import styles from '../configuracoes.module.css'
 
@@ -49,6 +53,23 @@ export default function DadosDaIgrejaPage() {
   const { data: igreja, isLoading } = useMinhaIgreja()
   const atualizar = useAtualizarIgreja()
   const { buscar: buscarCep, carregando: buscandoCep } = useBuscaCep()
+
+  const role = useAuthStore((s) => s.role)
+  const exclusaoAgendadaEm = useAuthStore((s) => s.exclusaoAgendadaEm)
+  const diasRestantes = useAuthStore((s) => s.diasRestantes)
+  const atualizarExclusaoAgendada = useAuthStore((s) => s.atualizarExclusaoAgendada)
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false)
+  const [cancelandoExclusao, setCancelandoExclusao] = useState(false)
+
+  async function cancelarExclusao() {
+    setCancelandoExclusao(true)
+    try {
+      await api.post(Endpoints.igreja.exclusao.CANCELAR)
+      atualizarExclusaoAgendada(null, null)
+    } finally {
+      setCancelandoExclusao(false)
+    }
+  }
 
   // O logo não faz parte do schema do RHF (não é um <input> comum, é o UploadFoto) — vive
   // em estado próprio, espelhado da igreja como o resto do formulário via reset().
@@ -308,6 +329,55 @@ export default function DadosDaIgrejaPage() {
           </p>
         </section>
       </div>
+
+      {role === 'ADMIN_IGREJA' && (
+        <section className={styles.zonaPerigo}>
+          <h2 className={styles.tituloZonaPerigo}>
+            <AlertTriangle size={16} aria-hidden="true" />
+            Zona de Perigo
+          </h2>
+
+          {exclusaoAgendadaEm ? (
+            <div className={styles.linhaZonaPerigo}>
+              <p className={styles.textoZonaPerigo}>
+                Esta igreja será excluída definitivamente em {diasRestantes} dia(s).
+              </p>
+              <button
+                type="button"
+                className={styles.botaoSecundario}
+                onClick={cancelarExclusao}
+                disabled={cancelandoExclusao}
+              >
+                {cancelandoExclusao ? 'Cancelando...' : 'Cancelar exclusão'}
+              </button>
+            </div>
+          ) : (
+            <div className={styles.linhaZonaPerigo}>
+              <p className={styles.textoZonaPerigo}>
+                Excluir a igreja apaga todos os dados definitivamente, após 10 dias de carência.
+              </p>
+              <button
+                type="button"
+                className={styles.botaoPerigo}
+                onClick={() => setModalExcluirAberto(true)}
+              >
+                Excluir esta igreja
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {modalExcluirAberto && (
+        <ModalExcluirIgreja
+          nomeIgreja={igreja.nome}
+          onClose={() => setModalExcluirAberto(false)}
+          onExcluidoComSucesso={() => {
+            setModalExcluirAberto(false)
+            atualizarExclusaoAgendada(new Date().toISOString(), 10)
+          }}
+        />
+      )}
     </>
   )
 }

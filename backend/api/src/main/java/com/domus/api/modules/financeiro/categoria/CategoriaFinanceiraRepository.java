@@ -65,4 +65,9 @@ public interface CategoriaFinanceiraRepository extends JpaRepository<CategoriaFi
     boolean existeComNome(@Param("igrejaId") UUID igrejaId,
                           @Param("nome") String nome,
                           @Param("idIgnorar") UUID idIgnorar);
+
+    /** Purga da igreja: chamar só depois de purgar movimentacao_financeira (que referencia categoria). */
+    @Modifying
+    @Query(value = "DELETE FROM categoria_financeira WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

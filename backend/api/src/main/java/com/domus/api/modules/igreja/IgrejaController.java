@@ -38,14 +38,7 @@ public class IgrejaController {
                         null, null, null));
     }
 
-    /*
-     * REMOVIDO em 2026-07-21: GET /igrejas/{id} lia QUALQUER igreja por UUID, sem checar
-     * tenant — um usuário logado de outra igreja obtinha nome, CNPJ, e-mail e telefone dela.
-     * Já tinha sido endurecido uma vez (era permitAll, virou authenticated), mas o acesso
-     * cruzado seguia. Não havia um único consumidor no front nem em teste, então apagar
-     * elimina a superfície em vez de remendá-la. O caso legítimo é GET /igrejas/minha, que
-     * tira o tenant do JWT e por isso não tem como pedir a igreja de outro.
-     */
+    // GET /igrejas/{id} foi removido: vazava dados de outra igreja sem checar tenant. Use /igrejas/minha (tenant vem do JWT).
 
     @GetMapping("/minha")
     public ResponseEntity<IgrejaDetalheDTO> buscarMinhaIgreja() {

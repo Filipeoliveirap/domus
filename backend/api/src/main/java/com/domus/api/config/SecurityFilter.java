@@ -59,12 +59,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * O token vem do cookie httpOnly, nunca mais do header Authorization.
-     *
-     * <p>Não existe fallback pro header de propósito: mantê-lo deixaria o localStorage
-     * viável no front e a migração seria só decorativa.
-     */
+    /** Sem fallback pro header Authorization de propósito — mantê-lo deixaria localStorage viável no front. */
     private String recoverToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) return null;

@@ -6,12 +6,7 @@ import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * A igreja inteira, para a tela de Configurações → Dados da Igreja.
- *
- * <p>Separado do {@link IgrejaDTO}, que é o resumo público (e cacheado) usado no cadastro.
- * Este aqui carrega o endereço e a auditoria — dado que só o admin da própria igreja vê.
- */
+/** Diferente do {@link IgrejaDTO} (resumo público cacheado): carrega endereço e auditoria, visível só ao admin da própria igreja. */
 public record IgrejaDetalheDTO(
         UUID id,
         String nome,

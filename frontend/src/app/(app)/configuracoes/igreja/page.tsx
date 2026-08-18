@@ -30,11 +30,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-/**
- * Os campos que contam para a barra de completude. Nome e e-mail ficam de fora de
- * propósito: são obrigatórios desde o cadastro, então sempre estariam preenchidos e só
- * inflariam o percentual sem dizer nada.
- */
+// Nome e e-mail ficam de fora: já obrigatórios no cadastro, inflariam o percentual à toa.
 const CAMPOS_COMPLETUDE: (keyof FormData)[] = [
   'razaoSocial', 'cnpj', 'denominacao', 'sigla', 'telefoneContato',
   'cep', 'logradouro', 'numero', 'bairro', 'cidade', 'uf',

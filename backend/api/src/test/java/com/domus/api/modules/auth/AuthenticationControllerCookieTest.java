@@ -29,13 +29,14 @@ class AuthenticationControllerCookieTest {
     @Mock private AuthService authService;
     @Mock private PasswordResetService passwordResetService;
     @Mock private GoogleAuthService googleAuthService;
+    @Mock private com.domus.api.shared.web.ClienteIpResolver clienteIpResolver;
 
     private final AuthCookieFactory cookieFactory =
             new AuthCookieFactory(true, "/api", 600_000L, 604_800_000L);
 
     private AuthenticationController controller() {
         return new AuthenticationController(
-                authService, passwordResetService, googleAuthService, cookieFactory);
+                authService, passwordResetService, googleAuthService, cookieFactory, clienteIpResolver);
     }
 
     @Test

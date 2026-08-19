@@ -5,9 +5,13 @@ import com.domus.api.shared.security.RefreshTokenService;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.modules.termos.TermoAceiteService;
+import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
+import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.CacheManager;
@@ -18,6 +22,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class IgrejaServiceTest {
@@ -32,6 +40,7 @@ class IgrejaServiceTest {
     CacheManager cacheManager;
     FotoService fotoService;
     OutboxRegistrador outboxRegistrador;
+    TermoAceiteService termoAceiteService;
     IgrejaService igrejaService;
 
     UUID igrejaId = UUID.randomUUID();
@@ -48,10 +57,11 @@ class IgrejaServiceTest {
         cacheManager = mock(CacheManager.class);
         fotoService = mock(FotoService.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
+        termoAceiteService = mock(TermoAceiteService.class);
         igrejaService = new IgrejaService(
                 igrejaRepository, usuarioRepository, roleRepository, passwordEncoder,
                 tokenService, refreshTokenService, pessoaRepository, cacheManager,
-                fotoService, outboxRegistrador);
+                fotoService, outboxRegistrador, termoAceiteService);
     }
 
     @Test
@@ -76,5 +86,44 @@ class IgrejaServiceTest {
 
         assertThat(dto.exclusaoAgendadaEm()).isNull();
         assertThat(dto.diasRestantes()).isNull();
+    }
+
+    @Test
+    void criarIgrejaComAdminLancaQuandoNaoAceitouTermos() {
+        doThrow(new BusinessException("TERMOS_NAO_ACEITOS", "É necessário aceitar os Termos de Uso e a Política de Privacidade para continuar."))
+                .when(termoAceiteService).exigirAceite(false);
+
+        assertThatThrownBy(() -> igrejaService.criarIgrejaComAdmin(
+                new DadosNovaIgreja("Igreja X", "contato@x.com", null, "11999999999",
+                        "Admin", "admin@x.com", "hash", null),
+                false, "203.0.113.9"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Termos");
+
+        verify(igrejaRepository, never()).save(any());
+    }
+
+    @Test
+    void criarIgrejaComAdminRegistraAceiteQuandoTrue() {
+        when(pessoaRepository.existsByEmail(anyString())).thenReturn(false);
+        when(igrejaRepository.save(any(Igreja.class))).thenAnswer(inv -> {
+            Igreja i = inv.getArgument(0);
+            i.setId(igrejaId);
+            return i;
+        });
+        when(roleRepository.findByNome("ADMIN_IGREJA")).thenReturn(Optional.of(
+                Role.builder().id(UUID.randomUUID()).nome("ADMIN_IGREJA").build()));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> {
+            Usuario u = inv.getArgument(0);
+            u.setId(UUID.randomUUID());
+            return u;
+        });
+
+        igrejaService.criarIgrejaComAdmin(
+                new DadosNovaIgreja("Igreja Y", "contato@y.com", null, "11999999999",
+                        "Admin", "admin@y.com", "hash", null),
+                true, "203.0.113.9");
+
+        verify(termoAceiteService).registrarAceite(any(UUID.class), eq("203.0.113.9"));
     }
 }

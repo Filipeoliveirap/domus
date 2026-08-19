@@ -7,6 +7,9 @@ import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.shared.security.AuthCookieFactory;
 import com.domus.api.shared.security.UsuarioAutenticado;
+import com.domus.api.shared.web.ClienteIpResolver;
+import com.domus.api.modules.termos.TermoAceiteService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -23,11 +26,14 @@ public class IgrejaController {
     private final IgrejaService igrejaService;
     private final AuthCookieFactory cookieFactory;
     private final UsuarioAutenticado usuarioAutenticado;
+    private final ClienteIpResolver clienteIpResolver;
+    private final TermoAceiteService termoAceiteService;
 
     @PostMapping("/registrar")
     public ResponseEntity<SessaoDTO> cadastrarIgreja(
-            @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
-        RegistrarIgrejaResponse response = igrejaService.registrar(data);
+            @RequestBody @Valid RegistrarIgrejaAdminRequest data,
+            HttpServletRequest request) {
+        RegistrarIgrejaResponse response = igrejaService.registrar(data, clienteIpResolver.resolver(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.access(response.token()).toString())
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(response.refreshToken()).toString())
@@ -35,7 +41,9 @@ public class IgrejaController {
                 .body(new SessaoDTO(
                         response.id(), response.nome(), response.role(),
                         response.igrejaId(), response.igrejaNome(), null,
-                        null, null, null));
+                        null, null, null, java.util.List.of(),
+                        termoAceiteService.precisaAceitar(response.id()),
+                        termoAceiteService.dataUltimoAceite(response.id())));
     }
 
     // GET /igrejas/{id} foi removido: vazava dados de outra igreja sem checar tenant. Use /igrejas/minha (tenant vem do JWT).

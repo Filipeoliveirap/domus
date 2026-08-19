@@ -28,6 +28,7 @@ class AuthServiceTest {
     UsuarioRepository usuarioRepository;
     UsuarioCapacidadeRepository capacidadeRepository;
     PasswordEncoder passwordEncoder;
+    com.domus.api.modules.termos.TermoAceiteService termoAceiteService;
     AuthService service;
 
     UUID usuarioId = UUID.randomUUID();
@@ -41,8 +42,9 @@ class AuthServiceTest {
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        termoAceiteService = mock(com.domus.api.modules.termos.TermoAceiteService.class);
         service = new AuthService(authenticationManager, tokenService, refreshTokenService,
-                loginAttemptService, usuarioRepository, passwordEncoder, capacidadeRepository);
+                loginAttemptService, usuarioRepository, passwordEncoder, capacidadeRepository, termoAceiteService);
     }
 
     private Usuario usuarioComSenha(String hash) {

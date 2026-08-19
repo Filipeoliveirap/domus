@@ -39,6 +39,7 @@ public class AuthenticationController {
     private final GoogleAuthService googleAuthService;
     private final AuthCookieFactory cookieFactory;
     private final com.domus.api.shared.web.ClienteIpResolver clienteIpResolver;
+    private final com.domus.api.modules.termos.TermoAceiteService termoAceiteService;
 
     @PostMapping("/login")
     public ResponseEntity<SessaoDTO> login(@RequestBody @Valid AuthenticationDTO data) {
@@ -123,6 +124,7 @@ public class AuthenticationController {
 
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
         return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
-                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId(), r.capacidadesExtras());
+                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId(), r.capacidadesExtras(),
+                termoAceiteService.precisaAceitar(r.id()), termoAceiteService.dataUltimoAceite(r.id()));
     }
 }

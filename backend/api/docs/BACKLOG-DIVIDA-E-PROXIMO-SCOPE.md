@@ -408,8 +408,9 @@ Outros resíduos dos protótipos, para quando as telas correspondentes forem fei
   entrega por não ter endpoint — botão que não faz nada é pior que botão ausente.
 - **"What to Prepare"** (o que levar) do protótipo é caso da **Spec D** (campos personalizados),
   não campo próprio.
-- **`adicionarAcompanhante` não tem `usuarioId` real no log** — usa `meuMembroId` como proxy.
-  Estender a assinatura quando alguém encostar no método.
+- ~~**`adicionarAcompanhante` não tem `usuarioId` real no log**~~ **RESOLVIDO** (nota
+  desatualizada, confirmado 2026-08-19): o método já recebe `usuarioId` como parâmetro
+  próprio e o `log.info` já usa ele, não `meuMembroId`.
 
 ### ~~Contribuintes: filtro, relatório e múltiplos por lançamento~~ (2026-07-22, **RESOLVIDO**)
 

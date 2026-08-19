@@ -7,6 +7,8 @@ import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.shared.security.AuthCookieFactory;
 import com.domus.api.shared.security.UsuarioAutenticado;
+import com.domus.api.shared.web.ClienteIpResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -23,11 +25,13 @@ public class IgrejaController {
     private final IgrejaService igrejaService;
     private final AuthCookieFactory cookieFactory;
     private final UsuarioAutenticado usuarioAutenticado;
+    private final ClienteIpResolver clienteIpResolver;
 
     @PostMapping("/registrar")
     public ResponseEntity<SessaoDTO> cadastrarIgreja(
-            @RequestBody @Valid RegistrarIgrejaAdminRequest data) {
-        RegistrarIgrejaResponse response = igrejaService.registrar(data);
+            @RequestBody @Valid RegistrarIgrejaAdminRequest data,
+            HttpServletRequest request) {
+        RegistrarIgrejaResponse response = igrejaService.registrar(data, clienteIpResolver.resolver(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.access(response.token()).toString())
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(response.refreshToken()).toString())

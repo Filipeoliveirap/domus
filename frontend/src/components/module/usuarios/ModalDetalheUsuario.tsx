@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { X, Shield, Clock, CalendarPlus, KeyRound } from 'lucide-react'
 import { useUsuario } from '@/hooks/usuario/useUsuario'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -49,8 +50,7 @@ export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
             <div className={styles.cabecalho}>
               <span className={styles.avatar}>
                 {urlFoto(usuario.fotoId, 'THUMB') ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                  <img src={urlFoto(usuario.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                  <Image src={urlFoto(usuario.fotoId, 'THUMB')!} alt="" width={48} height={48} unoptimized className={styles.avatarFoto} />
                 ) : (
                   iniciais(usuario.nome)
                 )}

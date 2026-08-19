@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
@@ -223,8 +224,7 @@ export function Sidebar() {
 
       <Link href="/perfil" className={styles.profile} onClick={fecharNav}>
         {urlFoto(fotoId, 'THUMB') ? (
-          // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-          <img src={urlFoto(fotoId, 'THUMB')!} alt={nome ?? 'Perfil'} className={styles.profileAvatar} />
+          <Image src={urlFoto(fotoId, 'THUMB')!} alt={nome ?? 'Perfil'} width={40} height={40} unoptimized className={styles.profileAvatar} />
         ) : (
           <div className={styles.profileAvatar}>
             <User size={20} />

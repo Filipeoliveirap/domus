@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
@@ -143,8 +144,7 @@ export default function MinisterioDetalhePage() {
               >
                 <div className={styles.itemMembroInfo}>
                   {urlFoto(membro.fotoId, 'THUMB') ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                    <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
+                    <Image src={urlFoto(membro.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatar}
                       onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
                   ) : (
                     <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>

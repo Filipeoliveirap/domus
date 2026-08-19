@@ -9,13 +9,20 @@ import { NextRequest, NextResponse } from 'next/server'
 // funcionando, mesmo ele injetando script dele mesmo na página.
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const isDev = process.env.NODE_ENV !== 'production'
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://accounts.google.com https://accounts.google.com/gsi/client`,
+    // 'unsafe-eval' só em dev: o React usa eval() de propósito em desenvolvimento (Fast
+    // Refresh, reconstrução de stack trace) — nunca em produção, confirmado sem uso de
+    // eval()/new Function() no bundle de produção (ver BACKLOG). Sem isso, `npm run dev`
+    // trava com "eval() is not supported" no Console.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client`,
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
     'frame-src https://accounts.google.com',
-    "connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br",
+    // ws://localhost só em dev: é o websocket do Hot Module Reload (webpack-hmr) — sem
+    // isso o navegador bloqueia a conexão e o Fast Refresh para de funcionar.
+    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br${isDev ? ' ws://localhost:*' : ''}`,
     "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com",
     "font-src 'self'",
     "base-uri 'self'",

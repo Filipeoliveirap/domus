@@ -13,6 +13,7 @@ import com.domus.api.modules.ministerio.MinisterioRepository;
 import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.foto.FotoRepository;
 import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -71,6 +72,10 @@ public class PurgaIgrejaService {
     public void purgar(UUID igrejaId) {
         log.warn("Iniciando purga definitiva da igreja. igreja_id={}", igrejaId);
 
+        // Captura os e-mails dos admins ANTES de apagar os usuários — depois disso não tem
+        // mais como saber quem eram, e o e-mail de conclusão precisa avisar todos eles.
+        List<String> emailsAdmins = usuarioRepository.buscarEmailsAdminsAtivos(igrejaId);
+
         inscricaoRepository.deleteAllByIgrejaId(igrejaId);
         movimentacaoRepository.deleteAllByIgrejaId(igrejaId);
         categoriaRepository.deleteAllByIgrejaId(igrejaId);
@@ -86,6 +91,10 @@ public class PurgaIgrejaService {
         localEventoRepository.deleteAllByIgrejaId(igrejaId);
 
         List<UUID> idsFilhas = igrejaRepository.buscarIdsDasFilhas(igrejaId);
+        // Nomes capturados antes do desvínculo — só pro e-mail de conclusão avisar quais
+        // igrejas continuam de pé, de forma independente.
+        List<String> nomesFilhas = idsFilhas.isEmpty() ? List.of()
+                : igrejaRepository.findAllById(idsFilhas).stream().map(Igreja::getNome).toList();
         if (!idsFilhas.isEmpty()) {
             igrejaRepository.desvincularFamiliaEmLote(idsFilhas);
             log.info("Igrejas vinculadas desvinculadas da família. igreja_mae_id={}, filhas={}", igrejaId, idsFilhas.size());
@@ -123,11 +132,50 @@ public class PurgaIgrejaService {
             }
         }
 
-        igrejaRepository.findById(igrejaId).ifPresent(igreja ->
-                emailService.enviar(igreja.getEmailContato(), "Sua igreja foi excluída",
-                        "A exclusão definitiva de \"" + igreja.getNome() + "\" foi concluída. Todos os dados foram removidos."));
+        igrejaRepository.findById(igrejaId).ifPresent(igreja -> {
+            String assunto = "Sua igreja foi excluída";
+            String corpo = corpoEmailConcluido(igreja.getNome(), nomesFilhas);
+            for (String destinatario : destinatarios(igreja.getEmailContato(), emailsAdmins)) {
+                try {
+                    emailService.enviar(destinatario, assunto, corpo);
+                } catch (Exception e) {
+                    log.error("Falha ao enviar e-mail de exclusão concluída — a purga segue mesmo assim. igreja_id={}, destinatario={}",
+                            igrejaId, destinatario, e);
+                }
+            }
+        });
 
         igrejaRepository.deleteById(igrejaId);
         log.warn("Purga definitiva da igreja concluída. igreja_id={}", igrejaId);
+    }
+
+    /** Corpo do e-mail final: sem botão (nada mais pra cancelar), com o aviso de família se
+     *  a igreja era mãe, e uma despedida. Conteúdo pensado pra evoluir junto com o produto. */
+    private String corpoEmailConcluido(String nomeIgreja, List<String> nomesFilhas) {
+        String avisoFamilia = nomesFilhas.isEmpty() ? "" : """
+                <p>As igrejas vinculadas (%s) continuam funcionando normalmente — elas só
+                   deixaram de estar ligadas a "%s", com todos os dados intactos.</p>
+                """.formatted(String.join(", ", nomesFilhas), nomeIgreja);
+
+        return """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2>Exclusão concluída</h2>
+                  <p>A exclusão definitiva de "%s" foi concluída. Todos os dados foram removidos
+                     permanentemente — esta ação não pode ser desfeita.</p>
+                  %s
+                  <p style="color: #666; font-size: 14px;">Obrigado por ter usado o Domus. Se quiser
+                     voltar no futuro, é só fazer um novo cadastro quando quiser.</p>
+                </div>
+                """.formatted(nomeIgreja, avisoFamilia);
+    }
+
+    /** Contato + todos os admins, sem duplicar (contato costuma ser o e-mail de um deles). */
+    private java.util.Set<String> destinatarios(String emailContato, List<String> emailsAdmins) {
+        java.util.Set<String> resultado = new java.util.LinkedHashSet<>();
+        if (emailContato != null && !emailContato.isBlank()) {
+            resultado.add(emailContato);
+        }
+        resultado.addAll(emailsAdmins);
+        return resultado;
     }
 }

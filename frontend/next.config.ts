@@ -6,10 +6,15 @@ import { withSentryConfig } from "@sentry/nextjs";
 const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8080";
 
 // CSP pragmática: libera o Google Identity (botão de login/cadastro) e restringe as origens.
-// unsafe-inline/unsafe-eval são concessão ao Next.js sem CSP baseada em nonce (ver BACKLOG).
+// unsafe-inline é concessão ao Next.js: a maior parte do site é gerada estaticamente no
+// build (○ em `next build`), então CSP com nonce por requisição não cobre esses scripts —
+// nonce só chega em página renderizada por requisição, e forçar renderização dinâmica em
+// tudo custaria a performance que a geração estática dá. unsafe-eval, por outro lado, foi
+// removida (2026-08-19): checado o bundle de produção inteiro (.next/static/chunks) e não
+// há nenhum uso de eval()/new Function() — era concessão sem necessidade real.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://accounts.google.com/gsi/client",
+  "script-src 'self' 'unsafe-inline' https://accounts.google.com https://accounts.google.com/gsi/client",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "frame-src https://accounts.google.com",
   // A API é same-origin agora (via rewrite /api/*), então 'self' basta.

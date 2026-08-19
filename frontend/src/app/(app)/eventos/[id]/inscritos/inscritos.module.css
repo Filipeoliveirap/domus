@@ -220,6 +220,18 @@
   background: var(--color-bg-page);
 }
 
+/* Card inteiro clicável: modo seleção (seleciona em qualquer ponto) ou detalhe da pessoa. */
+.linhaClicavel {
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+.linhaClicavel:hover {
+  background: var(--color-bg-page);
+}
+.linhaConvidado.linhaClicavel:hover {
+  background: var(--color-bg-table-head);
+}
+
 /* Conector visual: mostra que o convidado pertence à linha acima */
 .conector {
   position: absolute;

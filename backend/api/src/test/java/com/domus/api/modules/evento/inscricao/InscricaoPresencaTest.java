@@ -112,6 +112,46 @@ class InscricaoPresencaTest {
     }
 
     @Test
+    void desmarcarTodosPresentes_recusa409_quandoEventoNaoControlaPresenca() {
+        Evento evento = evento(false);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));
+
+        assertThatThrownBy(() -> service.desmarcarTodosPresentes(eventoId, igrejaId, "ADMIN_IGREJA"))
+                .isInstanceOf(ConflitoNegocioException.class);
+
+        verify(inscricaoRepository, never()).listarPorEvento(any());
+    }
+
+    @Test
+    void desmarcarTodosPresentes_desmarcaInscritoEAcompanhantes_quandoControlaPresenca() {
+        Evento evento = evento(true);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));
+
+        InscricaoEvento inscricao = inscricao(evento);
+        inscricao.setCompareceu(true);
+        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
+                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").compareceu(true).build();
+        inscricao.setAcompanhantes(new java.util.ArrayList<>(List.of(acompanhante)));
+
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(inscricao));
+
+        int desmarcados = service.desmarcarTodosPresentes(eventoId, igrejaId, "ADMIN_IGREJA");
+
+        assertThat(desmarcados).isEqualTo(2); // 1 inscrito + 1 acompanhante
+        assertThat(inscricao.isCompareceu()).isFalse();
+        assertThat(acompanhante.isCompareceu()).isFalse();
+        verify(inscricaoRepository).save(inscricao);
+    }
+
+    @Test
+    void desmarcarTodosPresentes_recusaSemPermissao() {
+        assertThatThrownBy(() -> service.desmarcarTodosPresentes(eventoId, igrejaId, "ACESSO_COMUM"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+
+        verify(eventoRepository, never()).findByIdAndIgrejaId(any(), any());
+    }
+
+    @Test
     void marcarPresencaInscricao_recusa409_quandoEventoNaoControlaPresenca() {
         Evento evento = evento(false);
         InscricaoEvento inscricao = inscricao(evento);

@@ -4,6 +4,45 @@
   gap: 40px;   /* espaço entre header e form */
 }
 
+.termosWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.termosLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.termosTexto {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.termosLink {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.termosLink:hover {
+  opacity: 0.75;
+}
+
 /* ─── Cabeçalho ──────────────────────────────────────────── */
 .header {
   display: flex;

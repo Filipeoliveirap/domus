@@ -10,6 +10,7 @@ import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioCapacidade;
 import com.domus.api.modules.usuario.UsuarioCapacidadeRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.termos.TermoAceiteService;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.exception.ContaBloqueadaException;
@@ -35,6 +36,7 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioCapacidadeRepository capacidadeRepository;
+    private final TermoAceiteService termoAceiteService;
 
     public LoginResponseDTO login(AuthenticationDTO data) {
         log.info("Tentativa de login. email={}", data.email());
@@ -141,7 +143,9 @@ public class AuthService {
                 sessao.igrejaId(), sessao.igrejaNome(), sessao.fotoId(),
                 sessao.cargo(), sessao.igrejaSigla(), sessao.igrejaLogoId(),
                 capacidadeRepository.findByUsuarioId(usuarioId).stream()
-                        .map(UsuarioCapacidade::getCapacidade).toList());
+                        .map(UsuarioCapacidade::getCapacidade).toList(),
+                termoAceiteService.precisaAceitar(usuarioId),
+                termoAceiteService.dataUltimoAceite(usuarioId));
     }
 
     /** Troca a própria senha e revoga as demais sessões, preservando a atual. */

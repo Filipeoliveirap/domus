@@ -75,4 +75,18 @@ public interface IgrejaRepository extends JpaRepository<Igreja, UUID> {
          WHERE id IN (:idsFilhas)
         """, nativeQuery = true)
     void desvincularFamiliaEmLote(@Param("idsFilhas") List<UUID> idsFilhas);
+
+    /** Zera as três FKs de `igreja` para `usuario` (na própria igreja e em qualquer filha
+     *  vinculada) antes da purga apagar os usuários — senão a FK recusa o DELETE. */
+    @Modifying
+    @Query(value = """
+        UPDATE igreja
+           SET atualizado_por_usuario_id = NULL,
+               vinculado_por_usuario_id = NULL,
+               exclusao_agendada_por_usuario_id = NULL
+         WHERE atualizado_por_usuario_id IN (SELECT id FROM usuario WHERE igreja_id = :igrejaId)
+            OR vinculado_por_usuario_id IN (SELECT id FROM usuario WHERE igreja_id = :igrejaId)
+            OR exclusao_agendada_por_usuario_id IN (SELECT id FROM usuario WHERE igreja_id = :igrejaId)
+        """, nativeQuery = true)
+    void limparReferenciasDeUsuario(@Param("igrejaId") UUID igrejaId);
 }

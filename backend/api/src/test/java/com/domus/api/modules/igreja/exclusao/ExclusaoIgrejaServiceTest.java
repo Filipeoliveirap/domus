@@ -16,6 +16,8 @@ import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.email.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -40,6 +42,8 @@ class ExclusaoIgrejaServiceTest {
     EmailService emailService;
     PasswordEncoder passwordEncoder;
     GoogleAuthService googleAuthService;
+    CacheManager cacheManager;
+    Cache igrejaCache;
     ExclusaoIgrejaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -57,9 +61,12 @@ class ExclusaoIgrejaServiceTest {
         emailService = mock(EmailService.class);
         passwordEncoder = mock(PasswordEncoder.class);
         googleAuthService = mock(GoogleAuthService.class);
+        cacheManager = mock(CacheManager.class);
+        igrejaCache = mock(Cache.class);
+        when(cacheManager.getCache("igreja")).thenReturn(igrejaCache);
         service = new ExclusaoIgrejaService(igrejaRepository, pessoaRepository, eventoRepository,
                 movimentacaoRepository, celulaRepository, ministerioRepository, usuarioRepository, emailService,
-                passwordEncoder, googleAuthService);
+                passwordEncoder, googleAuthService, cacheManager);
     }
 
     private Igreja igreja() {

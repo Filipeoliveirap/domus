@@ -92,6 +92,11 @@ class PurgaIgrejaIntegrationTest {
         Usuario usuario = usuarioRepository.save(Usuario.builder()
                 .igreja(igreja).pessoa(pessoa).role(roleAdmin).senhaHash("hash").ativo(true).build());
 
+        // Exercita o Critical 1 do review final: igreja.atualizado_por_usuario_id aponta pra um
+        // usuário desta igreja — sem limpar essa FK antes, o DELETE de usuario quebra.
+        igreja.setAtualizadoPor(usuario);
+        igreja = igrejaRepository.save(igreja);
+
         LocalEvento local = localEventoRepository.save(LocalEvento.builder()
                 .igreja(igreja).nome("Salão de Teste").build());
 
@@ -138,6 +143,13 @@ class PurgaIgrejaIntegrationTest {
         igreja.setLogoFoto(foto);
         igreja = igrejaRepository.save(igreja);
 
+        // Anexada também na pessoa (pessoa.foto_id é ON DELETE RESTRICT): exercita o Critical 2 do
+        // review final — a purga de fotos precisa rodar DEPOIS de apagar a pessoa, senão a FK barra.
+        Foto fotoPessoa = fotoRepository.save(Foto.builder()
+                .igreja(igreja).chave("fotos/teste/pessoa/" + pessoa.getId()).tipo("image/jpeg").bytes(456L).build());
+        pessoa.setFoto(fotoPessoa);
+        pessoa = pessoaRepository.save(pessoa);
+
         entityManager.flush();
         entityManager.clear();
 
@@ -157,5 +169,6 @@ class PurgaIgrejaIntegrationTest {
         assertThat(ministerioRepository.findByIdAndIgrejaId(ministerio.getId(), igreja.getId())).isEmpty();
         assertThat(visitanteRepository.findByIdAndIgrejaId(visitante.getId(), igreja.getId())).isEmpty();
         assertThat(fotoRepository.findById(foto.getId())).isEmpty();
+        assertThat(fotoRepository.findById(fotoPessoa.getId())).isEmpty();
     }
 }

@@ -544,13 +544,12 @@ depois que os dois módulos estiverem implementados:
   outbox nas operações de criar/atualizar/arquivar (mesmo padrão de pessoa/evento),
   senão o índice fica desatualizado silenciosamente.
 
-### Excluir igreja: contas só-Google sem caminho de reautenticação na UI (2026-08-18)
+### ~~Excluir igreja: contas só-Google sem caminho de reautenticação na UI~~ (2026-08-18, resolvido)
 
-Achado no review final da feature de exclusão de igreja (carência de 10 dias). O backend
-já suporta as duas formas de reautenticar antes de agendar a exclusão — senha nativa OU
-`googleIdToken` (`ExclusaoIgrejaService.reautenticar`, testado) — mas `ModalExcluirIgreja`
-só manda `senha`. Um `ADMIN_IGREJA` que só entra com Google (sem senha nativa) esbarra
-num campo de senha que não tem como preencher e recebe `REAUTENTICACAO_NECESSARIA` sem
-nenhum jeito de resolver pela tela. Fix desta rodada só ajustou a mensagem de erro pra
-não parecer "senha errada" nesse caso — a feature completa (botão "Confirmar com Google"
-no modal, reusando o componente de login Google já existente) fica pra depois.
+Achado no review final da feature de exclusão de igreja (carência de 10 dias): o backend
+já suportava as duas formas de reautenticar (senha nativa OU `googleIdToken`), mas
+`ModalExcluirIgreja` só mandava `senha`, deixando contas só-Google sem caminho de
+confirmação. Resolvido: `GET /igrejas/exclusao/resumo` agora expõe `temSenhaNativa`
+(`ExclusaoIgrejaService.resumo`, a partir de `usuario.senhaHash`); o modal mostra o campo
+de senha OU o botão `GoogleLogin` (reusando `@react-oauth/google`, mesmo componente do
+`/login`) conforme esse campo.

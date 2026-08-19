@@ -186,11 +186,31 @@ class ExclusaoIgrejaServiceTest {
         when(ministerioRepository.countByIgrejaId(igrejaId)).thenReturn(3L);
         when(usuarioRepository.countByIgrejaId(igrejaId)).thenReturn(8L);
         when(igrejaRepository.buscarIdsDasFilhas(igrejaId)).thenReturn(List.of());
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioId).senhaHash("hash-bcrypt").build()));
 
-        ResumoExclusaoResponse resumo = service.resumo(igrejaId);
+        ResumoExclusaoResponse resumo = service.resumo(igrejaId, usuarioId);
 
         assertThat(resumo.pessoas()).isEqualTo(42L);
         assertThat(resumo.eventos()).isEqualTo(10L);
         assertThat(resumo.igrejasVinculadas()).isEmpty();
+        assertThat(resumo.temSenhaNativa()).isTrue();
+    }
+
+    @Test
+    void resumoIndicaContaSoGoogleQuandoSemSenhaHash() {
+        when(pessoaRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(eventoRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(movimentacaoRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(celulaRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(ministerioRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(usuarioRepository.countByIgrejaId(igrejaId)).thenReturn(0L);
+        when(igrejaRepository.buscarIdsDasFilhas(igrejaId)).thenReturn(List.of());
+        when(usuarioRepository.findById(usuarioId))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioId).senhaHash(null).googleSub("sub-123").build()));
+
+        ResumoExclusaoResponse resumo = service.resumo(igrejaId, usuarioId);
+
+        assertThat(resumo.temSenhaNativa()).isFalse();
     }
 }

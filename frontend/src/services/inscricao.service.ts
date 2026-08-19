@@ -57,6 +57,9 @@ export const inscricoesService = {
   marcarTodosPresentes: (eventoId: string): Promise<void> =>
     api.post(Endpoints.presenca.MARCAR_TODOS(eventoId)).then(() => undefined),
 
+  desmarcarTodosPresentes: (eventoId: string): Promise<void> =>
+    api.post(Endpoints.presenca.DESMARCAR_TODOS(eventoId)).then(() => undefined),
+
   marcarPresencaInscricao: (eventoId: string, inscricaoId: string, compareceu: boolean): Promise<void> =>
     api.patch(Endpoints.presenca.INSCRICAO(eventoId, inscricaoId), { compareceu })
       .then(() => undefined),

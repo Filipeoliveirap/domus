@@ -6,6 +6,7 @@ import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/auth.service'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { ModalReaceitarTermos } from '@/components/common/ModalReaceitarTermos/ModalReaceitarTermos'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -15,6 +16,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const logoutIntencional = useAuthStore((s) => s.logoutIntencional)
   const login = useAuthStore((s) => s.login)
   const setHidratado = useAuthStore((s) => s.setHidratado)
+  const precisaAceitarTermos = useAuthStore((s) => s.precisaAceitarTermos)
   const [falhaInfra, setFalhaInfra] = useState(false)
   const [tentativa, setTentativa] = useState(0)
 
@@ -70,6 +72,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!hidratado || !isAuthenticated) return null
+
+  if (precisaAceitarTermos) return <ModalReaceitarTermos />
 
   return <>{children}</>
 }

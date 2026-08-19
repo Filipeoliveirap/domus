@@ -104,6 +104,13 @@ public class InscricaoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/eventos/{eventoId}/presenca/desmarcar-todos")
+    public ResponseEntity<Void> desmarcarTodosPresentes(@PathVariable UUID eventoId) {
+        var usuario = usuarioAutenticado.get();
+        inscricaoService.desmarcarTodosPresentes(eventoId, usuario.getIgreja().getId(), usuario.getRole().getNome());
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/eventos/{eventoId}/presenca/inscricoes/{inscricaoId}")
     public ResponseEntity<Void> marcarPresencaInscricao(
             @PathVariable UUID eventoId,

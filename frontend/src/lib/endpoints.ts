@@ -100,6 +100,7 @@ export const Endpoints = {
 
   presenca: {
     MARCAR_TODOS: (eventoId: string) => `/eventos/${eventoId}/presenca/marcar-todos`,
+    DESMARCAR_TODOS: (eventoId: string) => `/eventos/${eventoId}/presenca/desmarcar-todos`,
     INSCRICAO: (eventoId: string, inscricaoId: string) =>
       `/eventos/${eventoId}/presenca/inscricoes/${inscricaoId}`,
     ACOMPANHANTE: (eventoId: string, acompanhanteId: string) =>

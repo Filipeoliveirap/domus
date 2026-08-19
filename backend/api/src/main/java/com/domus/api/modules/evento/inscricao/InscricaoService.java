@@ -533,6 +533,35 @@ public class InscricaoService {
         return marcados;
     }
 
+    /** Reverte um "marcar todos" feito sem querer, ou reinicia a contagem de presença do zero. */
+    @Transactional
+    public int desmarcarTodosPresentes(UUID eventoId, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para marcar presença.");
+        }
+
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        validarControlaPresenca(evento);
+
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        int desmarcados = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            inscricao.setCompareceu(false);
+            desmarcados++;
+            for (AcompanhanteInscricao acompanhante : inscricao.getAcompanhantes()) {
+                acompanhante.setCompareceu(false);
+                desmarcados++;
+            }
+            inscricaoRepository.save(inscricao);
+        }
+
+        log.info("Presença desmarcada em lote. evento_id={}, pessoas_desmarcadas={}, igreja_id={}",
+                eventoId, desmarcados, igrejaId);
+        return desmarcados;
+    }
+
     /** Corrige a exceção de um inscrito específico após o "marcar todos" (ou o contrário). */
     @Transactional
     public void marcarPresencaInscricao(UUID eventoId, UUID inscricaoId, boolean compareceu,

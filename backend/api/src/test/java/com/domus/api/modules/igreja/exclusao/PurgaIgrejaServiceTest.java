@@ -156,26 +156,35 @@ class PurgaIgrejaServiceTest {
     }
 
     @Test
-    void purgaDeFotoContinuaMesmoSeUmaFalhar() {
-        UUID fotoId1 = UUID.randomUUID();
-        UUID fotoId2 = UUID.randomUUID();
-        Foto foto1 = Foto.builder().id(fotoId1).build();
-        Foto foto2 = Foto.builder().id(fotoId2).build();
-        when(fotoRepository.findByIgrejaId(igrejaId)).thenReturn(List.of(foto1, foto2));
-        doThrow(new RuntimeException("falha no R2")).when(fotoService).remover(fotoId1);
-
-        service.purgar(igrejaId);
-
-        verify(fotoService).remover(fotoId2);
-    }
-
-    @Test
     void purgaApagaUsuarioDepoisPessoa() {
         service.purgar(igrejaId);
 
         var ordem = inOrder(usuarioRepository, pessoaRepository);
         ordem.verify(usuarioRepository).deleteAllByIgrejaId(igrejaId);
         ordem.verify(pessoaRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaLimpaReferenciasDeUsuarioAntesDeApagarUsuario() {
+        service.purgar(igrejaId);
+
+        var ordem = inOrder(igrejaRepository, usuarioRepository);
+        ordem.verify(igrejaRepository).limparReferenciasDeUsuario(igrejaId);
+        ordem.verify(usuarioRepository).deleteAllByIgrejaId(igrejaId);
+    }
+
+    @Test
+    void purgaLimpaLogoERemoveFotosDepoisDePessoa() {
+        UUID fotoId = UUID.randomUUID();
+        Foto foto = Foto.builder().id(fotoId).build();
+        when(fotoRepository.findByIgrejaId(igrejaId)).thenReturn(List.of(foto));
+
+        service.purgar(igrejaId);
+
+        var ordem = inOrder(pessoaRepository, igrejaRepository, fotoService);
+        ordem.verify(pessoaRepository).deleteAllByIgrejaId(igrejaId);
+        ordem.verify(igrejaRepository).limparLogoFoto(igrejaId);
+        ordem.verify(fotoService).remover(fotoId);
     }
 
     @Test

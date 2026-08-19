@@ -18,6 +18,9 @@ export const Endpoints = {
     REGISTER_IGREJA: '/igrejas/registrar',
     CHANGE_PASSWORD: '/auth/change-password',
   },
+  termos: {
+    ACEITAR: '/termos/aceitar',
+  },
   usuarios: {
     LISTAR_USUARIOS: '/usuarios',
     BY_ID: (id: string) => `/usuarios/${id}`,

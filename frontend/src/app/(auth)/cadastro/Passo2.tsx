@@ -124,9 +124,9 @@ export function Passo2({
           />
           <span className={styles.termosTexto}>
             Ao criar minha conta, eu concordo com os{' '}
-            <Link href="/termos" className={styles.termosLink}>Termos de Uso</Link>
+            <Link href="/termos" className={styles.termosLink} target="_blank">Termos de Uso</Link>
             {' '}e a{' '}
-            <Link href="/privacidade" className={styles.termosLink}>Política de Privacidade</Link>
+            <Link href="/privacidade" className={styles.termosLink} target="_blank">Política de Privacidade</Link>
             {' '}do Domus.
           </span>
         </label>

@@ -21,8 +21,8 @@
   e exigem exportar as envs do `.env` no terminal. Ideal: subir um Postgres real em Docker por
   teste (fidelidade + isolamento), sem depender do Neon nem de env manual.
 
-- **Maven wrapper quebrado.** Falta `.mvn/wrapper/maven-wrapper.properties`, então `./mvnw`
-  não roda — usamos o `mvn` do sistema. Regerar o wrapper (`mvn wrapper:wrapper`).
+- ~~**Maven wrapper quebrado.**~~ **RESOLVIDO** (2026-08-16): `.mvn/wrapper/maven-wrapper.properties`
+  existe, `./mvnw` roda normalmente.
 
 - **CSP baseada em nonce no front (hardening).** A CSP atual do Next libera `'unsafe-inline'`
   e `'unsafe-eval'` (concessão ao Next.js sem nonce). Hardening real = CSP com nonce por
@@ -98,11 +98,10 @@
   LazyInitializationException na hora. Verificado em 2026-07-16: é o único `@Scheduled` do
   projeto, não há `@Async` nem event listener, e as reindexações são todas `@Transactional`.
 
-- **Coleções `@OneToMany` da `Igreja` não são lidas por ninguém.** `usuarios`, `membros`,
-  `eventos`, `categorias` e `movimentacoes` (`Igreja.java:54-66`) estão mapeadas mas nenhum
-  código as acessa (verificado em 2026-07-16). São mapeamento morto e uma arma engatilhada:
-  o dia em que alguém serializar uma `Igreja` ou tocar nelas fora de sessão, carrega a
-  igreja inteira ou estoura. Avaliar remover (YAGNI) — nada as usa hoje.
+- ~~**Coleções `@OneToMany` da `Igreja` não são lidas por ninguém.**~~ **RESOLVIDO**:
+  `Igreja.java` não tem mais nenhuma coleção `@OneToMany` — foram removidas. Resolve junto
+  o item de `CascadeType.ALL`/`orphanRemoval` listado mais abaixo (auditoria da feature de
+  igrejas vinculadas): sem coleção mapeada, não há cascata de escrita pra remover.
 
 - **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
   auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito
@@ -256,10 +255,8 @@ Dois agentes revisaram back e front. 9 dos 11 achados foram corrigidos na hora. 
 - **Semântica ARIA das abas em `/financeiro/relatorios`.** Lá são abas de verdade e faltam
   `aria-controls` + `role="tabpanel"` + navegação por setas. (Em `/configuracoes` já foi
   corrigido: eram links de navegação e viraram `aria-current="page"`.)
-- **`CascadeType.ALL` + `orphanRemoval` nas 5 coleções de `Igreja`.** Não há bug hoje (o código
-  novo nunca inicializa as coleções), mas é bomba armada: um `builder()` + `save()` sobre id
-  existente apagaria membros/usuários/eventos/movimentações. Remover a cascata de escrita da
-  raiz de tenant exige teste de integração — não fazer no susto.
+- ~~**`CascadeType.ALL` + `orphanRemoval` nas 5 coleções de `Igreja`.**~~ **RESOLVIDO**: as
+  coleções foram removidas de `Igreja.java` (ver item equivalente mais acima nesta lista).
 - **Trigger e lock cobrem a regra dos 2 níveis, mas por caminhos diferentes.** O lock
   (`VinculoService`) resolve a corrida; o trigger (V14) resolve caminhos futuros que não passem
   pelo serviço. Um NÃO substitui o outro: trigger com `SELECT` simples não vê transação
@@ -411,7 +408,15 @@ Outros resíduos dos protótipos, para quando as telas correspondentes forem fei
 - **`adicionarAcompanhante` não tem `usuarioId` real no log** — usa `meuMembroId` como proxy.
   Estender a assinatura quando alguém encostar no método.
 
-### Contribuintes: filtro, relatório e múltiplos por lançamento (2026-07-22)
+### ~~Contribuintes: filtro, relatório e múltiplos por lançamento~~ (2026-07-22, **RESOLVIDO**)
+
+**FEITO** (confirmado 2026-08-19): `movimentacao_financeira.pessoa_id` virou tabela
+`movimentacao_contribuinte` N-para-N (migration V15, `UNIQUE(movimentacao_id, pessoa_id)`,
+com `valor` próprio por contribuinte — resolve o rateio vs. repetição citado abaixo).
+`MovimentacaoContribuinte`, `MovimentacaoContribuinteRepository` e uso em
+`RelatorioRepository`/`MovimentacaoFinanceiraService` confirmados no código.
+
+Texto original mantido abaixo por contexto:
 
 Pedido do autor. **As duas partes são a mesma feature** e devem ser feitas juntas — fazer o
 relatório primeiro e depois mudar a cardinalidade obrigaria a reescrever o relatório.
@@ -456,9 +461,12 @@ confirmou em 2026-07-22 que quer.
   frente com cache de borda, sem mexer no modelo (o id nunca é reaproveitado, então cache
   de borda não tem problema de invalidação).
 
-### Separar as credenciais de backup das de foto (2026-07-22)
+### ~~Separar as credenciais de backup das de foto~~ (2026-07-22, **RESOLVIDO** — confirmado pelo autor em 2026-08-19)
 
-Hoje **o mesmo token do R2** atende os dois buckets, com leitura e escrita em ambos.
+Hoje o backup usa `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`R2_BUCKET` (secrets do GitHub)
+e as fotos usam `R2_FOTOS_*` (`.env` da VPS) — nomes e locais diferentes, tokens já separados.
+
+Texto original mantido abaixo por contexto:
 
 ⚠️ **Isso desfez uma proteção que existia por desenho.** O bucket de backup era **write-only**:
 o CI escrevia e não conseguia ler. Se aquela credencial vazasse, o atacante gravaria lixo, mas
@@ -527,22 +535,20 @@ realidade.
 
 ### Busca global (Elasticsearch) precisa acompanhar Visitantes/Células (2026-07-25)
 
-Os specs `2026-07-25-visitantes-design.md` e `2026-07-25-celulas-design.md` não
-mencionam a busca global unificada (Elasticsearch, `busca/` — o mesmo mecanismo que já
-indexa pessoa/evento/movimentação via *transactional outbox*). Pendência a resolver
-depois que os dois módulos estiverem implementados:
+**PARCIALMENTE RESOLVIDO** (confirmado 2026-08-19): `VisitanteSearchRepository`,
+`CelulaSearchRepository` e `MinisterioSearchRepository` existem — os três módulos já
+estão indexados e entram em `BuscaGlobalService.buscar`.
 
-- **Visitante**: provavelmente precisa entrar no índice (buscar visitante pelo nome na
-  busca global), com o mesmo cuidado de permissão que já existe pra financeiro/usuários
-  (`podeVerUsuariosEFinanceiroNaBuscaGlobal`) — decidir quem pode ver visitante na busca
-  (`ADMIN_IGREJA` e `SECRETARIO`, pelo spec de capacidades extra).
-- **Célula**: decidir se célula em si é uma entidade buscável (como `ministerio` deveria
-  ser, verificar se já está) ou só aparece indiretamente via pessoa/visitante.
-- Conferir se `ministerio` (Redes) já está indexado na busca global — se não estiver,
-  é a mesma pendência, só que já existente antes destes três specs.
-- Lembrar do outbox: toda entidade nova que entra na busca precisa emitir evento pro
-  outbox nas operações de criar/atualizar/arquivar (mesmo padrão de pessoa/evento),
-  senão o índice fica desatualizado silenciosamente.
+~~⚠️ **Gap: `BuscaGlobalService.buscar` não checava permissão pra visitante.**~~
+**RESOLVIDO** (2026-08-19): a chamada de `buscaVisitanteService.buscar` rodava
+incondicionalmente pra qualquer role, enquanto usuário/financeiro já eram gateados por
+`Permissoes.podeVerUsuariosEFinanceiroNaBuscaGlobal`. Envolvida no mesmo tipo de `if`,
+usando `Permissoes.podeGerenciarVisitantes(role, capacidadesExtras)` (mesma regra já
+aplicada em `VisitanteController`). Testes em `BuscaGlobalServiceTest`
+(`acessoComumNaoVeVisitanteNaBuscaGlobal`, `adminVeVisitanteNaBuscaGlobal`,
+`secretarioVeVisitanteNaBuscaGlobalMesmoSemSerAdmin`).
+
+Célula: ainda não decidido se é buscável diretamente ou só via pessoa/visitante — pendente.
 
 ### ~~Excluir igreja: contas só-Google sem caminho de reautenticação na UI~~ (2026-08-18, resolvido)
 

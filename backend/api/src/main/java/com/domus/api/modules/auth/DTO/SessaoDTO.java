@@ -19,10 +19,22 @@ public record SessaoDTO(
         /** Logo da igreja — exibida no ícone do TopBar no lugar do Church quando existe. */
         UUID igrejaLogoId,
         /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
-        List<String> capacidadesExtras
+        List<String> capacidadesExtras,
+        /** true = precisa (re)aceitar Termos/Política (conta nova ou versão desatualizada). */
+        boolean precisaAceitarTermos,
+        /** Data do último aceite (independente da versão) — exibida no perfil. */
+        java.time.LocalDateTime termosAceitosEm
 ) {
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
-        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId, List.of());
+        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                List.of(), false, null);
+    }
+
+    public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
+                      List<String> capacidadesExtras) {
+        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                capacidadesExtras, false, null);
     }
 }

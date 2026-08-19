@@ -44,6 +44,7 @@ const UF_OPTIONS = [
 export default function PerfilPage() {
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
+  const termosAceitosEm = useAuthStore((s) => s.termosAceitosEm)
   const podeEditarTudo = podeGerenciarPessoas(role, capacidadesExtras)
 
   const { data: pessoa, isLoading: carregando } = useMinhaPessoa()
@@ -230,6 +231,15 @@ export default function PerfilPage() {
       </form>
 
       <AlterarSenhaForm />
+
+      {termosAceitosEm && (
+        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+          Termos aceitos em{' '}
+          {new Date(termosAceitosEm).toLocaleDateString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+          })}
+        </p>
+      )}
     </div>
   )
 }

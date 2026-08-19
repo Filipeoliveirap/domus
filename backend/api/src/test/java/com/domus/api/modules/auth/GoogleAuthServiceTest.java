@@ -135,19 +135,19 @@ class GoogleAuthServiceTest {
         when(verifier.verify("t")).thenReturn(tokenComPayload("sub9", "dono@ig.com", true, "Dono"));
         Usuario admin = usuarioFake();
         admin.setGoogleSub("sub9");
-        when(igrejaService.criarIgrejaComAdmin(any())).thenReturn(admin);
+        when(igrejaService.criarIgrejaComAdmin(any(), anyBoolean(), any())).thenReturn(admin);
         when(tokenService.generateToken(admin)).thenReturn("jwt");
         when(refreshTokenService.criar(admin.getId())).thenReturn("refresh");
 
-        var dados = new com.domus.api.modules.auth.DTO.GoogleRegistrarDTO("t", "Nova Igreja", null, "11999999999");
-        var resp = service.registrar(dados);
+        var dados = new com.domus.api.modules.auth.DTO.GoogleRegistrarDTO("t", "Nova Igreja", null, "11999999999", true);
+        var resp = service.registrar(dados, "203.0.113.9");
 
         assertThat(resp.token()).isEqualTo("jwt");
         assertThat(resp.refreshToken()).isEqualTo("refresh");
 
         ArgumentCaptor<com.domus.api.modules.igreja.DadosNovaIgreja> captor =
                 ArgumentCaptor.forClass(com.domus.api.modules.igreja.DadosNovaIgreja.class);
-        verify(igrejaService).criarIgrejaComAdmin(captor.capture());
+        verify(igrejaService).criarIgrejaComAdmin(captor.capture(), eq(true), eq("203.0.113.9"));
         assertThat(captor.getValue().senhaHashOuNull()).isNull();
         assertThat(captor.getValue().googleSubOuNull()).isEqualTo("sub9");
         assertThat(captor.getValue().emailAdmin()).isEqualTo("dono@ig.com");
@@ -157,7 +157,7 @@ class GoogleAuthServiceTest {
     @Test
     void registrar_tokenInvalido_lanca() throws Exception {
         when(verifier.verify("t")).thenReturn(null);
-        var dados = new com.domus.api.modules.auth.DTO.GoogleRegistrarDTO("t", "Nova Igreja", null, "11999999999");
-        assertThatThrownBy(() -> service.registrar(dados)).isInstanceOf(BusinessException.class);
+        var dados = new com.domus.api.modules.auth.DTO.GoogleRegistrarDTO("t", "Nova Igreja", null, "11999999999", true);
+        assertThatThrownBy(() -> service.registrar(dados, "203.0.113.9")).isInstanceOf(BusinessException.class);
     }
 }

@@ -19,6 +19,7 @@ export default function CadastroPage() {
     register2, handleSubmit2, errors2, passo2Incompleto, watch2,
     erroGeral, isLoading, onSubmit,
     googleData, onGoogleAuth, onGoogleError, onSubmitGoogle,
+    aceitouTermosGoogle, setAceitouTermosGoogle,
     dadosSucesso, irParaPessoas, irParaPerfilIgreja, irParaMeuPerfil,
       irParaPainelInicial,
   } = useRegistrarIgreja()
@@ -44,6 +45,8 @@ export default function CadastroPage() {
               onSubmitGoogle={onSubmitGoogle}
               erroGeral={erroGeral}
               isLoading={isLoading}
+              aceitouTermosGoogle={aceitouTermosGoogle}
+              setAceitouTermosGoogle={setAceitouTermosGoogle}
             />
             <SecurityFooter />
           </div>

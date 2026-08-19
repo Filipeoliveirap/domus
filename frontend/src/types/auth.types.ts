@@ -9,6 +9,7 @@ export interface GoogleRegistrarRequest {
     nomeIgreja: string;
     cnpj?: string;
     telefoneContato: string;
+    aceitouTermos: boolean;
 }
 
 // Sem token de propósito: viajam em cookie httpOnly, JavaScript nunca os vê.
@@ -28,6 +29,10 @@ export interface Sessao {
     igrejaLogoId: string | null;
     /** Capacidades extras acumuladas (SECRETARIO, TESOUREIRO). */
     capacidadesExtras?: string[];
+    /** true = precisa aceitar Termos/Política de novo (nunca aceitou, ou versão mudou). */
+    precisaAceitarTermos: boolean;
+    /** Data do aceite mais recente, ou null se nunca aceitou. */
+    termosAceitosEm: string | null;
 }
 
 export interface ForgotPasswordRequest {
@@ -56,4 +61,5 @@ export interface RegistrarIgrejaRequest {
     nomeAdmin : string;
     emailAdmin : string;
     senhaAdmin : string;
+    aceitouTermos: boolean;
 }

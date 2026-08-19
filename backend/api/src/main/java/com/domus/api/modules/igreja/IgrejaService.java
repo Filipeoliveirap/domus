@@ -16,6 +16,7 @@ import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
+import com.domus.api.modules.termos.TermoAceiteService;
 import com.domus.api.modules.usuario.Role;
 import com.domus.api.modules.usuario.RoleRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -49,9 +50,10 @@ public class IgrejaService {
     private final CacheManager cacheManager;
     private final FotoService fotoService;
     private final OutboxRegistrador outboxRegistrador;
+    private final TermoAceiteService termoAceiteService;
 
     @Transactional
-    public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request) {
+    public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request, String ip) {
         log.info("Iniciando o cadastro da igreja. nome={}, emailAdmin={}", request.getNomeIgreja(), request.getEmailAdmin());
 
         Usuario admin = criarIgrejaComAdmin(new DadosNovaIgreja(
@@ -63,7 +65,7 @@ public class IgrejaService {
                 request.getEmailAdmin(),
                 passwordEncoder.encode(request.getSenhaAdmin()),
                 null
-        ));
+        ), request.isAceitouTermos(), ip);
 
         var token = tokenService.generateToken(admin);
         var refreshToken = refreshTokenService.criar(admin.getId());
@@ -82,7 +84,9 @@ public class IgrejaService {
     /** Cria igreja + pessoa + usuário ADMIN_IGREJA. Compartilhado entre cadastro nativo
      *  (senha com hash) e Google (senha null + google_sub). Não emite tokens. */
     @Transactional
-    public Usuario criarIgrejaComAdmin(DadosNovaIgreja dados) {
+    public Usuario criarIgrejaComAdmin(DadosNovaIgreja dados, boolean aceitouTermos, String ip) {
+        termoAceiteService.exigirAceite(aceitouTermos);
+
         if (membroRepository.existsByEmail(dados.emailAdmin())) {
             log.warn("E-mail já cadastrado. email={}", dados.emailAdmin());
             throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
@@ -127,6 +131,9 @@ public class IgrejaService {
         usuarioRepository.save(admin);
         outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.CRIADO, admin.getId(), igreja.getId());
         log.info("Igreja + admin criados. usuario_id={}, igreja_id={}", admin.getId(), igreja.getId());
+
+        termoAceiteService.registrarAceite(admin.getId(), ip);
+
         return admin;
     }
 

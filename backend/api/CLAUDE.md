@@ -246,6 +246,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 - **Não mockar tipos de domínio** (`Igreja`, `Evento`, `Pessoa`). Use builders ou `new`.
 - **Cada teste prova uma coisa só.** Um cenário de sucesso e um de falha por teste.
 - **Arquivo de teste cresce com a classe.** `InscricaoServiceTest` tem 850+ linhas e 47 testes — é o esperado para um service central. Não quebre em arquivos menores artificialmente.
+- **Nunca altere o teste só pra fazer passar — mude o código de produção, ou pare e explique por quê o teste não pode passar como está.** Enfraquecer uma asserção, trocar `equals` por `contains`, remover um `verify`, apagar um cenário difícil ou marcar como `@Disabled` sem justificativa real são formas de mentir que a feature funciona. Se um teste está genuinamente errado (prova a coisa errada, tem um typo), diga isso explicitamente antes de tocar nele — nunca silenciosamente. E nunca reporte "teste passou" sem ter rodado o comando de verdade e visto o resultado — sem chutar, sem assumir.
 
 ---
 
@@ -659,27 +660,32 @@ erDiagram
   de senha (reusa o fluxo de reset). Existe também reenvio de convite
   (`POST /usuarios/{id}/reenviar-convite`) para quem ainda não aceitou.
 
-- **Validação de formato de e-mail e telefone (BR)**
-    - *E-mail:* validar **formato** no cadastro de pessoa (Zod no front + defensivo no
-      back). Importante porque o e-mail vira a **chave de login** (ver Fase 1). Sem
-      verificação de posse — o primeiro login com Google já cobre isso.
-    - *Telefone:* só formato brasileiro (grátis), **sem SMS**.
+- [x] **Validação de formato de e-mail e telefone (BR)** — **FEITO**: e-mail com `@Email`
+  (back, `PessoaRequestDTO`) + `z.email()` (front); telefone com `@Pattern` (back) +
+  máscara BR (front), sem SMS.
 
 ---
 
 ### Fase 3 — Gestão de conta e configurações
 
 - **Aba de Configuração:** perfil do usuário + dados da igreja (visualizar e editar) —
-  **PARCIAL** (2026-07-29): existe `/configuracoes/igreja` (dados da igreja, incluindo
-  upload de logo — ver Fase 2) e `/perfil` (perfil do usuário), ambos visualizando e
-  editando. Falta unificar como abas de uma mesma tela de Configurações (hoje são rotas
-  separadas) e o restante desta fase (excluir conta, arquivados, termos de uso).
-- **Excluir conta.**
-- **Lista de arquivados por módulo + exclusão definitiva** (usuários, pessoas, eventos…).
-  Complementa o soft delete já existente; a exclusão definitiva atende ao **direito de
-  eliminação da LGPD**.
-- **Termos de Uso + Política de Privacidade.** Necessário sob a LGPD antes de usuário
-  real; obrigatório antes de vender.
+  **DECIDIDO FICAR ASSIM** (2026-08-19): existe `/configuracoes/igreja` (dados da igreja,
+  incluindo upload de logo — ver Fase 2) e `/perfil` (perfil do usuário). Continuam como
+  rotas separadas por decisão — **não vamos unificar em abas por ora**.
+- [x] **Excluir conta.** — **FEITO**: exclusão de igreja com carência de 10 dias
+  cancelável (`ExclusaoIgrejaController`/`ExclusaoIgrejaService`/`PurgaIgrejaService`),
+  reautenticação por senha nativa OU Google, aviso e job diário de purga definitiva.
+- [x] **Lista de arquivados por módulo + exclusão definitiva** (usuários, pessoas,
+  eventos, locais de evento, células, ministérios) — **FEITO**. Complementa o soft delete
+  já existente; a exclusão definitiva atende ao **direito de eliminação da LGPD**. Pessoa
+  em especial: `excluirDefinitivo` apaga o cadastro, mas movimentação/inscrição já
+  existentes mantêm a linha no histórico, mostrando "Pessoa removida do sistema" —
+  documentado na Política de Privacidade.
+- [x] **Termos de Uso + Política de Privacidade.** — **FEITO** (2026-08-19): tabela
+  `termo_aceite` (versionada, por `usuario`, com IP), enforcement no cadastro nativo e
+  Google, `precisaAceitarTermos`/`termosAceitosEm` em `/auth/me` e login, modal bloqueante
+  de reaceite (`ModalReaceitarTermos`), páginas estáticas `/termos` e `/privacidade`. Ver
+  spec/plano em `docs/superpowers/`.
 
 ---
 
@@ -762,3 +768,13 @@ Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
 ## Ordem de execução resumida
 
 `Fase 1 (fundações + auth) → Fase 2 → Fase 3 → Fase 4` *(igreja no ar)* `→ Fase 5 → Fase 6`
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

@@ -27,6 +27,7 @@ class AuthServiceContaSemSenhaTest {
     UsuarioRepository usuarioRepository;
     UsuarioCapacidadeRepository capacidadeRepository;
     PasswordEncoder passwordEncoder;
+    com.domus.api.modules.termos.TermoAceiteService termoAceiteService;
     AuthService service;
 
     @BeforeEach
@@ -38,8 +39,9 @@ class AuthServiceContaSemSenhaTest {
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        termoAceiteService = mock(com.domus.api.modules.termos.TermoAceiteService.class);
         service = new AuthService(authenticationManager, tokenService, refreshTokenService,
-                loginAttemptService, usuarioRepository, passwordEncoder, capacidadeRepository);
+                loginAttemptService, usuarioRepository, passwordEncoder, capacidadeRepository, termoAceiteService);
     }
 
     @Test

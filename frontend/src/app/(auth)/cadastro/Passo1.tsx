@@ -23,11 +23,14 @@ interface Passo1Props {
   onSubmitGoogle: (data: RegistrarIgrejaFormData1) => void
   erroGeral: string | null
   isLoading: boolean
+  aceitouTermosGoogle: boolean
+  setAceitouTermosGoogle: (v: boolean) => void
 }
 
 export function Passo1({
   register, handleSubmit, setValue, errors, passo1Incompleto, onAvancar,
   googleData, onGoogleAuth, onGoogleError, onSubmitGoogle, erroGeral, isLoading,
+  aceitouTermosGoogle, setAceitouTermosGoogle,
 }: Passo1Props) {
   const modoGoogle = googleData !== null
 
@@ -126,6 +129,26 @@ export function Passo1({
           {...register('emailContato')}
         />
 
+        {modoGoogle && (
+          <div className={styles.termosWrapper}>
+            <label className={styles.termosLabel}>
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={aceitouTermosGoogle}
+                onChange={(e) => setAceitouTermosGoogle(e.target.checked)}
+              />
+              <span className={styles.termosTexto}>
+                Li e concordo com os{' '}
+                <Link href="/termos" className={styles.termosLink} target="_blank">Termos de Uso</Link>
+                {' '}e a{' '}
+                <Link href="/privacidade" className={styles.termosLink} target="_blank">Política de Privacidade</Link>
+                {' '}do Domus.
+              </span>
+            </label>
+          </div>
+        )}
+
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
         {/* Action bar — Voltar (para login) + Próximo/Concluir */}
@@ -139,7 +162,7 @@ export function Passo1({
             type="submit"
             variant="primary"
             size="md"
-            disabled={passo1Incompleto || isLoading}
+            disabled={passo1Incompleto || isLoading || (modoGoogle && !aceitouTermosGoogle)}
             isLoading={modoGoogle && isLoading}
             loadingText="Cadastrando..."
           >

@@ -44,8 +44,13 @@ public class BuscaGlobalService {
         resultados.addAll(buscaEventoService.buscar(termo, igrejaId,
                 familiaIgrejaService.idsDaFamiliaCompleta(igrejaId), LIMITE_POR_TIPO));
         resultados.addAll(buscaCelulaService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
-        resultados.addAll(buscaVisitanteService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
         resultados.addAll(buscaMinisterioService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
+
+        // Mesma regra de quem pode gerenciar visitante (VisitanteController) — sem isso,
+        // a busca global vazava visitante pra quem nem lista pelo módulo próprio.
+        if (Permissoes.podeGerenciarVisitantes(role, capacidadesExtras)) {
+            resultados.addAll(buscaVisitanteService.buscar(termo, igrejaId, LIMITE_POR_TIPO));
+        }
 
         if (Permissoes.podeVerUsuariosEFinanceiroNaBuscaGlobal(role, capacidadesExtras)) {
             resultados.addAll(buscaUsuarioService.buscar(termo, igrejaId, LIMITE_POR_TIPO));

@@ -18,7 +18,8 @@ export function useRegistrarIgreja () {
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
     const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
     const [googleData, setGoogleData] = useState<{ idToken: string; nome: string; email: string } | null>(null)
-    
+    const [aceitouTermosGoogle, setAceitouTermosGoogle] = useState(false)
+
 
     const {
         register,
@@ -73,7 +74,7 @@ export function useRegistrarIgreja () {
         setIsLoading(true)
 
         try {
-            const { confirmarSenha, aceitouTermos, ...dadosAdmin } = dataPasso2
+            const { confirmarSenha, ...dadosAdmin } = dataPasso2
 
             const dadosIgreja = {
                 ...dataPasso1,
@@ -139,6 +140,7 @@ export function useRegistrarIgreja () {
                 nomeIgreja: dataIgreja.nomeIgreja,
                 cnpj: dataIgreja.cnpj?.replace(/\D/g, '') || undefined,
                 telefoneContato: dataIgreja.telefoneContato.replace(/\D/g, ''),
+                aceitouTermos: aceitouTermosGoogle,
             })
             login(response)
             setDadosSucesso({ nome: response.nome, nomeIgreja: dataIgreja.nomeIgreja })
@@ -187,6 +189,8 @@ export function useRegistrarIgreja () {
         onGoogleAuth,
         onGoogleError,
         onSubmitGoogle,
+        aceitouTermosGoogle,
+        setAceitouTermosGoogle,
         dadosSucesso,
         irParaPessoas,
         irParaPerfilIgreja,

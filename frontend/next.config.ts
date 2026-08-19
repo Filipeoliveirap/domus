@@ -5,34 +5,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 // para montar o rewrite. O navegador nunca fala com a API direto.
 const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8080";
 
-// CSP pragmática: libera o Google Identity (botão de login/cadastro) e restringe as origens.
-// unsafe-inline é concessão ao Next.js: a maior parte do site é gerada estaticamente no
-// build (○ em `next build`), então CSP com nonce por requisição não cobre esses scripts —
-// nonce só chega em página renderizada por requisição, e forçar renderização dinâmica em
-// tudo custaria a performance que a geração estática dá. unsafe-eval, por outro lado, foi
-// removida (2026-08-19): checado o bundle de produção inteiro (.next/static/chunks) e não
-// há nenhum uso de eval()/new Function() — era concessão sem necessidade real.
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://accounts.google.com https://accounts.google.com/gsi/client",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  "frame-src https://accounts.google.com",
-  // A API é same-origin agora (via rewrite /api/*), então 'self' basta.
-  "connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br",
-  // `blob:` é a PRÉVIA LOCAL do upload: URL.createObjectURL() produz uma blob: URL para
-  // mostrar a foto escolhida antes de enviar. Sem isto o navegador bloqueia e a pessoa vê
-  // só o texto alternativo — a imagem "não aparece" sem erro visível na tela.
-  // Continua não havendo domínio externo: a foto salva é servida pelo próprio Domus.
-  "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com",
-  "font-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-].join("; ");
-
+// A CSP saiu daqui: precisa de um nonce novo por requisição, e headers() só calcula um
+// valor estático uma vez no build. Agora vive em src/proxy.ts, que roda por requisição.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },

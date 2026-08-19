@@ -6,6 +6,7 @@ export interface ResumoExclusao {
   ministerios: number
   usuarios: number
   igrejasVinculadas: string[]
+  temSenhaNativa: boolean
 }
 
 export interface AgendarExclusaoPayload {

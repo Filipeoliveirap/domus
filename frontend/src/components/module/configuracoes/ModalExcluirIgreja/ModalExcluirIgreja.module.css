@@ -130,6 +130,14 @@
   display: block;
 }
 
+.googleConfirmado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-success, #16a34a);
+}
+
 .palavraChave {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-dark);

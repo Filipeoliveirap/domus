@@ -9,5 +9,6 @@ public record ResumoExclusaoResponse(
         long celulas,
         long ministerios,
         long usuarios,
-        List<String> igrejasVinculadas
+        List<String> igrejasVinculadas,
+        boolean temSenhaNativa
 ) {}

@@ -3,12 +3,7 @@ package com.domus.api.modules.auth.DTO;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * O que o front precisa saber sobre a sessão — e nada além disso.
- *
- * <p>Não carrega token: os tokens viajam em cookie httpOnly e o JavaScript
- * nunca os vê. Este é o corpo de /auth/login, /auth/google/* e /auth/me.
- */
+/** Não carrega token — tokens viajam em cookie httpOnly, JS nunca os vê. */
 public record SessaoDTO(
         UUID id,
         String nome,

@@ -5,16 +5,23 @@ import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentac
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
+import com.domus.api.modules.pessoa.DTO.PessoaArquivadaResponse;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.celula.CelulaMembroRepository;
+import com.domus.api.modules.ministerio.MinisterioMembroRepository;
+import com.domus.api.modules.financeiro.movimentacao.MovimentacaoContribuinteRepository;
+import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.outbox.TipoEntidadeOutbox;
 import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.usuario.*;
 import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -40,6 +48,11 @@ public class PessoaService {
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
     private final FotoService fotoService;
     private final com.domus.api.modules.evento.EventoRepository eventoRepository;
+    private final InscricaoRepository inscricaoRepository;
+    private final CelulaMembroRepository celulaMembroRepository;
+    private final MinisterioMembroRepository ministerioMembroRepository;
+    private final MovimentacaoContribuinteRepository movimentacaoContribuinteRepository;
+    private final VisitanteRepository visitanteRepository;
 
     @Transactional(readOnly = true)
     public java.util.List<String> listarBairros(UUID igrejaId) {
@@ -249,6 +262,18 @@ public class PessoaService {
         // o responsável manualmente para que o proxy LAZY não estoure EntityNotFoundException.
         eventoRepository.desvincularResponsavel(membro.getId(), membro.getNome());
 
+        // Mesmo motivo: sem isso, célula_membro/ministerio_membro ficam apontando pra uma
+        // pessoa arquivada, e o próximo lazy-load de membro.getPessoa() estoura
+        // EntityNotFoundException ao abrir a célula/ministério.
+        celulaMembroRepository.deleteByPessoaId(membro.getId());
+        ministerioMembroRepository.deleteByPessoaId(membro.getId());
+
+        // Inscrição: evento que ainda vai acontecer perde a vaga dela (cancela); evento já
+        // em andamento/encerrado não mexe — ela participou, é histórico (mostra os dados dela
+        // normalmente, ela só está arquivada). Contribuição financeira nunca é "cancelável" —
+        // fica vinculada e visível enquanto a pessoa só estiver arquivada (não excluída).
+        inscricaoService.cancelarInscricoesEmEventosAbertosPorPessoa(membro.getId());
+
         usuarioService.arquivarPorMembro(membro.getId(), igrejaId);
         membroRepository.delete(membro);
         outboxRegistrador.registrar(
@@ -261,8 +286,55 @@ public class PessoaService {
     }
 
     @Transactional(readOnly = true)
+    public List<PessoaArquivadaResponse> listarArquivadas(UUID igrejaId) {
+        return membroRepository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(p -> PessoaArquivadaResponse.de(p, membroRepository.buscarVinculos(p.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = membroRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Pessoa não encontrada.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+    }
+
+    /**
+     * Direito de eliminação (LGPD): diferente de Categoria, o vínculo aqui é da PRÓPRIA
+     * pessoa, não de terceiro — nunca bloqueia. Movimentação/inscrição mantêm a linha (conta
+     * no relatório) mas mostram "Pessoa removida do sistema"; célula/ministério desvinculam
+     * de vez (lista viva de membros atuais); usuário (login) é apagado junto.
+     */
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        Pessoa pessoa = membroRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
+        String nome = pessoa.getNome();
+
+        usuarioService.excluirDefinitivamentePorMembro(id, igrejaId, nome);
+
+        // Reindexa ANTES de desvincular: buscarIdsPorMembro navega ct.pessoa.id, que some assim que a FK é anulada.
+        reindexacaoMovimentacaoService.reindexarPorMembro(id, igrejaId);
+        movimentacaoContribuinteRepository.desvincularPessoa(id);
+        inscricaoRepository.desvincularPessoa(id);
+        celulaMembroRepository.deleteByPessoaId(id);
+        ministerioMembroRepository.deleteByPessoaId(id);
+        visitanteRepository.desvincularConvertido(id);
+        eventoRepository.desvincularResponsavel(id, nome);
+
+        membroRepository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+    }
+
+    @Transactional(readOnly = true)
     public PessoaResponse buscarPorId(UUID id, UUID igrejaId, boolean podeVerDadosSensiveis) {
-        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+        // IncluindoArquivadas: a tela de Arquivados também abre o detalhe de uma pessoa
+        // arquivada (pra só olhar), igual célula/ministério/evento.
+        Pessoa membro = membroRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
         return PessoaResponse.from(membro, null, podeVerDadosSensiveis);
     }

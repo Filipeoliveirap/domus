@@ -116,7 +116,7 @@ export function useVisitanteForm({ visitanteId, visitanteInicial }: UseVisitante
         notificar.sucesso('Visitante cadastrado com sucesso!')
       }
 
-      router.push('/pessoas/visitantes')
+      router.back()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar. Tente novamente.')

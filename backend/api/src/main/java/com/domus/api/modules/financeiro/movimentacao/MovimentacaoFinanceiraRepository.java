@@ -3,6 +3,7 @@ package com.domus.api.modules.financeiro.movimentacao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,9 +22,10 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
     """)
     List<MovimentacaoFinanceira> recentes(@Param("igrejaId") UUID igrejaId, Pageable pageable);
 
+    // Sem FETCH em m.categoria de propósito: JOIN eager herda o @SQLRestriction da categoria
+    // e some com a movimentação inteira quando ela está arquivada. Nome resolvido à parte.
     @Query("""
         SELECT m FROM MovimentacaoFinanceira m
-        JOIN FETCH m.categoria
         JOIN FETCH m.criadoPor cp
         JOIN FETCH cp.pessoa
         LEFT JOIN FETCH m.contribuintes ct
@@ -37,7 +39,7 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
 
     @Query("""
         SELECT m FROM MovimentacaoFinanceira m
-        JOIN FETCH m.categoria c
+        LEFT JOIN m.categoria c
         JOIN FETCH m.criadoPor cp
         JOIN FETCH cp.pessoa
         LEFT JOIN FETCH m.contribuintes ct
@@ -71,9 +73,12 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
 """)
     List<UUID> buscarIdsPorCategoria(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
 
-    /** A11: quantos lançamentos usam a categoria — um COUNT só, sob demanda (ver Javadoc de
-     *  {@code ContagemMovimentacoesResponse}), não durante a listagem de categorias. */
-    long countByCategoriaIdAndIgrejaId(UUID categoriaId, UUID igrejaId);
+    /** Nativa: uma derived query herdaria o @SQLRestriction de CategoriaFinanceira e contaria 0 pra categoria arquivada, liberando hard delete indevido. */
+    @Query(value = """
+        SELECT COUNT(*) FROM movimentacao_financeira
+        WHERE categoria_id = :categoriaId AND igreja_id = :igrejaId AND deleted_at IS NULL
+        """, nativeQuery = true)
+    long countByCategoriaIdAndIgrejaId(@Param("categoriaId") UUID categoriaId, @Param("igrejaId") UUID igrejaId);
 
     @Query("""
     SELECT DISTINCT ct.movimentacao.id FROM MovimentacaoContribuinte ct
@@ -89,7 +94,7 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
             COALESCE(SUM(CASE WHEN m.tipo = 'SAIDA' THEN m.valor ELSE 0 END), 0) AS totalSaidas,
             COUNT(m) AS quantidade
         FROM MovimentacaoFinanceira m
-        JOIN m.categoria c
+        LEFT JOIN m.categoria c
         WHERE m.igreja.id = :igrejaId
           AND (:tipo IS NULL OR m.tipo = :tipo)
           AND (:categoriaId IS NULL OR c.id = :categoriaId)
@@ -114,4 +119,54 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
         java.math.BigDecimal getTotalSaidas();
         Long getQuantidade();
     }
+
+    @Query(value = """
+        SELECT * FROM movimentacao_financeira
+        WHERE igreja_id = :igrejaId AND deleted_at IS NOT NULL
+        ORDER BY data_movimentacao DESC
+        """, nativeQuery = true)
+    List<MovimentacaoFinanceira> findArquivadasPorIgreja(@Param("igrejaId") UUID igrejaId);
+
+    /** Igual a {@link #findById}, mas enxerga arquivadas também — usado pela tela de Arquivadas. */
+    @Query(value = "SELECT * FROM movimentacao_financeira WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    Optional<MovimentacaoFinanceira> findByIdAndIgrejaIdIncluindoArquivadas(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    /** Contribuintes desta movimentação — não tem @SQLRestriction próprio, mas a contagem
+     *  entra no aviso de "excluir definitivamente" (eles somem junto, ON DELETE CASCADE). */
+    @Query(value = "SELECT COUNT(*) FROM movimentacao_contribuinte WHERE movimentacao_id = :id", nativeQuery = true)
+    long contarContribuintes(@Param("id") UUID id);
+
+    @Modifying
+    @Query(value = "UPDATE movimentacao_financeira SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    /** UPDATE nativo, não {@code repository.delete(entidade)}: {@code contribuintes} tem
+     *  cascade=ALL+orphanRemoval (necessário pro fluxo de editar) — deletar a entidade
+     *  cascadeia um REMOVE de verdade nos filhos, apagando contribuintes na hora em vez de só
+     *  arquivar a movimentação (que devia ser reversível). */
+    @Modifying
+    @Query(value = "UPDATE movimentacao_financeira SET deleted_at = NOW() WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
+    int arquivarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
+
+    @Modifying
+    @Query(value = "DELETE FROM movimentacao_financeira WHERE id = :id", nativeQuery = true)
+    void hardDeleteById(@Param("id") UUID id);
+
+    @Modifying
+    @Query(value = """
+        UPDATE movimentacao_financeira
+           SET criado_por_texto = CASE WHEN criado_por_usuario_id = :usuarioId THEN :nome ELSE criado_por_texto END,
+               criado_por_usuario_id = CASE WHEN criado_por_usuario_id = :usuarioId THEN NULL ELSE criado_por_usuario_id END,
+               atualizado_por_texto = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN :nome ELSE atualizado_por_texto END,
+               atualizado_por_usuario_id = CASE WHEN atualizado_por_usuario_id = :usuarioId THEN NULL ELSE atualizado_por_usuario_id END
+         WHERE criado_por_usuario_id = :usuarioId OR atualizado_por_usuario_id = :usuarioId
+        """, nativeQuery = true)
+    int desvincularUsuario(@Param("usuarioId") UUID usuarioId, @Param("nome") String nome);
+
+    long countByIgrejaId(UUID igrejaId);
+
+    /** Purga da igreja: movimentacao_contribuinte cascadeia sozinho via ON DELETE CASCADE. */
+    @Modifying
+    @Query(value = "DELETE FROM movimentacao_financeira WHERE igreja_id = :igrejaId", nativeQuery = true)
+    void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);
 }

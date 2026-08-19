@@ -9,13 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Collections;
 
-/**
- * Configura o verificador de ID tokens do Google.
- *
- * O verificador confere a assinatura do token contra as chaves públicas do Google
- * (baixadas e cacheadas por ele), a validade, o emissor e o audience (aud) — que precisa
- * ser o NOSSO Client ID. Assim garantimos que o token foi emitido pelo Google PARA o Domus.
- */
+/** Verifica assinatura, validade e audience (aud = nosso Client ID) do ID token do Google. */
 @Configuration
 public class GoogleTokenConfig {
 

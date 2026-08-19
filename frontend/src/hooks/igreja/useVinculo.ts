@@ -20,10 +20,6 @@ export function useConsolidado(periodo: PeriodoRelatorio, enabled = true) {
   })
 }
 
-/**
- * Toda mutação de vínculo invalida o status — é ele que decide qual dos três estados a
- * tela mostra, e o estado muda justamente por causa dessas ações.
- */
 function useMutacaoDeVinculo<TVars>(fn: (vars: TVars) => Promise<unknown>) {
   const queryClient = useQueryClient()
   return useMutation({

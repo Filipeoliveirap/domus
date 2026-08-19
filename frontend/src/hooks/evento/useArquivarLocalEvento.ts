@@ -21,11 +21,11 @@ export function useArquivarLocalEvento(local: LocalEventoResponse, onClose: () =
       notificar.sucesso(`"${local.nome}" foi arquivado.`)
       onClose()
     } catch (error: unknown) {
-      if (axios.isAxiosError<ApiError>(error)) {
-        setErroGeral(error.response?.data?.message ?? 'Erro ao arquivar. Tente novamente.')
-      } else {
-        setErroGeral('Erro ao arquivar. Tente novamente.')
-      }
+      const mensagem = axios.isAxiosError<ApiError>(error)
+        ? error.response?.data?.message ?? 'Erro ao arquivar. Tente novamente.'
+        : 'Erro ao arquivar. Tente novamente.'
+      setErroGeral(mensagem)
+      notificar.erro(mensagem)
     } finally {
       setIsLoading(false)
     }

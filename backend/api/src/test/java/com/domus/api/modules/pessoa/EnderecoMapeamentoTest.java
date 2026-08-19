@@ -1,6 +1,7 @@
 package com.domus.api.modules.pessoa;
 
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
+import com.domus.api.shared.dominio.Endereco;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

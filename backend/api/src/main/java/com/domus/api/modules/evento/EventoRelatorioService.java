@@ -62,11 +62,7 @@ public class EventoRelatorioService {
         return Math.round(valor * 10.0) / 10.0;
     }
 
-    /**
-     * Relatório entre eventos com filtros combináveis e opcionais (período, recorte etário, tipo).
-     * Comparecimento médio e participantes únicos só existem entre eventos com controlaPresenca=true;
-     * evento mais popular cai para inscritos confirmados quando falta dado de comparecimento.
-     */
+    /** Comparecimento médio/participantes únicos só entre eventos com controlaPresenca=true. */
     @Transactional(readOnly = true)
     public RelatorioGeralResponse relatorioGeral(UUID igrejaId, LocalDateTime inicio, LocalDateTime fim,
                                                   String recorteEtario, String tipo, Pageable pageable) {
@@ -124,10 +120,7 @@ public class EventoRelatorioService {
                 .orElse(null);
     }
 
-    /**
-     * Últimos 6 meses (atual + 5 anteriores), fixo, independente do filtro de período.
-     * Recorte etário e tipo se aplicam; mês sem evento com controlaPresenca=true vira null.
-     */
+    /** Últimos 6 meses fixo, independente do filtro de período; mês sem controlaPresenca=true vira null. */
     private List<RelatorioGeralResponse.PontoTendencia> montarTendencia(
             UUID igrejaId, String recorteEtario, String tipo, Map<UUID, Long> totalCompareceramJaCalculado) {
         java.time.YearMonth mesAtual = java.time.YearMonth.now();

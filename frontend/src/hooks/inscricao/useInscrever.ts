@@ -13,12 +13,7 @@ interface Variaveis {
 }
 
 interface Opcoes {
-  /**
-   * Chamado quando o 422 é de elegibilidade e TODOS os impedimentos são contornáveis — o
-   * caso em que um gestor pode se inscrever mesmo assim. Só quem PODE contornar (gestor)
-   * passa este callback; com ele, o hook não notifica, porque a confirmação vai aparecer.
-   * Sem ele (membro comum), o hook notifica o erro normalmente.
-   */
+  // Presente = hook não notifica o 422 (abre confirmação em vez de erro); ausente = notifica normalmente.
   onContornavel?: (impedimentos: Impedimento[]) => void
 }
 

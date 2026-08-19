@@ -6,13 +6,14 @@ import com.domus.api.modules.ministerio.Papel;
 import java.util.List;
 import java.util.UUID;
 
-public record MinisterioResponse(UUID id, String nome, UUID fotoId, List<String> lideres, int totalMembros) {
+public record MinisterioResponse(UUID id, String nome, UUID fotoId, List<String> lideres, int totalMembros,
+                                  boolean temVinculo) {
     /** Usado onde só o cadastro básico importa (ex.: `GET /pessoas/{id}/ministerios`) — sem
      * consultar membros, então líderes/contagem vêm zerados. */
     public static MinisterioResponse from(Ministerio ministerio) {
         return new MinisterioResponse(ministerio.getId(), ministerio.getNome(),
                 ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
-                List.of(), 0);
+                List.of(), 0, false);
     }
 
     /** Usado na listagem (`GET /ministerios`), onde o card mostra líder(es) e quantidade de
@@ -25,6 +26,6 @@ public record MinisterioResponse(UUID id, String nome, UUID fotoId, List<String>
                 .toList();
         return new MinisterioResponse(ministerio.getId(), ministerio.getNome(),
                 ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
-                lideres, membrosAtivos.size());
+                lideres, membrosAtivos.size(), !membrosAtivos.isEmpty());
     }
 }

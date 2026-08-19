@@ -22,11 +22,7 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Precisa de Postgres real (não Mockito): o próprio caminho feliz depende de
- * {@code FotoRepository} gravando de verdade, e o storage é o {@link ArmazenamentoEmMemoria}
- * (trocado pela property de teste, ver pom.xml/surefire).
- */
+/** Postgres real (não Mockito): o caminho feliz depende de FotoRepository gravando de verdade; storage é {@link ArmazenamentoEmMemoria} (property de teste). */
 @SpringBootTest
 class FotoServiceTest {
 
@@ -101,11 +97,7 @@ class FotoServiceTest {
         assertThat(bytes).isNotEmpty();
     }
 
-    /**
-     * A chave no bucket é `fotos/{igrejaId}/{UUID-aleatório}` — aleatório e DIFERENTE do id
-     * da linha em `foto` (ver FotoService.enviar). Como cada teste usa uma igreja isolada e
-     * só envia uma foto, o prefixo por igreja basta para contar as três versões.
-     */
+    /** Chave no bucket é `fotos/{igrejaId}/{UUID-aleatório}`, diferente do id da linha em `foto` — o prefixo por igreja basta pra contar as três versões. */
     private String prefixoDaIgreja() {
         return "fotos/" + igrejaId + "/";
     }

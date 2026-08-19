@@ -22,6 +22,7 @@ import { UsuarioResponse } from "@/types/usuario.types";
 import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
 import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
 import { ModalArquivarUsuario } from "./(arquivarusuario)/ModalArquivarUsuario";
+import { ModalDetalheUsuario } from "@/components/module/usuarios/ModalDetalheUsuario";
 import { useBuscaUrl } from "@/hooks/busca/useBuscaUrl";
 import { useAuthStore } from "@/store/authStore";
 import { AcessoRestrito } from "@/components/common/AcessoRestrito/AcessoRestrito";
@@ -55,6 +56,7 @@ function UsuariosConteudo() {
   const [usuarioStatus, setUsuarioStatus] = useState<UsuarioResponse | null>(null)
   const [usuarioPermissao, setUsuarioPermissao] = useState<UsuarioResponse | null>(null)
   const [usuarioArquivando, setUsuarioArquivando] = useState<UsuarioResponse | null>(null)
+  const [usuarioDetalhe, setUsuarioDetalhe] = useState<string | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -190,11 +192,18 @@ function UsuariosConteudo() {
                 ];
 
                 return (
-                  <tr key={u.id} className={!u.ativo ? styles.linhaInativa : undefined}>
+                  <tr
+                    key={u.id}
+                    className={`${styles.linhaClicavel} ${!u.ativo ? styles.linhaInativa : ''}`}
+                    onClick={() => setUsuarioDetalhe(u.id)}
+                  >
                     <td>
                       <div className={styles.celulaUsuario}>
                         {u.fotoId ? (
-                          <span onClick={() => setFotoVisualizando(u.fotoId!)} style={{ cursor: 'pointer' }}>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setFotoVisualizando(u.fotoId!) }}
+                            style={{ cursor: 'pointer' }}
+                          >
                             <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
                           </span>
                         ) : (
@@ -230,7 +239,7 @@ function UsuariosConteudo() {
                     <td className={styles.ultimoAcesso}>
                       {formatarUltimoAcesso(u.ultimoLoginEm)}
                     </td>
-                    <td className={styles.colunaAcoes}>
+                    <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
                       <div className={styles.acoesCell}>
                         <MenuAcoes itens={acoes} />
                       </div>
@@ -275,6 +284,10 @@ function UsuariosConteudo() {
 
       {usuarioArquivando && (
         <ModalArquivarUsuario usuario={usuarioArquivando} onClose={() => setUsuarioArquivando(null)} />
+      )}
+
+      {usuarioDetalhe && (
+        <ModalDetalheUsuario usuarioId={usuarioDetalhe} onClose={() => setUsuarioDetalhe(null)} />
       )}
 
       {fotoVisualizando && (

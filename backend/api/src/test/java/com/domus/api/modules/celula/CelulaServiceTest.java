@@ -4,6 +4,7 @@ import com.domus.api.modules.celula.DTOs.*;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -11,7 +12,6 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
-import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +36,7 @@ class CelulaServiceTest {
     PessoaRepository pessoaRepository;
     VisitanteRepository visitanteRepository;
     FotoService fotoService;
+    OutboxRegistrador outboxRegistrador;
     CelulaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -50,8 +51,9 @@ class CelulaServiceTest {
         pessoaRepository = mock(PessoaRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
         fotoService = mock(FotoService.class);
+        outboxRegistrador = mock(OutboxRegistrador.class);
         service = new CelulaService(celulaRepository, membroRepository, igrejaRepository,
-                usuarioRepository, pessoaRepository, visitanteRepository, fotoService);
+                usuarioRepository, pessoaRepository, visitanteRepository, fotoService, outboxRegistrador);
 
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
         when(celulaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -74,6 +76,8 @@ class CelulaServiceTest {
 
     private void dadoQueExiste() {
         when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
                 .thenReturn(Optional.of(celula()));
     }
 
@@ -117,8 +121,9 @@ class CelulaServiceTest {
 
     @Test
     void excluirDefinitivoApagaDeVerdadeQuandoVazia() {
-        dadoQueExiste();
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(false);
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
 
         service.excluirDefinitivo(celulaId, igrejaId);
 
@@ -126,14 +131,60 @@ class CelulaServiceTest {
     }
 
     @Test
-    void excluirDefinitivoRecusaQuandoTemMembro() {
-        dadoQueExiste();
-        when(membroRepository.existsByCelulaId(celulaId)).thenReturn(true);
+    void excluirDefinitivoFuncionaMesmoComMembros_desvinculaEmVezDeBloquear() {
+        // Vínculo de célula é só "pessoa está nesse grupo" — não é dado pessoal de
+        // terceiro (diferente de Evento/Categoria). Apagar a célula não bloqueia,
+        // só remove os vínculos (a pessoa/visitante continua existindo).
+        Pessoa pessoa = Pessoa.builder().id(UUID.randomUUID()).build();
+        CelulaMembro membroPessoa = CelulaMembro.builder().id(UUID.randomUUID()).pessoa(pessoa).build();
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of(membroPessoa));
+
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(membroRepository).deleteAll(List.of(membroPessoa));
+        verify(celulaRepository).hardDeleteById(celulaId);
+    }
+
+    @Test
+    void excluirDefinitivoReindexaVisitantesDesvinculados() {
+        Visitante visitante = Visitante.builder().id(UUID.randomUUID()).build();
+        CelulaMembro membroVisitante = CelulaMembro.builder().id(UUID.randomUUID()).visitante(visitante).build();
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of(membroVisitante));
+
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.VISITANTE,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
+                visitante.getId(), igrejaId);
+    }
+
+    @Test
+    void excluirDefinitivoFunciona_MesmoJaArquivada() {
+        // O caso de uso principal: célula já arquivada, chamando pela tela de Arquivados.
+        // buscarDaIgrejaOuFalhar (usado por outros métodos) não acharia — precisa do
+        // findByIdAndIgrejaIdIncluindoArquivadas.
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.of(celula()));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
+
+        service.excluirDefinitivo(celulaId, igrejaId);
+
+        verify(celulaRepository).hardDeleteById(celulaId);
+        verify(celulaRepository, never()).findByIdAndIgrejaId(any(), any());
+    }
+
+    @Test
+    void excluirDefinitivoFalhaQuandoNaoEncontrada() {
+        when(celulaRepository.findByIdAndIgrejaIdIncluindoArquivadas(celulaId, igrejaId))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.excluirDefinitivo(celulaId, igrejaId))
-                .isInstanceOf(ConflitoNegocioException.class);
-
-        verify(celulaRepository, never()).hardDeleteById(any());
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -149,7 +200,7 @@ class CelulaServiceTest {
     void atualizarPermiteLiderDaCelula() {
         dadoQueExiste();
         UUID pessoaId = UUID.randomUUID();
-        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, "LIDER"))
                 .thenReturn(true);
 
         service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false);
@@ -161,7 +212,7 @@ class CelulaServiceTest {
     void atualizarRecusaQuemNaoEAdminNemLider() {
         dadoQueExiste();
         UUID pessoaId = UUID.randomUUID();
-        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, PapelCelula.LIDER))
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaId, "LIDER"))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> service.atualizar(celulaId, request("Novo nome"), igrejaId, null, pessoaId, false))
@@ -274,5 +325,66 @@ class CelulaServiceTest {
 
         assertThatThrownBy(() -> service.detalhe(celulaId, igrejaId, null))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void listarArquivadasRetornaSoAsArquivadas() {
+        Celula arquivada = celula();
+        when(celulaRepository.findArquivadasPorIgreja(igrejaId)).thenReturn(List.of(arquivada));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
+
+        List<CelulaResponse> response = service.listarArquivadas(igrejaId);
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).nome()).isEqualTo("Célula Bethânia");
+        verify(celulaRepository, never()).findByIgrejaIdOrderByNomeAsc(any());
+    }
+
+    @Test
+    void restaurarTiraDoArquivoEReindexaNaBusca() {
+        when(celulaRepository.restaurarPorId(celulaId, igrejaId)).thenReturn(1);
+
+        service.restaurar(celulaId, igrejaId);
+
+        verify(celulaRepository).restaurarPorId(celulaId, igrejaId);
+        verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.CELULA,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
+                celulaId, igrejaId);
+    }
+
+    @Test
+    void restaurarFalhaQuandoIdNaoPertenceAEssaIgreja() {
+        // 0 linhas afetadas = ou não existe, ou é de outra igreja — a query nativa já
+        // filtra por igreja_id, então isso é a defesa contra restaurar célula de outro tenant.
+        when(celulaRepository.restaurarPorId(celulaId, igrejaId)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.restaurar(celulaId, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(outboxRegistrador, never()).registrar(any(), any(), any(), any());
+    }
+
+    @Test
+    void listarMarcaTemVinculoQuandoTemMembro() {
+        Celula c = celula();
+        when(celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of(c));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId))
+                .thenReturn(List.of(CelulaMembro.builder().build()));
+
+        List<CelulaResponse> response = service.listar(igrejaId, null);
+
+        assertThat(response.get(0).temVinculo()).isTrue();
+    }
+
+    @Test
+    void listarMarcaSemVinculoQuandoVazia() {
+        Celula c = celula();
+        when(celulaRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of(c));
+        when(membroRepository.findByCelulaIdOrderByPapelAsc(celulaId)).thenReturn(List.of());
+
+        List<CelulaResponse> response = service.listar(igrejaId, null);
+
+        assertThat(response.get(0).temVinculo()).isFalse();
     }
 }

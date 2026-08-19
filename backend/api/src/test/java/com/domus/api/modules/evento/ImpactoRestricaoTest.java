@@ -32,14 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Task 6: apertar/ligar uma restrição de elegibilidade num evento que já tem inscritos NUNCA
- * cancela em silêncio. O admin vê a prévia (quem ficaria de fora) e só cancela com escolha
- * explícita ({@code cancelarNaoElegiveis=true}).
- *
- * <p>Roda contra Postgres de verdade (mesmo raciocínio de {@code EventoAuditoriaArquivamentoTest}):
- * a corrida de vaga usa lock pessimista de verdade, e a releitura via
- * {@code entityManager.flush()+clear()} prova que a mudança foi de fato persistida — sem isso a
- * instância já gerenciada na sessão manteria o status antigo em memória.
+ * Apertar restrição de elegibilidade em evento com inscritos nunca cancela em silêncio — exige {@code cancelarNaoElegiveis=true}.
+ * Roda contra Postgres real: lock pessimista de verdade e flush()+clear() pra provar persistência (sem isso a instância gerenciada mantém o status antigo em memória).
  */
 @SpringBootTest
 @Transactional

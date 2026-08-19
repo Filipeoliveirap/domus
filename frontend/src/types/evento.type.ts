@@ -6,6 +6,15 @@ export type RestricaoEstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO
 
 export type RestricaoSexo = 'HOMEM' | 'MULHER'
 
+export interface EventoArquivadoResponse {
+  id: string
+  titulo: string
+  inicioEm: string
+  tipo: string | null
+  temVinculo: boolean
+  totalInscritos: number
+}
+
 export interface EventoLocalInfo {
   id: string | null
   nome: string
@@ -52,6 +61,7 @@ export interface EventoResponse {
   igrejaOrganizadora: IgrejaResumo
   podeGerenciarEsteEvento: boolean
   restritoPropriaIgreja: boolean
+  arquivado: boolean
 }
 
 export interface EventoRequest {
@@ -95,6 +105,7 @@ export interface LocalEventoResponse {
   enderecoHerdado: boolean
   cepLogradouroNumero: string | null
   complementoBairroCidadeUf: string | null
+  temEvento: boolean
 }
 
 export interface LocalEventoRequest {

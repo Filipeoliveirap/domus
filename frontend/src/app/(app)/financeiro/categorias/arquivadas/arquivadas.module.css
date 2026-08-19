@@ -1,0 +1,99 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-white);
+  flex-wrap: wrap;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.iconeBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.entrada { background: var(--color-success-bg); color: var(--color-success-text); }
+.saida { background: var(--color-danger-bg); color: var(--color-danger); }
+.ambos { background: var(--color-primary-light); color: var(--color-primary-dark); }
+
+.nome {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.detalhe {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.botaoRestaurar, .botaoExcluir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.botaoRestaurar:hover:not(:disabled) { background: var(--color-bg-page); }
+.botaoRestaurar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.botaoExcluir {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.botaoExcluir:hover:not(:disabled) { background: var(--color-danger-bg); }
+
+.bloqueado {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  max-width: 260px;
+  cursor: default;
+}
+.bloqueado svg { flex-shrink: 0; margin-top: 2px; }
+
+@media (max-width: 640px) {
+  .linha { flex-direction: column; align-items: stretch; }
+  .acoes { justify-content: flex-end; }
+  .bloqueado { max-width: none; }
+}

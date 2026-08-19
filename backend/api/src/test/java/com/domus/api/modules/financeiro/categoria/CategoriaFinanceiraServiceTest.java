@@ -16,13 +16,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * A11: contagem de lançamentos por categoria, consultada sob demanda (não na listagem) pra o
- * front decidir se pede confirmação antes de salvar uma edição.
- */
+/** Contagem de lançamentos por categoria, consultada sob demanda pra o front decidir se pede confirmação antes de salvar uma edição. */
 class CategoriaFinanceiraServiceTest {
 
     CategoriaFinanceiraRepository repository;
@@ -58,7 +58,7 @@ class CategoriaFinanceiraServiceTest {
 
     @Test
     void contarMovimentacoesRetornaZeroQuandoCategoriaSemUso() {
-        when(repository.findByIdAndIgrejaId(categoriaId, igrejaId)).thenReturn(Optional.of(categoria()));
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId)).thenReturn(Optional.of(categoria()));
         when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
                 .thenReturn(0L);
 
@@ -69,7 +69,7 @@ class CategoriaFinanceiraServiceTest {
 
     @Test
     void contarMovimentacoesRetornaQuantidadeQuandoCategoriaEmUso() {
-        when(repository.findByIdAndIgrejaId(categoriaId, igrejaId)).thenReturn(Optional.of(categoria()));
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId)).thenReturn(Optional.of(categoria()));
         when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
                 .thenReturn(7L);
 
@@ -80,9 +80,82 @@ class CategoriaFinanceiraServiceTest {
 
     @Test
     void contarMovimentacoesDeCategoriaDeOutraIgrejaEh404() {
-        when(repository.findByIdAndIgrejaId(categoriaId, igrejaId)).thenReturn(Optional.empty());
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.contarMovimentacoes(categoriaId, igrejaId))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    /** A tela de Arquivadas chama este endpoint pra explicar por que o excluir definitivo
+     *  está bloqueado — teria que enxergar categoria arquivada, não só ativa. */
+    @Test
+    void contarMovimentacoesFuncionaParaCategoriaArquivada() {
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId)).thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(4L);
+
+        ContagemMovimentacoesResponse r = service.contarMovimentacoes(categoriaId, igrejaId);
+
+        assertThat(r.total()).isEqualTo(4L);
+        verify(repository, never()).findByIdAndIgrejaId(any(), any());
+    }
+
+    @Test
+    void excluirDefinitivoApagaDeVerdadeQuandoSemMovimentacao() {
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId))
+                .thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(0L);
+
+        service.excluirDefinitivo(categoriaId, igrejaId);
+
+        org.mockito.Mockito.verify(repository).hardDeleteById(categoriaId);
+    }
+
+    @Test
+    void excluirDefinitivoBloqueiaQuandoTemMovimentacao() {
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId))
+                .thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(3L);
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(categoriaId, igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ConflitoNegocioException.class);
+
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).hardDeleteById(any());
+    }
+
+    @Test
+    void restaurarFalhaQuandoIdNaoPertenceAEssaIgreja() {
+        when(repository.restaurarPorId(categoriaId, igrejaId)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.restaurar(categoriaId, igrejaId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void restaurarFuncionaEReindexaNaBusca() {
+        when(repository.restaurarPorId(categoriaId, igrejaId)).thenReturn(1);
+
+        service.restaurar(categoriaId, igrejaId);
+
+        org.mockito.Mockito.verify(outboxRegistrador).registrar(
+                com.domus.api.modules.outbox.TipoEntidadeOutbox.CATEGORIA,
+                com.domus.api.modules.outbox.TipoEventoOutbox.ATUALIZADO,
+                categoriaId, igrejaId);
+    }
+
+    @Test
+    void listarArquivadasMarcaTemVinculoConformeMovimentacao() {
+        when(repository.findArquivadasPorIgreja(igrejaId)).thenReturn(java.util.List.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(5L);
+
+        var arquivadas = service.listarArquivadas(igrejaId);
+
+        assertThat(arquivadas).hasSize(1);
+        assertThat(arquivadas.get(0).temVinculo()).isTrue();
+    }
+
+    private static <T> T any() { return org.mockito.ArgumentMatchers.any(); }
 }

@@ -23,8 +23,6 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const queryClient = useQueryClient()
   const ehEdicao = !!eventoId
 
-  // Ao editar, o payload calculado no clique de "salvar" fica aqui esperando a escolha
-  // do admin no <ModalImpactoRestricao> — sem isso teríamos que recalcular tudo de novo.
   const [impactoAfetados, setImpactoAfetados] = useState<InscritoImpactado[] | null>(null)
   const [isVerificandoImpacto, setIsVerificandoImpacto] = useState(false)
   const [payloadPendente, setPayloadPendente] = useState<EventoRequest | null>(null)
@@ -126,7 +124,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         invalidarCache(queryClient, 'evento')
         notificar.sucesso('Evento cadastrado com sucesso!')
       }
-      router.push('/eventos')
+      router.back()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data
@@ -151,12 +149,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         ? `${data.fimData}T${data.fimHora}:00`
         : undefined
 
-      // O backend faz PUT (substitui a entidade inteira) e lê booleano JSON ausente como
-      // false. Por isso requerInscricao/exclusivoMembros/elegibilidade são SEMPRE
-      // enviados com o valor atual do form — mesmo quando a seção "Inscrições" está
-      // recolhida na tela — nunca omitidos condicionalmente. O RHF não desmonta esses
-      // campos do estado do form ao escondê-los (shouldUnregister não está ativo em
-      // useAppForm), então o valor sobrevive intacto até aqui mesmo com o input invisível.
+      // PUT substitui a entidade inteira; booleano ausente no JSON vira false no backend.
       const payload: EventoRequest = {
         titulo: data.titulo,
         descricao: data.descricao || undefined,
@@ -170,11 +163,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: data.tipo || undefined,
         responsavelPessoaId: data.responsavelPessoaId || null,
         requerInscricao: data.requerInscricao,
-        // Mesmo raciocínio de vagas/preço: sempre enviado com o valor atual do form (nunca
-        // omitido condicionalmente), mesmo quando a seção está escondida — o PUT substitui a
-        // entidade inteira e um campo ausente vira false. Forçado a false quando
-        // requerInscricao=false: o toggle já fica desabilitado nesse estado, mas o
-        // valor no form pode ter sobrevivido de uma edição anterior.
+        // Forçado a false quando requerInscricao=false, mesmo que o form tenha valor de edição anterior.
         controlaPresenca: data.requerInscricao ? data.controlaPresenca : false,
         exclusivoMembros: data.exclusivoMembros,
         vagas: data.requerInscricao ? data.vagas : undefined,

@@ -158,20 +158,27 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
                                                                          @Param("dataFim") LocalDate dataFim,
                                                                          @Param("vinculo") Vinculo vinculo);
 
-    @Query("""
-    SELECT
-        p.id AS pessoaId,
-        p.nome AS pessoaNome,
-        ct.movimentacao.tipo AS tipo,
-        SUM(ct.valor) AS total
-    FROM MovimentacaoContribuinte ct
-    JOIN ct.pessoa p
-    WHERE ct.movimentacao.igreja.id = :igrejaId
-      AND ct.movimentacao.dataMovimentacao >= :dataInicio
-      AND ct.movimentacao.dataMovimentacao <= :dataFim
-    GROUP BY p.id, p.nome, ct.movimentacao.tipo
-    ORDER BY SUM(ct.valor) DESC
-""")
+    /**
+     * Nativa + LEFT JOIN de propósito: um contribuinte cuja pessoa foi excluída (pessoa_id
+     * NULL) precisa continuar contando aqui — JOIN normal (JPQL) sumiria com ele. Agrupa
+     * todos os anônimos numa linha só (pessoa_id NULL).
+     */
+    @Query(value = """
+        SELECT
+            p.id AS pessoaId,
+            COALESCE(p.nome, 'Pessoa removida do sistema') AS pessoaNome,
+            m.tipo AS tipo,
+            SUM(ct.valor) AS total
+        FROM movimentacao_contribuinte ct
+        JOIN movimentacao_financeira m ON m.id = ct.movimentacao_id
+        LEFT JOIN pessoa p ON p.id = ct.pessoa_id
+        WHERE m.igreja_id = :igrejaId
+          AND m.deleted_at IS NULL
+          AND m.data_movimentacao >= :dataInicio
+          AND m.data_movimentacao <= :dataFim
+        GROUP BY p.id, p.nome, m.tipo
+        ORDER BY SUM(ct.valor) DESC
+        """, nativeQuery = true)
     List<RelatorioProjections.ContribuinteAgregado> agregarPorContribuinte(@Param("igrejaId") UUID igrejaId,
                                                                            @Param("dataInicio") LocalDate dataInicio,
                                                                            @Param("dataFim") LocalDate dataFim);

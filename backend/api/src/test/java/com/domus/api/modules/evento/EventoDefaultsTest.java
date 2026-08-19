@@ -20,13 +20,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Prova, contra o Postgres de testes de verdade (não um `Evento.builder()` em memória),
- * que colunas booleanas de controle de presença nascem `false` quando não informadas:
- * persiste a entidade sem setar o campo, força o flush, LIMPA o cache de 1º nível e
- * relê do banco — só assim uma coluna mal mapeada ou um default de banco desconectado
- * do Java seria realmente pego.
- */
+/** Flush + clear do cache de 1º nível e relê do banco — só assim um default de banco desconectado do Java seria pego. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class EventoDefaultsTest {

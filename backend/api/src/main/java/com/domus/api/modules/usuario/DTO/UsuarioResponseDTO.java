@@ -17,11 +17,12 @@ public record UsuarioResponseDTO(
         boolean convitePendente,
         LocalDateTime criadoEm,
         UUID fotoId,
-        List<String> capacidadesExtras
+        List<String> capacidadesExtras,
+        boolean arquivado
 ) {
     public UsuarioResponseDTO(UUID id, String nome, String email, String role, boolean ativo,
                               LocalDateTime ultimoLoginEm, LocalDateTime criadoEm, UUID fotoId) {
-        this(id, nome, email, role, ativo, ultimoLoginEm, ultimoLoginEm == null, criadoEm, fotoId, List.of());
+        this(id, nome, email, role, ativo, ultimoLoginEm, ultimoLoginEm == null, criadoEm, fotoId, List.of(), false);
     }
 
     public static UsuarioResponseDTO from(Usuario u) {
@@ -35,7 +36,8 @@ public record UsuarioResponseDTO(
                 u.getUltimoLoginEm() == null,
                 u.getCreatedAt(),
                 u.getPessoa().getFoto() != null ? u.getPessoa().getFoto().getId() : null,
-                List.of()
+                List.of(),
+                u.getDeleteAt() != null
         );
     }
 }

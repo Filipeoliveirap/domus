@@ -86,10 +86,7 @@ public class RefreshTokenService {
         redisTemplate.delete(chaveFamilia(familyId));
     }
 
-    /**
-     * Revoga TODAS as sessões (famílias) de um usuário de uma vez. Usado na troca de
-     * senha: derruba qualquer sessão ativa, inclusive a de um eventual invasor.
-     */
+    /** Usado na troca de senha: derruba qualquer sessão ativa, inclusive a de um eventual invasor. */
     public void revogarTodasSessoes(UUID usuarioId) {
         String chaveIndice = chaveUsuarioFamilias(usuarioId);
         var familias = redisTemplate.opsForSet().members(chaveIndice);
@@ -102,12 +99,7 @@ public class RefreshTokenService {
         log.info("Todas as sessões revogadas. usuario_id={}", usuarioId);
     }
 
-    /**
-     * Revoga todas as sessões do usuário MENOS a família do token informado — usado na troca
-     * de senha "sabendo a senha atual" (Meu Perfil), onde derrubar a sessão de quem acabou de
-     * confirmar a própria identidade seria pior UX sem ganho de segurança. `tokenAtual == null`
-     * (ex.: cookie ausente) revoga tudo, igual a `revogarTodasSessoes`.
-     */
+    /** Mantém a sessão do token atual viva; `tokenAtual == null` revoga tudo, igual a {@link #revogarTodasSessoes}. */
     public void revogarTodasSessoesExceto(UUID usuarioId, String tokenAtual) {
         String familiaAtual = familiaDoToken(tokenAtual);
         String chaveIndice = chaveUsuarioFamilias(usuarioId);

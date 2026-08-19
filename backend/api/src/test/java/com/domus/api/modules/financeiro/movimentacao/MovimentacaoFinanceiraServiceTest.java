@@ -82,6 +82,7 @@ class MovimentacaoFinanceiraServiceTest {
             return mov;
         });
         when(repository.buscarPorIdComRelacoes(any(), any())).thenAnswer(inv -> Optional.ofNullable(ultimaSalva));
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(any(), any())).thenAnswer(inv -> Optional.ofNullable(ultimaSalva));
     }
 
     private MovimentacaoFinanceira ultimaSalva;

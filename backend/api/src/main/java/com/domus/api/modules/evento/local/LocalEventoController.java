@@ -47,4 +47,24 @@ public class LocalEventoController {
         localEventoService.arquivar(id, igrejaId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/arquivados")
+    public ResponseEntity<List<LocalEventoResponse>> arquivados() {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(localEventoService.listarArquivados(igrejaId));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        localEventoService.restaurar(id, igrejaId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        localEventoService.excluirDefinitivo(id, igrejaId);
+        return ResponseEntity.noContent().build();
+    }
 }

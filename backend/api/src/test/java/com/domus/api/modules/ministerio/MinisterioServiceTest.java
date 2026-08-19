@@ -4,7 +4,7 @@ import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.ministerio.DTOs.MinisterioRequest;
 import com.domus.api.modules.ministerio.DTOs.MinisterioResponse;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.ministerio.Papel;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -184,5 +184,77 @@ class MinisterioServiceTest {
     private boolean membroRepositoryVazio(UUID ministerioId, UUID pessoaId) {
         return service.detalhe(ministerioId, igrejaId, null, true).pedidosPendentes().isEmpty()
                 && service.detalhe(ministerioId, igrejaId, null, true).membros().isEmpty();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    jakarta.persistence.EntityManager entityManager;
+
+    @Test
+    void detalheEnxergaMembrosDeMinisterioArquivado() {
+        // Regressão do mesmo bug já corrigido em Célula: @SQLRestriction("deleted_at IS
+        // NULL") da entidade Ministerio vazando pro JOIN implícito de
+        // findByMinisterioIdOrderByPapelAsc, escondendo membros de ministério arquivado.
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID pessoaId = novaPessoa("Ana", igrejaId).getId();
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoaId),
+                igrejaId, null, true, null);
+        entityManager.flush();
+        entityManager.clear();
+
+        service.arquivar(ministerioId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        var detalhe = service.detalhe(ministerioId, igrejaId, null, true);
+
+        assertThat(detalhe.arquivada()).isTrue();
+        assertThat(detalhe.membros()).hasSize(1);
+    }
+
+    @Test
+    void listarArquivadasRetornaSoAsArquivadas() {
+        UUID ativoId = service.criar(new MinisterioRequest("Ativo", null), igrejaId, null).id();
+        UUID arquivadoId = service.criar(new MinisterioRequest("Arquivado", null), igrejaId, null).id();
+        service.arquivar(arquivadoId, igrejaId);
+
+        var arquivados = service.listarArquivadas(igrejaId);
+
+        assertThat(arquivados).extracting(MinisterioResponse::id).containsExactly(arquivadoId);
+        assertThat(arquivados).extracting(MinisterioResponse::id).doesNotContain(ativoId);
+    }
+
+    @Test
+    void restaurarTiraDoArquivoEBloqueiaOutraIgreja() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Intercessão", null), igrejaId, null).id();
+        service.arquivar(ministerioId, igrejaId);
+
+        assertThatThrownBy(() -> service.restaurar(ministerioId, outraIgrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
+
+        service.restaurar(ministerioId, igrejaId);
+        assertThat(service.listar(igrejaId)).extracting(MinisterioResponse::id).contains(ministerioId);
+    }
+
+    @Test
+    void excluirDefinitivoFuncionaComMembros_desvinculaEmVezDeBloquear() {
+        // Regressão: excluirDefinitivo buscava os membros pra desvincular usando a mesma
+        // consulta afetada pelo vazamento do @SQLRestriction — recebia lista vazia,
+        // não desvinculava nada, e a FK recusava o hard delete do ministério.
+        UUID ministerioId = service.criar(new MinisterioRequest("Missões", null), igrejaId, null).id();
+        UUID pessoaId = novaPessoa("Heitor", igrejaId).getId();
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoaId),
+                igrejaId, null, true, null);
+        entityManager.flush();
+        entityManager.clear();
+
+        service.arquivar(ministerioId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        service.excluirDefinitivo(ministerioId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(repository.findById(ministerioId)).isEmpty();
     }
 }

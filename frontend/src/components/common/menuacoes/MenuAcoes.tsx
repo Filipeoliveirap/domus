@@ -42,9 +42,19 @@ export function MenuAcoes({ itens }: MenuAcoesProps) {
     const menu = menuRef.current;
     if (!btn || !menu) return;
 
+    const margem = 8;
     const btnRect = btn.getBoundingClientRect();
     const alturaMenu = menu.offsetHeight;
-    const direita = window.innerWidth - btnRect.right;
+    const larguraMenu = menu.offsetWidth;
+
+    // Clampa: numa tabela larga com scroll horizontal (comum no mobile), o botão pode
+    // estar perto ou além da borda direita real da tela — sem isso, "right" vira negativo
+    // e o menu vaza pra fora da viewport em vez de encostar na borda.
+    const direita = Math.min(
+      Math.max(window.innerWidth - btnRect.right, margem),
+      window.innerWidth - larguraMenu - margem
+    );
+
     const abaixo = btnRect.bottom + 6;
     const acima = btnRect.top - alturaMenu - 6;
 

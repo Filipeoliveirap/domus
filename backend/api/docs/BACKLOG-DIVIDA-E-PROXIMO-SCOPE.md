@@ -232,8 +232,10 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
 - **`fuso_horario` na igreja.** Tentador (o Brasil tem 4), mas a coluna sozinha é ilusão de
   suporte a fuso: só serve se o sistema inteiro formatar data por igreja. **Armadilha conhecida
   do módulo de eventos** — reavaliar se aparecer igreja fora de BRT.
-- **`Endereco` (`@Embeddable`) mora em `modules.membro`** e é reusado por `Igreja`. Funciona e é
-  DRY, mas o lugar certo seria `shared`. Mover quando alguém encostar no módulo de membro.
+- ~~**`Endereco` (`@Embeddable`) mora em `modules.membro`**.~~ **RESOLVIDO** (nota
+  desatualizada, confirmado 2026-08-19): já vive em `shared.dominio.Endereco`, reusado
+  por `Igreja`, `Pessoa`, `Visitante` e `LocalEvento`. O move já tinha acontecido em
+  algum momento sem essa linha ser atualizada.
 - **Listas navegáveis** (a mãe folhear membros/eventos das filhas) — continua fora, como o
   spec já dizia. Depende de consultar o pastor primeiro. ~~**Irmãs verem eventos umas das
   outras**~~ **RESOLVIDO** (2026-07-29): eventos compartilhados entre igrejas vinculadas

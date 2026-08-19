@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useLogin } from '@/hooks/auth/useLogin'
+import { authService } from '@/services/auth.service'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import styles from './page.module.css'
@@ -14,8 +15,22 @@ export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const {
     register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit,
-    onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado,
+    onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado, aplicarSessao,
   } = useLogin()
+
+  // Quem já tem sessão válida (cookie httpOnly ainda ativo) e cai em /login — por um link
+  // de e-mail com ?next=, por exemplo — não deve ver o formulário: só passa direto pro
+  // destino. Fica só nesta página (não no hook) porque /reset-password também usa
+  // useLogin() só pelo botão do Google, e não pode herdar este redirecionamento —
+  // senão o link de convite de um novo admin cairia na sessão de quem já está logado.
+  useEffect(() => {
+    authService.me()
+      .then((sessao) => aplicarSessao(sessao))
+      .catch(() => {
+        // 401 (sem sessão) é o caminho normal: fica na tela de login mesmo.
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className={styles.page}>

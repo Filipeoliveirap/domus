@@ -16,12 +16,14 @@ import org.springframework.web.bind.annotation.*;
 public class ExclusaoIgrejaController {
 
     private final ExclusaoIgrejaService exclusaoIgrejaService;
+    private final ExclusaoIgrejaJob exclusaoIgrejaJob;
     private final UsuarioAutenticado usuarioAutenticado;
 
     @GetMapping("/resumo")
     public ResponseEntity<ResumoExclusaoResponse> resumo() {
         exigirAdmin();
-        return ResponseEntity.ok(exclusaoIgrejaService.resumo(usuarioAutenticado.getIgrejaId()));
+        return ResponseEntity.ok(exclusaoIgrejaService.resumo(
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
     }
 
     @PostMapping("/agendar")
@@ -36,6 +38,15 @@ public class ExclusaoIgrejaController {
     public ResponseEntity<Void> cancelar() {
         exigirAdmin();
         exclusaoIgrejaService.cancelar(usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.ok().build();
+    }
+
+    /** Dispara o job diário na hora — testa lembretes/purga sem esperar o cron (4h) nem
+     *  esperar 10 dias de verdade. TEMPORÁRIO: remover antes de produção. */
+    @PostMapping("/rodar-job")
+    public ResponseEntity<Void> rodarJob() {
+        exigirAdmin();
+        exclusaoIgrejaJob.verificarPrazos();
         return ResponseEntity.ok().build();
     }
 

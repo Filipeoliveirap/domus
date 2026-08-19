@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import axios from 'axios'
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle, X, CheckCircle2 } from 'lucide-react'
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type { ApiError } from '@/types/api.types'
@@ -19,22 +20,22 @@ interface Props {
  * Modal de confirmação de exclusão da igreja. Segue a linguagem visual de
  * `ModalConfirmacaoCritica` (mesmo overlay, mesmo "digite o nome"), mas é componente
  * próprio porque tem responsabilidade extra: buscar o resumo do que será apagado e
- * exigir reautenticação (senha) antes de agendar a exclusão.
+ * exigir reautenticação antes de agendar a exclusão.
  *
- * A reautenticação por senha é sempre oferecida aqui; o backend é quem decide se a
- * conta logada tem senha nativa ou é só-Google (`usuario.senhaHash` vs `googleSub`) —
- * o front não tenta adivinhar isso hoje, porque essa informação ainda não está exposta
- * em `useAuthStore()`/`GET /auth/me`. Confirmação via Google fica de fora desta task
- * (ver Task 17b) por depender de localizar o componente de login Google já existente.
+ * O resumo (`GET /igrejas/exclusao/resumo`) já traz `temSenhaNativa`, calculado pelo
+ * backend a partir de `usuario.senhaHash`. Conta nativa vê o campo de senha; conta
+ * só-Google (`senhaHash == null`) vê o botão "Confirmar com Google" em vez disso.
  */
 export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }: Props) {
   const [resumo, setResumo] = useState<ResumoExclusao | null>(null)
   const [digitado, setDigitado] = useState('')
   const [senha, setSenha] = useState('')
+  const [googleIdToken, setGoogleIdToken] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -59,6 +60,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
     v.trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[̀-ͯ]/g, '')
 
   const confere = normalizar(digitado) === normalizar(nomeIgreja)
+  const reautenticado = resumo?.temSenhaNativa ? senha.length > 0 : googleIdToken !== null
 
   async function confirmar() {
     setCarregando(true)
@@ -66,18 +68,19 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
     try {
       await api.post(Endpoints.igreja.exclusao.AGENDAR, {
         nomeConfirmacao: digitado,
-        senha: senha || undefined,
+        senha: resumo?.temSenhaNativa ? senha : undefined,
+        googleIdToken: resumo?.temSenhaNativa ? undefined : googleIdToken ?? undefined,
       })
       onExcluidoComSucesso()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const codigo = error.response?.data?.error
-        if (codigo === 'REAUTENTICACAO_NECESSARIA' || codigo === 'REAUTENTICACAO_INVALIDA') {
-          // Conta só-Google (sem senha nativa): a senha não estava errada, é que essa conta
-          // não tem senha pra conferir. A UI ainda não oferece "Confirmar com Google" — só a
-          // mensagem já evita o usuário ficar tentando adivinhar uma senha que não existe.
-          setErro('Sua conta usa login do Google e não tem senha cadastrada. Ainda não é possível '
-            + 'confirmar a exclusão por este caminho — entre em contato com o suporte.')
+        if (codigo === 'REAUTENTICACAO_INVALIDA') {
+          setGoogleIdToken(null)
+          setErro('A conta do Google que você confirmou é diferente da conta usada neste login. '
+            + 'Entre com a mesma conta Google do seu login para confirmar a exclusão.')
+        } else if (codigo === 'REAUTENTICACAO_NECESSARIA') {
+          setErro('Confirme sua identidade antes de continuar.')
         } else {
           setErro(error.response?.data?.message ?? 'Não foi possível agendar a exclusão. Tente novamente.')
         }
@@ -91,7 +94,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
 
   function aoEnviar(e: React.FormEvent) {
     e.preventDefault()
-    if (confere && !carregando) confirmar()
+    if (confere && reautenticado && !carregando) confirmar()
   }
 
   return (
@@ -162,20 +165,46 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
             />
           </div>
 
-          <div className={styles.blocoConfirmacao}>
-            <label className={styles.instrucao} htmlFor={`${inputId}-senha`}>
-              Confirme sua senha (se sua conta usa senha):
-            </label>
-            <input
-              id={`${inputId}-senha`}
-              type="password"
-              className={styles.input}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              disabled={carregando}
-              autoComplete="current-password"
-            />
-          </div>
+          {resumo && (
+            resumo.temSenhaNativa ? (
+              <div className={styles.blocoConfirmacao}>
+                <label className={styles.instrucao} htmlFor={`${inputId}-senha`}>
+                  Confirme sua senha:
+                </label>
+                <input
+                  id={`${inputId}-senha`}
+                  type="password"
+                  className={styles.input}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  disabled={carregando}
+                  autoComplete="current-password"
+                />
+              </div>
+            ) : (
+              <div className={styles.blocoConfirmacao}>
+                <span className={styles.instrucao}>
+                  Sua conta usa login com Google — confirme sua identidade:
+                </span>
+                {googleIdToken ? (
+                  <p className={styles.googleConfirmado}>
+                    <CheckCircle2 size={16} aria-hidden="true" /> Identidade confirmada com o Google.
+                  </p>
+                ) : (
+                  <GoogleOAuthProvider clientId={googleClientId}>
+                    <GoogleLogin
+                      onSuccess={(cred) => {
+                        if (cred.credential) setGoogleIdToken(cred.credential)
+                      }}
+                      onError={() => setErro('Não foi possível confirmar sua identidade com o Google.')}
+                      text="continue_with"
+                      width="320"
+                    />
+                  </GoogleOAuthProvider>
+                )}
+              </div>
+            )
+          )}
         </div>
 
         {erro && <p className={styles.erro}>{erro}</p>}
@@ -184,7 +213,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
           <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={carregando}>
             Cancelar
           </button>
-          <button type="submit" className={styles.btnConfirmar} disabled={!confere || carregando}>
+          <button type="submit" className={styles.btnConfirmar} disabled={!confere || !reautenticado || carregando}>
             {carregando ? 'Processando…' : 'Excluir esta igreja'}
           </button>
         </div>

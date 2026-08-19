@@ -71,7 +71,16 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
       onExcluidoComSucesso()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
-        setErro(error.response?.data?.message ?? 'Não foi possível agendar a exclusão. Tente novamente.')
+        const codigo = error.response?.data?.error
+        if (codigo === 'REAUTENTICACAO_NECESSARIA' || codigo === 'REAUTENTICACAO_INVALIDA') {
+          // Conta só-Google (sem senha nativa): a senha não estava errada, é que essa conta
+          // não tem senha pra conferir. A UI ainda não oferece "Confirmar com Google" — só a
+          // mensagem já evita o usuário ficar tentando adivinhar uma senha que não existe.
+          setErro('Sua conta usa login do Google e não tem senha cadastrada. Ainda não é possível '
+            + 'confirmar a exclusão por este caminho — entre em contato com o suporte.')
+        } else {
+          setErro(error.response?.data?.message ?? 'Não foi possível agendar a exclusão. Tente novamente.')
+        }
       } else {
         setErro('Não foi possível agendar a exclusão. Tente novamente.')
       }

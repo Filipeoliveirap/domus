@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import { Search, X } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -67,8 +68,7 @@ export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }
           {resultados.map((pessoa) => (
             <li key={pessoa.id} className={styles.itemResultado} onClick={() => selecionar(pessoa.id)}>
               {urlFoto(pessoa.fotoId, 'THUMB') ? (
-                // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                <img src={urlFoto(pessoa.fotoId, 'THUMB')!} alt="" className={styles.avatar} />
+                <Image src={urlFoto(pessoa.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatar} />
               ) : (
                 <span className={styles.avatarIniciais}>{iniciais(pessoa.nome)}</span>
               )}

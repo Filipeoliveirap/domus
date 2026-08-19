@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Pencil, KeyRound, Archive } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
@@ -182,8 +183,7 @@ function PessoasConteudo() {
                       <div className={styles.celulaPessoa}>
                         <span className={styles.avatar}>
                           {urlFoto(p.fotoId, 'THUMB') ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                            <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto}
+                            <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={40} height={40} unoptimized className={styles.avatarFoto}
                               onClick={(e) => { e.stopPropagation(); setFotoVisualizando(p.fotoId) }} />
                           ) : (
                             iniciais(p.nome)

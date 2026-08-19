@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
@@ -32,8 +33,7 @@ function Avatar({ nome, fotoId }: { nome: string; fotoId: string | null }) {
   return (
     <span className={styles.avatar}>
       {url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-        <img src={url} alt="" className={styles.avatarFoto} />
+        <Image src={url} alt="" width={40} height={40} unoptimized className={styles.avatarFoto} />
       ) : (
         iniciais(nome)
       )}

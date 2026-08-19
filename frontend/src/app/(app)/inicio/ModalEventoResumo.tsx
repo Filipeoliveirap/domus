@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { X, CalendarDays, MapPin, Users, UserPlus, Ticket, Flame, Pencil, XCircle, Building2 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuthStore } from '@/store/authStore'
 import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { useEvento } from '@/hooks/evento/useEvento'
@@ -195,8 +196,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                     {participantes.slice(0, MAX_AVATARES).map((p) => (
                       <span key={p.id} className={styles.avatarPresenca} title={p.nome}>
                         {urlFoto(p.fotoId, 'THUMB') ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                          <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarPresencaFoto} />
+                          <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatarPresencaFoto} />
                         ) : (
                           iniciais(p.nome)
                         )}

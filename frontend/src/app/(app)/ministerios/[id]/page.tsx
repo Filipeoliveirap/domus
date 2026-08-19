@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users } from 'lucide-react'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
@@ -14,7 +14,7 @@ import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
-import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(detalhe)/DrawerDetalhePessoa'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import styles from './detalhe.module.css'
 
@@ -70,6 +70,14 @@ export default function MinisterioDetalhePage() {
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>{ministerio.nome}</span>
       </nav>
+
+      {ministerio.arquivada && (
+        <Link href="/ministerios/arquivados" className={styles.avisoArquivada}>
+          <ArrowLeft size={16} />
+          <Archive size={16} />
+          <span>Esta {ROTULO_MINISTERIO.toLowerCase()} está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+        </Link>
+      )}
 
       <header className={styles.cabecalho}>
         <div className={styles.fotoDetalhe}>
@@ -133,35 +141,42 @@ export default function MinisterioDetalhePage() {
               <li key={membro.pessoaId} className={styles.itemMembro}
                 onClick={() => setPessoaDetalheId(membro.pessoaId)}
               >
-                {urlFoto(membro.fotoId, 'THUMB') ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                  <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
-                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
-                ) : (
-                  <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
-                )}
-                <span className={styles.nomeMembro}>
-                  {membro.nome}
-                  {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
-                </span>
-                {membro.papel === 'LIDER' && (
-                  <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
-                )}
-                {isAdmin && (
-                  <button type="button" className={styles.botaoPromover}
-                    onClick={() => atualizarPapel.mutate({
-                      pessoaId: membro.pessoaId,
-                      papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
-                    })}>
-                    {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
-                  </button>
-                )}
-                {podeGerenciarMembros && (
-                  <button type="button" className={styles.botaoRemover}
-                    onClick={() => removerMembro.mutate(membro.pessoaId)}>
-                    <UserMinus size={16} />
-                  </button>
-                )}
+                <div className={styles.itemMembroInfo}>
+                  {urlFoto(membro.fotoId, 'THUMB') ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+                    <img src={urlFoto(membro.fotoId, 'THUMB')!} alt="" className={styles.avatar}
+                      onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
+                  ) : (
+                    <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
+                  )}
+                  <span className={styles.nomeMembro}>
+                    {membro.nome}
+                    {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
+                  </span>
+                  {membro.papel === 'LIDER' && (
+                    <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
+                  )}
+                </div>
+                <div className={styles.itemMembroAcoes}>
+                  {isAdmin && (
+                    <button type="button" className={styles.botaoPromover}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        atualizarPapel.mutate({
+                          pessoaId: membro.pessoaId,
+                          papel: membro.papel === 'LIDER' ? 'MEMBRO' : 'LIDER',
+                        })
+                      }}>
+                      {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
+                    </button>
+                  )}
+                  {podeGerenciarMembros && (
+                    <button type="button" className={styles.botaoRemover}
+                      onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
+                      <UserMinus size={16} />
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -7,11 +7,7 @@ import type { RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
 import styles from './BlocoParaQuemE.module.css'
 import formStyles from './EventoForm.module.css'
 
-/**
- * Recortes etários prontos: escolher um chip preenche idadeMin/idadeMax, mas os dois
- * campos continuam editáveis à mão (a pessoa pode ajustar sem perder o nome do recorte —
- * é ele que alimenta o selo no card, não os números).
- */
+// Escolher um chip preenche idadeMin/idadeMax, mas os campos continuam editáveis — o nome do recorte alimenta o selo, não os números.
 export const RECORTES_ETARIOS = [
   { nome: 'Kids', idadeMin: 0, idadeMax: 11 },
   { nome: 'Adolescentes', idadeMin: 12, idadeMax: 17 },
@@ -47,12 +43,7 @@ function temRestricaoAtiva(v: ValoresParaQuemE): boolean {
     || v.restricaoEstadoCivil != null || v.restricaoSexo != null
 }
 
-/**
- * Bloco "Para quem é" — elegibilidade do evento. Recolhido em "Todos" por padrão: a
- * maioria dos eventos não restringe ninguém, e não deveria pagar o custo visual desta
- * feature. Só existe dentro da seção "Inscrições" (requerInscricao=true) — não faz
- * sentido restringir quem se inscreve num evento que não tem inscrição.
- */
+// Recolhido em "Todos" por padrão: maioria dos eventos não restringe ninguém.
 export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
   const {
     recorteEtario, idadeMin, idadeMax, restricaoEstadoCivil, restricaoSexo, exclusivoMembros,
@@ -61,11 +52,7 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
     onChangeEstadoCivil, onChangeSexo, onChangeExclusivoMembros,
   } = props
 
-  // "Faixa específica" aberta = há restrição nos dados OU a pessoa abriu a seção à mão.
-  // O estado local existe para o segundo caso: sem ele, o único jeito de abrir a seção
-  // seria já gravar uma restrição — e era isso que forçava um `idadeMin = 0` espúrio no
-  // payload de quem só queria restringir por sexo. Na edição, `temRestricaoAtiva` abre
-  // sozinho, então o reidratar continua funcionando.
+  // Estado local separado evita forçar idadeMin=0 espúrio só pra abrir a seção sem restrição de idade.
   const [abertoManual, setAbertoManual] = useState(false)
   const modoFaixa = abertoManual || temRestricaoAtiva(props)
 

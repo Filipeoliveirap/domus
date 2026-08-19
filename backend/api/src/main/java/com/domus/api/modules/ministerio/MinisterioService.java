@@ -4,6 +4,9 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest;
 import com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest;
 import com.domus.api.modules.ministerio.DTOs.MembroResponse;
@@ -36,6 +39,7 @@ public class MinisterioService {
     private final UsuarioRepository usuarioRepository;
     private final PessoaRepository pessoaRepository;
     private final FotoService fotoService;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listar(UUID igrejaId) {
@@ -72,7 +76,9 @@ public class MinisterioService {
                 .atualizadoPor(usuario)
                 .build();
 
-        return MinisterioResponse.from(ministerioRepository.save(ministerio));
+        Ministerio salvo = ministerioRepository.save(ministerio);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.CRIADO, salvo.getId(), igrejaId);
+        return MinisterioResponse.from(salvo);
     }
 
     @Transactional
@@ -91,6 +97,7 @@ public class MinisterioService {
         Foto fotoNova = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
         ministerio.setFoto(fotoNova);
         MinisterioResponse response = MinisterioResponse.from(ministerioRepository.save(ministerio));
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.ATUALIZADO, ministerio.getId(), igrejaId);
         if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null, fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
             fotoService.remover(fotoAntiga.getId());
         }
@@ -101,6 +108,40 @@ public class MinisterioService {
     public void arquivar(UUID id, UUID igrejaId) {
         Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
         ministerioRepository.delete(ministerio);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MinisterioResponse> listarArquivadas(UUID igrejaId) {
+        return ministerioRepository.findArquivadasPorIgreja(igrejaId).stream()
+                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = ministerioRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Ministério não encontrado.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+    }
+
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        // Inclui arquivados: chamado a partir da tela de Arquivados.
+        ministerioRepository.findByIdAndIgrejaIdIncluindoArquivadas(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
+
+        // Vínculo é só "pessoa está no grupo", não histórico — ter membro não bloqueia a exclusão.
+        List<MinisterioMembro> membros = membroRepository.findByMinisterioIdOrderByPapelAsc(id);
+        membroRepository.deleteAll(membros);
+        // hardDeleteById é SQL nativo — precisa do delete acima já refletido no banco
+        // antes de rodar (mesmo motivo do fix em CelulaService.excluirDefinitivo).
+        membroRepository.flush();
+
+        ministerioRepository.hardDeleteById(id);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.MINISTERIO, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
     Ministerio buscarDaIgrejaOuFalhar(UUID id, UUID igrejaId) {
@@ -120,7 +161,10 @@ public class MinisterioService {
 
     @Transactional(readOnly = true)
     public MinisterioDetalheResponse detalhe(UUID ministerioId, UUID igrejaId, UUID pessoaLogadaId, boolean isAdmin) {
-        Ministerio ministerio = buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
+        // Precisa enxergar arquivado também — dá pra abrir o detalhe de um ministério
+        // arquivado a partir da tela de Arquivados, igual um ministério ativo.
+        Ministerio ministerio = ministerioRepository.findByIdAndIgrejaIdIncluindoArquivadas(ministerioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ministério não encontrado."));
         boolean souLider = isAdmin || (pessoaLogadaId != null && ehLiderDoMinisterio(ministerioId, pessoaLogadaId));
 
         List<MinisterioMembro> todos = membroRepository.findByMinisterioIdOrderByPapelAsc(ministerioId);
@@ -148,7 +192,7 @@ public class MinisterioService {
 
     public boolean ehLiderDoMinisterio(UUID ministerioId, UUID pessoaId) {
         return membroRepository.existsByMinisterioIdAndPessoaIdAndPapelAndStatus(
-                ministerioId, pessoaId, Papel.LIDER, StatusMembro.ATIVO);
+                ministerioId, pessoaId, Papel.LIDER.name(), StatusMembro.ATIVO.name());
     }
 
     private void exigirAdminOuLider(UUID ministerioId, UUID atorPessoaId, boolean isAdmin) {

@@ -11,5 +11,13 @@ export interface UsuarioResponse {
   criadoEm: string;
   fotoId: string | null;
   capacidadesExtras?: string[];
+  arquivado: boolean;
+}
+
+export interface UsuarioArquivadoResponse {
+  id: string;
+  nome: string;
+  email: string | null;
+  role: string;
 }
 

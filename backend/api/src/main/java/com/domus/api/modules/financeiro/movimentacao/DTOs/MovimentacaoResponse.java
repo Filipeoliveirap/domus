@@ -2,10 +2,12 @@ package com.domus.api.modules.financeiro.movimentacao.DTOs;
 
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceira;
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
+import com.domus.api.modules.pessoa.Pessoa;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -21,9 +23,18 @@ public record MovimentacaoResponse(
         String categoriaNome,
         List<ContribuinteResponse> contribuintes,
         String criadoPorNome,
-        String atualizadoPorNome
+        String atualizadoPorNome,
+        boolean arquivada
 ) {
-    public static MovimentacaoResponse de(MovimentacaoFinanceira m) {
+    /**
+     * @param categoriaNome        resolvido à parte, em lote — nunca m.getCategoria().getNome()
+     *                             direto, senão categoria arquivada estoura EntityNotFoundException.
+     * @param pessoasContribuintes idem, resolvidas via bypass do @SQLRestriction — pessoa
+     *                             arquivada (mas não excluída) mostra os dados reais; ausente
+     *                             do mapa só quando excluída de vez (pessoa_id já é NULL).
+     */
+    public static MovimentacaoResponse de(MovimentacaoFinanceira m, String categoriaNome,
+                                           Map<UUID, Pessoa> pessoasContribuintes) {
         return new MovimentacaoResponse(
                 m.getId(),
                 m.getTipo(),
@@ -31,12 +42,19 @@ public record MovimentacaoResponse(
                 m.getDataMovimentacao(),
                 m.getDescricao(),
                 m.getCategoria().getId(),
-                m.getCategoria().getNome(),
+                categoriaNome,
                 m.getContribuintes().stream()
-                        .map(c -> new ContribuinteResponse(c.getPessoa().getId(), c.getPessoa().getNome(), c.getValor()))
+                        .map(c -> {
+                            Pessoa pessoa = c.getPessoa() == null ? null : pessoasContribuintes.get(c.getPessoa().getId());
+                            return new ContribuinteResponse(
+                                    pessoa == null ? null : pessoa.getId(),
+                                    pessoa == null ? "Pessoa removida do sistema" : pessoa.getNome(),
+                                    c.getValor());
+                        })
                         .toList(),
-                m.getCriadoPor().getNome(),
-                m.getAtualizadoPor() != null ? m.getAtualizadoPor().getNome() : null
+                m.getCriadoPor() != null ? m.getCriadoPor().getNome() : m.getCriadoPorTexto(),
+                m.getAtualizadoPor() != null ? m.getAtualizadoPor().getNome() : m.getAtualizadoPorTexto(),
+                m.getDeletedAt() != null
         );
     }
 }

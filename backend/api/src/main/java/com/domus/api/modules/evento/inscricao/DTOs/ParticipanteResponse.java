@@ -2,17 +2,13 @@ package com.domus.api.modules.evento.inscricao.DTOs;
 
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
+import com.domus.api.modules.pessoa.Pessoa;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Uma linha da lista de participantes visível a QUALQUER MEMBRO autenticado (revisão de
- * 2026-07-21: ver quem vai motiva a ir).
- *
- * <p>Deliberadamente OMITE, em relação a {@link InscritoResponse}: o telefone dos convidados
- * (era seguro enquanto só a administração lia; abrir para a igreja inteira exporia o contato
- * de um visitante para centenas de pessoas), quem inscreveu quem ({@code inscritoPorUsuarioId})
- * e a data da inscrição — são dados administrativos, não de "quem vai".
+ * Visível a QUALQUER MEMBRO autenticado — por isso omite, em relação a {@link InscritoResponse},
+ * telefone de convidado, quem inscreveu quem e data da inscrição (dados administrativos, não de "quem vai").
  */
 public record ParticipanteResponse(
         UUID id,
@@ -22,14 +18,15 @@ public record ParticipanteResponse(
         List<String> convidados,
         EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
-    public static ParticipanteResponse from(InscricaoEvento i) {
+    /** @param pessoaResolvida resolvida em lote via bypass — ver Javadoc de {@link InscritoResponse#from}. */
+    public static ParticipanteResponse from(InscricaoEvento i, Pessoa pessoaResolvida) {
         return new ParticipanteResponse(
                 i.getId(),
-                i.getPessoa().getId(),
-                i.getPessoa().getNome(),
-                i.getPessoa().getFoto() != null ? i.getPessoa().getFoto().getId() : null,
+                pessoaResolvida == null ? null : pessoaResolvida.getId(),
+                pessoaResolvida == null ? "Pessoa removida do sistema" : pessoaResolvida.getNome(),
+                pessoaResolvida != null && pessoaResolvida.getFoto() != null ? pessoaResolvida.getFoto().getId() : null,
                 i.getAcompanhantes().stream().map(a -> a.getNome()).toList(),
-                EventoResponse.IgrejaResumo.de(i.getPessoa().getIgreja())
+                EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );
     }
 }

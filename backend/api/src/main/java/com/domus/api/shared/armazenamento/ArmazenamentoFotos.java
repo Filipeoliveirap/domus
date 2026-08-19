@@ -1,12 +1,6 @@
 package com.domus.api.shared.armazenamento;
 
-/**
- * Onde os bytes da foto ficam. Trocável por desenho (mesmo motivo do EmailService):
- * hoje R2, amanhã outro provedor, e nos testes memória.
- *
- * <p>O banco guarda apenas a CHAVE — nunca uma URL. Guardar URL acoplaria o dado ao
- * provedor, e trocar de provedor viraria migration.
- */
+/** Trocável por provedor (hoje R2, testes em memória). Banco guarda só a chave — nunca URL, senão trocar de provedor vira migration. */
 public interface ArmazenamentoFotos {
 
     void guardar(String chave, byte[] conteudo, String tipo);

@@ -13,10 +13,7 @@ public final class VinculoDTOs {
     /** Os três estados são mutuamente exclusivos — a regra dos 2 níveis garante isso. */
     public enum EstadoVinculo { INDEPENDENTE, MAE, FILHA }
 
-    /**
-     * A congregação como a tela de "Igrejas vinculadas" a mostra.
-     * {@code cidade}/{@code uf} vêm do endereço (podem ser nulos — endereço é opcional).
-     */
+    /** {@code cidade}/{@code uf} vêm do endereço, podem ser nulos (endereço é opcional). */
     public record IgrejaResumo(
             UUID id,
             String nome,
@@ -24,11 +21,7 @@ public final class VinculoDTOs {
             String uf,
             LocalDateTime vinculadoEm) {}
 
-    /**
-     * Tudo que a tela precisa, numa chamada só.
-     * {@code codigoVinculo} vem preenchido para INDEPENDENTE e MAE (a filha não gera código);
-     * {@code mae} só para FILHA; {@code congregacoes} só para MAE.
-     */
+    /** {@code codigoVinculo} preenchido só para INDEPENDENTE/MAE; {@code mae} só para FILHA; {@code congregacoes} só para MAE. */
     public record VinculoStatusResponse(
             EstadoVinculo estado,
             String codigoVinculo,

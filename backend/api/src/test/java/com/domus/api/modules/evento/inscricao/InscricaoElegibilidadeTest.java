@@ -30,15 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Task 4: a Task 3 entregou o MECANISMO de elegibilidade; este teste prova que ele foi
- * CONECTADO ao fluxo de inscrição de verdade — as quatro regras que não podem ser erradas.
- *
- * <p>Pós-revisão: os testes de {@link InscricaoService#inscreverPessoas} foram acrescentados
- * porque era exatamente ali — não em {@link InscricaoService#inscrever} direto — que um
- * admin conseguia contornar FAIXA_ETARIA para SI MESMO (ver
- * {@code auto_inscricao_via_inscreverPessoas_com_o_proprio_pessoaId_e_recusada}).
- */
+/** {@link InscricaoService#inscreverPessoas}, não só {@link InscricaoService#inscrever}, precisa validar elegibilidade — admin conseguia contornar FAIXA_ETARIA por ali. */
 class InscricaoElegibilidadeTest {
 
     EventoRepository eventoRepository;

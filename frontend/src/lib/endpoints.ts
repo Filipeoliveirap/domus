@@ -28,6 +28,9 @@ export const Endpoints = {
     REENVIAR_CONVITE: (id: string) => `/usuarios/${id}/reenviar-convite`,
     CAPACIDADE: (id: string) => `/usuarios/${id}/capacidades`,
     CAPACIDADE_ESPECIFICA: (id: string, cap: string) => `/usuarios/${id}/capacidades/${cap}`,
+    ARQUIVADOS: '/usuarios/arquivados',
+    RESTAURAR: (id: string) => `/usuarios/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/usuarios/${id}/definitivo`,
   },
   pessoas: {
     LISTAR: '/pessoas',
@@ -37,6 +40,9 @@ export const Endpoints = {
     BAIRROS: '/pessoas/bairros',
     ME: '/pessoas/me',
     PESSOA_MINISTERIOS: (pessoaId: string) => `/pessoas/${pessoaId}/ministerios`,
+    ARQUIVADOS: '/pessoas/arquivados',
+    RESTAURAR: (id: string) => `/pessoas/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/pessoas/${id}/definitivo`,
   },
 
   eventos: {
@@ -48,18 +54,27 @@ export const Endpoints = {
     ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
     RELATORIO: (id: string) => `/eventos/${id}/relatorio`,
     RELATORIO_GERAL: '/eventos/relatorio-geral',
+    ARQUIVADOS: '/eventos/arquivados',
+    RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
   },
 
   locaisEvento: {
     LISTAR: '/locais-evento',
     CRIAR: '/locais-evento',
     BY_ID: (id: string) => `/locais-evento/${id}`,
+    ARQUIVADOS: '/locais-evento/arquivados',
+    RESTAURAR: (id: string) => `/locais-evento/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/locais-evento/${id}/definitivo`,
   },
 
   ministerios: {
     LISTAR: '/ministerios',
     CRIAR: '/ministerios',
     BY_ID: (id: string) => `/ministerios/${id}`,
+    ARQUIVADOS: '/ministerios/arquivados',
+    RESTAURAR: (id: string) => `/ministerios/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/ministerios/${id}/definitivo`,
     MEMBROS: (id: string) => `/ministerios/${id}/membros`,
     MEMBRO: (id: string, pessoaId: string) => `/ministerios/${id}/membros/${pessoaId}`,
     PAPEL: (id: string, pessoaId: string) => `/ministerios/${id}/membros/${pessoaId}/papel`,
@@ -93,12 +108,18 @@ export const Endpoints = {
     todas: '/categorias/todas',
     porId: (id: string) => `/categorias/${id}`,
     contagemMovimentacoes: (id: string) => `/categorias/${id}/contagem-movimentacoes`,
+    arquivadas: '/categorias/arquivadas',
+    restaurar: (id: string) => `/categorias/${id}/restaurar`,
+    definitivo: (id: string) => `/categorias/${id}/definitivo`,
   },
 
   movimentacoes: {
     base: '/movimentacoes',
     porId: (id: string) => `/movimentacoes/${id}`,
     totais: '/movimentacoes/totais',
+    arquivadas: '/movimentacoes/arquivadas',
+    restaurar: (id: string) => `/movimentacoes/${id}/restaurar`,
+    definitivo: (id: string) => `/movimentacoes/${id}/definitivo`,
   },
 
   relatorios: {
@@ -114,6 +135,11 @@ export const Endpoints = {
 
   igreja: {
     MINHA: '/igrejas/minha',
+    exclusao: {
+      RESUMO: '/igrejas/exclusao/resumo',
+      AGENDAR: '/igrejas/exclusao/agendar',
+      CANCELAR: '/igrejas/exclusao/cancelar',
+    },
   },
 
   igrejasVinculadas: {
@@ -143,6 +169,9 @@ export const Endpoints = {
     LISTAR: '/celulas',
     CRIAR: '/celulas',
     BY_ID: (id: string) => `/celulas/${id}`,
+    ARQUIVADOS: '/celulas/arquivados',
+    RESTAURAR: (id: string) => `/celulas/${id}/restaurar`,
+    DEFINITIVO: (id: string) => `/celulas/${id}/definitivo`,
     MEMBROS: (id: string) => `/celulas/${id}/membros`,
     MEMBRO: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}`,
     PAPEL: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}/papel`,

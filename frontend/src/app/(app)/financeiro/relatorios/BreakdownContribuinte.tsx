@@ -65,8 +65,8 @@ function Tabela({ itens, variante }: { itens: ContribuinteBreakdown[]; variante:
         <span className={styles.colValor}>VALOR</span>
         <span className={styles.colPct}>%</span>
       </div>
-      {itens.map((item) => (
-        <div key={item.pessoaId} className={styles.linha}>
+      {itens.map((item, index) => (
+        <div key={item.pessoaId ?? `removida-${index}`} className={styles.linha}>
           <span className={styles.catNome}>{item.pessoaNome}</span>
           <span className={styles.colValor}>{formatarMoeda(item.total)}</span>
           <span className={styles.colPct}>

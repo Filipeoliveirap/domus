@@ -1,8 +1,9 @@
 'use client'
 
 import { use, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X } from 'lucide-react'
+import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X, Archive, ArrowLeft } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useQueryClient } from '@tanstack/react-query'
@@ -24,7 +25,7 @@ import { ModalConverterVisitante } from './ModalConverterVisitante'
 import { urlFoto } from '@/lib/urlFoto'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { iniciaisVisitante } from '@/lib/formats/visitanteFormat'
-import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(detalhe)/DrawerDetalhePessoa'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { DrawerDetalheVisitante } from '@/app/(app)/pessoas/visitantes/(detalhe)/DrawerDetalheVisitante'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { VisitanteForm } from '@/components/module/visitantes/VisitanteForm'
@@ -45,6 +46,7 @@ const DIA_OPTIONS = [
 
 export default function CelulaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
   const { data: celula, isLoading, isError, refetch } = useCelula(id)
   const queryClient = useQueryClient()
   const role = useAuthStore(s => s.role)
@@ -55,7 +57,9 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const [editando, setEditando] = useState(false)
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
-  const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(null)
+  const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(
+    () => searchParams.get('visitante')
+  )
   const [convertendoId, setConvertendoId] = useState<string | null>(null)
   const [cadastrarExterno, setCadastrarExterno] = useState(false)
   const [fotoId, setFotoId] = useState<string | null>(null)
@@ -72,7 +76,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     lideres: [] as string[],
     totalMembros: celula.membros.length,
     souLiderDestaCelula: celula.souLiderDestaCelula,
-  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula])
+    temVinculo: celula.membros.length > 0,
+  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula, celula?.membros.length])
 
   const form = useCelulaForm({ celulaId: id, celulaInicial })
   const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form
@@ -166,6 +171,14 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>{celula?.nome ?? '…'}</span>
       </nav>
+
+      {celula?.arquivada && (
+        <Link href="/celulas/arquivados" className={styles.avisoArquivada}>
+          <ArrowLeft size={16} className={styles.avisoSeta} />
+          <Archive size={16} />
+          <span>Esta célula está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+        </Link>
+      )}
 
       {isLoading ? (
         <Skeleton width="100%" height="200px" radius="var(--radius-lg)" />
@@ -347,9 +360,11 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {modalAdicionarAberto && (
+      {modalAdicionarAberto && celula && (
         <ModalAdicionarMembro
           celulaId={id}
+          membrosPessoaIds={new Set(celula.membros.filter(m => m.pessoaId).map(m => m.pessoaId!))}
+          membrosVisitanteIds={new Set(celula.membros.filter(m => m.visitanteId).map(m => m.visitanteId!))}
           onClose={() => setModalAdicionarAberto(false)}
           onCadastrarExterno={() => {
             setModalAdicionarAberto(false)

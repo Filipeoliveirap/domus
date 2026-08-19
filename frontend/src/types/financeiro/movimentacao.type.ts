@@ -1,7 +1,7 @@
 export type TipoMovimentacao = 'ENTRADA' | 'SAIDA'
 
 export interface ContribuinteResponse {
-  pessoaId: string
+  pessoaId: string | null
   pessoaNome: string
   valor: string
 }
@@ -22,6 +22,7 @@ export interface MovimentacaoResponse {
   contribuintes: ContribuinteResponse[]
   criadoPorNome: string
   atualizadoPorNome: string | null
+  arquivada: boolean
 }
 
 export interface MovimentacaoRequest {
@@ -31,6 +32,15 @@ export interface MovimentacaoRequest {
   dataMovimentacao: string
   contribuintes: ContribuinteInput[]
   descricao?: string | null
+}
+
+export interface MovimentacaoArquivadaResponse {
+  id: string
+  descricao: string | null
+  tipo: TipoMovimentacao
+  valor: string
+  dataMovimentacao: string
+  temContribuinte: boolean
 }
 
 export interface MovimentacaoTotais {

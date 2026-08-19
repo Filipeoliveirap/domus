@@ -13,12 +13,9 @@ public interface FotoRepository extends JpaRepository<Foto, UUID> {
 
     Optional<Foto> findByIdAndIgrejaId(UUID id, UUID igrejaId);
 
-    /**
-     * Fotos órfãs: mais velhas que o corte e que NENHUMA das três tabelas referencia.
-     *
-     * <p>Acontece quando alguém envia a foto e abandona o formulário sem salvar. Sem esta
-     * limpeza, todo formulário abandonado deixa lixo permanente no bucket.
-     */
+    List<Foto> findByIgrejaId(UUID igrejaId);
+
+    /** Órfãs: sem referência nas três tabelas — acontece quando o upload é abandonado sem salvar. */
     @Query("""
         SELECT f FROM Foto f
         WHERE f.createdAt < :corte
@@ -28,15 +25,7 @@ public interface FotoRepository extends JpaRepository<Foto, UUID> {
     """)
     List<Foto> buscarOrfas(@Param("corte") LocalDateTime corte);
 
-    /**
-     * Fotos de pessoas arquivadas (soft delete) há mais tempo que o corte.
-     *
-     * <p>{@code Pessoa} tem {@code @SQLRestriction("deleted_at IS NULL")}, então qualquer
-     * consulta JPQL sobre {@code Pessoa} simplesmente não enxerga quem está arquivado — a
-     * rotina de limpeza nunca encontraria essas fotos por ali. Por isso esta consulta é
-     * NATIVA: vai direto na tabela {@code pessoa}, ignorando a restrição do Hibernate, do
-     * mesmo jeito que {@code PessoaRepository.existsByEmailIncluindoArquivados} já faz.
-     */
+    /** Nativa: {@code Pessoa} tem {@code @SQLRestriction("deleted_at IS NULL")}, então JPQL não enxerga arquivados. */
     @Query(value = """
         SELECT f.* FROM foto f
         JOIN pessoa p ON p.foto_id = f.id

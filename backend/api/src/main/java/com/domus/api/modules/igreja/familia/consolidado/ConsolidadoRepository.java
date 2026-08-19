@@ -11,13 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * As três consultas do consolidado. O soft delete de Pessoa e Evento é aplicado
- * automaticamente pelo {@code @SQLRestriction} das entidades — não precisa entrar no WHERE.
- *
- * <p>{@code :igrejaIds} SEMPRE vem de {@code FamiliaIgrejaService.idsDaFamilia} — nunca
- * direto da requisição.
- */
+/** {@code :igrejaIds} sempre vem de {@code FamiliaIgrejaService.idsDaFamilia} — nunca direto da requisição. */
 @Repository
 public interface ConsolidadoRepository extends JpaRepository<Pessoa, UUID> {
 
@@ -33,10 +27,7 @@ public interface ConsolidadoRepository extends JpaRepository<Pessoa, UUID> {
     List<ConsolidadoProjections.MembrosPorIgreja> contarMembros(
             @Param("igrejaIds") List<UUID> igrejaIds);
 
-    /**
-     * Realizado = já terminou. Usa {@code fimEm} quando existe e cai para {@code inicioEm}
-     * quando o evento não tem fim declarado.
-     */
+    /** Realizado = já terminou; usa {@code fimEm} quando existe, senão cai pra {@code inicioEm}. */
     @Query("""
     SELECT
         e.igreja.id AS igrejaId,

@@ -52,12 +52,7 @@ public class InscricaoService {
     private final ElegibilidadeService elegibilidadeService;
     private final FamiliaIgrejaService familiaIgrejaService;
 
-    /**
-     * Inscreve um membro. {@code inscritoPorOuNull} é NULL na auto-inscrição.
-     *
-     * <p>Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}.
-     * O evento é buscado COM LOCK para atomizar contagem de vagas e insert.
-     */
+    /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
                                             UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
@@ -105,10 +100,7 @@ public class InscricaoService {
         return MinhaInscricaoResponse.from(salva);
     }
 
-    /**
-     * Inscreve vários membros de uma vez — tudo ou nada. Checa os já inscritos em uma
-     * query só antes do laço, para poder nomear a quantidade na mensagem de erro.
-     */
+    /** Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro. */
     @Transactional
     public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
                                  UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
@@ -141,13 +133,7 @@ public class InscricaoService {
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
     }
 
-    /**
-     * Checa se o evento organiza inscrição de TERCEIROS (vagas, convidados, inscrever outra
-     * pessoa) — {@code requerInscricao}. NÃO se aplica à auto-inscrição (ver {@link #inscrever}),
-     * que funciona em qualquer evento. Mensagem varia por chamador para dizer exatamente o que
-     * está indisponível, em vez do genérico "não abre inscrição" (que ficou errado desde que a
-     * auto-inscrição passou a valer sempre).
-     */
+    /** {@code requerInscricao} não se aplica à auto-inscrição (ver {@link #inscrever}), que funciona em qualquer evento. */
     private void validarOrganizaInscricao(Evento evento, String mensagem) {
         if (!evento.isRequerInscricao()) {
             throw new BusinessException("INSCRICAO_NAO_HABILITADA", mensagem);
@@ -167,10 +153,7 @@ public class InscricaoService {
         }
     }
 
-    /**
-     * Bloqueia o mesmo convidado duas vezes no mesmo evento. Compara por telefone
-     * normalizado, com fallback para nome normalizado se não houver telefone.
-     */
+    /** Compara por telefone normalizado, com fallback para nome se não houver telefone. */
     private void validarConvidadoNaoDuplicado(UUID eventoId, AcompanhanteRequest data) {
         String telefoneNovo = TextoUtil.somenteDigitos(data.telefone());
         String nomeNovo = TextoUtil.normalizarParaComparacao(data.nome());
@@ -189,26 +172,15 @@ public class InscricaoService {
     }
 
     /**
-     * Aplica regras de {@link ElegibilidadeService} e decide se o impedimento pode ser
-     * contornado. Auto-inscrição NUNCA contorna, nem para admin. Quem não gerencia também
-     * não contorna e não vê detalhes de terceiro no 422. Vaga não entra aqui — é barrada
-     * por {@link #validarVaga}, sempre.
-     *
-     * @return {@code true} se a inscrição contornou um impedimento deliberadamente
-     *         ({@link InscricaoEvento#isInscritoPorExcecao}).
+     * Auto-inscrição NUNCA contorna, nem para admin. Vaga não entra aqui — é barrada por {@link #validarVaga}, sempre.
+     * @return {@code true} se contornou um impedimento deliberadamente ({@link InscricaoEvento#isInscritoPorExcecao}).
      */
     private boolean validarElegibilidade(Evento evento, Pessoa membro, String role, boolean confirmado,
                                           UUID igrejaId) {
         Elegibilidade elegibilidade = elegibilidadeService.avaliar(evento, membro);
         if (elegibilidade.apto()) return false;
 
-        // Quem GERENCIA inscrições (admin/líder) pode contornar uma restrição contornável,
-        // inclusive na PRÓPRIA inscrição — decisão do autor: o gestor organiza os eventos e
-        // pode participar de um recorte fora do seu (equipe do retiro de jovens, café dos
-        // homens que ele coordena). Exige `confirmado` explícito por clique, então não é
-        // burla casual. Quem NÃO gerencia nunca contorna (podeGerenciar == false barra),
-        // então a restrição continua real para o membro comum — que era a proteção que
-        // importava. VAGAS_ESGOTADAS não é contornável (não entra em totalmenteContornavel).
+        // Quem gerencia pode contornar restrição contornável mesmo na própria inscrição; exige `confirmado` explícito.
         boolean podeGerenciar = Permissoes.podeGerenciarInscricoes(role)
                 && evento.getIgreja().getId().equals(igrejaId);
         boolean podeContornar = podeGerenciar
@@ -221,11 +193,7 @@ public class InscricaoService {
         return true;
     }
 
-    /**
-     * Quantas pessoas (inscritos confirmados + acompanhantes) ocupam vaga hoje neste evento.
-     * Exposto para o {@link com.domus.api.modules.evento.EventoService} usar na A9 (recusar
-     * reduzir {@code vagas} abaixo de quem já está confirmado) sem duplicar a query.
-     */
+    /** Exposto para {@link com.domus.api.modules.evento.EventoService} recusar reduzir vagas abaixo do confirmado. */
     @Transactional(readOnly = true)
     public long contarPessoasConfirmadas(UUID eventoId) {
         return inscricaoRepository.contarPessoasConfirmadas(eventoId);
@@ -251,7 +219,7 @@ public class InscricaoService {
 
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
-        boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
+        boolean souODono = inscricao.getPessoa() != null && inscricao.getPessoa().getId().equals(meuMembroId);
         if (!gestorDaMesmaIgreja && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
                     "Você só pode adicionar convidados à sua própria inscrição.");
@@ -293,17 +261,13 @@ public class InscricaoService {
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
 
-        // A2: mesma trava de cancelar() — remover convidado de evento EM_ANDAMENTO/ENCERRADO
-        // reescreveria quem esteve presente. Vale para TODO MUNDO, admin incluso (ver Javadoc
-        // de cancelar()).
+        // Mesma trava de cancelar(): evento EM_ANDAMENTO/ENCERRADO reescreveria quem esteve presente.
         validarEventoAberto(inscricao.getEvento());
 
-        // A permissão vem de SER DONO DA INSCRIÇÃO, não de ter sido quem inscreveu.
-        // Comparar com inscritoPorUsuarioId seria furo: ele é NULL em toda auto-inscrição
-        // (o caso mais comum), e qualquer NULL-check liberaria geral.
+        // Permissão vem de ser dono da inscrição, não de quem inscreveu — inscritoPorUsuarioId é NULL na maioria dos casos.
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
-        boolean souODono = inscricao.getPessoa().getId().equals(meuMembroId);
+        boolean souODono = inscricao.getPessoa() != null && inscricao.getPessoa().getId().equals(meuMembroId);
 
         if (!gestorDaMesmaIgreja && !souODono) {
             throw new BusinessException("SEM_PERMISSAO",
@@ -314,10 +278,7 @@ public class InscricaoService {
                 acompanhanteId, meuMembroId, igrejaId);
     }
 
-    /**
-     * Cancela uma inscrição. Cada pessoa controla a sua; gestores controlam qualquer uma.
-     * Evento EM_ANDAMENTO/ENCERRADO não permite cancelamento — presença é histórico.
-     */
+    /** Evento EM_ANDAMENTO/ENCERRADO não permite cancelamento — presença é histórico. */
     @Transactional
     public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
                          String role, UUID igrejaId) {
@@ -326,7 +287,7 @@ public class InscricaoService {
 
         boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
         boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
-        boolean souEu = inscricao.getPessoa().getId().equals(meuMembroId);
+        boolean souEu = inscricao.getPessoa() != null && inscricao.getPessoa().getId().equals(meuMembroId);
 
         if (!gestorDaMesmaIgreja && !souEu) {
             throw new BusinessException("SEM_PERMISSAO",
@@ -340,10 +301,7 @@ public class InscricaoService {
                 inscricaoId, convidados, usuarioId, igrejaId);
     }
 
-    /**
-     * O cancelamento em si, reusado pelo cancelamento manual e pela remoção por restrição.
-     * Convidados vão junto com a inscrição e não voltam numa reinscrição.
-     */
+    /** Reusado pelo cancelamento manual e pela remoção por restrição — convidados não voltam numa reinscrição. */
     private void cancelarInterno(InscricaoEvento inscricao) {
         inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
         inscricao.setStatus(StatusInscricao.CANCELADA);
@@ -351,19 +309,33 @@ public class InscricaoService {
     }
 
     /**
-     * Cancela inscrições de quem não é mais elegível para as regras atuais do evento.
-     * Só roda com escolha EXPLÍCITA do admin (campo {@code cancelarNaoElegiveis} no PUT).
-     * Pula quem foi inscrito por exceção deliberada ({@link InscricaoEvento#isInscritoPorExcecao}).
+     * Chamado ao arquivar a pessoa (antes do soft delete, pessoa ainda ativa aqui). Evento que
+     * ainda vai acontecer perde a vaga dela — cancela, como qualquer cancelamento normal. Evento
+     * já em andamento ou encerrado não mexe: ela participou, isso é histórico e continua exibindo
+     * os dados normalmente (ela só está arquivada, não excluída).
      */
+    @Transactional
+    public void cancelarInscricoesEmEventosAbertosPorPessoa(UUID pessoaId) {
+        List<InscricaoEvento> confirmadas = inscricaoRepository.findByPessoaIdAndStatus(pessoaId, StatusInscricao.CONFIRMADA);
+        for (InscricaoEvento inscricao : confirmadas) {
+            if (inscricao.getEvento().getSituacao() == SituacaoEvento.AGENDADO) {
+                cancelarInterno(inscricao);
+            }
+        }
+    }
+
+    /** Só roda com escolha explícita do admin ({@code cancelarNaoElegiveis}); pula exceções deliberadas. */
     @Transactional
     public int removerInscritosNaoElegiveis(UUID eventoId) {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
         int removidos = 0;
         for (InscricaoEvento inscricao : inscricoes) {
-            if (inscricao.isInscritoPorExcecao()) continue;
+            Pessoa pessoa = resolverPessoa(inscricao, pessoas);
+            // Pessoa excluída (LGPD): não dá pra reavaliar elegibilidade de quem não existe mais.
+            if (inscricao.isInscritoPorExcecao() || pessoa == null) continue;
 
-            Elegibilidade elegibilidade = elegibilidadeService.avaliar(
-                    inscricao.getEvento(), inscricao.getPessoa());
+            Elegibilidade elegibilidade = elegibilidadeService.avaliar(inscricao.getEvento(), pessoa);
             if (!elegibilidade.apto()) {
                 cancelarInterno(inscricao);
                 removidos++;
@@ -377,47 +349,32 @@ public class InscricaoService {
         return removidos;
     }
 
-    /**
-     * Prévia PURA (nada é gravado) de quem, dentre os CONFIRMADOS de hoje, ficaria de fora sob
-     * {@code regrasHipoteticas} — alimenta {@code POST /eventos/{id}/impacto-restricao}
-     * (ver {@link EventoService#calcularImpacto}).
-     *
-     * <p>Pula quem já tem {@link InscricaoEvento#isInscritoPorExcecao()}: essas exceções são
-     * permanentes por decisão do admin, então nunca aparecem como "afetadas" nem sob regra mais
-     * apertada — o admin já escolheu, uma vez, mantê-las.
-     */
+    /** Prévia pura (nada gravado); pula exceção deliberada — o admin já escolheu manter aquela inscrição. */
     @Transactional(readOnly = true)
     public List<ImpactoRestricaoResponse.InscritoImpactado> calcularImpacto(
             UUID eventoId, Evento regrasHipoteticas) {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
         List<ImpactoRestricaoResponse.InscritoImpactado> afetados = new ArrayList<>();
 
         for (InscricaoEvento inscricao : inscricoes) {
-            if (inscricao.isInscritoPorExcecao()) continue;
+            Pessoa pessoa = resolverPessoa(inscricao, pessoas);
+            if (inscricao.isInscritoPorExcecao() || pessoa == null) continue;
 
-            Elegibilidade elegibilidade = elegibilidadeService.avaliar(
-                    regrasHipoteticas, inscricao.getPessoa());
+            Elegibilidade elegibilidade = elegibilidadeService.avaliar(regrasHipoteticas, pessoa);
             if (!elegibilidade.apto()) {
                 List<String> motivos = elegibilidade.impedimentos().stream()
                         .map(Impedimento::mensagem)
                         .toList();
                 afetados.add(new ImpactoRestricaoResponse.InscritoImpactado(
-                        inscricao.getPessoa().getId(), inscricao.getPessoa().getNome(), motivos));
+                        pessoa.getId(), pessoa.getNome(), motivos));
             }
         }
         return afetados;
     }
 
     /**
-     * Cancela as inscrições CONFIRMADAS de uma pessoa em eventos {@code exclusivoMembros},
-     * chamada quando o vínculo dela deixa de ser MEMBRO (ver {@link
-     * com.domus.api.modules.pessoa.PessoaService#atualizarMembro}).
-     *
-     * <p>Sem isto, alguém que perde o vínculo MEMBRO continuaria confirmado e ocupando vaga
-     * num evento exclusivo para membros — a mesma inscrição que {@link #validarElegibilidade}
-     * recusaria se fosse tentada de novo. Reusa {@link #cancelarInterno}, então os
-     * acompanhantes são removidos junto, igual a qualquer outro cancelamento.
-     *
+     * Chamada quando o vínculo deixa de ser MEMBRO — sem isto a pessoa continuaria ocupando vaga em evento exclusivo.
      * @return quantas inscrições foram canceladas.
      */
     @Transactional
@@ -436,30 +393,26 @@ public class InscricaoService {
         return inscricoes.size();
     }
 
-    /**
-     * Lista PAGINADA de inscritos confirmados + contagem de vagas restantes. {@code busca}
-     * (nome do inscrito, opcional) e a paginação afetam só {@code inscritos} — total de
-     * pessoas/vagas restantes sempre contam TODAS as confirmadas do evento.
-     */
+    /** {@code busca} e a paginação afetam só {@code inscritos} — total/vagas restantes contam TODAS as confirmadas. */
     @Transactional(readOnly = true)
     public ListaInscritosResponse listarInscritos(UUID eventoId, UUID igrejaId, String busca, Pageable pageable) {
-        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+        // IncluindoArquivados: a tela de Arquivados também abre a lista de inscritos de um
+        // evento arquivado (pra só olhar) — arquivar não desvincula ninguém.
+        Evento evento = eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        // Paginar direto numa query com JOIN FETCH de coleção (acompanhantes) faz o Hibernate
-        // paginar EM MEMÓRIA — por isso os ids vêm paginados primeiro, e os detalhes completos
-        // depois, por IN (mesma ordem, createdAt ASC nas duas queries).
+        // JOIN FETCH de coleção paginaria em memória no Hibernate — ids paginados primeiro, detalhes por IN depois.
         Page<UUID> idsPagina = inscricaoRepository.listarIdsPaginadoPorEvento(eventoId, busca, pageable);
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarComDetalhesPorIds(idsPagina.getContent());
 
-        // Resolve "quem inscreveu" em UMA query para a página inteira (evita N+1): coleta os
-        // ids distintos e não-nulos e busca nome+foto em lote. Ids ausentes no mapa de volta
-        // (conta ou membro arquivados depois da inscrição) viram null no DTO — tratados
-        // explicitamente, não escondidos atrás de um texto genérico incorreto.
+        // Resolve "quem inscreveu" em UMA query (evita N+1); id ausente no mapa (conta arquivada) vira null explícito.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
+        Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
 
         List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
-                .map(i -> InscritoResponse.from(i, registrantes.get(i.getInscritoPorUsuarioId())))
+                .map(i -> InscritoResponse.from(i,
+                        resolverPessoa(i, pessoas),
+                        registrantes.get(i.getInscritoPorUsuarioId())))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
@@ -472,26 +425,57 @@ public class InscricaoService {
         return new ListaInscritosResponse(total, evento.getVagas(), restantes, paginaInscritos);
     }
 
-    /**
-     * Lista de participantes visível a QUALQUER MEMBRO — versão reduzida de
-     * {@link #listarInscritos}, sem telefone de convidado, sem "quem inscreveu quem" e sem
-     * data da inscrição (ver Javadoc de {@link ParticipanteResponse}).
-     */
+    /** Visível a QUALQUER MEMBRO — versão reduzida de {@link #listarInscritos} (ver {@link ParticipanteResponse}). */
     @Transactional(readOnly = true)
     public List<ParticipanteResponse> listarParticipantes(UUID eventoId, UUID igrejaId) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        // IncluindoArquivados: mesma razão do buscarPorId — abrir o detalhe de um evento
+        // arquivado (tela de Arquivados) também carrega essa lista reduzida.
         eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
+                .or(() -> eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        return inscricaoRepository.listarPorEvento(eventoId)
-                .stream().map(ParticipanteResponse::from).toList();
+        List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
+        Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
+        return inscricoes.stream()
+                .map(i -> ParticipanteResponse.from(i, resolverPessoa(i, pessoas)))
+                .toList();
     }
 
     /**
-     * Busca nome+foto de quem inscreveu para toda a lista, numa única query (ou nenhuma,
-     * se ninguém foi inscrito por terceiro). {@code Map.of()} do {@code Collectors.toMap}
-     * já garante ids únicos porque a origem é uma coluna de PK.
+     * Em lote, via bypass do @SQLRestriction (nunca {@code i.getPessoa().getNome()} direto) —
+     * pessoa arquivada (mas não excluída) continua tendo os dados reais resolvidos aqui; some
+     * do mapa só quando foi excluída de vez (pessoa_id já é NULL nesse caso, nem entra na busca).
      */
+    private Map<UUID, Pessoa> resolverPessoasEmLote(List<InscricaoEvento> inscricoes) {
+        List<UUID> ids = inscricoes.stream()
+                .map(InscricaoEvento::getPessoa)
+                .filter(p -> p != null)
+                .map(Pessoa::getId)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return membroRepository.findByIdInIncluindoArquivadas(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Pessoa::getId, p -> p));
+    }
+
+    /**
+     * Resolve a pessoa de exibição pra uma inscrição. Em produção, {@code i.getPessoa()} é sempre
+     * um proxy lazy do Hibernate (repositório nunca mais faz JOIN FETCH em pessoa) — usa o mapa
+     * resolvido em lote pra não estourar @SQLRestriction se ela estiver arquivada. Em teste
+     * (objeto construído direto via builder), não é proxy — usa direto, sem depender do mock do
+     * bypass estar stubado.
+     */
+    private Pessoa resolverPessoa(InscricaoEvento i, Map<UUID, Pessoa> pessoasResolvidas) {
+        Pessoa p = i.getPessoa();
+        if (p == null) return null;
+        if (!(p instanceof org.hibernate.proxy.HibernateProxy)) return p;
+        return pessoasResolvidas.get(p.getId());
+    }
+
+    /** Numa única query (ou nenhuma, se ninguém foi inscrito por terceiro). */
     private Map<UUID, RegistranteResumo> buscarRegistrantesEmLote(List<InscricaoEvento> inscricoes) {
         List<UUID> ids = inscricoes.stream()
                 .map(InscricaoEvento::getInscritoPorUsuarioId)
@@ -499,9 +483,7 @@ public class InscricaoService {
                 .distinct()
                 .toList();
 
-        // HashMap (não Map.of()): .get(null) é uma consulta legítima e frequente aqui —
-        // toda auto-inscrição tem inscritoPorUsuarioId nulo, e Map.of() lança NPE em
-        // chave nula.
+        // HashMap, não Map.of(): .get(null) é consulta legítima aqui (auto-inscrição) e Map.of() lança NPE em chave nula.
         Map<UUID, RegistranteResumo> mapa = new HashMap<>();
         if (ids.isEmpty()) {
             return mapa;
@@ -520,12 +502,8 @@ public class InscricaoService {
     }
 
     /**
-     * Marca presente TODO inscrito CONFIRMADO do evento e TODOS os seus acompanhantes —
-     * o fluxo real é "quase todo mundo veio", e cada linha ganha um checkbox individual
-     * para corrigir a exceção depois (ver {@link #marcarPresencaInscricao}/
-     * {@link #marcarPresencaAcompanhante}).
-     *
-     * @return quantas PESSOAS FÍSICAS (inscritos + acompanhantes) foram marcadas.
+     * Fluxo real é "quase todo mundo veio" — exceções se corrigem depois via {@link #marcarPresencaInscricao}.
+     * @return quantas pessoas físicas (inscritos + acompanhantes) foram marcadas.
      */
     @Transactional
     public int marcarTodosPresentes(UUID eventoId, UUID igrejaId, String role) {
@@ -587,8 +565,7 @@ public class InscricaoService {
         AcompanhanteInscricao acompanhante = acompanhanteRepository.findById(acompanhanteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
 
-        // Mesmo isolamento multi-tenant de removerAcompanhante(): id de outra igreja é
-        // tratado como inexistente, nunca vaza que existe fora da própria igreja.
+        // Mesmo isolamento de removerAcompanhante(): id de outra igreja é tratado como inexistente, nunca vaza.
         if (!acompanhante.getInscricao().getIgreja().getId().equals(igrejaId)) {
             throw new ResourceNotFoundException("Convidado não encontrado.");
         }
@@ -610,10 +587,7 @@ public class InscricaoService {
         }
     }
 
-    /**
-     * Só é editável se a inscrição estiver CONFIRMADA (spec do relatório de eventos,
-     * 2026-07-23): uma inscrição CANCELADA não deveria ter presença marcada/desmarcada.
-     */
+    /** Inscrição CANCELADA não deveria ter presença marcada/desmarcada. */
     private void validarInscricaoConfirmada(InscricaoEvento inscricao) {
         if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
             throw new ConflitoNegocioException("INSCRICAO_NAO_CONFIRMADA",

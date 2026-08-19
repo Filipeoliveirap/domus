@@ -609,7 +609,7 @@ class InscricaoServiceTest {
     @Test
     void listaTrazTotalDePessoasEVagasRestantes() {
         Evento e = evento(10);
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)).thenReturn(Optional.of(e));
         when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of()));
         when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of());
@@ -624,7 +624,7 @@ class InscricaoServiceTest {
 
     @Test
     void vagasRestantesEhNuloQuandoNaoHaLimite() {
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
                 .thenReturn(Optional.of(evento(null)));
         when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of()));
@@ -642,7 +642,7 @@ class InscricaoServiceTest {
                 .pessoa(membro(Vinculo.MEMBRO))
                 .inscritoPorUsuarioId(usuarioId)
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)).thenReturn(Optional.of(e));
         when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
         when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
@@ -666,7 +666,7 @@ class InscricaoServiceTest {
                 .pessoa(membro(Vinculo.MEMBRO))
                 .inscritoPorUsuarioId(null) // auto-inscrição
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)).thenReturn(Optional.of(e));
         when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
         when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
@@ -691,7 +691,7 @@ class InscricaoServiceTest {
                 .pessoa(membro(Vinculo.MEMBRO))
                 .inscritoPorUsuarioId(usuarioId)
                 .status(StatusInscricao.CONFIRMADA).build();
-        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(e));
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)).thenReturn(Optional.of(e));
         when(inscricaoRepository.listarIdsPaginadoPorEvento(eq(eventoId), any(), any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(inscricao.getId())));
         when(inscricaoRepository.listarComDetalhesPorIds(any())).thenReturn(java.util.List.of(inscricao));
@@ -1043,7 +1043,7 @@ class InscricaoServiceTest {
                 .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
                 .build();
 
-        InscritoResponse response = InscritoResponse.from(inscricao, null);
+        InscritoResponse response = InscritoResponse.from(inscricao, pessoaDeOutraIgreja, null);
 
         assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Norte");
     }
@@ -1056,7 +1056,7 @@ class InscricaoServiceTest {
                 .acompanhantes(new ArrayList<>()).createdAt(java.time.LocalDateTime.now())
                 .build();
 
-        ParticipanteResponse response = ParticipanteResponse.from(inscricao);
+        ParticipanteResponse response = ParticipanteResponse.from(inscricao, pessoaDeOutraIgreja);
 
         assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Sul");
     }

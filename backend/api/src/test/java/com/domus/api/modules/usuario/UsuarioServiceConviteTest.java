@@ -39,6 +39,13 @@ class UsuarioServiceConviteTest {
     EmailService emailService;
     com.domus.api.modules.evento.EventoRepository eventoRepository;
     UsuarioCapacidadeRepository capacidadeRepository;
+    com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
+    com.domus.api.modules.celula.CelulaRepository celulaRepository;
+    com.domus.api.modules.celula.CelulaMembroRepository celulaMembroRepository;
+    com.domus.api.modules.ministerio.MinisterioRepository ministerioRepository;
+    com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
+    com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
+    com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
     UsuarioService service;
 
     final UUID igrejaId = UUID.randomUUID();
@@ -56,9 +63,18 @@ class UsuarioServiceConviteTest {
         emailService = mock(EmailService.class);
         eventoRepository = mock(com.domus.api.modules.evento.EventoRepository.class);
         capacidadeRepository = mock(UsuarioCapacidadeRepository.class);
+        inscricaoRepository = mock(com.domus.api.modules.evento.inscricao.InscricaoRepository.class);
+        celulaRepository = mock(com.domus.api.modules.celula.CelulaRepository.class);
+        celulaMembroRepository = mock(com.domus.api.modules.celula.CelulaMembroRepository.class);
+        ministerioRepository = mock(com.domus.api.modules.ministerio.MinisterioRepository.class);
+        ministerioMembroRepository = mock(com.domus.api.modules.ministerio.MinisterioMembroRepository.class);
+        movimentacaoFinanceiraRepository = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository.class);
+        visitanteRepository = mock(com.domus.api.modules.visitante.VisitanteRepository.class);
         service = new UsuarioService(usuarioRepository, igrejaRepository, roleRepository,
                 membroRepository, cacheEvictor, outboxRegistrador, passwordResetService, emailService,
-                eventoRepository, capacidadeRepository);
+                eventoRepository, capacidadeRepository, inscricaoRepository, celulaRepository,
+                celulaMembroRepository, ministerioRepository, ministerioMembroRepository,
+                movimentacaoFinanceiraRepository, visitanteRepository);
 
         Role role = new Role();
         role.setNome("ACESSO_COMUM");

@@ -1,0 +1,58 @@
+package com.domus.api.modules.igreja.exclusao;
+
+import com.domus.api.modules.igreja.exclusao.DTO.AgendarExclusaoRequest;
+import com.domus.api.modules.igreja.exclusao.DTO.ResumoExclusaoResponse;
+import com.domus.api.shared.exception.AcessoNegadoException;
+import com.domus.api.shared.security.Permissoes;
+import com.domus.api.shared.security.UsuarioAutenticado;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/igrejas/exclusao")
+@RequiredArgsConstructor
+public class ExclusaoIgrejaController {
+
+    private final ExclusaoIgrejaService exclusaoIgrejaService;
+    private final ExclusaoIgrejaJob exclusaoIgrejaJob;
+    private final UsuarioAutenticado usuarioAutenticado;
+
+    @GetMapping("/resumo")
+    public ResponseEntity<ResumoExclusaoResponse> resumo() {
+        exigirAdmin();
+        return ResponseEntity.ok(exclusaoIgrejaService.resumo(
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
+    }
+
+    @PostMapping("/agendar")
+    public ResponseEntity<Void> agendar(@RequestBody @Valid AgendarExclusaoRequest data) {
+        exigirAdmin();
+        exclusaoIgrejaService.agendar(usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                data.nomeConfirmacao(), data.senha(), data.googleIdToken());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/cancelar")
+    public ResponseEntity<Void> cancelar() {
+        exigirAdmin();
+        exclusaoIgrejaService.cancelar(usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.ok().build();
+    }
+
+    /** Dispara o job diário na hora — testa lembretes/purga sem esperar o cron (4h) nem
+     *  esperar 10 dias de verdade. TEMPORÁRIO: remover antes de produção. */
+    @PostMapping("/rodar-job")
+    public ResponseEntity<Void> rodarJob() {
+        exigirAdmin();
+        exclusaoIgrejaJob.verificarPrazos();
+        return ResponseEntity.ok().build();
+    }
+
+    private void exigirAdmin() {
+        if (!Permissoes.podeExcluirIgreja(usuarioAutenticado.getRole())) {
+            throw new AcessoNegadoException();
+        }
+    }
+}

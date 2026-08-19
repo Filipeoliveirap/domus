@@ -5,11 +5,7 @@ import com.domus.api.modules.evento.elegibilidade.Impedimento;
 
 import java.util.List;
 
-/**
- * É conveniência de UX — a tela usa para decidir o que mostrar ANTES de tentar o POST —,
- * NUNCA defesa: quem chamar o POST direto continua esbarrando na mesma
- * {@link com.domus.api.modules.evento.elegibilidade.NaoElegivelException}.
- */
+/** Conveniência de UX, nunca defesa — o POST direto continua barrado pela mesma validação. */
 public record ElegibilidadeResponse(boolean apto, List<Impedimento> impedimentos) {
     public static ElegibilidadeResponse from(Elegibilidade elegibilidade) {
         return new ElegibilidadeResponse(elegibilidade.apto(), elegibilidade.impedimentos());

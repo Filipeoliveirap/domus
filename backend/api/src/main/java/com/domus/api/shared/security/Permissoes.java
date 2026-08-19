@@ -4,12 +4,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * Autorização centralizada: compare capacidade ("pode gerenciar inscrições?"), não
- * identidade ({@code "ADMIN_IGREJA".equals(role)}). Divergência entre cópias de uma
- * regra é um furo de autorização silencioso — não quebra compilação nem teste.
- * Se uma pergunta não está aqui, adicione um método; não compare string no seu service.
- */
+/** Compare capacidade, não identidade — string comparada em vários services diverge sem quebrar compilação nem teste. */
 public final class Permissoes {
 
     private Permissoes() {}
@@ -70,4 +65,7 @@ public final class Permissoes {
 
     /** Criar, arquivar células e promover líderes de célula. */
     public static boolean podeGerenciarCelulas(String role) { return tem(role, SO_ADMIN); }
+
+    /** Agendar ou cancelar a exclusão definitiva da igreja — a ação de maior risco do sistema. */
+    public static boolean podeExcluirIgreja(String role) { return tem(role, SO_ADMIN); }
 }

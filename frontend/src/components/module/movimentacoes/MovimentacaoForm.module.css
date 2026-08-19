@@ -326,7 +326,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 48px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
   border-radius: var(--radius-md);
   background: var(--color-bg-table-header);
   color: var(--color-text-secondary);
@@ -414,6 +418,19 @@
 }
 
 .contribuintePessoa { min-width: 0; }
+
+.pessoaRemovida {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-table-header);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
 
 .inputValorContribuinte {
   min-height: 48px;

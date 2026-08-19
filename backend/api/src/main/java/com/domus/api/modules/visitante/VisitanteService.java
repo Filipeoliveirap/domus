@@ -4,7 +4,10 @@ import com.domus.api.modules.celula.CelulaMembro;
 import com.domus.api.modules.celula.CelulaMembroRepository;
 import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.modules.outbox.OutboxRegistrador;
+import com.domus.api.modules.outbox.TipoEntidadeOutbox;
+import com.domus.api.modules.outbox.TipoEventoOutbox;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.DTOs.VisitanteRequest;
 import com.domus.api.modules.visitante.DTOs.VisitanteResponse;
@@ -31,6 +34,7 @@ public class VisitanteService {
     private final UsuarioRepository usuarioRepository;
     private final CelulaRepository celulaRepository;
     private final CelulaMembroRepository celulaMembroRepository;
+    private final OutboxRegistrador outboxRegistrador;
 
     @Transactional(readOnly = true)
     public PagedResponse<VisitanteResponse> listar(UUID igrejaId, String q,
@@ -84,7 +88,9 @@ public class VisitanteService {
                     .build());
         }
 
-        return VisitanteResponse.from(visitanteRepository.save(visitante));
+        Visitante salvo = visitanteRepository.save(visitante);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.CRIADO, salvo.getId(), igrejaId);
+        return VisitanteResponse.from(salvo);
     }
 
     @Transactional
@@ -119,7 +125,9 @@ public class VisitanteService {
             usuarioRepository.findById(usuarioId).ifPresent(visitante::setAtualizadoPor);
         }
 
-        return VisitanteResponse.from(visitanteRepository.save(visitante));
+        Visitante salvo = visitanteRepository.save(visitante);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, salvo.getId(), igrejaId);
+        return VisitanteResponse.from(salvo);
     }
 
     @Transactional
@@ -130,6 +138,7 @@ public class VisitanteService {
                     "Não é possível excluir um visitante que está em uma célula.");
         }
         visitanteRepository.delete(visitante);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.REMOVIDO, id, igrejaId);
     }
 
     @Transactional
@@ -152,7 +161,10 @@ public class VisitanteService {
                     .build());
         }
 
-        return VisitanteResponse.from(visitanteRepository.save(visitante));
+        VisitanteResponse response = VisitanteResponse.from(visitanteRepository.save(visitante));
+        // VisitanteDocument.celulaId muda — busca precisa reindexar.
+        outboxRegistrador.registrar(TipoEntidadeOutbox.VISITANTE, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        return response;
     }
 
     @Transactional

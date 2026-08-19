@@ -23,21 +23,11 @@ interface Props {
   onClose: () => void
 }
 
-/**
- * Já estar inscrita é o único bloqueio DE VERDADE na lista (o clique falharia sozinho) —
- * por isso é o único que desabilita o checkbox.
- */
 function jaInscrita(p: PessoaResponse, jaInscritos: Set<string>): boolean {
   return jaInscritos.has(p.id)
 }
 
-/**
- * Aviso (não bloqueio) de que a pessoa pode não ser elegível para o evento. Continua
- * selecionável: `EXCLUSIVO_MEMBROS` é CONTORNÁVEL pelo backend para quem gerencia — quem
- * bloqueasse aqui tiraria do gestor uma opção que o servidor permite. A verificação real
- * (idade, sexo, estado civil…) só existe no 422 do POST — o front não a antecipa para
- * terceiros (só a `GET /elegibilidade`, que avalia a PESSOA LOGADA).
- */
+// Não bloqueia: EXCLUSIVO_MEMBROS é contornável pelo backend para quem gerencia.
 function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): string | null {
   if (exclusivoMembros && p.vinculo !== 'MEMBRO') {
     return 'Congregante — evento exclusivo para membros'
@@ -45,10 +35,7 @@ function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): strin
   return null
 }
 
-/**
- * Busca + seleção múltipla de pessoas para inscrever no evento. Deliberadamente NÃO tem
- * "selecionar todos" — a seleção um a um é o que evita uma inscrição em massa por engano.
- */
+// Sem "selecionar todos" de propósito: evita inscrição em massa por engano.
 export function ModalInscreverPessoas({
   eventoId, tituloEvento, exclusivoMembros, onClose,
 }: Props) {
@@ -71,7 +58,7 @@ export function ModalInscreverPessoas({
   // é restrita a ADMIN/LÍDER e devolveria 401 para uma pessoa comum abrindo este modal.
   const { data: participantes = [] } = useParticipantes(eventoId)
   const jaInscritos = useMemo(
-    () => new Set(participantes.map((p) => p.pessoaId)),
+    () => new Set(participantes.map((p) => p.pessoaId).filter((id): id is string => id !== null)),
     [participantes],
   )
 

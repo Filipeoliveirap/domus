@@ -11,13 +11,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Prova que o trigger da V14 (regra dos 2 níveis) realmente barra no BANCO.
- *
- * <p>Estes testes escrevem SQL direto, sem passar pelo {@code VinculoService} — de propósito.
- * O trigger existe justamente para o dia em que alguém escrever num caminho que não conhece
- * as regras da aplicação. Um teste que passasse pelo serviço não provaria nada sobre isso.
- *
- * <p>Contra Postgres real (`replace = NONE`): trigger não existe em H2.
+ * SQL direto, sem passar por VinculoService de propósito — o trigger existe pro dia em que alguém escrever num caminho que não conhece as regras da aplicação.
+ * Postgres real (`replace = NONE`): trigger não existe em H2.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

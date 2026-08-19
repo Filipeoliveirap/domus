@@ -6,6 +6,18 @@ export type EstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO'
 // não descrever identidade.
 export type Sexo = 'HOMEM' | 'MULHER'
 
+export interface PessoaArquivadaResponse {
+  id: string
+  nome: string
+  email: string | null
+  temVinculo: boolean
+  temUsuario: boolean
+  temContribuicao: boolean
+  temInscricao: boolean
+  temCelula: boolean
+  temMinisterio: boolean
+}
+
 export interface Endereco {
   cep?: string
   logradouro?: string
@@ -46,6 +58,7 @@ export interface PessoaResponse {
   observacoes: string | null
   createdAt: string
   dataBatismo: string | null
+  arquivada: boolean
 }
 
 export interface ConcederAcessoRequest {

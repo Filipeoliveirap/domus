@@ -13,12 +13,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * {@code Pessoa} tem {@code @SQLRestriction("deleted_at IS NULL")}, então um teste com
- * Mockito não prova nada sobre esta query — ela existe justamente para enxergar pessoa
- * arquivada, que o Hibernate esconde de qualquer JPQL. Só um banco de verdade prova que o
- * UPDATE nativo realmente bate na pessoa arquivada e não é filtrado pela restrição.
- */
+/** Pessoa tem @SQLRestriction("deleted_at IS NULL"); só banco real prova que o UPDATE nativo bate na pessoa arquivada sem ser filtrado. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class PessoaRepositoryDesvincularFotoTest {

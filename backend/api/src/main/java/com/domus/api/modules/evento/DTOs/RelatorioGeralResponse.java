@@ -11,17 +11,10 @@ public record RelatorioGeralResponse(
         Resumo resumo,
         EventoMaisPopular eventoMaisPopular,
         List<PontoTendencia> tendencia,
-        /**
-         * Paginado — resumo/eventoMaisPopular/tendencia usam o filtro INTEIRO (não a página
-         * atual), só esta lista pagina para não devolver a igreja inteira de uma vez.
-         */
+        /** Só esta lista pagina — resumo/eventoMaisPopular/tendencia usam o filtro inteiro. */
         PagedResponse<UltimoEvento> ultimosEventos
 ) {
-    /**
-     * {@code comparecimentoMedio}/{@code participantesUnicos} são {@code null} quando NENHUM
-     * evento do filtro controla presença — nunca {@code 0} (Decisão 4: zero mentiria "ninguém
-     * foi", quando na verdade ninguém controlou).
-     */
+    /** {@code null} (nunca {@code 0}) quando nenhum evento do filtro controla presença — zero mentiria "ninguém foi". */
     public record Resumo(long totalEventos, Double comparecimentoMedio, Long participantesUnicos) {}
 
     /** Sempre baseado em inscritos confirmados (pessoa+convidado) — funciona em QUALQUER evento. */

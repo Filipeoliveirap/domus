@@ -1,6 +1,7 @@
 package com.domus.api.modules.evento.local;
 
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.EventoService;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoRequest;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
 import com.domus.api.modules.igreja.Igreja;
@@ -22,11 +23,12 @@ public class LocalEventoService {
     private final LocalEventoRepository localEventoRepository;
     private final IgrejaRepository igrejaRepository;
     private final EventoRepository eventoRepository;
+    private final EventoService eventoService;
 
     @Transactional(readOnly = true)
     public List<LocalEventoResponse> listar(UUID igrejaId) {
         return localEventoRepository.findByIgrejaIdOrderByNomeAsc(igrejaId).stream()
-                .map(LocalEventoResponse::from)
+                .map(l -> LocalEventoResponse.from(l, eventoRepository.countByLocalIdAndIgrejaId(l.getId(), igrejaId) > 0))
                 .toList();
     }
 
@@ -63,9 +65,11 @@ public class LocalEventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
 
         String nome = TextoUtil.capitalizar(data.nome());
+        boolean nomeMudou = !TextoUtil.normalizarParaComparacao(nome)
+                .equals(TextoUtil.normalizarParaComparacao(local.getNome()));
         // Só valida duplicata se o nome mudou de verdade — senão o próprio local bateria
         // consigo mesmo na comparação normalizada.
-        if (!TextoUtil.normalizarParaComparacao(nome).equals(TextoUtil.normalizarParaComparacao(local.getNome()))) {
+        if (nomeMudou) {
             validarNaoDuplicado(nome, igrejaId);
         }
 
@@ -75,6 +79,13 @@ public class LocalEventoService {
         local.setComplementoBairroCidadeUf(data.complementoBairroCidadeUf());
 
         LocalEvento salvo = localEventoRepository.save(local);
+
+        // EventoDocument.local reflete o nome do local — todo evento vinculado precisa
+        // reindexar quando ele muda (via evento.getLocalExibicao()).
+        if (nomeMudou) {
+            eventoService.reindexarPorLocal(id, igrejaId);
+        }
+
         return LocalEventoResponse.from(salvo);
     }
 
@@ -83,15 +94,40 @@ public class LocalEventoService {
         LocalEvento local = localEventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
 
-        // Soft delete do LocalEvento não dispara ON DELETE SET NULL da FK evento.local_id.
-        // Sem desvincular, o proxy LAZY de local dispararia EntityNotFoundException ao ler
-        // EventoResponse e derrubaria a listagem inteira de eventos. Copiamos o nome para
-        // local_texto (reaproveitando o campo ad-hoc já existente) e usamos SQL nativo para
-        // alcançar também os eventos já arquivados — @SQLRestriction esconde arquivados de
-        // qualquer query derivada/JPQL.
-        eventoRepository.desvincularLocal(id, local.getNome());
+        // Reindexa antes de desvincular: depois disso local_id vira NULL e a query de
+        // busca por local não encontra mais os eventos afetados.
+        eventoService.reindexarPorLocal(id, igrejaId);
+
+        // Soft delete não desvincula (sem isso o proxy LAZY de local derrubaria a listagem); SQL nativo pra alcançar também eventos arquivados.
+        eventoRepository.desvincularLocal(id);
 
         localEventoRepository.delete(local);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocalEventoResponse> listarArquivados(UUID igrejaId) {
+        return localEventoRepository.findArquivadosPorIgreja(igrejaId).stream()
+                .map(LocalEventoResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = localEventoRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Local não encontrado.");
+        }
+    }
+
+    /**
+     * Nunca bloqueia: {@code arquivar} já desvincula todo evento (inclusive arquivado) antes
+     * de soft-deletar — quando um local chega até aqui, nada mais aponta pra ele.
+     */
+    @Transactional
+    public void excluirDefinitivo(UUID id, UUID igrejaId) {
+        localEventoRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Local não encontrado."));
+        localEventoRepository.hardDeleteById(id);
     }
 
     private void validarNaoDuplicado(String nome, UUID igrejaId) {

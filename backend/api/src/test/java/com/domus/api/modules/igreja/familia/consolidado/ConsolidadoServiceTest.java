@@ -17,13 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Trava a contagem de membros/congregantes do consolidado — em particular a armadilha do
- * {@code ordinal()}: {@code Vinculo} tem só 2 valores hoje, mas indexar um array por posição
- * do enum é uma bomba-relógio para o dia em que um 3º vínculo for adicionado. A agregação
- * usa {@code EnumMap<Vinculo, Long>} com o próprio enum como chave — este teste garante que
- * a contagem está certa, não só que "compila".
- */
+/** Indexar array por ordinal() de Vinculo é bomba-relógio pro dia de um 3º vínculo; agregação usa EnumMap<Vinculo, Long> como chave. */
 class ConsolidadoServiceTest {
 
     ConsolidadoRepository repository;

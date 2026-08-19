@@ -18,12 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Autenticação via Google (fluxo Option A: ID token no front).
- *
- * O Google só IDENTIFICA a pessoa (validamos o ID token dele). Identificada, a emissão da
- * sessão do Domus (JWT + refresh) reusa exatamente o mesmo caminho do login/cadastro nativo.
- */
+/** Google só identifica a pessoa; a emissão de sessão (JWT + refresh) reusa o caminho do login nativo. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -117,6 +112,11 @@ public class GoogleAuthService {
                 admin.getIgreja().getId(),
                 admin.getIgreja().getNome()
         );
+    }
+
+    /** Reautenticação (step-up auth) fora do fluxo de login — ex.: confirmar exclusão de igreja. */
+    public String reautenticarPorGoogle(String idToken) {
+        return verificar(idToken).getSubject();
     }
 
     /**

@@ -6,16 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
-/**
- * Fábrica dos cookies de sessão.
- *
- * <p>Os tokens deixaram de trafegar no corpo/header e passaram a viver em cookies
- * {@code httpOnly} — o JavaScript não os lê, então um XSS não rouba a sessão.
- *
- * <p>O {@code path-prefix} existe porque o front chama a API através de um proxy do Next
- * ({@code /api/*}). O {@code Path} do cookie precisa ser escrito na visão do NAVEGADOR
- * ({@code /api/auth}), não na do Spring ({@code /auth}) — o Spring não enxerga esse prefixo.
- */
+/** Path do cookie usa a visão do navegador ({@code /api/auth}), não a do Spring ({@code /auth}) — o proxy do Next some do lado do Spring. */
 @Component
 public class AuthCookieFactory {
 

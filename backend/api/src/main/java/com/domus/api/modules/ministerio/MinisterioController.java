@@ -54,6 +54,26 @@ public class MinisterioController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/arquivados")
+    public ResponseEntity<List<MinisterioResponse>> arquivados() {
+        exigirAdmin();
+        return ResponseEntity.ok(ministerioService.listarArquivadas(usuarioAutenticado.getIgrejaId()));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        exigirAdmin();
+        ministerioService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        exigirAdmin();
+        ministerioService.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/membros")
     public ResponseEntity<Void> adicionarMembro(@PathVariable UUID id, @Valid @RequestBody AdicionarMembroRequest data) {
         ministerioService.adicionarMembro(id, data, usuarioAutenticado.getIgrejaId(),

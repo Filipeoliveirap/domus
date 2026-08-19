@@ -39,7 +39,7 @@ export interface PeriodoRelatorio {
 }
 
 export interface ContribuinteBreakdown {
-  pessoaId: string
+  pessoaId: string | null
   pessoaNome: string
   tipo: TipoMovimentacao
   total: string

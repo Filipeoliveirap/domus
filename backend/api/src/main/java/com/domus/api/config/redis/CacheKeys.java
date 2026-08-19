@@ -19,19 +19,7 @@ public final class CacheKeys {
         return igrejaId + ":" + sha256Curto(bruto);
     }
 
-    /**
-     * Chave da listagem de pessoas. <b>Toda dimensão que muda a RESPOSTA precisa entrar aqui</b>,
-     * senão o Redis serve a resposta de uma pergunta como se fosse de outra — sem passar por
-     * autorização nem por filtro nenhum.
-     *
-     * <p>{@code sensiveis}: ADMIN vê endereço e observações; LÍDER e ACESSO_COMUM não. Sem esta
-     * dimensão, a consulta de um ADMIN encheria o cache e o LÍDER seguinte receberia a versão
-     * dele — endereço da igreja inteira entregue pelo cache.
-     *
-     * <p>{@code vinculo}: a lista filtrada por MEMBRO e a lista sem filtro são respostas
-     * diferentes para o mesmo {@code igrejaId}+{@code q}+{@code pageable}. Sem ela, quem pedisse
-     * CONGREGANTE receberia a página cacheada por quem pediu MEMBRO.
-     */
+    /** Toda dimensão que muda a resposta (sensiveis, vinculo) precisa entrar na chave, senão o Redis vaza a resposta de um perfil/filtro para outro. */
     public static String pessoas(UUID igrejaId, String q, Pageable pageable, boolean sensiveis, Vinculo vinculo) {
         String bruto = (q == null ? "" : q) + "|"
                 + pageable.getPageNumber() + "|"

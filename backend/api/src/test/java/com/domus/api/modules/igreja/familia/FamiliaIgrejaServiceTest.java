@@ -15,12 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.*;
 
-/**
- * O teste mais importante da feature: um furo aqui vaza financeiro entre igrejas.
- *
- * <p>Cenário das duas famílias:
- * família A = maeA + filhaA1, filhaA2; família B = maeB + filhaB1.
- */
+/** Um furo aqui vaza financeiro entre igrejas. Cenário: família A = maeA + filhaA1, filhaA2; família B = maeB + filhaB1. */
 class FamiliaIgrejaServiceTest {
 
     IgrejaRepository igrejaRepository;

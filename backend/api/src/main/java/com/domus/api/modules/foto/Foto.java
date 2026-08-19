@@ -8,10 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Metadado da foto. Os BYTES vivem no R2 — aqui só o que o banco precisa saber para
- * localizar, isolar por igreja e decidir sobre limpeza.
- */
+/** Metadado da foto — os bytes vivem no R2. */
 @Entity
 @Table(name = "foto")
 @Getter @Setter

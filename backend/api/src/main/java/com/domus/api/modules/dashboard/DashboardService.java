@@ -3,8 +3,11 @@ package com.domus.api.modules.dashboard;
 import com.domus.api.modules.dashboard.dto.DashboardResponse;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
+import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceira;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
+import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.financeiro.relatorio.RelatorioProjections;
 import com.domus.api.modules.financeiro.relatorio.RelatorioRepository;
 import com.domus.api.modules.inicio.dto.EventoResumoDTO;
@@ -32,6 +35,7 @@ public class DashboardService {
     private final EventoRepository eventoRepository;
     private final RelatorioRepository relatorioRepository;
     private final MovimentacaoFinanceiraRepository movimentacaoRepository;
+    private final CategoriaFinanceiraRepository categoriaRepository;
     private final FamiliaIgrejaService familiaIgrejaService;
 
     @Transactional(readOnly = true)
@@ -56,9 +60,30 @@ public class DashboardService {
         BigDecimal saidas = resumo.getTotalSaidas();
         BigDecimal saldo = entradas.subtract(saidas);
 
-        List<MovimentacaoResponse> recentes =
-                movimentacaoRepository.recentes(igrejaId, PageRequest.of(0, LIMITE))
-                        .stream().map(MovimentacaoResponse::de).toList();
+        List<MovimentacaoFinanceira> movimentacoesRecentes =
+                movimentacaoRepository.recentes(igrejaId, PageRequest.of(0, LIMITE));
+        // Nunca m.getCategoria().getNome() direto — categoria arquivada estoura EntityNotFoundException.
+        List<UUID> idsCategoria = movimentacoesRecentes.stream().map(m -> m.getCategoria().getId()).distinct().toList();
+        var nomesPorCategoria = idsCategoria.isEmpty()
+                ? java.util.Map.<UUID, String>of()
+                : categoriaRepository.findByIdInAndIgrejaIdIncluindoArquivadas(idsCategoria, igrejaId).stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                com.domus.api.modules.financeiro.categoria.CategoriaFinanceira::getId,
+                                com.domus.api.modules.financeiro.categoria.CategoriaFinanceira::getNome));
+        List<UUID> idsPessoaContribuinte = movimentacoesRecentes.stream()
+                .flatMap(m -> m.getContribuintes().stream())
+                .map(c -> c.getPessoa())
+                .filter(p -> p != null)
+                .map(Pessoa::getId)
+                .distinct()
+                .toList();
+        var pessoasContribuintes = idsPessoaContribuinte.isEmpty()
+                ? java.util.Map.<UUID, Pessoa>of()
+                : pessoaRepository.findByIdInIncluindoArquivadas(idsPessoaContribuinte).stream()
+                        .collect(java.util.stream.Collectors.toMap(Pessoa::getId, p -> p));
+        List<MovimentacaoResponse> recentes = movimentacoesRecentes.stream()
+                .map(m -> MovimentacaoResponse.de(m, nomesPorCategoria.get(m.getCategoria().getId()), pessoasContribuintes))
+                .toList();
 
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         List<EventoResumoDTO> proximos =

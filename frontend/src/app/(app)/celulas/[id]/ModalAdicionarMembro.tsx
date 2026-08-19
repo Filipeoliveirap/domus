@@ -15,13 +15,15 @@ import styles from './ModalAdicionarMembro.module.css'
 
 interface ModalAdicionarMembroProps {
   celulaId: string
+  membrosPessoaIds: Set<string>
+  membrosVisitanteIds: Set<string>
   onClose: () => void
   onCadastrarExterno: () => void
 }
 
 type Tab = 'pessoas' | 'visitantes'
 
-export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: ModalAdicionarMembroProps) {
+export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisitanteIds, onClose, onCadastrarExterno }: ModalAdicionarMembroProps) {
   const [tab, setTab] = useState<Tab>('pessoas')
   const [busca, setBusca] = useState('')
   const queryClient = useQueryClient()
@@ -31,8 +33,10 @@ export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: 
     q: tab === 'visitantes' ? busca : '', page: 0, size: 50,
   })
 
-  const pessoas = pessoasData?.content ?? []
-  const visitantes = visitantesData?.content ?? []
+  // Já vinculado à célula some da lista — evita adicionar de novo e dá o feedback
+  // visual de que funcionou, sem fechar o modal (dá pra adicionar vários seguidos).
+  const pessoas = (pessoasData?.content ?? []).filter(p => !membrosPessoaIds.has(p.id))
+  const visitantes = (visitantesData?.content ?? []).filter(v => !membrosVisitanteIds.has(v.id))
 
   async function handleAdicionarPessoa(pessoaId: string) {
     try {
@@ -77,7 +81,10 @@ export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: 
         <div className={styles.lista}>
           {tab === 'pessoas' ? (
             pessoas.map(p => (
-              <div key={p.id} className={styles.item}>
+              <div key={p.id} className={styles.item} role="button" tabIndex={0}
+                onClick={() => handleAdicionarPessoa(p.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAdicionarPessoa(p.id) }}
+                title="Adicionar à célula">
                 <div className={styles.itemInfo}>
                   <span className={styles.avatar}>{iniciaisPessoa(p.nome)}</span>
                   <div>
@@ -85,15 +92,17 @@ export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: 
                     <p className={styles.itemSub}>{formatarTelefoneExibicao(p.telefone)}</p>
                   </div>
                 </div>
-                <button className={styles.btnAdd} onClick={() => handleAdicionarPessoa(p.id)}
-                  title="Adicionar à célula">
+                <span className={styles.btnAdd}>
                   <Plus size={18} />
-                </button>
+                </span>
               </div>
             ))
           ) : (
             visitantes.map(v => (
-              <div key={v.id} className={styles.item}>
+              <div key={v.id} className={styles.item} role="button" tabIndex={0}
+                onClick={() => handleAdicionarVisitante(v.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAdicionarVisitante(v.id) }}
+                title="Adicionar à célula">
                 <div className={styles.itemInfo}>
                   <span className={styles.avatar}>{iniciaisVisitante(v.nome)}</span>
                   <div>
@@ -101,10 +110,9 @@ export function ModalAdicionarMembro({ celulaId, onClose, onCadastrarExterno }: 
                     <p className={styles.itemSub}>{formatarTelefoneExibicao(v.telefone)}</p>
                   </div>
                 </div>
-                <button className={styles.btnAdd} onClick={() => handleAdicionarVisitante(v.id)}
-                  title="Adicionar à célula">
+                <span className={styles.btnAdd}>
                   <Plus size={18} />
-                </button>
+                </span>
               </div>
             ))
           )}

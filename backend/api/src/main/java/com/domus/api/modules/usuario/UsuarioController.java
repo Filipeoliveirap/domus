@@ -86,6 +86,23 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/arquivados")
+    public ResponseEntity<java.util.List<com.domus.api.modules.usuario.DTO.UsuarioArquivadoResponse>> arquivados() {
+        return ResponseEntity.ok(usuarioService.listarArquivados(usuarioAutenticado.getIgrejaId()));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+        usuarioService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/definitivo")
+    public ResponseEntity<Void> excluirDefinitivo(@PathVariable UUID id) {
+        usuarioService.excluirDefinitivo(id, usuarioAutenticado.getIgrejaId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/capacidades")
     public ResponseEntity<Void> concederCapacidade(@PathVariable UUID id,
                                                     @Valid @RequestBody CapacidadeRequest data) {

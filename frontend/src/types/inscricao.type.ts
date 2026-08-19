@@ -37,7 +37,7 @@ export interface MinhaInscricaoResponse {
 
 export interface ParticipanteResponse {
   id: string
-  pessoaId: string
+  pessoaId: string | null
   nome: string
   fotoId: string | null
   convidados: string[]
@@ -46,9 +46,10 @@ export interface ParticipanteResponse {
 
 export interface InscritoResponse {
   id: string
-  pessoaId: string
+  pessoaId: string | null
   nome: string
   fotoId: string | null
+  pessoaRemovida: boolean
   inscritoPorUsuarioId: string | null
   inscritoPorNome: string | null
   inscritoPorFotoId: string | null

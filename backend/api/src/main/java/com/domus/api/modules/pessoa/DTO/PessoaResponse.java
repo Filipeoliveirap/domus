@@ -23,7 +23,8 @@ public record PessoaResponse(
         String observacoes,
         LocalDateTime createdAt,
         LocalDate dataBatismo,
-        String avisoTelefoneDuplicado
+        String avisoTelefoneDuplicado,
+        boolean arquivada
 ) {
     public static PessoaResponse from(Pessoa m) {
         return from(m, null);
@@ -44,11 +45,12 @@ public record PessoaResponse(
                 m.getFoto() != null ? m.getFoto().getId() : null,
                 incluirDadosSensiveis ? m.getObservacoes() : null,
                 m.getCreatedAt(),
-                m.getDataBatismo(), avisoTelefoneDuplicado
+                m.getDataBatismo(), avisoTelefoneDuplicado,
+                m.getDeletedAt() != null
         );
     }
 
-    private static EnderecoDTO enderecoDe(com.domus.api.modules.pessoa.Endereco e) {
+    private static EnderecoDTO enderecoDe(com.domus.api.shared.dominio.Endereco e) {
         if (e == null) return null;
         return new EnderecoDTO(e.getCep(), e.getLogradouro(), e.getNumero(),
                 e.getComplemento(), e.getBairro(), e.getCidade(), e.getUf());

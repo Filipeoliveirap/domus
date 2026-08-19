@@ -15,13 +15,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Testes puros com Mockito — sem Spring, sem Postgres. Isso é proposital: esta rotina
- * roda de madrugada contra o banco de verdade, e o banco de dev tem dados de demonstração
- * (igrejas, pessoas, eventos e fotos reais). Testar com mocks garante que a suíte nunca
- * remove nada de verdade e que o `@Scheduled` do job nunca dispara durante os testes (a
- * classe não sobe como `@SpringBootTest`, então o agendador do Spring nem existe aqui).
- */
+/** Mockito puro de propósito: essa rotina roda de madrugada contra dados reais de demonstração, e sem @SpringBootTest o @Scheduled nem existe aqui. */
 class LimpezaFotosJobTest {
 
     FotoRepository fotoRepository;
@@ -42,10 +36,7 @@ class LimpezaFotosJobTest {
 
     @Test
     void naoRemoveFotoQueEstaEmUso() {
-        // A rotina decide por AUSÊNCIA de referência. Um erro aqui apaga a foto de alguém
-        // para sempre — este é o teste que impede isso. buscarOrfas() (a query real) já
-        // filtra fotos referenciadas, então uma foto em uso jamais aparece aqui; simulamos
-        // isso retornando lista vazia, exatamente como a query faria.
+        // Rotina decide por ausência de referência; buscarOrfas() real já filtra fotos em uso, simulamos retornando lista vazia.
         Foto usada = fotoDe(LocalDateTime.now().minusDays(30));
         when(fotoRepository.buscarOrfas(any())).thenReturn(List.of());
 

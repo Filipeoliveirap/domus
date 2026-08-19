@@ -128,5 +128,6 @@ export function useLogin() {
         isButtonDisabled,
         contaSemSenha,
         emailDigitado,
+        aplicarSessao,
     }
 }

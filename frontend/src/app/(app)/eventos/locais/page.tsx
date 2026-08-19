@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { ChevronRight, Pencil, Archive, MapPinned } from 'lucide-react'
+import { Pencil, Archive, MapPinned } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarEventos } from '@/lib/permissoes'
 import { useLocaisEvento } from '@/hooks/evento/useLocaisEvento'
@@ -11,6 +10,7 @@ import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { ModalLocalForm } from './ModalLocalForm'
 import { ModalArquivarLocal } from './ModalArquivarLocal'
+import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
 import type { LocalEventoResponse } from '@/types/evento.type'
 import styles from './locais.module.css'
 
@@ -25,6 +25,7 @@ export default function LocaisEventoPage() {
   // distingue "fechado" de "aberto para criar" (edição sempre traz o local escolhido).
   const [formAberto, setFormAberto] = useState<'novo' | LocalEventoResponse | null>(null)
   const [localArquivando, setLocalArquivando] = useState<LocalEventoResponse | null>(null)
+  const [localDetalhe, setLocalDetalhe] = useState<LocalEventoResponse | null>(null)
 
   if (!hidratado || isLoading) {
     return <div className={styles.pagina} />
@@ -40,14 +41,6 @@ export default function LocaisEventoPage() {
 
   return (
     <div className={styles.pagina}>
-      <nav className={styles.breadcrumb} aria-label="breadcrumb">
-        <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <Link href="/eventos" className={styles.breadcrumbLink}>Eventos</Link>
-        <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Locais</span>
-      </nav>
-
       <header className={styles.cabecalho}>
         <div>
           <h1 className={styles.titulo}>Locais</h1>
@@ -83,14 +76,14 @@ export default function LocaisEventoPage() {
                   { label: 'Arquivar', icone: Archive, onClick: () => setLocalArquivando(local), perigo: true, separadorAntes: true },
                 ]
                 return (
-                  <tr key={local.id}>
+                  <tr key={local.id} className={styles.linhaClicavel} onClick={() => setLocalDetalhe(local)}>
                     <td className={styles.nome}>{local.nome}</td>
                     <td>{local.capacidade ?? '—'}</td>
                     <td className={styles.endereco}>
                       {local.endereco ?? '—'}
                       {local.enderecoHerdado && <span className={styles.tagHerdado}>endereço da igreja</span>}
                     </td>
-                    <td className={styles.colunaAcoes}>
+                    <td className={styles.colunaAcoes} onClick={(e) => e.stopPropagation()}>
                       <MenuAcoes itens={acoes} />
                     </td>
                   </tr>
@@ -110,6 +103,10 @@ export default function LocaisEventoPage() {
 
       {localArquivando && (
         <ModalArquivarLocal local={localArquivando} onClose={() => setLocalArquivando(null)} />
+      )}
+
+      {localDetalhe && (
+        <ModalDetalheLocal local={localDetalhe} onClose={() => setLocalDetalhe(null)} />
       )}
     </div>
   )

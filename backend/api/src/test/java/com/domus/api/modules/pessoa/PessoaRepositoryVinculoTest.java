@@ -13,12 +13,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Task 9: prova que o filtro opcional {@code vinculo} da listagem paginada de pessoas funciona —
- * filtrar por MEMBRO devolve só os batizados; sem filtro (vinculo = null), devolve todos. Roda
- * contra o Postgres de testes de verdade, dentro da transação que o {@code @DataJpaTest} desfaz
- * ao final (não deixa linha nenhuma no banco compartilhado).
- */
+/** Filtro opcional vinculo da listagem paginada: MEMBRO devolve só batizados, null devolve todos. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class PessoaRepositoryVinculoTest {

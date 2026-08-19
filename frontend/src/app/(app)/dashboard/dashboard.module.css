@@ -81,6 +81,7 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
   padding: 20px;
+  min-width: 0;
 }
 .cardHeader {
   display: flex;
@@ -157,6 +158,7 @@
 .movValor {
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .entrada { color: var(--color-success-text); }
 .saida { color: var(--color-danger); }
@@ -211,6 +213,9 @@
   .pagina { gap: 16px; }
   .cards { gap: 12px; }
   .cardValor { font-size: var(--font-size-xl); }
+  .card { padding: 16px; }
+  .itemMov { gap: 8px; }
+  .movValor { font-size: var(--font-size-sm); }
 }
 @media (max-width: 400px) {
   .cards { grid-template-columns: 1fr; }

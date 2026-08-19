@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import { Search, X, Check, AlertTriangle } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
@@ -176,8 +177,7 @@ export function ModalInscreverPessoas({
                   />
                   <span className={styles.avatar}>
                     {urlFoto(p.fotoId, 'THUMB') ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                      <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                      <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={36} height={36} unoptimized className={styles.avatarFoto} />
                     ) : (
                       iniciais(p.nome)
                     )}

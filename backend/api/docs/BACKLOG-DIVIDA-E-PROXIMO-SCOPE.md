@@ -450,11 +450,20 @@ confirmou em 2026-07-22 que quer.
   `webp-imageio`), e na prática os seletores de arquivo do celular/navegador entregam JPEG
   ou PNG. Reavaliar se aparecer um caso real de upload em WebP.
 
-- **Revisar `next/image` nas telas de foto.** Hoje elas usam `<img>` com
-  `eslint-disable` justificado como "URL de storage externo" — justificativa que **deixou
-  de valer**: as fotos são servidas pelo próprio domínio (`GET /fotos/{id}`), não por uma
-  URL de R2. Trocar por `next/image` (otimização, lazy loading) é seguro agora, mas não
-  entrou nesta entrega de propósito — misturaria dois assuntos (ver spec de upload de foto).
+- ~~**Revisar `next/image` nas telas de foto.**~~ **PARCIALMENTE RESOLVIDO** (2026-08-19):
+  os 13 avatares/logos de tamanho **fixo** (36-56px: modais de inscrição/quem vai/usuário,
+  Sidebar, TopBar, início, ministérios, drawer de pessoa, lista de pessoas, lista de
+  inscritos) viraram `next/image` com `width`/`height` numéricos batendo o px do CSS
+  (`unoptimized`, porque `/api/fotos/{id}` exige cookie de sessão que o otimizador de
+  imagem do Next não repassa na busca server-side — ver nota abaixo). Ficaram de fora
+  **de propósito**, por serem imagem grande/responsiva sem tamanho fixo seguro pra
+  hardcodar: banner de evento (`ModalEventoResumo.capaFoto` — tem aviso explícito no
+  código sobre `z-index`/stacking context com o botão de fechar, `fill` violaria isso),
+  os dois visualizadores em tela cheia (`VisualizadorFoto`, `viewerImg` de pessoas e
+  ministérios), e `UploadFoto` (tamanho vem de prop, variável por chamada).
+  ⚠️ **Gotcha registrado pra não esquecer:** o otimizador embutido do `next/image`
+  busca a imagem no servidor sem o cookie httpOnly do navegador — usar `fill`/otimização
+  de verdade nessas fotos (em vez de `unoptimized`) quebraria o carregamento por 401.
 
 - **CDN de borda para `/fotos/{id}`.** Toda imagem passa pela própria API hoje; a resposta
   é `Cache-Control: immutable`, então cada navegador busca uma vez só — suficiente no

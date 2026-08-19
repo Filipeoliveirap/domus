@@ -44,6 +44,7 @@ export default function PoliticaDePrivacidadePage() {
           <li><strong>Resend</strong> — envio de e-mails transacionais (recuperação de senha, convites, avisos).</li>
           <li><strong>Google</strong> — autenticação via login com Google (OAuth), quando você escolhe esse método.</li>
           <li><strong>Elasticsearch</strong> — busca interna dos dados, auto-hospedado, sem compartilhamento externo.</li>
+          <li><strong>Sentry</strong> — rastreamento de erros técnicos do sistema, sem dados pessoais (removidos antes do envio).</li>
         </ul>
 
         <h2>5. Cookies</h2>
@@ -58,13 +59,21 @@ export default function PoliticaDePrivacidadePage() {
         <p>Como titular de dados, você tem direito a:</p>
         <ul>
           <li>Confirmar a existência de tratamento e acessar seus dados.</li>
-          <li>Corrigir dados incompletos, inexatos ou desatualizados.</li>
+          <li>
+            <strong>Corrigir</strong> dados incompletos, inexatos ou desatualizados — dentro do
+            Domus, quem edita o cadastro de uma pessoa é o administrador ou o(a) secretário(a) da
+            igreja; peça a eles a correção.
+          </li>
           <li>
             <strong>Solicitar a eliminação</strong> dos seus dados — o Domus já implementa esse
-            direito de forma concreta: o administrador da sua igreja pode excluir definitivamente
-            seu cadastro a qualquer momento, e a própria igreja pode agendar a exclusão de toda
-            a conta (com carência de 10 dias cancelável), apagando todos os dados de forma
-            irreversível ao final do prazo.
+            direito de forma concreta: o administrador ou o(a) secretário(a) da sua igreja pode
+            apagar definitivamente o seu cadastro a qualquer momento (registros financeiros e de
+            eventos já existentes continuam no histórico da igreja, mas sem identificar você —
+            aparecem como &quot;Pessoa removida do sistema&quot;); e a própria igreja pode agendar
+            a exclusão de toda a conta (com carência de 10 dias cancelável), apagando todos os
+            dados do banco de forma irreversível ao final do prazo. Cópias de segurança
+            criptografadas ficam retidas por até 90 dias antes de serem descartadas, mesmo depois
+            de uma exclusão.
           </li>
           <li>Revogar consentimento, quando aplicável.</li>
         </ul>

@@ -225,6 +225,19 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
   tende a sumir. Se incomodar em dev: conferir a origem em "Authorized JavaScript origins" e
   aguardar propagação.
 
+## Deploy / operação — gotchas descobertos ao vivo
+
+- **Run do GitHub Actions pode ficar travada em `queued` para sempre (2026-08-19).** O
+  workflow "Build e publicar imagens" (dispara em todo push pra `main`) ficou quase 8h em
+  `queued`, sem nenhum step iniciar — não é billing/quota (backup do Postgres, mesmo
+  runner `ubuntu-latest`, rodou normal no meio desse intervalo) nem outage do GitHub
+  (status page limpo). Parece um bug pontual do lado do GitHub numa run específica.
+  `gh run cancel` nela devolveu **erro 500** — nem cancelar dava. **Solução:** disparar
+  uma run nova manualmente (`gh workflow run build-images.yml --ref main`, o workflow já
+  tem `workflow_dispatch`) — pega runner normal, a antiga só fica de lixo visual no
+  histórico. Se o deploy não completar depois de um merge aprovado, checar
+  `gh run list --workflow=build-images.yml` antes de supor que o problema é no código.
+
 ## Bugs conhecidos (corrigir na fase apropriada)
 
 - ~~**`Sidebar.tsx` referencia `state.foto`** que não existe em `AuthState`.~~ **RESOLVIDO**

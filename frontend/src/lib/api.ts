@@ -31,9 +31,12 @@ function encerrarSessao() {
     const { pathname, search } = window.location
     const ehPublica = ['/login', '/cadastro', '/forgot-password', '/reset-password', '/']
       .some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
-    window.location.href = ehPublica
-      ? '/login'
-      : `/login?next=${encodeURIComponent(pathname + search)}`
+    const destino = ehPublica ? '/login' : `/login?next=${encodeURIComponent(pathname + search)}`
+    // Já estamos lá: recarregar de novo não muda nada e, se algo nesta própria rota
+    // pública também chamar uma rota autenticada (ex.: /login checando /auth/me pra
+    // pular o formulário se já tiver sessão), vira reload infinito sem esta guarda.
+    if (destino === pathname) return
+    window.location.href = destino
   }
 }
 

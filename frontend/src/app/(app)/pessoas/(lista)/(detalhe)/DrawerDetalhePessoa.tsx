@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive } from 'lucide-react'
+import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
 import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
@@ -16,12 +16,22 @@ import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import styles from './DrawerDetalhePessoa.module.css'
 
+/** Bloco opcional exibido no topo do drawer — usado por telas que abrem o cadastro dentro de
+ *  um contexto específico (ex.: lista de inscritos de um evento), sem acoplar este componente
+ *  genérico a nenhum domínio de fora. */
+export interface ContextoExtraDrawer {
+  titulo: string
+  icone: LucideIcon
+  linhas: string[]
+}
+
 interface DrawerDetalhePessoaProps {
   pessoaId: string
   onClose: () => void
+  contextoExtra?: ContextoExtraDrawer
 }
 
-export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaProps) {
+export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: DrawerDetalhePessoaProps) {
   const { data: pessoa, isPending, isError, refetch } = usePessoa(pessoaId)
   const { data: ministerios = [] } = usePessoaMinisterios(pessoaId)
   const [ampliada, setAmpliada] = useState(false)
@@ -95,6 +105,18 @@ export function DrawerDetalhePessoa({ pessoaId, onClose }: DrawerDetalhePessoaPr
               <span className={`${styles.statusBadge} ${styles[varianteVinculo(pessoa.vinculo)]}`}>
                 {rotuloVinculo(pessoa.vinculo)}
               </span>
+
+              {contextoExtra && (
+                <div className={styles.bloco}>
+                  <div className={styles.blocoHeader}>
+                    <contextoExtra.icone size={16} />
+                    <span>{contextoExtra.titulo}</span>
+                  </div>
+                  {contextoExtra.linhas.map((linha, i) => (
+                    <p key={i} className={styles.blocoTexto}>{linha}</p>
+                  ))}
+                </div>
+              )}
 
               <div className={styles.infos}>
                 <div className={styles.infoItem}>

@@ -17,7 +17,9 @@ function RedefinirSenhaConteudo() {
   const searchParams = useSearchParams()
   // Modo convite (link vindo do e-mail de convite): mostra também o "Entrar com Google".
   const convite = searchParams.get('convite') === '1'
-  const { onGoogleLogin, onGoogleError } = useLogin()
+  // erroGeral/isLoading próprios do useLogin — independentes dos de useRedefinirSenha,
+  // já que são dois fluxos distintos na mesma tela (definir senha vs. entrar com Google).
+  const { onGoogleLogin, onGoogleError, erroGeral: erroGoogle, isLoading: carregandoGoogle } = useLogin()
   const { register, handleSubmit, watch, errors, erroGeral, isLoading, isButtonDisabled, onSubmit, sucesso, linkInvalido } =
     useRedefinirSenha()
   const [mostrarNova, setMostrarNova] = useState(false)
@@ -163,13 +165,18 @@ function RedefinirSenhaConteudo() {
         <>
           <div className={styles.divider}><span className={styles.dividerText}>OU</span></div>
           <div className={styles.googleWrap}>
-            <GoogleLogin
-              onSuccess={(cred) => { if (cred.credential) onGoogleLogin(cred.credential) }}
-              onError={onGoogleError}
-              text="continue_with"
-              width="280"
-            />
+            {carregandoGoogle ? (
+              <p className={styles.subtitulo}>Confirmando com o Google…</p>
+            ) : (
+              <GoogleLogin
+                onSuccess={(cred) => { if (cred.credential) onGoogleLogin(cred.credential) }}
+                onError={onGoogleError}
+                text="continue_with"
+                width="280"
+              />
+            )}
           </div>
+          {erroGoogle && <div className={styles.erroGeral}>{erroGoogle}</div>}
         </>
       )}
 

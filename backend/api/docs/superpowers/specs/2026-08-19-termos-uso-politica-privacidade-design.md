@@ -64,25 +64,28 @@ que muda o texto, é suficiente.
 
 ### 1. Aceite no momento da criação de acesso
 
-Três pontos de entrada exigem `aceitouTermos: boolean` no corpo da requisição, e o
+Dois pontos de entrada exigem `aceitouTermos: boolean` no corpo da requisição, e o
 backend **recusa a operação** (400) se vier `false`/ausente:
 
 1. `POST /igrejas/registrar` (cadastro nativo da igreja)
 2. `POST /auth/google/registrar` (cadastro via Google)
-3. `POST /auth/reset-password` no modo convite (definir senha por convite)
 
-Em todos os três, depois de criado/ativado o `usuario`, grava duas linhas em
-`termo_aceite` (uma `TERMOS_DE_USO`, uma `POLITICA_PRIVACIDADE`) com a versão atual,
-**na mesma transação** da criação/ativação da conta — nunca em passo separado que
-possa falhar independente.
+Nos dois, depois de criado o `usuario`, grava duas linhas em `termo_aceite` (uma
+`TERMOS_DE_USO`, uma `POLITICA_PRIVACIDADE`) com a versão atual, **na mesma
+transação** da criação da conta — nunca em passo separado que possa falhar
+independente.
 
-**Por que não um quarto ponto pra "entrar com Google pela primeira vez num convite":**
-esse caminho usa o **mesmo endpoint** do login Google normal (`POST
-/auth/google/login`), chamado toda vez que qualquer pessoa já provisionada loga — não
-dá pra exigir `aceitouTermos` ali sem quebrar todo login recorrente. Não precisa:
-quem entra assim ainda não tem nenhuma linha em `termo_aceite`, então cai sozinho no
-modal bloqueante da seção seguinte (Fluxo 2) no primeiro `GET /auth/me` da sessão —
-mesmo mecanismo genérico que cobre contas antigas, sem caso especial no login.
+**Por que não também "definir senha por convite" e "entrar com Google pela primeira
+vez num convite":** os dois usam endpoints **compartilhados** com fluxos que não
+deveriam pedir aceite de novo — `POST /auth/reset-password` é o mesmo endpoint tanto
+pro convite (definir senha pela primeira vez) quanto pro "esqueci minha senha" comum
+de quem já tem senha; `POST /auth/google/login` é o mesmo do login Google recorrente
+de qualquer pessoa já provisionada. Exigir `aceitouTermos` nesses endpoints forçaria
+reaceite toda vez que alguém só esquece a senha ou faz login normal. Não precisa: quem
+está no convite (por qualquer um dos dois caminhos) ainda não tem nenhuma linha em
+`termo_aceite`, então cai sozinho no modal bloqueante da seção seguinte (Fluxo 2) no
+primeiro `GET /auth/me` da sessão — mesmo mecanismo genérico que cobre contas
+antigas, sem caso especial em nenhum dos dois endpoints de login/reset.
 
 ### 2. Reforço no login (pega contas antigas + futuras mudanças de versão)
 
@@ -109,9 +112,9 @@ lê o `aceito_em` mais recente do `usuario` logado. Só leitura, sem ação.
   bloqueante). Corpo vazio; usa `igrejaId`/`usuarioId` do JWT, `versao` da constante
   atual do backend, `ip` do request.
 - `GET /auth/me` (existente) ganha `precisaAceitarTermos: boolean`.
-- `POST /igrejas/registrar`, `POST /auth/google/registrar`, `POST /auth/reset-password`
-  (existentes) ganham o campo obrigatório `aceitouTermos` no corpo e passam a gravar
-  `termo_aceite` na mesma transação de criação/ativação da conta.
+- `POST /igrejas/registrar`, `POST /auth/google/registrar` (existentes) ganham o campo
+  obrigatório `aceitouTermos` no corpo e passam a gravar `termo_aceite` na mesma
+  transação de criação da conta.
 
 ## Conteúdo (o texto em si)
 
@@ -140,7 +143,7 @@ os pontos obrigatórios que precisam entrar, listados acima.
 ## Frontend
 
 - **Checkbox obrigatória** ("Li e concordo com os [Termos de Uso] e a [Política de
-  Privacidade]", cada link abrindo a página correspondente em nova aba) nos três
+  Privacidade]", cada link abrindo a página correspondente em nova aba) nos dois
   pontos de entrada da seção Fluxo → 1. Botão de submeter desabilitado até marcar —
   mesmo padrão de UX já usado noutros formulários do projeto.
 - **Modal bloqueante de reaceite** (seção Fluxo → 2), reaproveitando a mesma
@@ -150,7 +153,7 @@ os pontos obrigatórios que precisam entrar, listados acima.
 
 ## Casos de borda
 
-- `aceitouTermos: false` ou ausente em qualquer um dos três endpoints de
+- `aceitouTermos: false` ou ausente em qualquer um dos dois endpoints de
   criação/ativação → 400, nada é criado/ativado.
 - Conta criada antes desta feature, sem nenhum registro em `termo_aceite` → mesmo
   tratamento de "versão desatualizada", cai no modal bloqueante no próximo login.
@@ -161,7 +164,7 @@ os pontos obrigatórios que precisam entrar, listados acima.
 
 ## Testes
 
-- `TermoAceiteServiceTest` (Mockito puro): grava aceite corretamente nos três pontos
+- `TermoAceiteServiceTest` (Mockito puro): grava aceite corretamente nos dois pontos
   de entrada; recusa criação/ativação quando `aceitouTermos` é falso/ausente;
   `precisaAceitarTermos` retorna `true` quando falta qualquer um dos dois tipos ou a
   versão está desatualizada, `false` quando os dois batem com a versão atual.
@@ -177,9 +180,9 @@ Feature de porte pequeno/moderado — sem necessidade de subagentes revisando em
 
 1. Schema (migration) + `TermoAceiteService` (gravar aceite, checar
    `precisaAceitarTermos`) + `POST /termos/aceitar`
-2. Enforcement nos três endpoints de criação/ativação de conta
+2. Enforcement nos dois endpoints de criação/ativação de conta
 3. `GET /auth/me` ganha `precisaAceitarTermos`
-4. Frontend: páginas de conteúdo, checkbox nos três formulários, modal bloqueante,
+4. Frontend: páginas de conteúdo, checkbox nos dois formulários, modal bloqueante,
    linha em Configurações → perfil
 
 ## Fora do escopo desta versão

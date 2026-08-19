@@ -246,6 +246,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 - **Não mockar tipos de domínio** (`Igreja`, `Evento`, `Pessoa`). Use builders ou `new`.
 - **Cada teste prova uma coisa só.** Um cenário de sucesso e um de falha por teste.
 - **Arquivo de teste cresce com a classe.** `InscricaoServiceTest` tem 850+ linhas e 47 testes — é o esperado para um service central. Não quebre em arquivos menores artificialmente.
+- **Nunca altere o teste só pra fazer passar — mude o código de produção, ou pare e explique por quê o teste não pode passar como está.** Enfraquecer uma asserção, trocar `equals` por `contains`, remover um `verify`, apagar um cenário difícil ou marcar como `@Disabled` sem justificativa real são formas de mentir que a feature funciona. Se um teste está genuinamente errado (prova a coisa errada, tem um typo), diga isso explicitamente antes de tocar nele — nunca silenciosamente. E nunca reporte "teste passou" sem ter rodado o comando de verdade e visto o resultado — sem chutar, sem assumir.
 
 ---
 
@@ -762,3 +763,13 @@ Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
 ## Ordem de execução resumida
 
 `Fase 1 (fundações + auth) → Fase 2 → Fase 3 → Fase 4` *(igreja no ar)* `→ Fase 5 → Fase 6`
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

@@ -103,6 +103,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     long countByIgrejaId(UUID igrejaId);
 
+    /** E-mails de todos os ADMIN_IGREJA ativos — usado pra avisar todo mundo que pode agir
+     *  sobre a exclusão da igreja, não só quem agendou. */
+    @Query("""
+        SELECT DISTINCT u.pessoa.email FROM Usuario u
+        WHERE u.igreja.id = :igrejaId AND u.role.nome = 'ADMIN_IGREJA' AND u.ativo = true
+    """)
+    List<String> buscarEmailsAdminsAtivos(@Param("igrejaId") UUID igrejaId);
+
     @Modifying
     @Query(value = "DELETE FROM usuario WHERE igreja_id = :igrejaId", nativeQuery = true)
     void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);

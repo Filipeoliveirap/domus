@@ -2,6 +2,7 @@ package com.domus.api.modules.igreja.exclusao;
 
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.email.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.*;
 class ExclusaoIgrejaJobTest {
 
     IgrejaRepository igrejaRepository;
+    UsuarioRepository usuarioRepository;
     EmailService emailService;
     PurgaIgrejaService purgaIgrejaService;
     ExclusaoIgrejaJob job;
@@ -23,9 +25,10 @@ class ExclusaoIgrejaJobTest {
     @BeforeEach
     void setup() {
         igrejaRepository = mock(IgrejaRepository.class);
+        usuarioRepository = mock(UsuarioRepository.class);
         emailService = mock(EmailService.class);
         purgaIgrejaService = mock(PurgaIgrejaService.class);
-        job = new ExclusaoIgrejaJob(igrejaRepository, emailService, purgaIgrejaService);
+        job = new ExclusaoIgrejaJob(igrejaRepository, usuarioRepository, emailService, purgaIgrejaService);
     }
 
     private Igreja igrejaAgendadaHa(int dias) {

@@ -82,7 +82,7 @@ public class GoogleAuthService {
         );
     }
 
-    public RegistrarIgrejaResponse registrar(GoogleRegistrarDTO dados) {
+    public RegistrarIgrejaResponse registrar(GoogleRegistrarDTO dados, String ip) {
         GoogleIdToken.Payload payload = verificar(dados.idToken());
         String sub = payload.getSubject();
         String email = payload.getEmail();
@@ -97,7 +97,7 @@ public class GoogleAuthService {
                 email,
                 null,                      // sem senha nativa (conta só-Google)
                 sub
-        ));
+        ), dados.aceitouTermos(), ip);
 
         String token = tokenService.generateToken(admin);
         String refreshToken = refreshTokenService.criar(admin.getId());

@@ -18,5 +18,7 @@ public record GoogleRegistrarDTO(
 
         @NotBlank(message = "Telefone para contato é obrigatório")
         @Pattern(regexp = "^\\d{10,11}$", message = "Telefone inválido. Informe DDD + número (10 ou 11 dígitos)")
-        String telefoneContato
+        String telefoneContato,
+
+        boolean aceitouTermos
 ) {}

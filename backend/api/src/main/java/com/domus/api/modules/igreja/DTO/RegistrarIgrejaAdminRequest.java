@@ -42,4 +42,6 @@ public class RegistrarIgrejaAdminRequest {
     @Size(min = 8, message = "Senha do administrador deve ter no mínimo 8 caracteres")
     private String senhaAdmin;
 
+    private boolean aceitouTermos;
+
 }

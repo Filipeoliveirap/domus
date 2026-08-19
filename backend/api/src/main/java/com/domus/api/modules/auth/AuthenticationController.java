@@ -38,6 +38,7 @@ public class AuthenticationController {
     private final PasswordResetService passwordResetService;
     private final GoogleAuthService googleAuthService;
     private final AuthCookieFactory cookieFactory;
+    private final com.domus.api.shared.web.ClienteIpResolver clienteIpResolver;
 
     @PostMapping("/login")
     public ResponseEntity<SessaoDTO> login(@RequestBody @Valid AuthenticationDTO data) {
@@ -52,8 +53,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/google/registrar")
-    public ResponseEntity<SessaoDTO> googleRegistrar(@RequestBody @Valid GoogleRegistrarDTO data) {
-        RegistrarIgrejaResponse r = googleAuthService.registrar(data);
+    public ResponseEntity<SessaoDTO> googleRegistrar(
+            @RequestBody @Valid GoogleRegistrarDTO data,
+            jakarta.servlet.http.HttpServletRequest request) {
+        RegistrarIgrejaResponse r = googleAuthService.registrar(data, clienteIpResolver.resolver(request));
         return comCookies(r.token(), r.refreshToken())
                 .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
                         null, null, null, null));

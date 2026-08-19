@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
@@ -90,8 +91,7 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
                     onClick={() => setAmpliada(true)}
                     aria-label={`Ampliar foto de ${pessoa.nome}`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
-                    <img src={urlFoto(pessoa.fotoId, 'DISPLAY')!} alt="" className={styles.avatarFoto} />
+                    <Image src={urlFoto(pessoa.fotoId, 'DISPLAY')!} alt="" width={56} height={56} unoptimized className={styles.avatarFoto} />
                   </button>
                 ) : (
                   <span className={styles.avatar}>{iniciais(pessoa.nome)}</span>

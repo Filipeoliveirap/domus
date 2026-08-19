@@ -24,9 +24,23 @@
 - ~~**Maven wrapper quebrado.**~~ **RESOLVIDO** (2026-08-16): `.mvn/wrapper/maven-wrapper.properties`
   existe, `./mvnw` roda normalmente.
 
-- **CSP baseada em nonce no front (hardening).** A CSP atual do Next libera `'unsafe-inline'`
-  e `'unsafe-eval'` (concessão ao Next.js sem nonce). Hardening real = CSP com nonce por
-  requisição (via middleware), removendo os `unsafe-*`. Tarefa própria, considerável.
+- **CSP: `unsafe-eval` removido, `unsafe-inline` (script) fica — nonce por requisição
+  não serve pra esse app (2026-08-19).** Tentativa real de nonce+`strict-dynamic` via
+  `proxy.ts` (Next 16, ex-`middleware.ts`): funcionou tecnicamente (nonce novo por
+  requisição, header CSP certo), mas **quebraria o site inteiro**. Motivo: a maior parte
+  das rotas é gerada **estaticamente** no build (`○` em `next build`) — o nonce só é
+  aplicado em página renderizada por requisição, então nenhum `<script>` do Next em
+  página estática ganha o nonce. Com `'strict-dynamic'` na regra, o navegador **ignora**
+  `'self'`/`'unsafe-inline'` e exige nonce em todo script — sem ele em página estática,
+  o próprio bundle JS do site (e o script do Google) seria bloqueado. Confirmado testando
+  local (`next build && next start`, curl no header e grep por `nonce=` nas `<script>` —
+  zero, apesar do header vir certo). Forçar renderização dinâmica em tudo resolveria, mas
+  custa a performance que a geração estática dá — fora de escopo dessa correção.
+  **O que ficou feito de verdade:** `unsafe-eval` saiu do `script-src` (checado o bundle de
+  produção inteiro, `.next/static/chunks`, sem nenhum uso de `eval()`/`new Function()` —
+  era concessão sem necessidade real). `unsafe-inline` (script) e `unsafe-inline` (style,
+  por causa do `next/font`) continuam — hardening de verdade exigiria repensar quais rotas
+  podem virar dinâmicas, não é ajuste de configuração.
 
 - ~~**Rate limiting: migrar bloqueio de login para Redis.**~~ **FEITO** (2026-07-16): o
   `LoginAttemptService` agora usa Redis (`login:attempt:*`/`login:block:*`). Junto entrou o
@@ -103,9 +117,10 @@
   o item de `CascadeType.ALL`/`orphanRemoval` listado mais abaixo (auditoria da feature de
   igrejas vinculadas): sem coleção mapeada, não há cascata de escrita pra remover.
 
-- **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
-  auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito
-  como Java agent no surefire.
+- ~~**Aviso do Mockito (self-attaching agent).**~~ **RESOLVIDO** (2026-08-19):
+  `maven-dependency-plugin` (goal `properties`) resolve `${org.mockito:mockito-core:jar}`
+  no repositório local, e o `maven-surefire-plugin` usa isso como `-javaagent`. Warning
+  sumiu (`mvn test` sem nenhuma ocorrência de "self-attaching"), suíte completa continua verde.
 
 ---
 
@@ -231,8 +246,10 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
 - **`fuso_horario` na igreja.** Tentador (o Brasil tem 4), mas a coluna sozinha é ilusão de
   suporte a fuso: só serve se o sistema inteiro formatar data por igreja. **Armadilha conhecida
   do módulo de eventos** — reavaliar se aparecer igreja fora de BRT.
-- **`Endereco` (`@Embeddable`) mora em `modules.membro`** e é reusado por `Igreja`. Funciona e é
-  DRY, mas o lugar certo seria `shared`. Mover quando alguém encostar no módulo de membro.
+- ~~**`Endereco` (`@Embeddable`) mora em `modules.membro`**.~~ **RESOLVIDO** (nota
+  desatualizada, confirmado 2026-08-19): já vive em `shared.dominio.Endereco`, reusado
+  por `Igreja`, `Pessoa`, `Visitante` e `LocalEvento`. O move já tinha acontecido em
+  algum momento sem essa linha ser atualizada.
 - **Listas navegáveis** (a mãe folhear membros/eventos das filhas) — continua fora, como o
   spec já dizia. Depende de consultar o pastor primeiro. ~~**Irmãs verem eventos umas das
   outras**~~ **RESOLVIDO** (2026-07-29): eventos compartilhados entre igrejas vinculadas
@@ -405,8 +422,9 @@ Outros resíduos dos protótipos, para quando as telas correspondentes forem fei
   entrega por não ter endpoint — botão que não faz nada é pior que botão ausente.
 - **"What to Prepare"** (o que levar) do protótipo é caso da **Spec D** (campos personalizados),
   não campo próprio.
-- **`adicionarAcompanhante` não tem `usuarioId` real no log** — usa `meuMembroId` como proxy.
-  Estender a assinatura quando alguém encostar no método.
+- ~~**`adicionarAcompanhante` não tem `usuarioId` real no log**~~ **RESOLVIDO** (nota
+  desatualizada, confirmado 2026-08-19): o método já recebe `usuarioId` como parâmetro
+  próprio e o `log.info` já usa ele, não `meuMembroId`.
 
 ### ~~Contribuintes: filtro, relatório e múltiplos por lançamento~~ (2026-07-22, **RESOLVIDO**)
 
@@ -449,11 +467,20 @@ confirmou em 2026-07-22 que quer.
   `webp-imageio`), e na prática os seletores de arquivo do celular/navegador entregam JPEG
   ou PNG. Reavaliar se aparecer um caso real de upload em WebP.
 
-- **Revisar `next/image` nas telas de foto.** Hoje elas usam `<img>` com
-  `eslint-disable` justificado como "URL de storage externo" — justificativa que **deixou
-  de valer**: as fotos são servidas pelo próprio domínio (`GET /fotos/{id}`), não por uma
-  URL de R2. Trocar por `next/image` (otimização, lazy loading) é seguro agora, mas não
-  entrou nesta entrega de propósito — misturaria dois assuntos (ver spec de upload de foto).
+- ~~**Revisar `next/image` nas telas de foto.**~~ **PARCIALMENTE RESOLVIDO** (2026-08-19):
+  os 13 avatares/logos de tamanho **fixo** (36-56px: modais de inscrição/quem vai/usuário,
+  Sidebar, TopBar, início, ministérios, drawer de pessoa, lista de pessoas, lista de
+  inscritos) viraram `next/image` com `width`/`height` numéricos batendo o px do CSS
+  (`unoptimized`, porque `/api/fotos/{id}` exige cookie de sessão que o otimizador de
+  imagem do Next não repassa na busca server-side — ver nota abaixo). Ficaram de fora
+  **de propósito**, por serem imagem grande/responsiva sem tamanho fixo seguro pra
+  hardcodar: banner de evento (`ModalEventoResumo.capaFoto` — tem aviso explícito no
+  código sobre `z-index`/stacking context com o botão de fechar, `fill` violaria isso),
+  os dois visualizadores em tela cheia (`VisualizadorFoto`, `viewerImg` de pessoas e
+  ministérios), e `UploadFoto` (tamanho vem de prop, variável por chamada).
+  ⚠️ **Gotcha registrado pra não esquecer:** o otimizador embutido do `next/image`
+  busca a imagem no servidor sem o cookie httpOnly do navegador — usar `fill`/otimização
+  de verdade nessas fotos (em vez de `unoptimized`) quebraria o carregamento por 401.
 
 - **CDN de borda para `/fotos/{id}`.** Toda imagem passa pela própria API hoje; a resposta
   é `Cache-Control: immutable`, então cada navegador busca uma vez só — suficiente no

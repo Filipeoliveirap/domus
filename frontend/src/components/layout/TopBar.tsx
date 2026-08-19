@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Church, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
@@ -24,8 +25,7 @@ export function TopBar() {
       <div className={styles.igreja}>
         <div className={styles.igrejaIcone}>
           {urlFoto(igrejaLogoId, 'THUMB') ? (
-            // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-            <img src={urlFoto(igrejaLogoId, 'THUMB')!} alt={igrejaNome ?? 'Igreja'} className={styles.igrejaLogo} />
+            <Image src={urlFoto(igrejaLogoId, 'THUMB')!} alt={igrejaNome ?? 'Igreja'} width={32} height={32} unoptimized className={styles.igrejaLogo} />
           ) : (
             <Church size={18} />
           )}

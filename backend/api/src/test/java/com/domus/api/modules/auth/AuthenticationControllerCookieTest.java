@@ -2,9 +2,11 @@ package com.domus.api.modules.auth;
 
 import com.domus.api.modules.auth.DTO.AuthenticationDTO;
 import com.domus.api.modules.auth.DTO.GoogleLoginDTO;
+import com.domus.api.modules.auth.DTO.GoogleRegistrarDTO;
 import com.domus.api.modules.auth.DTO.LoginResponseDTO;
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.auth.DTO.TokenPairDTO;
+import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
 import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.shared.exception.SessaoExpiradaException;
 import com.domus.api.shared.security.AuthCookieFactory;
@@ -14,11 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -151,5 +156,23 @@ class AuthenticationControllerCookieTest {
         assertEquals(2, cookies.size());
         assertTrue(cookies.stream().allMatch(c -> c.contains("Max-Age=0")),
                 "o JS não consegue apagar cookie httpOnly — quem expira é o servidor");
+    }
+
+    /** googleRegistrar monta o SessaoDTO na mão — sem consultar o TermoAceiteService, mentiria sobre o aceite recém-registrado. */
+    @Test
+    void googleRegistrarTrazDataDoAceiteQueAcabouDeRegistrar() {
+        UUID id = UUID.randomUUID();
+        GoogleRegistrarDTO dados = new GoogleRegistrarDTO("id-token", "Igreja Nova", null, "11999999999", true);
+        when(googleAuthService.registrar(dados, "203.0.113.9")).thenReturn(new RegistrarIgrejaResponse(
+                id, "jwt", "refresh", "Dono", "ADMIN_IGREJA", UUID.randomUUID(), "Igreja Nova"));
+        when(clienteIpResolver.resolver(any())).thenReturn("203.0.113.9");
+        when(termoAceiteService.precisaAceitar(id)).thenReturn(false);
+        LocalDateTime aceiteAgora = LocalDateTime.now();
+        when(termoAceiteService.dataUltimoAceite(id)).thenReturn(aceiteAgora);
+
+        SessaoDTO sessao = controller().googleRegistrar(dados, new MockHttpServletRequest()).getBody();
+
+        assertFalse(sessao.precisaAceitarTermos());
+        assertEquals(aceiteAgora, sessao.termosAceitosEm());
     }
 }

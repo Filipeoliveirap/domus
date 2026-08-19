@@ -24,9 +24,23 @@
 - ~~**Maven wrapper quebrado.**~~ **RESOLVIDO** (2026-08-16): `.mvn/wrapper/maven-wrapper.properties`
   existe, `./mvnw` roda normalmente.
 
-- **CSP baseada em nonce no front (hardening).** A CSP atual do Next libera `'unsafe-inline'`
-  e `'unsafe-eval'` (concessão ao Next.js sem nonce). Hardening real = CSP com nonce por
-  requisição (via middleware), removendo os `unsafe-*`. Tarefa própria, considerável.
+- **CSP: `unsafe-eval` removido, `unsafe-inline` (script) fica — nonce por requisição
+  não serve pra esse app (2026-08-19).** Tentativa real de nonce+`strict-dynamic` via
+  `proxy.ts` (Next 16, ex-`middleware.ts`): funcionou tecnicamente (nonce novo por
+  requisição, header CSP certo), mas **quebraria o site inteiro**. Motivo: a maior parte
+  das rotas é gerada **estaticamente** no build (`○` em `next build`) — o nonce só é
+  aplicado em página renderizada por requisição, então nenhum `<script>` do Next em
+  página estática ganha o nonce. Com `'strict-dynamic'` na regra, o navegador **ignora**
+  `'self'`/`'unsafe-inline'` e exige nonce em todo script — sem ele em página estática,
+  o próprio bundle JS do site (e o script do Google) seria bloqueado. Confirmado testando
+  local (`next build && next start`, curl no header e grep por `nonce=` nas `<script>` —
+  zero, apesar do header vir certo). Forçar renderização dinâmica em tudo resolveria, mas
+  custa a performance que a geração estática dá — fora de escopo dessa correção.
+  **O que ficou feito de verdade:** `unsafe-eval` saiu do `script-src` (checado o bundle de
+  produção inteiro, `.next/static/chunks`, sem nenhum uso de `eval()`/`new Function()` —
+  era concessão sem necessidade real). `unsafe-inline` (script) e `unsafe-inline` (style,
+  por causa do `next/font`) continuam — hardening de verdade exigiria repensar quais rotas
+  podem virar dinâmicas, não é ajuste de configuração.
 
 - ~~**Rate limiting: migrar bloqueio de login para Redis.**~~ **FEITO** (2026-07-16): o
   `LoginAttemptService` agora usa Redis (`login:attempt:*`/`login:block:*`). Junto entrou o

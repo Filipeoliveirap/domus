@@ -20,10 +20,13 @@ interface AuthState {
   logoutIntencional: boolean
   exclusaoAgendadaEm: string | null
   diasRestantes: number | null
+  precisaAceitarTermos: boolean
+  termosAceitosEm: string | null
   login: (data: Sessao) => void
   logout: () => void
   atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role' | 'fotoId' | 'cargo' | 'igrejaSigla' | 'igrejaLogoId'>>) => void
   atualizarExclusaoAgendada: (exclusaoAgendadaEm: string | null, diasRestantes: number | null) => void
+  confirmarAceiteTermos: () => void
   setHidratado: () => void
 }
 
@@ -41,6 +44,8 @@ const estadoDeslogado = {
   isAuthenticated: false,
   exclusaoAgendadaEm: null,
   diasRestantes: null,
+  precisaAceitarTermos: false,
+  termosAceitosEm: null,
 } as const
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -52,5 +57,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
   logout: () => set({ ...estadoDeslogado, hidratado: true, logoutIntencional: true }),
   atualizarUsuarioLogado: (data) => set(data),
   atualizarExclusaoAgendada: (exclusaoAgendadaEm, diasRestantes) => set({ exclusaoAgendadaEm, diasRestantes }),
+  confirmarAceiteTermos: () => set({ precisaAceitarTermos: false, termosAceitosEm: new Date().toISOString() }),
   setHidratado: () => set({ hidratado: true }),
 }))

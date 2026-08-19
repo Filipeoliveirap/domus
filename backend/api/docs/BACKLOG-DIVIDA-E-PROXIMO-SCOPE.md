@@ -103,9 +103,10 @@
   o item de `CascadeType.ALL`/`orphanRemoval` listado mais abaixo (auditoria da feature de
   igrejas vinculadas): sem coleção mapeada, não há cascata de escrita pra remover.
 
-- **Aviso do Mockito (self-attaching agent).** Testes logam warning de que o Mockito se
-  auto-anexa como agente; em JDKs futuros deixará de funcionar. Configurar o byte-buddy/mockito
-  como Java agent no surefire.
+- ~~**Aviso do Mockito (self-attaching agent).**~~ **RESOLVIDO** (2026-08-19):
+  `maven-dependency-plugin` (goal `properties`) resolve `${org.mockito:mockito-core:jar}`
+  no repositório local, e o `maven-surefire-plugin` usa isso como `-javaagent`. Warning
+  sumiu (`mvn test` sem nenhuma ocorrência de "self-attaching"), suíte completa continua verde.
 
 ---
 

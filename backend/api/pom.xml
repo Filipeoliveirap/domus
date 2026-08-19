@@ -177,8 +177,26 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>resolve-mockito-agent</id>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
+					<!-- Mockito precisa se anexar como Java agent no JDK 21+; sem isso, ele se
+					     auto-anexa dinamicamente (warning nos logs) e vai parar de funcionar em
+					     JDKs futuros. ${org.mockito:mockito-core:jar} vem do maven-dependency-plugin
+					     acima (goal properties), que resolve o caminho real do jar no repositório
+					     local — não dá pra hardcodar a versão aqui sem ela desatualizar sozinha. -->
+					<argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
 					<systemPropertyVariables>
 						<app.fotos.armazenamento>memoria</app.fotos.armazenamento>
 					</systemPropertyVariables>

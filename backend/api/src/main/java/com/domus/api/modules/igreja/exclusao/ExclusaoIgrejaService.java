@@ -16,6 +16,7 @@ import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,7 @@ public class ExclusaoIgrejaService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final GoogleAuthService googleAuthService;
+    private final CacheManager cacheManager;
 
     @Transactional(readOnly = true)
     public ResumoExclusaoResponse resumo(UUID igrejaId) {
@@ -74,6 +76,7 @@ public class ExclusaoIgrejaService {
         reautenticar(usuario, senha, googleIdToken);
 
         igrejaRepository.marcarExclusaoAgendada(igrejaId, usuarioId, LocalDateTime.now());
+        cacheManager.getCache("igreja").evictIfPresent(igrejaId);
         log.info("Exclusão agendada. igreja_id={}, por_usuario_id={}", igrejaId, usuarioId);
 
         emailService.enviar(igreja.getEmailContato(), "Exclusão da sua igreja no Domus foi agendada",
@@ -104,6 +107,7 @@ public class ExclusaoIgrejaService {
     @Transactional
     public void cancelar(UUID igrejaId) {
         igrejaRepository.cancelarExclusaoAgendada(igrejaId);
+        cacheManager.getCache("igreja").evictIfPresent(igrejaId);
         log.info("Exclusão cancelada. igreja_id={}", igrejaId);
     }
 

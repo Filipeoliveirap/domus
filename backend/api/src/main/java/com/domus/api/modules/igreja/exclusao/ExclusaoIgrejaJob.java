@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -23,29 +22,35 @@ public class ExclusaoIgrejaJob {
     private final PurgaIgrejaService purgaIgrejaService;
 
     @Scheduled(cron = "0 0 4 * * *")
-    @Transactional
     public void verificarPrazos() {
         var igrejas = igrejaRepository.buscarComExclusaoAgendada();
         int lembretes = 0;
 
         for (Igreja igreja : igrejas) {
-            long decorridos = ChronoUnit.DAYS.between(igreja.getExclusaoAgendadaEm(), LocalDateTime.now());
-            long faltam = 10 - decorridos;
+            try {
+                long decorridos = ChronoUnit.DAYS.between(igreja.getExclusaoAgendadaEm(), LocalDateTime.now());
+                long faltam = 10 - decorridos;
 
-            if (faltam == 5) {
-                emailService.enviar(igreja.getEmailContato(),
-                        "Sua igreja será excluída em 5 dias",
-                        "Faltam 5 dias para a exclusão definitiva de \"" + igreja.getNome() + "\". "
-                                + "Cancele em Configurações → Sistema, se quiser manter sua conta.");
-                lembretes++;
-            } else if (faltam == 1) {
-                emailService.enviar(igreja.getEmailContato(),
-                        "Sua igreja será excluída em 1 dia",
-                        "Falta 1 dia para a exclusão definitiva de \"" + igreja.getNome() + "\". "
-                                + "Cancele em Configurações → Sistema, se quiser manter sua conta.");
-                lembretes++;
-            } else if (faltam <= 0) {
-                purgaIgrejaService.purgar(igreja.getId());
+                if (faltam == 5) {
+                    emailService.enviar(igreja.getEmailContato(),
+                            "Sua igreja será excluída em 5 dias",
+                            "Faltam 5 dias para a exclusão definitiva de \"" + igreja.getNome() + "\". "
+                                    + "Cancele em Configurações → Sistema, se quiser manter sua conta.");
+                    lembretes++;
+                } else if (faltam == 1) {
+                    emailService.enviar(igreja.getEmailContato(),
+                            "Sua igreja será excluída em 1 dia",
+                            "Falta 1 dia para a exclusão definitiva de \"" + igreja.getNome() + "\". "
+                                    + "Cancele em Configurações → Sistema, se quiser manter sua conta.");
+                    lembretes++;
+                } else if (faltam <= 0) {
+                    purgaIgrejaService.purgar(igreja.getId());
+                }
+            } catch (Exception e) {
+                // Cada igreja é independente: uma falha aqui não pode derrubar as demais
+                // (nem os lembretes já enviados nesta rodada) — o job tenta de novo amanhã.
+                log.error("Falha ao processar exclusão agendada de uma igreja — seguindo para as demais. igreja_id={}",
+                        igreja.getId(), e);
             }
         }
 

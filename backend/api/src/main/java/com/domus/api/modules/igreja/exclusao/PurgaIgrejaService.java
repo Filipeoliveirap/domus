@@ -85,24 +85,25 @@ public class PurgaIgrejaService {
         visitanteRepository.deleteAllByIgrejaId(igrejaId);
         localEventoRepository.deleteAllByIgrejaId(igrejaId);
 
-        igrejaRepository.limparLogoFoto(igrejaId);
-        for (var foto : fotoRepository.findByIgrejaId(igrejaId)) {
-            try {
-                fotoService.remover(foto.getId());
-            } catch (Exception e) {
-                log.error("Falha ao remover foto na purga da igreja — seguindo para as demais. foto_id={}, igreja_id={}",
-                        foto.getId(), igrejaId, e);
-            }
-        }
-
         List<UUID> idsFilhas = igrejaRepository.buscarIdsDasFilhas(igrejaId);
         if (!idsFilhas.isEmpty()) {
             igrejaRepository.desvincularFamiliaEmLote(idsFilhas);
             log.info("Igrejas vinculadas desvinculadas da família. igreja_mae_id={}, filhas={}", igrejaId, idsFilhas.size());
         }
 
+        // Antes de apagar os usuários, zera as FKs de `igreja` que apontam pra eles
+        // (atualizado_por, vinculado_por, exclusao_agendada_por) — senão o DELETE viola a FK.
+        igrejaRepository.limparReferenciasDeUsuario(igrejaId);
+
         usuarioRepository.deleteAllByIgrejaId(igrejaId);
         pessoaRepository.deleteAllByIgrejaId(igrejaId);
+
+        // Fotos por último entre os passos de banco: pessoa.foto_id é ON DELETE RESTRICT,
+        // então só dá pra apagar a foto depois que a pessoa (e a igreja/logo) já sumiram.
+        igrejaRepository.limparLogoFoto(igrejaId);
+        for (var foto : fotoRepository.findByIgrejaId(igrejaId)) {
+            fotoService.remover(foto.getId());
+        }
 
         String idTexto = igrejaId.toString();
         for (Runnable limpezaIndice : List.<Runnable>of(

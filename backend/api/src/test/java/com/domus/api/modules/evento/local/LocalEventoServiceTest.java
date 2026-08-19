@@ -8,7 +8,7 @@ import com.domus.api.modules.evento.local.DTOs.LocalEventoRequest;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
-import com.domus.api.modules.pessoa.Endereco;
+import com.domus.api.shared.dominio.Endereco;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import jakarta.persistence.EntityManager;
@@ -26,11 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Roda contra um Postgres de verdade (não mock): a checagem de duplicata compara nomes já
- * persistidos e o endereço herdado depende do valor real gravado na igreja. {@code
- * @Transactional} garante rollback ao final de cada teste — nada fica no banco.
- */
+/** Postgres real (não mock): checagem de duplicata e endereço herdado dependem de dado já persistido; @Transactional dá rollback ao final. */
 @SpringBootTest
 @Transactional
 class LocalEventoServiceTest {
@@ -102,21 +98,11 @@ class LocalEventoServiceTest {
     }
 
     /**
-     * Prova o achado crítico da revisão da Task 1: como LocalEvento usa soft delete
-     * (@SQLDelete + @SQLRestriction), o ON DELETE SET NULL da FK evento.local_id nunca
-     * dispara. Sem tratar isso no arquivar, o evento ficaria com local_id apontando para um
-     * local "invisível" (filtrado pelo @SQLRestriction), e resolver o proxy LAZY de local ao
-     * montar EventoResponse estouraria EntityNotFoundException — derrubando a listagem
-     * INTEIRA de eventos.
-     *
-     * <p>Faz {@code flush()}+{@code clear()} e chama {@code EventoService.listarEventos}
-     * (o caminho REAL que quebrava, via {@code EventoResponse.from} → {@code
-     * getLocalExibicao()}) em vez de reler a mesma instância gerenciada na persistence
-     * context — sem isso, o teste passaria mesmo com o local_id sujo, porque o proxy LAZY
-     * nunca seria resolvido de novo.
+     * LocalEvento usa soft delete, então o ON DELETE SET NULL da FK evento.local_id nunca dispara — arquivar precisa desvincular manualmente, senão o proxy LAZY estoura EntityNotFoundException ao montar EventoResponse e derruba a listagem inteira.
+     * flush()+clear() e chama EventoService.listarEventos (o caminho real) em vez de reler a instância já gerenciada, senão o proxy LAZY não seria resolvido de novo e o teste passaria mesmo com o bug.
      */
     @Test
-    void arquivar_local_no_evento_preserva_local_texto_e_nao_quebra_a_listagem() {
+    void arquivar_local_no_evento_deixaOEventoSemLocalENaoQuebraAListagem() {
         UUID localId = service.criar(new LocalEventoRequest("Salão Social", 80, null, null), igrejaId).id();
         LocalEvento local = repository.findByIdAndIgrejaId(localId, igrejaId).orElseThrow();
 
@@ -145,29 +131,22 @@ class LocalEventoServiceTest {
         EventoResponse resposta = pagina.getContent().stream()
                 .filter(r -> r.id().equals(eventoId)).findFirst().orElseThrow();
 
-        assertThat(resposta.local().nome()).isEqualTo("Salão Social");
-        assertThat(resposta.local().id()).isNull(); // virou texto ad-hoc — não é mais o cadastrado
+        // Local arquivado não é endereço válido pra continuar aparecendo — o evento fica
+        // sem local (nem o nome sobra como texto), não vira ad-hoc.
+        assertThat(resposta.local()).isNull();
 
         Evento recarregado = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId).orElseThrow();
         assertThat(recarregado.getLocal()).isNull();
-        assertThat(recarregado.getLocalTexto()).isEqualTo("Salão Social");
-        assertThat(recarregado.getLocalExibicao()).isEqualTo("Salão Social");
+        assertThat(recarregado.getLocalTexto()).isNull();
+        assertThat(recarregado.getLocalExibicao()).isNull();
 
         // O local em si foi arquivado (soft delete) — não aparece mais para a igreja.
         assertThat(repository.findByIdAndIgrejaId(localId, igrejaId)).isEmpty();
     }
 
     /**
-     * Prova o achado 1 (CRITICAL) da revisão da Task 2: eventos ARQUIVADOS também precisam
-     * ser desvinculados ao arquivar o local. Como Evento tem @SQLRestriction("deleted_at IS
-     * NULL"), findByLocalIdAndIgrejaId (JPQL/derived query) NUNCA enxerga o evento arquivado
-     * — por isso a correção usa SQL nativo (EventoRepository.desvincularLocal), que ignora
-     * esse filtro do Hibernate. Sem a correção, esse evento arquivado ficaria com local_id
-     * apontando pra um local também arquivado — e ao ser restaurado no futuro (Fase 3),
-     * quebraria a listagem inteira de eventos com HTTP 500.
-     *
-     * <p>A verificação usa SQL direto via EntityManager (não o repository/service, que
-     * filtram deleted_at IS NULL e não enxergariam a linha arquivada de jeito nenhum).
+     * Eventos arquivados também precisam ser desvinculados ao arquivar o local: @SQLRestriction("deleted_at IS NULL") faz findByLocalIdAndIgrejaId nunca enxergar o evento arquivado, por isso a correção usa SQL nativo (EventoRepository.desvincularLocal).
+     * Verificação via SQL direto no EntityManager — repository/service filtram deleted_at IS NULL e não enxergariam a linha arquivada.
      */
     @Test
     void arquivar_local_desvincula_ate_evento_ja_arquivado() {
@@ -203,6 +182,41 @@ class LocalEventoServiceTest {
                 .getSingleResult();
 
         assertThat(linha.get("local_id")).isNull();
-        assertThat(linha.get("local_texto")).isEqualTo("Salão Social");
+        assertThat(linha.get("local_texto")).isNull();
+    }
+
+    @Test
+    void arquivar_listarArquivados_restaurarEExcluirDefinitivo_semNuncaBloquear() {
+        UUID localId = service.criar(new LocalEventoRequest("Salão Nobre", 100, null, null), igrejaId).id();
+
+        service.arquivar(localId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        var arquivados = service.listarArquivados(igrejaId);
+        assertThat(arquivados).hasSize(1);
+        assertThat(arquivados.get(0).id()).isEqualTo(localId);
+
+        service.restaurar(localId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(service.listarArquivados(igrejaId)).isEmpty();
+        assertThat(repository.findByIdAndIgrejaId(localId, igrejaId)).isPresent();
+
+        service.arquivar(localId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        service.excluirDefinitivo(localId, igrejaId);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(repository.findByIdAndIgrejaIdIncluindoArquivados(localId, igrejaId)).isEmpty();
+    }
+
+    @Test
+    void excluirDefinitivo_falhaQuandoLocalNaoEncontrado() {
+        assertThatThrownBy(() -> service.excluirDefinitivo(UUID.randomUUID(), igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
     }
 }

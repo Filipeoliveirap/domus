@@ -3,6 +3,7 @@ import { Endpoints } from '@/lib/endpoints'
 import type {
   PessoaRequest,
   PessoaResponse,
+  PessoaArquivadaResponse,
   ConcederAcessoRequest,
   Vinculo,
 } from '@/types/pessoa.type'
@@ -56,4 +57,13 @@ export const pessoasService = {
 
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.pessoas.BY_ID(id)).then(() => undefined),
+
+  listarArquivadas: (): Promise<PessoaArquivadaResponse[]> =>
+    api.get<PessoaArquivadaResponse[]>(Endpoints.pessoas.ARQUIVADOS).then(res => res.data),
+
+  restaurar: (id: string): Promise<void> =>
+    api.post(Endpoints.pessoas.RESTAURAR(id)).then(() => undefined),
+
+  excluirDefinitivo: (id: string): Promise<void> =>
+    api.delete(Endpoints.pessoas.DEFINITIVO(id)).then(() => undefined),
 }

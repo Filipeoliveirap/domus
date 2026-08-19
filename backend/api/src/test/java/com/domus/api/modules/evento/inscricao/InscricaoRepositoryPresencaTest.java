@@ -18,12 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Task 5: prova que as queries de contagem de inscritos/comparecimento filtram corretamente
- * por evento, por status (só CONFIRMADA) e por presença (compareceu=true) — inserindo linhas
- * "decoy" (canceladas, de outro evento, de outra igreja) para provar que são excluídas, não só
- * que a contagem "bate" no caso feliz.
- */
+/** Insere linhas "decoy" (canceladas, outro evento, outra igreja) pra provar que a contagem as exclui, não só que bate no caso feliz. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class InscricaoRepositoryPresencaTest {

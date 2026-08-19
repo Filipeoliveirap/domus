@@ -6,10 +6,7 @@ import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 import type { AcompanhanteRequest } from '@/types/inscricao.type'
 
-/**
- * Adiciona um convidado à inscrição. Chama o endpoint `/acompanhantes` do backend — o
- * nome muda só na UI ("convidado" soa melhor em português que "acompanhante").
- */
+// Chama /acompanhantes; "convidado" é só o nome na UI.
 export function useAdicionarConvidado(eventoId: string, inscricaoId: string | null) {
   const queryClient = useQueryClient()
 

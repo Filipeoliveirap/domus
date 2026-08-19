@@ -29,16 +29,7 @@ class UsuarioRepositoryTest {
         assertThat(usuarioRepository.findSessaoById(UUID.randomUUID())).isEmpty();
     }
 
-    /**
-     * Este teste existe por causa de um bug real (2026-07-16): o /auth/me lia
-     * {@code usuario.getIgreja().getNome()} do principal do Spring Security — uma entidade
-     * DESANEXADA, porque o SecurityFilter é um servlet filter e roda antes do open-in-view.
-     * Resultado: LazyInitializationException a cada reload da página.
-     *
-     * <p>Nenhum teste com Mockito pegaria isso (lá a entidade é montada na mão e não há
-     * lazy loading). Só uma consulta contra o banco de verdade prova que a projeção monta o
-     * DTO inteiro — inclusive {@code igrejaNome}, o campo que estourava.
-     */
+    /** SecurityFilter roda antes do open-in-view, então o principal vem desanexado — ler campo LAZY dele (ex.: igrejaNome) estoura LazyInitializationException. */
     @Test
     void findSessaoById_montaODtoInteiroSemDependerDeLazyLoading() {
         Optional<Usuario> algum = usuarioRepository.findAll().stream().findFirst();

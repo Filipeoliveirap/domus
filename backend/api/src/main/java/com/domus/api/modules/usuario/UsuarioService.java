@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Perfil;
@@ -44,6 +45,13 @@ public class UsuarioService {
     private final EmailService emailService;
     private final com.domus.api.modules.evento.EventoRepository eventoRepository;
     private final UsuarioCapacidadeRepository capacidadeRepository;
+    private final com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
+    private final com.domus.api.modules.celula.CelulaRepository celulaRepository;
+    private final com.domus.api.modules.celula.CelulaMembroRepository celulaMembroRepository;
+    private final com.domus.api.modules.ministerio.MinisterioRepository ministerioRepository;
+    private final com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
+    private final com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
+    private final com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -71,7 +79,7 @@ public class UsuarioService {
                     "Este membro já teve acesso, que foi arquivado. Deseja reativar?");
         }
 
-        String email = garantirEmailDoMembro(membro, data.email());
+        String email = garantirEmailDoMembro(membro, data.email(), igrejaId);
 
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
@@ -107,7 +115,7 @@ public class UsuarioService {
                 .filter(u -> u.getDeleteAt() != null)
                 .orElseThrow(() -> new BusinessException("Nenhum acesso arquivado encontrado."));
 
-        String email = garantirEmailDoMembro(membro, data.email());
+        String email = garantirEmailDoMembro(membro, data.email(), igrejaId);
 
         Role role = roleRepository.findByNome(data.role())
                 .orElseThrow(() -> new BusinessException("Perfil inválido"));
@@ -155,7 +163,7 @@ public class UsuarioService {
     }
 
     /** Garante e-mail no membro (o convite depende dele). Se não tem, valida unicidade e grava. */
-    private String garantirEmailDoMembro(Pessoa membro, String emailFornecido) {
+    private String garantirEmailDoMembro(Pessoa membro, String emailFornecido, UUID igrejaId) {
         if (membro.getEmail() != null && !membro.getEmail().isBlank()) {
             return membro.getEmail();
         }
@@ -169,6 +177,7 @@ public class UsuarioService {
         }
         membro.setEmail(email);
         membroRepository.save(membro);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.ATUALIZADO, membro.getId(), igrejaId);
         return email;
     }
 
@@ -284,7 +293,9 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public UsuarioResponseDTO buscarPorId(UUID id, UUID igrejaId) {
-        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(id, igrejaId)
+        // IncluindoArquivados: a tela de Arquivados também abre o detalhe de um usuário
+        // arquivado (pra só olhar), igual pessoa/célula/ministério/evento/movimentação.
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
         return enriquecerComCapacidades(UsuarioResponseDTO.from(usuario));
     }
@@ -294,7 +305,7 @@ public class UsuarioService {
                 .stream().map(UsuarioCapacidade::getCapacidade).toList();
         return new UsuarioResponseDTO(dto.id(), dto.nome(), dto.email(), dto.role(),
                 dto.ativo(), dto.ultimoLoginEm(), dto.convitePendente(), dto.criadoEm(),
-                dto.fotoId(), capacidades);
+                dto.fotoId(), capacidades, dto.arquivado());
     }
 
     @Transactional
@@ -335,6 +346,72 @@ public class UsuarioService {
             );
             cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         });
+    }
+
+    /** Chamado por PessoaService#excluirDefinitivo — apaga o login de vez, sem quebrar FK em
+     *  nenhum lugar que esse usuário criou/atualizou (célula, ministério, movimentação, visitante, igreja, evento). */
+    @Transactional
+    public void excluirDefinitivamentePorMembro(UUID pessoaId, UUID igrejaId, String nome) {
+        usuarioRepository.findByPessoaIdIncluindoArquivados(pessoaId).ifPresent(usuario ->
+                excluirDefinitivoInterno(usuario.getId(), igrejaId, nome));
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.domus.api.modules.usuario.DTO.UsuarioArquivadoResponse> listarArquivados(UUID igrejaId) {
+        List<Usuario> usuarios = usuarioRepository.findArquivadosPorIgreja(igrejaId);
+        List<UUID> pessoaIds = usuarios.stream()
+                .map(u -> u.getPessoa().getId())
+                .distinct()
+                .toList();
+        Map<UUID, com.domus.api.modules.pessoa.Pessoa> pessoas = pessoaIds.isEmpty() ? Map.of()
+                : membroRepository.findByIdInIncluindoArquivadas(pessoaIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(com.domus.api.modules.pessoa.Pessoa::getId, p -> p));
+        return usuarios.stream()
+                .map(u -> com.domus.api.modules.usuario.DTO.UsuarioArquivadoResponse.de(u, pessoas.get(u.getPessoa().getId())))
+                .toList();
+    }
+
+    @Transactional
+    public void restaurar(UUID id, UUID igrejaId) {
+        int linhas = usuarioRepository.restaurarPorId(id, igrejaId);
+        if (linhas == 0) {
+            throw new ResourceNotFoundException("Usuário não encontrado.");
+        }
+        outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+    }
+
+    /** Fluxo próprio do módulo Usuários (LGPD): apaga só o login, pessoa e todo o histórico
+     *  dela (célula, ministério, movimentação, evento, inscrição…) ficam intactos — nunca bloqueia. */
+    @Transactional
+    public void excluirDefinitivo(UUID usuarioId, UUID igrejaId) {
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaIdIncluindoArquivados(usuarioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        UUID pessoaId = usuario.getPessoa().getId();
+        String nome = membroRepository.findByIdInIncluindoArquivadas(List.of(pessoaId)).stream()
+                .findFirst().map(com.domus.api.modules.pessoa.Pessoa::getNome).orElse("Pessoa removida do sistema");
+        excluirDefinitivoInterno(usuarioId, igrejaId, nome);
+    }
+
+    private void excluirDefinitivoInterno(UUID usuarioId, UUID igrejaId, String nome) {
+        log.info("Excluindo usuário definitivamente. usuario_id={}, igreja_id={}", usuarioId, igrejaId);
+
+        capacidadeRepository.deleteByUsuarioId(usuarioId);
+        capacidadeRepository.desvincularConcedidoPor(usuarioId);
+
+        eventoRepository.desvincularUsuario(usuarioId, nome);
+        inscricaoRepository.desvincularInscritoPor(usuarioId);
+        celulaRepository.desvincularUsuario(usuarioId, nome);
+        celulaMembroRepository.desvincularUsuario(usuarioId, nome);
+        ministerioRepository.desvincularUsuario(usuarioId, nome);
+        ministerioMembroRepository.desvincularUsuario(usuarioId, nome);
+        movimentacaoFinanceiraRepository.desvincularUsuario(usuarioId, nome);
+        visitanteRepository.desvincularUsuario(usuarioId, nome);
+        igrejaRepository.desvincularUsuario(usuarioId, nome);
+
+        usuarioRepository.hardDeleteById(usuarioId);
+        outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.REMOVIDO, usuarioId, igrejaId);
+        cacheEvictor.evictPorIgreja("usuarios", igrejaId);
     }
 
     @Transactional

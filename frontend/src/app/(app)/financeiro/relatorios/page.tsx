@@ -86,12 +86,7 @@ export default function RelatoriosPage() {
   // A aba só existe para quem é mãe — quem não tem congregação não teria o que ver nela.
   const ehMae = vinculo.data?.estado === 'MAE'
 
-  /*
-   * DERIVADO, não sincronizado por efeito. Se a última congregação sair da família com esta
-   * tela aberta, `ehMae` vira false e a barra de abas some; sem isto o state continuaria em
-   * 'CONGREGACOES' e a visão geral ficaria na tela sem nenhum controle para voltar.
-   * Derivar resolve no mesmo render — um useEffect com setState causaria render em cascata.
-   */
+  // Derivado, não sincronizado por efeito: se `ehMae` virar false com aba='CONGREGACOES', cai direto pra MINHA_IGREJA sem useEffect.
   const abaEfetiva: Aba = ehMae ? aba : 'MINHA_IGREJA'
   const selecao = ehMae ? igrejaSelecionada : null
 

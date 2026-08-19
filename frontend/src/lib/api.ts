@@ -12,19 +12,12 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-// Não há interceptor de request: o token vive em cookie httpOnly e o navegador o envia
-// sozinho. O header X-XSRF-TOKEN do CSRF também é automático — os defaults do axios já são
-// xsrfCookieName 'XSRF-TOKEN' e xsrfHeaderName 'X-XSRF-TOKEN', e como o proxy nos deixa
-// same-origin ele faz isso sem configuração.
+// Token vive em cookie httpOnly; sem interceptor de request, o navegador e o axios (XSRF default) cuidam disso sozinhos.
 
-// Endpoints de auth que NÃO devem disparar uma tentativa de refresh ao receber 401.
-// /auth/me NÃO entra aqui de propósito: se o access expirou mas o refresh é válido,
-// queremos justamente que o load renove a sessão em vez de deslogar o usuário.
+// /auth/me fica de fora de propósito: se o access expirou mas o refresh é válido, o load deve renovar a sessão, não deslogar.
 const rotasAuth = [Endpoints.auth.LOGIN, Endpoints.auth.REFRESH, Endpoints.auth.LOGOUT]
 
-// Single-flight: um único refresh em andamento por vez. Requisições 401 concorrentes
-// esperam nesta mesma promessa em vez de dispararem refreshes paralelos (que a rotação
-// do backend invalidaria entre si).
+// Single-flight: 401s concorrentes esperam a mesma promessa em vez de refreshes paralelos (a rotação do backend invalidaria um ao outro).
 let refreshPromise: Promise<void> | null = null
 
 function encerrarSessao() {
@@ -38,9 +31,12 @@ function encerrarSessao() {
     const { pathname, search } = window.location
     const ehPublica = ['/login', '/cadastro', '/forgot-password', '/reset-password', '/']
       .some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
-    window.location.href = ehPublica
-      ? '/login'
-      : `/login?next=${encodeURIComponent(pathname + search)}`
+    const destino = ehPublica ? '/login' : `/login?next=${encodeURIComponent(pathname + search)}`
+    // Já estamos lá: recarregar de novo não muda nada e, se algo nesta própria rota
+    // pública também chamar uma rota autenticada (ex.: /login checando /auth/me pra
+    // pular o formulário se já tiver sessão), vira reload infinito sem esta guarda.
+    if (destino === pathname) return
+    window.location.href = destino
   }
 }
 

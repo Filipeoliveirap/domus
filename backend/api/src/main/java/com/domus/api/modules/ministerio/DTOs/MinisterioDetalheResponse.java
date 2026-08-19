@@ -12,7 +12,8 @@ public record MinisterioDetalheResponse(
         List<MembroResponse> pedidosPendentes,
         boolean souLiderDesteMinisterio,
         boolean souMembroAtivo,
-        boolean tenhoPedidoPendente
+        boolean tenhoPedidoPendente,
+        boolean arquivada
 ) {
     public static MinisterioDetalheResponse from(
             Ministerio ministerio, List<MembroResponse> membros,
@@ -22,6 +23,7 @@ public record MinisterioDetalheResponse(
                 ministerio.getId(), ministerio.getNome(),
                 ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
                 membros, pedidosPendentes,
-                souLiderDesteMinisterio, souMembroAtivo, tenhoPedidoPendente);
+                souLiderDesteMinisterio, souMembroAtivo, tenhoPedidoPendente,
+                ministerio.getDeletedAt() != null);
     }
 }

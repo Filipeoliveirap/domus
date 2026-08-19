@@ -1,11 +1,6 @@
 package com.domus.api.modules.evento;
 
-/**
- * Situação do evento no tempo, DERIVADA de {@code inicioEm}/{@code fimEm} — não é coluna
- * no banco. Dado derivável que vira coluna fica velho sem um scheduler para atualizá-lo;
- * calculando na hora (ver {@link Evento#getSituacao()}), a situação está sempre certa e
- * nunca pode dessincronizar do relógio.
- */
+/** Situação DERIVADA de {@code inicioEm}/{@code fimEm}, calculada na hora — não é coluna no banco. */
 public enum SituacaoEvento {
     /** Ainda não começou. */
     AGENDADO,

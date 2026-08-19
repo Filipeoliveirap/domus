@@ -11,14 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
-/**
- * Fica sob {@code /relatorios} porque é onde o pastor já vai ver números — mas o matcher
- * do {@code SecurityConfig} pra {@code /relatorios/**} libera ADMIN/LÍDER/COMUM (por causa
- * do {@code RelatorioController}), então a autorização financeira real é feita aqui dentro.
- *
- * <p>Não recebe {@code igrejaId}: o escopo é sempre a família de quem pergunta, calculada
- * no servidor a partir do JWT. Não há o que forjar.
- */
+/** Matcher de {@code /relatorios/**} libera ADMIN/LÍDER/COMUM, então a autorização financeira real é feita aqui dentro. */
 @RestController
 @RequestMapping("/relatorios/congregacoes")
 @RequiredArgsConstructor

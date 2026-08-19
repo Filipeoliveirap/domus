@@ -10,13 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import type { PessoaRequest, PessoaResponse } from '@/types/pessoa.type'
 import type { ApiError } from '@/types/api.types'
 
-/**
- * Formulário da página /perfil. Mesmo padrão de `usePessoaForm` (useAppForm +
- * zodResolver(pessoaSchema) + reset() no useEffect), mas usa
- * `useAtualizarMinhaPessoa` (endpoint /pessoas/me) no lugar de
- * `usePessoa`/`pessoasService.atualizar`: aqui a pessoa edita a SI mesma, não
- * um registro qualquer identificado por id.
- */
+// Usa /pessoas/me (useAtualizarMinhaPessoa) em vez de pessoasService.atualizar: a pessoa edita a si mesma, não um id qualquer.
 export function usePerfilForm(pessoaInicial: PessoaResponse | undefined) {
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const { mutateAsync, isPending } = useAtualizarMinhaPessoa()

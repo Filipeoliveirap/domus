@@ -4,6 +4,7 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
 import com.domus.api.modules.foto.FotoService;
@@ -45,6 +46,7 @@ class EventoServiceTest {
     CacheEvictor cacheEvictor;
     OutboxRegistrador outboxRegistrador;
     InscricaoService inscricaoService;
+    InscricaoRepository inscricaoRepository;
     FotoService fotoService;
     ElegibilidadeService elegibilidadeService;
     PessoaRepository pessoaRepository;
@@ -63,6 +65,7 @@ class EventoServiceTest {
         cacheEvictor = mock(CacheEvictor.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         inscricaoService = mock(InscricaoService.class);
+        inscricaoRepository = mock(InscricaoRepository.class);
         fotoService = mock(FotoService.class);
         elegibilidadeService = mock(ElegibilidadeService.class);
         pessoaRepository = mock(PessoaRepository.class);
@@ -72,7 +75,7 @@ class EventoServiceTest {
 
         service = new EventoService(
                 eventoRepository, igrejaRepository, cacheEvictor, outboxRegistrador,
-                inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
+                inscricaoService, inscricaoRepository, fotoService, elegibilidadeService, pessoaRepository,
                 localEventoRepository, usuarioRepository, familiaIgrejaService
         );
 
@@ -255,6 +258,23 @@ class EventoServiceTest {
 
         assertThatThrownBy(() -> service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA"))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    /** Tela de Arquivados precisa abrir o detalhe de um evento arquivado, igual célula/ministério. */
+    @Test
+    void buscarPorIdEnxergaEventoArquivadoDaPropriaIgreja() {
+        UUID eventoId = UUID.randomUUID();
+        Evento arquivado = evento(igrejaId, false);
+        when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId)).thenReturn(Set.of(igrejaId));
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.empty());
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
+                .thenReturn(Optional.of(arquivado));
+
+        EventoResponse response = service.buscarPorId(eventoId, igrejaId, "ADMIN_IGREJA");
+
+        assertThat(response).isNotNull();
+        assertThat(response.podeGerenciarEsteEvento()).isTrue();
     }
 
     @Test

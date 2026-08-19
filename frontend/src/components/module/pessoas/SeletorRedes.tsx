@@ -13,15 +13,6 @@ interface SeletorRedesProps {
   onChange: (selecionadas: Set<string>) => void
 }
 
-/**
- * Cadastro de pessoa é o outro lugar (além da própria tela de {@link ROTULO_MINISTERIO_PLURAL})
- * onde dá pra colocar alguém numa rede — útil pra quem já cadastra a pessoa sabendo de cara
- * onde ela vai servir, sem precisar abrir a tela de detalhe da rede depois.
- *
- * Busca em vez de lista fixa: numa igreja com muitas redes cadastradas, rolar uma lista de
- * checkboxes fica ruim rápido — digitar o nome é mais direto. As já selecionadas viram chips
- * removíveis, e a busca só afeta o que ainda pode ser adicionado.
- */
 export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
   const { data: redes = [], isLoading } = useMinisterios()
   const [busca, setBusca] = useState('')

@@ -543,3 +543,13 @@ depois que os dois módulos estiverem implementados:
 - Lembrar do outbox: toda entidade nova que entra na busca precisa emitir evento pro
   outbox nas operações de criar/atualizar/arquivar (mesmo padrão de pessoa/evento),
   senão o índice fica desatualizado silenciosamente.
+
+### ~~Excluir igreja: contas só-Google sem caminho de reautenticação na UI~~ (2026-08-18, resolvido)
+
+Achado no review final da feature de exclusão de igreja (carência de 10 dias): o backend
+já suportava as duas formas de reautenticar (senha nativa OU `googleIdToken`), mas
+`ModalExcluirIgreja` só mandava `senha`, deixando contas só-Google sem caminho de
+confirmação. Resolvido: `GET /igrejas/exclusao/resumo` agora expõe `temSenhaNativa`
+(`ExclusaoIgrejaService.resumo`, a partir de `usuario.senhaHash`); o modal mostra o campo
+de senha OU o botão `GoogleLogin` (reusando `@react-oauth/google`, mesmo componente do
+`/login`) conforme esse campo.

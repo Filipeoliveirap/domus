@@ -4,6 +4,7 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.evento.local.LocalEventoRepository;
@@ -32,11 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Cobre a normalização de {@code tipo} (Step 2/3 da Task 5) e a validação de local/idade —
- * o ponto sutil é que dois textos diferentes que normalizam igual ("Vigília"/"vigilia") têm
- * que reusar a MESMA grafia, senão o filtro de tipos fica com duas entradas para o mesmo tipo.
- */
+/** Textos que normalizam igual ("Vigília"/"vigilia") precisam reusar a mesma grafia, senão o filtro de tipos duplica entrada. */
 class EventoTipoENormalizacaoTest {
 
     EventoRepository eventoRepository;
@@ -44,6 +41,7 @@ class EventoTipoENormalizacaoTest {
     CacheEvictor cacheEvictor;
     OutboxRegistrador outboxRegistrador;
     InscricaoService inscricaoService;
+    InscricaoRepository inscricaoRepository;
     FotoService fotoService;
     ElegibilidadeService elegibilidadeService;
     PessoaRepository pessoaRepository;
@@ -68,6 +66,7 @@ class EventoTipoENormalizacaoTest {
         cacheEvictor = mock(CacheEvictor.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         inscricaoService = mock(InscricaoService.class);
+        inscricaoRepository = mock(InscricaoRepository.class);
         fotoService = mock(FotoService.class);
         elegibilidadeService = mock(ElegibilidadeService.class);
         pessoaRepository = mock(PessoaRepository.class);
@@ -75,8 +74,8 @@ class EventoTipoENormalizacaoTest {
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
-                outboxRegistrador, inscricaoService, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository, familiaIgrejaService);
+                outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
+                pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService);
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));

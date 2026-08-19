@@ -7,11 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
-/**
- * Só o nome e o e-mail são obrigatórios — são {@code NOT NULL} na tabela desde a V1.
- * Todo o resto é opcional de propósito: a igreja completa o cadastro aos poucos, sem
- * atrapalhar o fluxo de quem acabou de se registrar.
- */
+/** Só nome e e-mail são obrigatórios ({@code NOT NULL} desde V1); o resto é opcional pra completar o cadastro aos poucos. */
 public record AtualizarIgrejaRequest(
         @NotBlank(message = "O nome da igreja é obrigatório.")
         @Size(max = 255) String nome,

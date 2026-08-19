@@ -13,12 +13,7 @@ interface Variaveis {
 }
 
 interface Opcoes {
-  /**
-   * Chamado quando o 422 é de elegibilidade e TODOS os impedimentos são contornáveis — o
-   * caso em que quem gerencia pode "inscrever mesmo assim". Só quem PODE contornar (gestor)
-   * passa este callback; quando ele existe, o hook não notifica, porque a confirmação vai
-   * aparecer. Sem ele (não-gestor, ou impedimento não contornável), o hook notifica o erro.
-   */
+  // Presente = hook não notifica o 422 (abre confirmação em vez de erro); ausente = notifica normalmente.
   onContornavel?: (impedimentos: Impedimento[]) => void
 }
 
@@ -28,13 +23,7 @@ export function impedimentosDe422(error: unknown): Impedimento[] | undefined {
   return error.response.data.impedimentos
 }
 
-/**
- * O 422 é totalmente contornável? TODOS os impedimentos precisam ser contornáveis — espelha
- * o `totalmenteContornavel()` do backend (`!apto && nenhum não-contornável`). Um único
- * impedimento definitivo na lista (ex.: um futuro que não seja vaga) impede o contorno, mesmo
- * que os outros sejam contornáveis. Usar `.some` aqui ofereceria "inscrever mesmo assim" para
- * um caso que o backend rejeitaria de novo.
- */
+// TODOS os impedimentos precisam ser contornáveis (espelha totalmenteContornavel() do backend); `.some` ofereceria contorno que o backend rejeitaria de novo.
 export function ehNaoElegivelContornavel(error: unknown): boolean {
   const imps = impedimentosDe422(error)
   return !!imps?.length && imps.every((i) => i.contornavel)

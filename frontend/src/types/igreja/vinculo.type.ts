@@ -10,12 +10,7 @@ export interface IgrejaResumo {
   vinculadoEm: string | null
 }
 
-/**
- * Os três estados são mutuamente exclusivos — a regra dos 2 níveis (quem tem mãe não pode
- * ser mãe) garante isso no backend, então a tela nunca precisa oferecer o impossível.
- *
- * `codigoVinculo` vem para INDEPENDENTE e MAE; `mae` só para FILHA; `congregacoes` só para MAE.
- */
+// Os três estados são mutuamente exclusivos (regra dos 2 níveis garantida no backend).
 export interface VinculoStatus {
   estado: EstadoVinculo
   codigoVinculo: string | null

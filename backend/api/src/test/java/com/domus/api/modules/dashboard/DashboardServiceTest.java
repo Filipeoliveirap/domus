@@ -2,6 +2,7 @@ package com.domus.api.modules.dashboard;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.financeiro.categoria.CategoriaFinanceiraRepository;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository;
 import com.domus.api.modules.financeiro.relatorio.RelatorioProjections;
 import com.domus.api.modules.financeiro.relatorio.RelatorioRepository;
@@ -29,6 +30,7 @@ class DashboardServiceTest {
     EventoRepository eventoRepository;
     RelatorioRepository relatorioRepository;
     MovimentacaoFinanceiraRepository movimentacaoRepository;
+    CategoriaFinanceiraRepository categoriaRepository;
     FamiliaIgrejaService familiaIgrejaService;
     DashboardService service;
 
@@ -40,9 +42,10 @@ class DashboardServiceTest {
         eventoRepository = mock(EventoRepository.class);
         relatorioRepository = mock(RelatorioRepository.class);
         movimentacaoRepository = mock(MovimentacaoFinanceiraRepository.class);
+        categoriaRepository = mock(CategoriaFinanceiraRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         service = new DashboardService(pessoaRepository, eventoRepository, relatorioRepository,
-                movimentacaoRepository, familiaIgrejaService);
+                movimentacaoRepository, categoriaRepository, familiaIgrejaService);
 
         when(relatorioRepository.agregarResumo(eq(igrejaId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(new RelatorioProjections.ResumoAgregado() {

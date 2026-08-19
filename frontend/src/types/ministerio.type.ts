@@ -12,6 +12,7 @@ export interface MinisterioResponse {
   /** Vazio em respostas que não consultam membros (ex.: GET /pessoas/{id}/ministerios). */
   lideres: string[]
   totalMembros: number
+  temVinculo: boolean
 }
 
 export interface MembroResponse {
@@ -30,4 +31,5 @@ export interface MinisterioDetalheResponse {
   souLiderDesteMinisterio: boolean
   souMembroAtivo: boolean
   tenhoPedidoPendente: boolean
+  arquivada: boolean
 }

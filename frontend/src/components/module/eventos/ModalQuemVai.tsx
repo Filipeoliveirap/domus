@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { X, Users } from 'lucide-react'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
@@ -105,8 +106,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
                 <div className={styles.linha}>
                   <span className={styles.avatar}>
                     {urlFoto(l.fotoId, 'THUMB') ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                      <img src={urlFoto(l.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                      <Image src={urlFoto(l.fotoId, 'THUMB')!} alt="" width={36} height={36} unoptimized className={styles.avatarFoto} />
                     ) : (
                       iniciais(l.nome)
                     )}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X, Archive, XCircle, ClipboardList } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -336,8 +337,7 @@ export default function InscritosPage() {
                         <div className={styles.colParticipante}>
                           <span className={styles.avatar}>
                             {urlFoto(inscrito.fotoId, 'THUMB') ? (
-                              // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                              <img src={urlFoto(inscrito.fotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                              <Image src={urlFoto(inscrito.fotoId, 'THUMB')!} alt="" width={36} height={36} unoptimized className={styles.avatarFoto} />
                             ) : (
                               iniciais(inscrito.nome)
                             )}
@@ -357,8 +357,7 @@ export default function InscritosPage() {
                             <span className={styles.inscritoPor}>
                               <span className={styles.avatarInscritoPor}>
                                 {urlFoto(inscrito.inscritoPorFotoId, 'THUMB') ? (
-                                  // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
-                                  <img src={urlFoto(inscrito.inscritoPorFotoId, 'THUMB')!} alt="" className={styles.avatarFoto} />
+                                  <Image src={urlFoto(inscrito.inscritoPorFotoId, 'THUMB')!} alt="" width={20} height={20} unoptimized className={styles.avatarFoto} />
                                 ) : (
                                   iniciais(inscrito.inscritoPorNome)
                                 )}

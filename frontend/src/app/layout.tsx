@@ -4,6 +4,12 @@ import '@/styles/globals.css'
 import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 
+// Todo o app passa a renderizar por requisição (não mais pré-fabricado no build) — é o que
+// permite o nonce da CSP (src/proxy.ts) chegar em toda página, em vez de só nas poucas
+// rotas que já eram dinâmicas. Custo: performance de servir HTML pronto do cache; ganho:
+// CSP com 'strict-dynamic' de verdade em vez de 'unsafe-inline' liberado geral.
+export const dynamic = 'force-dynamic'
+
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({

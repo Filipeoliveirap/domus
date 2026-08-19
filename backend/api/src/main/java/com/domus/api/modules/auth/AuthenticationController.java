@@ -60,7 +60,9 @@ public class AuthenticationController {
         RegistrarIgrejaResponse r = googleAuthService.registrar(data, clienteIpResolver.resolver(request));
         return comCookies(r.token(), r.refreshToken())
                 .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
-                        null, null, null, null));
+                        null, null, null, null, java.util.List.of(),
+                        termoAceiteService.precisaAceitar(r.id()),
+                        termoAceiteService.dataUltimoAceite(r.id())));
     }
 
     // O principal é carregado no SecurityFilter (antes do open-in-view): ler campo LAZY lança

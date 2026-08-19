@@ -220,10 +220,14 @@
   background: var(--color-bg-page);
 }
 
-/* Card inteiro clicável: modo seleção (seleciona em qualquer ponto) ou detalhe da pessoa. */
+/* Card inteiro clicável: modo seleção (seleciona em qualquer ponto) ou detalhe da pessoa.
+   -webkit-tap-highlight-color evita que tocar num botão DENTRO do card (ex.: "Marcar
+   presença", que já para propagação no JS) acenda visualmente o card inteiro — esse realce
+   é um efeito só de CSS do navegador em cima do ancestral clicável, não segue o JS. */
 .linhaClicavel {
   cursor: pointer;
   transition: background-color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 .linhaClicavel:hover {
   background: var(--color-bg-page);

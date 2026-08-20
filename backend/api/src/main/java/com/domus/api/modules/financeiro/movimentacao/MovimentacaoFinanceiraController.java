@@ -5,7 +5,9 @@ import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/movimentacoes")
 @RequiredArgsConstructor
+@Validated
 public class MovimentacaoFinanceiraController {
 
     private final MovimentacaoFinanceiraService service;
@@ -38,7 +41,7 @@ public class MovimentacaoFinanceiraController {
             @RequestParam(required = false) UUID categoriaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @RequestParam(required = false) UUID pessoaId,
             @PageableDefault(size = 15) Pageable pageable) {
         exigirFinanceiro();
@@ -52,7 +55,7 @@ public class MovimentacaoFinanceiraController {
             @RequestParam(required = false) UUID categoriaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @RequestParam(required = false) UUID pessoaId) {
         exigirFinanceiro();
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

@@ -6,7 +6,9 @@ import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/pessoas")
 @RequiredArgsConstructor
+@Validated
 public class PessoaController {
 
     private final PessoaService pessoaService;
@@ -26,7 +29,7 @@ public class PessoaController {
 
     @GetMapping
     public ResponseEntity<PagedResponse<PessoaResponse>> listar(
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @RequestParam(required = false) Vinculo vinculo,
             @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

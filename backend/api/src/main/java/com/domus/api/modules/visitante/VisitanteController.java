@@ -94,7 +94,7 @@ public class VisitanteController {
 
     @PutMapping("/{id}/celula")
     public ResponseEntity<VisitanteResponse> moverParaCelula(@PathVariable UUID id,
-                                                              @RequestBody MoverParaCelulaRequest data) {
+                                                              @Valid @RequestBody MoverParaCelulaRequest data) {
         exigirGestao();
         return ResponseEntity.ok(visitanteService.moverParaCelula(
                 id, data.celulaId(), usuarioAutenticado.getIgrejaId()));

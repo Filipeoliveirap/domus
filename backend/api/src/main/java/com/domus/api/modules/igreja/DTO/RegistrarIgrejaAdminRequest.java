@@ -18,6 +18,7 @@ public class RegistrarIgrejaAdminRequest {
 
     @NotBlank(message = "E-mail de contato é obrigatório")
     @Email(message = "E-mail de contato inválido")
+    @Size(max = 255, message = "E-mail de contato deve ter no máximo 255 caracteres")
     private String emailContato;
 
     @Size(max = 18, message = "CNPJ deve ter no máximo 18 caracteres")
@@ -36,10 +37,11 @@ public class RegistrarIgrejaAdminRequest {
 
     @NotBlank(message = "Email do administrador é obrigatório")
     @Email(message = "Email do administrador inválido")
+    @Size(max = 255, message = "Email do administrador deve ter no máximo 255 caracteres")
     private String emailAdmin;
 
     @NotBlank(message = "Senha do administrador é obrigatória")
-    @Size(min = 8, message = "Senha do administrador deve ter no mínimo 8 caracteres")
+    @Size(min = 8, max = 255, message = "Senha do administrador deve ter entre 8 e 255 caracteres")
     private String senhaAdmin;
 
     private boolean aceitouTermos;

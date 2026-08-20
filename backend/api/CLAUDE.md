@@ -617,7 +617,11 @@ erDiagram
       `npm audit` saiu de 7 (1 baixa, 3 médias, 3 altas) para **0**. Como: `npm audit fix` (sem
       `--force`, que rebaixaria o Next p/ 9.3.3 e quebraria o build), `next@16.2.10` explícito e
       `overrides.postcss ^8.5.15`. **Falta:** avaliar o back (ex.: OWASP dependency-check).
-    - [ ] Revisão de **validação de input** em toda entrada — contínuo.
+    - [ ] Revisão de **validação de input** em toda entrada — contínuo. Primeira passada
+      em 2026-08-20 (detalhe no BACKLOG): harness de teste de controller, `@Valid`/`@NotNull`
+      faltando em 2 lugares (1 causava 500 real), `@Size` em texto livre, teto de paginação,
+      `@Size` em parâmetros de busca livre. Não cobre o app inteiro — retomar módulo a
+      módulo conforme for mexendo neles.
     - [x] **Verificar domínio no Resend** — **FEITO** (2026-07-18): domínio `domusigreja.com.br`
       verificado (DKIM + SPF/MX no subdomínio `send`, via DNS na Cloudflare). Remetente de
       produção `Domus <nao-responda@domusigreja.com.br>` (env `EMAIL_FROM`). Testado ao vivo:

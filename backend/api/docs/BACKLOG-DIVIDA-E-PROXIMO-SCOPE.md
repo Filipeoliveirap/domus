@@ -122,6 +122,54 @@
   no repositório local, e o `maven-surefire-plugin` usa isso como `-javaagent`. Warning
   sumiu (`mvn test` sem nenhuma ocorrência de "self-attaching"), suíte completa continua verde.
 
+### Revisão de validação de input em toda entrada — item do CLAUDE.md, primeira passada 2026-08-20
+
+Levantamento (agente de exploração) de todos os `*RequestDTO`/`*Request` usados como
+`@RequestBody`, cobertura de Bean Validation, uso de `@Valid`/`@Validated`, e parâmetros
+livres (`q`/`busca`/paginação) sem limite. Corrigido nesta passada:
+
+- **Bug real**: `VisitanteController.moverParaCelula` sem `@Valid` e `MoverParaCelulaRequest.celulaId`
+  sem `@NotNull` — ver seção do harness de teste acima.
+- **`@Size` em texto livre sem limite**: `EventoRequest` (descricao 5000, titulo/localTexto 255,
+  tipo 80, recorteEtario 40), `PessoaRequestDTO` (email 255, observacoes 5000), `VisitanteRequest`
+  (observacoes 5000, telefone com `@Pattern` que faltava, quantidadeFilhos com `@Min`/`@Max`),
+  `AgendarExclusaoRequest` (senha 255, googleIdToken 4096, nomeConfirmacao 255), DTOs de auth
+  (`AuthenticationDTO`, `ChangePasswordDTO`, `ResetPasswordDTO`, `GoogleLoginDTO`,
+  `GoogleRegistrarDTO`, `ForgotPasswordDTO`, `RegistrarIgrejaAdminRequest` — senha/token/email
+  sem teto de tamanho), `VinculoDTOs.EntrarNaFamiliaRequest` (código).
+- **Bug real #2**: `MovimentacaoRequestDTO.contribuintes` não tinha `@Valid` — Bean Validation
+  só cascateia pra dentro de listas quando o campo tem `@Valid`, então o `@NotNull` de
+  `ContribuinteDTO.valor`/`pessoaId` nunca era checado. Um contribuinte com `valor: null`
+  estourava `NullPointerException` (500) em `MovimentacaoFinanceiraService.validarContribuintes`
+  (`BigDecimal::add` na soma) em vez de 400. Corrigido com `@Valid` + `@Size(max=200)` no campo.
+- **Bug real #3**: `CelulaRequest.horario` era `String` livre sem `@Pattern`; o service fazia
+  `LocalTime.parse(data.horario())` sem tratamento — string malformada estourava
+  `DateTimeParseException` não capturada (500) em vez de 400. Corrigido com
+  `@Pattern` aceitando vazio/null ou `HH:mm`.
+- **Listas sem limite**: `InscreverPessoasRequest.pessoaIds` ganhou `@Size(max=500)`.
+- **Teto de paginação**: `spring.data.web.pageable.max-page-size=100` em
+  `application.properties` — o default do Spring é 2000, então `?size=2000` funcionava em
+  qualquer listagem paginada. Confirmado que nenhum `@PageableDefault` do projeto passa de 20.
+- **`q`/`busca` sem limite**: `@Validated` na classe + `@Size(max=200)` no parâmetro, em
+  `BuscaController` (6 endpoints), `VisitanteController`, `UsuarioController`,
+  `PessoaController`, `EventoController`, `MovimentacaoFinanceiraController` (2),
+  `CategoriaFinanceiraController`, `InscricaoController`. Exigiu um handler novo em
+  `GlobalExceptionHandler` para `ConstraintViolationException` — violação de `@Validated` em
+  `@RequestParam` não é `MethodArgumentNotValidException` (essa só cobre `@Valid` em
+  `@RequestBody`); sem o handler, cairia no genérico e devolveria 500 em vez de 400.
+- **Investigado e descartado como falso positivo**: `role`/`capacidade` como `String` livre
+  (`UpdateRoleRequest`, `ConcederAcessoRequestDTO`, `CapacidadeRequest`) já são validados no
+  service (`RoleRepository.findByNome` → 404 se inválido; `UsuarioService.validarCapacidade`
+  → `BusinessException` 400) — não é bug, é validação na camada certa, não na anotação.
+  `AdicionarMembroCelulaRequest` (pessoaId/visitanteId sem `@NotNull`) também é falso
+  positivo: `CelulaService.adicionarMembro` já lança `BusinessException("MEMBRO_INVALIDO", ...)`
+  quando os dois vêm nulos — regra XOR de negócio, não dá pra expressar em Bean Validation
+  simples sem `@AssertTrue` num validador custom (avaliar se compensar depois).
+
+**Ficou de fora desta passada** (não é todo o app, é dívida contínua por natureza — ver
+item do CLAUDE.md): módulos de célula/ministério/local-evento/financeiro além do que foi
+listado acima não foram auditados campo a campo; revisar quando mexer neles.
+
 ---
 
 ## Segurança / autorização — a discutir (decisão de produto)

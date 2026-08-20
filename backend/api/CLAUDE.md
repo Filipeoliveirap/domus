@@ -138,12 +138,26 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 | **Service (regra de negócio)** | Mockito puro, sem contexto Spring | **Regra padrão.** 90% dos testes do projeto. |
 | **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra o Neon de testes. |
 | **Integração JPA complexa** | `@SpringBootTest` + `@Transactional` | FK constraints, triggers, concorrência com lock, migration. **Exceção, não regra.** |
-| **Controller (HTTP + Security)** | `@WebMvcTest` ou `@SpringBootTest` + `MockMvc` | **Não existe no projeto ainda.** Dívida técnica. Hoje a validação de rotas e matchers do Spring Security é manual (curl/navegador). |
+| **Controller (HTTP + Security)** | `@SpringBootTest` + `@AutoConfigureMockMvc` + `AutenticacaoTestSupport` | Harness introduzido em 2026-08-20 (piloto: `VisitanteControllerTest`). Ainda **não aplicado a todos os controllers** — expandir módulo a módulo conforme mexer neles. |
 
 > **Por que Mockito puro é a regra?** Serviços com Mockito rodam em milissegundos, não
 > precisam de banco, não precisam de `.env`, e testam a lógica de negócio isolada. Mas
 > **não pegam** bugs de lazy loading, ordem de `requestMatchers` do Spring Security, ou FK
 > constraints — esses precisam de `@SpringBootTest`.
+
+> **Harness de teste de controller (`AutenticacaoTestSupport`):** o `SecurityFilter` do
+> projeto lê o JWT direto de um cookie (`domus_access`), não usa o mecanismo padrão do
+> Spring Security — então `@WithMockUser` não autentica nada aqui. `AutenticacaoTestSupport`
+> (em `src/test/java/.../shared/security/`) gera um JWT real via `TokenService` e devolve um
+> `Cookie` pronto pra `mockMvc.perform(...)`; o método `autenticado(builder, usuario)` já
+> anexa esse cookie **e** um token CSRF válido (via `csrf()` do `spring-security-test`, que
+> já estava no `pom.xml` mas não era usado). Uso: `@SpringBootTest @AutoConfigureMockMvc
+> @Transactional`, instanciar `new AutenticacaoTestSupport(tokenService)` no `@BeforeEach`,
+> fixtures de Igreja/Pessoa/Role/Usuario montadas inline por teste (sem fixture
+> compartilhada de domínio — só a mecânica de autenticação é compartilhada). Cobre os dois
+> ângulos ao mesmo tempo: validação de `@Valid` (pega bug de anotação ausente, tipo o de
+> `MoverParaCelulaRequest`) **e** autorização por perfil (`requestMatchers` do
+> `SecurityConfig` + checagens `Permissoes.*` dentro do controller).
 
 ### Padrão de mock
 

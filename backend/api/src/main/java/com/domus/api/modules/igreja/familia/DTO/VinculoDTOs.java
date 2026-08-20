@@ -1,6 +1,7 @@
 package com.domus.api.modules.igreja.familia.DTO;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,5 +30,8 @@ public final class VinculoDTOs {
             IgrejaResumo mae,
             List<IgrejaResumo> congregacoes) {}
 
-    public record EntrarNaFamiliaRequest(@NotBlank(message = "Informe o código de vínculo.") String codigo) {}
+    public record EntrarNaFamiliaRequest(
+            @NotBlank(message = "Informe o código de vínculo.")
+            @Size(max = 20, message = "Código de vínculo inválido.")
+            String codigo) {}
 }

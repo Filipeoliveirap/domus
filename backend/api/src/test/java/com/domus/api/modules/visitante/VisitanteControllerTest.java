@@ -130,6 +130,16 @@ class VisitanteControllerTest {
     }
 
     @Test
+    void listar_termoDeBuscaAcimaDe200Caracteres_recusaCom400() throws Exception {
+        Usuario admin = usuarioComRole("ADMIN_IGREJA");
+
+        mockMvc.perform(auth.autenticado(
+                        get("/visitantes").param("q", "a".repeat(201)),
+                        admin))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void moverParaCelula_semTokenCsrf_recusaCom403() throws Exception {
         Usuario admin = usuarioComRole("ADMIN_IGREJA");
         Visitante v = visitante();

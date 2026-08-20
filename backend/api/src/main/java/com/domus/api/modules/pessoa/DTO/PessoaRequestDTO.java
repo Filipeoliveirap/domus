@@ -13,6 +13,7 @@ public record PessoaRequestDTO(
         String nome,
 
         @Email(message = "E-mail inválido")
+        @Size(max = 255, message = "O e-mail deve ter no máximo 255 caracteres")
         String email,
 
         @Pattern(regexp = "^\\d{10,11}$", message = "O telefone deve conter 10 ou 11 dígitos numéricos.")
@@ -37,6 +38,7 @@ public record PessoaRequestDTO(
         @Size(max = 255)
         String cargo,
 
+        @Size(max = 5000, message = "As observações devem ter no máximo 5000 caracteres")
         String observacoes,
 
         @Past(message = "A data de batismo deve ser uma data no passado.")

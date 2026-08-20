@@ -1,6 +1,7 @@
 package com.domus.api.shared.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,26 @@ public class GlobalExceptionHandler {
         );
 
         log.warn("Erro de validação. path={}, campos={}", request.getRequestURI(), campos);
+
+        return ResponseEntity
+                .badRequest()
+                .body(ErrorResponse.ofValidacao(campos));
+    }
+
+    /** Violação de @Validated em @RequestParam/@PathVariable — MethodArgumentNotValidException cobre só @Valid em @RequestBody. */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+
+        Map<String, String> campos = new HashMap<>();
+        ex.getConstraintViolations().forEach(violation -> {
+            String propriedade = violation.getPropertyPath().toString();
+            String campo = propriedade.contains(".")
+                    ? propriedade.substring(propriedade.lastIndexOf('.') + 1)
+                    : propriedade;
+            campos.put(campo, violation.getMessage());
+        });
+
+        log.warn("Erro de validação de parâmetro. path={}, campos={}", request.getRequestURI(), campos);
 
         return ResponseEntity
                 .badRequest()

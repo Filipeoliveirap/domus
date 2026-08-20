@@ -1,6 +1,7 @@
 package com.domus.api.modules.financeiro.movimentacao.DTOs;
 
 import com.domus.api.modules.financeiro.movimentacao.TipoMovimentacao;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -24,6 +25,8 @@ public record MovimentacaoRequestDTO(
         LocalDate dataMovimentacao,
 
         @NotNull(message = "A lista de contribuintes é obrigatória (pode ser vazia)")
+        @Valid
+        @Size(max = 200, message = "No máximo 200 contribuintes por movimentação.")
         List<ContribuinteDTO> contribuintes,
 
         @Size(max = 1000, message = "A descrição deve ter no máximo 1000 caracteres")

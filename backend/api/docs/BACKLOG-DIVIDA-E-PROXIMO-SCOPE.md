@@ -67,12 +67,18 @@
   por isso ficou assim. Se virar vetor de abuso, mover o `RateLimitFilter` para antes do
   `CsrfFilter`.
 
-- **HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.** O Spring só vê
-  o salto HTTP interno do proxy, então `request.isSecure()` é false e o `HstsHeaderWriter`
-  não escreve nada. A property foi adicionada (default `none`, como o `trust-forwarded-for`),
-  mas **precisa virar `framework` em produção** — senão o bloco de HSTS do `SecurityConfig`
-  é letra morta. Quem protege de fato é o HSTS do front (`next.config.ts`), que cobre a
-  origem inteira; o do back é defesa em profundidade.
+- ~~**HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.**~~
+  **RESOLVIDO** (2026-08-20): confirmado que `/root/deploy/.env.prod` na VPS **não** tinha
+  `FORWARD_HEADERS_STRATEGY` nem `RATELIMIT_TRUST_FORWARDED_FOR` — as duas ficaram no
+  default (`none`/`false`) desde o deploy original, então o `HstsHeaderWriter` nunca
+  escrevia o header em produção, e o rate limiting por IP estava usando o IP interno do
+  túnel Cloudflare (mesmo "IP" pra todo mundo, balde único). Adicionadas as duas linhas ao
+  `.env.prod` (backup do arquivo feito antes) e o container `domus-api-1` recriado
+  (`docker compose up -d --force-recreate api`). Validado ao vivo:
+  `curl -sI https://domusigreja.com.br/api/auth/me` agora traz
+  `strict-transport-security: max-age=31536000 ; includeSubDomains`. Quem protege de fato
+  é o HSTS do front (`next.config.ts`), que cobre a origem inteira; o do back era defesa em
+  profundidade que ficou letra morta por ~1 mês (desde a Fase 1) sem ninguém notar.
 
 - **Backup: janela de perda de 24h e restauração manual.** O backup roda 1×/dia, então o
   pior caso é perder um dia de lançamentos. Aceito: a igreja lança dízimo no domingo e

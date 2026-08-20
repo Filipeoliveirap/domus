@@ -187,13 +187,22 @@ faltavam — item do CLAUDE.md pode ser marcado como feito.
 
 ## Segurança / autorização — a discutir (decisão de produto)
 
-- **Login CSRF (resíduo aceito na migração de cookie, 2026-07-16).** As rotas públicas de
-  auth (`/auth/login`, `/auth/google/*`, `/igrejas/registrar`, `/auth/forgot-password`,
-  `/auth/reset-password`) são isentas do double-submit: rodam sem sessão para um atacante
-  cavalgar, e protegê-las exigiria buscar um token CSRF antes de cada formulário público em
-  4 telas. Fica possível o **login CSRF** (forçar a vítima a logar na conta do atacante e
-  digitar dados achando que é a própria). Impacto modesto e o `SameSite=Lax` já o barra na
-  prática (é POST cross-site). Reavaliar se surgir fluxo sensível pré-login.
+- ~~**Login CSRF (resíduo aceito na migração de cookie, 2026-07-16).**~~ **RESOLVIDO**
+  (2026-08-20): as rotas públicas de auth (`/auth/login`, `/auth/google/login`,
+  `/auth/google/registrar`, `/auth/forgot-password`, `/auth/reset-password`,
+  `/igrejas/registrar`) saíram do `ignoringRequestMatchers` do CSRF em `SecurityConfig`, e
+  agora exigem o double-submit token como qualquer rota autenticada. O obstáculo original
+  (buscar token antes de cada form público) resolvido sem endpoint novo: o backend já faz
+  resolução **eager** do token CSRF (`csrfTokenRequestHandler`, `setCsrfRequestAttributeName(null)`),
+  então qualquer `GET`, mesmo 401, já grava o cookie `XSRF-TOKEN`. `authService`
+  (`frontend/src/services/auth.service.ts`) ganhou `garantirCsrfCookie()`, chamada antes
+  das 6 mutações públicas: dispara `GET /auth/me` só quando o cookie ainda não existe
+  (`document.cookie` sem `XSRF-TOKEN=`), e o axios já anexa `X-XSRF-TOKEN` sozinho (default
+  do axios pra requisição same-origin — sem precisar de interceptor manual). Testado:
+  backend (`AuthCsrfConfigTest`, POST sem token → 403, com token → passa da camada CSRF) e
+  ao vivo no navegador + curl simulando o fluxo do axios — as 4 telas (login, cadastro,
+  esqueci senha, reset de senha) funcionando normalmente, inclusive no pior caso (visita
+  fria numa página sem passar por `/login` antes, sem cookie nenhum).
 
 - **Janela de convivência cookie+header.** A migração para cookie httpOnly matou toda sessão
   existente (o `SecurityFilter` parou de ler o header `Authorization`). Foi aceitável porque

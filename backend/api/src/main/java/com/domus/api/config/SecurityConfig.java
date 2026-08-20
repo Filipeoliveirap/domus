@@ -45,14 +45,7 @@ public class SecurityConfig {
         return httpSecurity
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
-                        .csrfTokenRequestHandler(csrfTokenRequestHandler())
-                        .ignoringRequestMatchers(
-                                "/auth/login",
-                                "/auth/google/login",
-                                "/auth/google/registrar",
-                                "/auth/forgot-password",
-                                "/auth/reset-password",
-                                "/igrejas/registrar"))
+                        .csrfTokenRequestHandler(csrfTokenRequestHandler()))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize

@@ -155,10 +155,9 @@
   esquecimento). A implementação (`PessoaResponse.from(..., incluirDadosSensiveis)`,
   já usada em `GET /pessoas` e `GET /pessoas/{id}`) já existia — faltava só teste
   provando; adicionado em `PessoaServiceTest` (`buscarPorId_semDadosSensiveis_...`).
-- **Revisão de autorização por perfil, módulo a módulo (escopo maior, ainda aberto).**
-  Nunca foi feita uma varredura sistemática de "quem vê o quê" em todos os módulos — só
-  correções pontuais conforme apareceram (esta mesma, célula, visitantes...). Vale um
-  brainstorm próprio se decidir fazer. Descoberto em 2026-07-16 discutindo o item acima.
+- ~~**Revisão de autorização por perfil, módulo a módulo.**~~ **RESOLVIDO** (confirmado
+  pelo autor em 2026-08-20): feito via brainstorm próprio, cobrindo "quem vê o quê" nos
+  módulos do sistema.
 
 ---
 
@@ -203,11 +202,6 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
   API — Authorization Code flow com `access_type=offline` + escopo `calendar`, guardando o
   refresh token do Google **por usuário**, com botão explícito "Conectar agenda". NÃO se mistura
   com o login (que é só identidade). Ver memória `google-oauth-auth`.
-
-- **Fluxo de convite por e-mail (novo provisionamento).** Hoje o admin, ao "conceder acesso",
-  define a senha do membro. Desejado: admin só escolhe a role e **convida por e-mail**; o próprio
-  usuário define a senha (reusa o reset). Já movido para a **Fase 2** do roadmap (o Google OAuth
-  já deixou `senha_hash` nullable, então o back está pronto para usuários sem senha).
 
 - Itens já listados em "Fora do escopo desta versão" no `CLAUDE.md` (filtros extras em
   financeiro, múltiplos atribuintes, verificação de posse de telefone via SMS, expansão de
@@ -327,7 +321,6 @@ abaixo. Banner reusou o `<UploadFoto>` já existente da Fase 2.
 **Ficou de fora desta entrega** (ver itens específicos mais abaixo neste arquivo):
 - Capacidade do local **impondo** limite de vagas (hoje só sugere; nada barra cadastrar
   vagas acima da capacidade).
-- Lista de espera quando as vagas esgotam.
 - Recorrência (Spec C), campos personalizados (Spec D) e programação/equipe (Spec E) —
   continuam como specs futuras, não tocadas por esta entrega.
 
@@ -381,7 +374,7 @@ outra pessoa, mas `VAGAS_ESGOTADAS` **não é contornável** por ninguém — e 
 nunca contorna nada, nem para admin.
 
 **Ficou de fora:** nada pendente da elegibilidade em si — os itens de fora são os já listados
-acima na Spec B (capacidade impondo limite de vagas, lista de espera) e as Specs C/D/E.
+acima na Spec B (capacidade impondo limite de vagas) e as Specs C/D/E.
 
 ### Selos e filtros por tipo de evento — **CONCLUÍDA (2026-07-22)**
 
@@ -400,20 +393,27 @@ o que a igreja realmente digita.
 
 ---
 
-## Falta harness de teste de autorização por endpoint (descoberto 2026-07-20)
+## Harness de teste de autorização por endpoint — FEITO (2026-08-20)
 
-Ao adicionar os matchers de `/eventos/*/inscricoes**` no `SecurityConfig`, a Task 2 original
-previa um teste MockMvc batendo na `SecurityFilterChain` de verdade (`membroPodeSeInscreverEmEvento`
-/ `membroNaoVeListaDeInscritos`). **Não existe esse harness no projeto.** `SecurityFilterTest`
-é um teste unitário do `SecurityFilter` (o JWT filter) com Mockito puro — não sobe contexto
-Spring, não passa pela `authorizeHttpRequests`, então não tem como pegar bug de **ordem** de
-`requestMatchers`.
+Ao adicionar os matchers de `/eventos/*/inscricoes**` no `SecurityConfig` (2026-07-20), a Task 2
+original previa um teste MockMvc batendo na `SecurityFilterChain` de verdade
+(`membroPodeSeInscreverEmEvento`/`membroNaoVeListaDeInscritos`), mas o harness não existia:
+`SecurityFilterTest` é um teste unitário do `SecurityFilter` (o JWT filter) com Mockito puro —
+não sobe contexto Spring, não passa pela `authorizeHttpRequests`, então não tinha como pegar
+bug de **ordem** de `requestMatchers`. Erro de ordenação de matcher (curinga genérico casando
+antes da regra específica) compilava limpo e passava em todos os testes unitários, só aparecendo
+testando ao vivo (curl/Postman) — foi assim que a armadilha de `/igrejas/*` foi descoberta.
 
-Consequência prática: erro de ordenação de matcher (curinga genérico casando antes da regra
-específica) **compila limpo e passa em todos os testes unitários**, e só aparece testando ao
-vivo (curl/Postman) contra o servidor rodando. Foi exatamente assim que a armadilha de
-`/igrejas/*` foi descoberta antes, e é como esta de `/eventos/*/inscricoes` está sendo validada
-agora — não há rede automatizada pegando isso hoje.
+**Resolvido:** `AutenticacaoTestSupport` (`src/test/java/.../shared/security/`) + padrão
+`@SpringBootTest @AutoConfigureMockMvc` — gera JWT real via `TokenService` num cookie
+`domus_access` (o `SecurityFilter` do projeto lê o cookie na mão, não usa `@WithMockUser`) e
+anexa CSRF via `csrf()` do `spring-security-test` (já estava no `pom.xml`, não era usado).
+Piloto em `VisitanteControllerTest`, cobrindo validação (`@Valid` não acionado — o mesmo bug
+real corrigido em `MoverParaCelulaRequest` nesta sessão) e autorização (403 por perfil, 401 sem
+sessão, 403 sem CSRF). Documentado na tabela de convenções de teste do `CLAUDE.md`.
+
+**Ficou de fora:** aplicar o harness aos demais controllers — hoje só `Visitante` está coberto.
+Expandir módulo a módulo conforme for mexendo neles, não de uma vez.
 
 Ideal futuro: um `@SpringBootTest` com `@AutoConfigureMockMvc` (ou `WebMvcTest` importando o
 `SecurityConfig`) que suba a `SecurityFilterChain` real e teste, por perfil, quais rotas dão

@@ -166,9 +166,16 @@ livres (`q`/`busca`/paginação) sem limite. Corrigido nesta passada:
   quando os dois vêm nulos — regra XOR de negócio, não dá pra expressar em Bean Validation
   simples sem `@AssertTrue` num validador custom (avaliar se compensar depois).
 
-**Ficou de fora desta passada** (não é todo o app, é dívida contínua por natureza — ver
-item do CLAUDE.md): módulos de célula/ministério/local-evento/financeiro além do que foi
-listado acima não foram auditados campo a campo; revisar quando mexer neles.
+~~**Ficou de fora desta passada**~~ **RESOLVIDO** (2026-08-20): módulos de
+célula/ministério/local-evento/financeiro auditados campo a campo (agente de exploração).
+Nenhum bug real encontrado — todos os controllers já usam `@Valid`, campos de texto livre
+já têm `@Size`/`@NotBlank` onde cabe. Únicos pontos levantados e descartados por
+julgamento (não são bugs, é regra hipotética que ninguém pediu):
+`AdicionarMembroCelulaRequest.pessoaId`/`visitanteId` sem `@NotNull` (já é falso positivo
+documentado acima — regra XOR resolvida no service); `LocalEventoRequest.capacidade` sem
+`@Max` (só `@Positive`); `MovimentacaoRequestDTO.dataMovimentacao` sem limite temporal
+(aceita data futura). Revisão de validação de input **concluída** para os módulos que
+faltavam — item do CLAUDE.md pode ser marcado como feito.
 
 ---
 

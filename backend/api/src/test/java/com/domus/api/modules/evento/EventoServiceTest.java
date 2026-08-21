@@ -623,6 +623,76 @@ class EventoServiceTest {
     }
 
     @Test
+    void restaurarEventoAvulsoComEscopoEstaRestauraSoAqueleId() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1)).build();
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(eventoRepository.restaurarPorId(eventoId, igrejaId)).thenReturn(1);
+
+        service.restaurar(eventoId, igrejaId, com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        verify(eventoRepository).restaurarPorId(eventoId, igrejaId);
+        verify(eventoRepository, never()).restaurarPorSerie(any(), any());
+        verify(eventoRepository, never()).restaurarPorSerieAPartirDe(any(), any(), any());
+    }
+
+    @Test
+    void restaurarComEscopoSerieRestauraTodasSemFiltroDeDataEReativaASerie() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).ativa(false).build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1)).serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(eventoRepository.restaurarPorSerie(serieId, igrejaId)).thenReturn(3);
+
+        service.restaurar(eventoId, igrejaId, com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        verify(eventoRepository).restaurarPorSerie(serieId, igrejaId);
+        verify(eventoRepository, never()).restaurarPorId(any(), any());
+        assertThat(serie.isAtiva()).isTrue();
+    }
+
+    @Test
+    void restaurarComEscopoEstaESeguintesRestauraSoAPartirDaData() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var dataDaOcorrencia = LocalDateTime.now().plusDays(1);
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).ativa(false).build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(dataDaOcorrencia).serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(eventoRepository.restaurarPorSerieAPartirDe(serieId, igrejaId, dataDaOcorrencia)).thenReturn(2);
+
+        service.restaurar(eventoId, igrejaId, com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA_E_SEGUINTES);
+
+        verify(eventoRepository).restaurarPorSerieAPartirDe(serieId, igrejaId, dataDaOcorrencia);
+        assertThat(serie.isAtiva()).isTrue();
+    }
+
+    @Test
+    void restaurarLancaNotFoundQuandoNaoAcheiNenhumaLinha() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1)).build();
+        when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId))
+                .thenReturn(Optional.of(existente));
+        when(eventoRepository.restaurarPorId(eventoId, igrejaId)).thenReturn(0);
+
+        assertThatThrownBy(() ->
+                service.restaurar(eventoId, igrejaId, com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA))
+                .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
     void listarEventosIncluiCompartilhadosDaFamilia() {
         UUID outraIgrejaId = UUID.randomUUID();
         when(familiaIgrejaService.idsDaFamiliaCompleta(igrejaId))

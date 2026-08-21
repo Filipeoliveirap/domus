@@ -65,6 +65,7 @@ public class EventoService {
     private final UsuarioRepository usuarioRepository;
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    private final com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
 
     @Cacheable(
             value = "eventos",
@@ -139,6 +140,13 @@ public class EventoService {
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
+
+        if (data.recorrencia() != null) {
+            var serie = criarSerie(data.recorrencia(), igreja, usuario);
+            salvo.setSerie(serie);
+            salvo = eventoRepository.save(salvo);
+        }
+
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.CRIADO,
@@ -448,6 +456,25 @@ public class EventoService {
         if (responsavelPessoaId == null) return null;
         return pessoaRepository.findByIdAndIgrejaId(responsavelPessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
+    }
+
+    private com.domus.api.modules.evento.serie.EventoSerie criarSerie(
+            com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest data, Igreja igreja, Usuario usuario) {
+        String dias = data.diasSemana() == null || data.diasSemana().isEmpty()
+                ? null
+                : data.diasSemana().stream().map(Enum::name)
+                        .collect(java.util.stream.Collectors.joining(","));
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .igreja(igreja)
+                .frequencia(data.frequencia())
+                .intervalo(data.intervalo() == null ? 1 : data.intervalo())
+                .diasSemana(dias)
+                .tipoRecorrenciaMensal(data.tipoRecorrenciaMensal())
+                .dataFim(data.dataFim())
+                .numeroOcorrencias(data.numeroOcorrencias())
+                .criadoPor(usuario)
+                .build();
+        return eventoSerieRepository.save(serie);
     }
 
     /** Reusa grafia já existente da igreja se a forma normalizada bater — evita "Vigília"/"vigilia" duplicados. */

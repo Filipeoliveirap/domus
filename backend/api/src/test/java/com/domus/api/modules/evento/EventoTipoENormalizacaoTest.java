@@ -49,6 +49,7 @@ class EventoTipoENormalizacaoTest {
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -75,10 +76,11 @@ class EventoTipoENormalizacaoTest {
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        eventoSerieRepository = mock(com.domus.api.modules.evento.serie.EventoSerieRepository.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
                 pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
-                notificacaoService);
+                notificacaoService, eventoSerieRepository);
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));

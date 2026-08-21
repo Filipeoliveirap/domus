@@ -28,6 +28,11 @@
   margin: 0;
 }
 
+.text a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .brand {
   font-weight: var(--font-weight-bold);
 }

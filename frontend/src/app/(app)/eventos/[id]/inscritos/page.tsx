@@ -21,6 +21,8 @@ import { useRelatorioEvento } from '@/hooks/evento/useRelatorioEvento'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { CardsRelatorioEvento } from '@/components/module/eventos/CardsRelatorioEvento'
 import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
+import { PendenciaCamposBadge } from '@/components/module/eventos/PendenciaCamposBadge'
+import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { DrawerDetalhePessoa, type ContextoExtraDrawer } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -44,6 +46,8 @@ export default function InscritosPage() {
   const autorizado = podeVerListaCompletaDeInscritos(role)
 
   const { data: evento } = useEvento(eventoId)
+  const { data: camposPersonalizados } = useCamposPersonalizados(eventoId)
+  const camposObrigatorios = (camposPersonalizados ?? []).filter((c) => c.obrigatorio)
 
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca)
@@ -347,6 +351,9 @@ export default function InscritosPage() {
                             <span className={styles.pillIgreja}>
                               {inscrito.igrejaDaPessoa.sigla ?? inscrito.igrejaDaPessoa.nome}
                             </span>
+                          )}
+                          {camposObrigatorios.length > 0 && (
+                            <PendenciaCamposBadge inscricaoId={inscrito.id} camposObrigatorios={camposObrigatorios} />
                           )}
                         </div>
                         <div className={styles.colData}>{formatarData(inscrito.inscritoEm)}</div>

@@ -60,12 +60,15 @@
   `trustForwardedFor_usaUltimoIpDoHeader` e um teste simulando um atacante variando o
   primeiro elemento a cada requisição (`RateLimitFilterTest`).
 
-- **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
-  migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
-  `RateLimitFilter` em ~1898, então um flood de POST sem `X-XSRF-TOKEN` leva 403 e **nunca
-  incrementa** `rl:global:<ip>`. As respostas são baratas (403 seco, sem tocar no banco),
-  por isso ficou assim. Se virar vetor de abuso, mover o `RateLimitFilter` para antes do
-  `CsrfFilter`.
+- ~~**Rate limiting não conta requisições barradas pelo CSRF.**~~ **RESOLVIDO**
+  (2026-08-20): `RateLimitFilter` movido para antes do `CsrfFilter`
+  (`.addFilterBefore(rateLimitFilter, CsrfFilter.class)` em `SecurityConfig`) — agora toda
+  requisição, inclusive a barrada por CSRF (403), conta no limite. Provado por
+  `RateLimitCsrfOrderTest` (semeia o contador no Redis e confirma 429 antes do 403, sem
+  depender da virada do minuto da janela fixa). Efeito colateral descoberto no processo:
+  `AuthCsrfConfigTest` batia nas mesmas rotas de auth-tier (limite 10/min) sem isolar o
+  contador — execuções repetidas na mesma janela levavam 429 legítimo mascarando o que o
+  teste queria provar. Corrigido com limpeza do Redis no `@BeforeEach` desse teste.
 
 - ~~**HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.**~~
   **RESOLVIDO** (2026-08-20): confirmado que `/root/deploy/.env.prod` na VPS **não** tinha

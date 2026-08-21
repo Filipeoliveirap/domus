@@ -1,11 +1,16 @@
 package com.domus.api.modules.auth;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
+import java.util.Set;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,6 +27,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthCsrfConfigTest {
 
     @Autowired MockMvc mockMvc;
+    @Autowired StringRedisTemplate redisTemplate;
+
+    /**
+     * O RateLimitFilter roda antes do CsrfFilter (2026-08-20) — requisição 403 de CSRF já
+     * conta no limite de auth (10/min). Sem isso, execuções repetidas deste teste (ou de
+     * outro que bata nas mesmas rotas) na mesma janela de 60s acumulam no Redis real
+     * (compartilhado, sem Testcontainers) e um 429 legítimo mascara o que o teste quer provar.
+     */
+    @BeforeEach
+    void limpaContadorDeRateLimit() {
+        long minuto = Instant.now().getEpochSecond() / 60;
+        Set<String> chaves = Set.of(
+                "rl:auth:127.0.0.1:" + minuto,
+                "rl:global:127.0.0.1:" + minuto);
+        redisTemplate.delete(chaves);
+    }
 
     @Test
     void loginSemTokenCsrfE403() throws Exception {

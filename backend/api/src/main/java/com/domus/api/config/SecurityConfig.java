@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -155,7 +156,9 @@ public class SecurityConfig {
                         .accessDeniedHandler((req, res, e) ->
                                 res.setStatus(HttpStatus.FORBIDDEN.value())))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, SecurityFilter.class)
+                // Antes do CsrfFilter: requisição barrada por CSRF (403) também conta no
+                // limite — senão um flood sem token nunca incrementa o contador (ver BACKLOG).
+                .addFilterBefore(rateLimitFilter, CsrfFilter.class)
                 .build();
     }
 

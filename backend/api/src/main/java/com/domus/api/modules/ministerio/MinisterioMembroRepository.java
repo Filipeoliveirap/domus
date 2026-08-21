@@ -20,6 +20,12 @@ public interface MinisterioMembroRepository extends JpaRepository<MinisterioMemb
     List<MinisterioMembro> findByPessoaIdAndIgrejaIdAndStatus(UUID pessoaId, UUID igrejaId, StatusMembro status);
 
     /** Nativa pelo mesmo motivo de findByMinisterioIdOrderByPapelAsc. */
+    @Query(value = "SELECT * FROM ministerio_membro WHERE ministerio_id = :ministerioId AND papel = :papel AND status = :status",
+           nativeQuery = true)
+    List<MinisterioMembro> findByMinisterioIdAndPapelAndStatus(
+            @Param("ministerioId") UUID ministerioId, @Param("papel") String papel, @Param("status") String status);
+
+    /** Nativa pelo mesmo motivo de findByMinisterioIdOrderByPapelAsc. */
     @Query(value = """
         SELECT EXISTS(
             SELECT 1 FROM ministerio_membro

@@ -187,6 +187,51 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
                 && service.detalhe(ministerioId, igrejaId, null, true).membros().isEmpty();
     }
 
+    @Autowired com.domus.api.modules.usuario.UsuarioRepository usuarioRepository;
+    @Autowired com.domus.api.modules.usuario.RoleRepository roleRepository;
+    @Autowired com.domus.api.modules.notificacao.NotificacaoRepository notificacaoRepository;
+
+    private com.domus.api.modules.usuario.Usuario novoUsuario(com.domus.api.modules.pessoa.Pessoa pessoa) {
+        com.domus.api.modules.usuario.Role role = roleRepository.findByNome("LIDER").orElseThrow();
+        return usuarioRepository.save(com.domus.api.modules.usuario.Usuario.builder()
+                .igreja(pessoa.getIgreja()).pessoa(pessoa).role(role).ativo(true).build());
+    }
+
+    @Test
+    void pedirEntradaNotificaOLiderQueTemUsuario() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Intercessão", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa liderPessoa = novaPessoa("Helena", igrejaId);
+        UUID candidataId = novaPessoa("Ivana", igrejaId).getId();
+
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderPessoa.getId()),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioId, liderPessoa.getId(),
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+        com.domus.api.modules.usuario.Usuario usuarioLider = novoUsuario(liderPessoa);
+
+        service.pedirEntrada(ministerioId, candidataId, igrejaId);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuarioLider.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTipo())
+                .contains(com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_MINISTERIO);
+    }
+
+    @Test
+    void pedirEntradaNaoQuebraSeLiderNaoTemUsuario() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor Kids", null), igrejaId, null).id();
+        UUID liderId = novaPessoa("Joana", igrejaId).getId();
+        UUID candidataId = novaPessoa("Karina", igrejaId).getId();
+
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioId, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+
+        service.pedirEntrada(ministerioId, candidataId, igrejaId); // não deve lançar mesmo sem usuário no líder
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     jakarta.persistence.EntityManager entityManager;
 

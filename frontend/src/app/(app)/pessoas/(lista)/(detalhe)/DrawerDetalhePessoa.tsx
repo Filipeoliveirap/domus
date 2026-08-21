@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
-import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData,
   formatarTelefoneExibicao, rotuloEstadoCivil, formatarDataNascimento, formatarEndereco,
@@ -35,6 +35,7 @@ interface DrawerDetalhePessoaProps {
 export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: DrawerDetalhePessoaProps) {
   const { data: pessoa, isPending, isError, refetch } = usePessoa(pessoaId)
   const { data: ministerios = [] } = usePessoaMinisterios(pessoaId)
+  const { ministerio: rotuloMinisterio } = useRotulos()
   const [ampliada, setAmpliada] = useState(false)
 
   useEffect(() => {
@@ -150,7 +151,7 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
                 <div className={styles.infoItem}>
                   <span className={styles.infoIcone}><Church size={18} /></span>
                   <div>
-                    <p className={styles.infoLabel}>{ROTULO_MINISTERIO_PLURAL}</p>
+                    <p className={styles.infoLabel}>{rotuloMinisterio.plural}</p>
                     {ministerios.length === 0 ? (
                       <p className={styles.infoValor}>Nenhuma</p>
                     ) : (

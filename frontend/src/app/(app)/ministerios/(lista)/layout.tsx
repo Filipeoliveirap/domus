@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
-import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './layout.module.css'
 
 const ABAS = [
@@ -13,13 +13,14 @@ const ABAS = [
 
 export default function MinisteriosLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { ministerio } = useRotulos()
 
   return (
     <div className={styles.moduloWrapper}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
         <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>{ROTULO_MINISTERIO_PLURAL}</span>
+        <span className={styles.breadcrumbAtual}>{ministerio.plural}</span>
       </nav>
 
       <div className={styles.abas}>

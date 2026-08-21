@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { ministerioService } from '@/services/ministerio.service'
-import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { ApiError } from '@/types/api.types'
 
 function mensagemErro(error: unknown, fallback: string): string {
@@ -12,11 +12,13 @@ function mensagemErro(error: unknown, fallback: string): string {
 
 export function useAdicionarMembro(ministerioId: string) {
   const queryClient = useQueryClient()
+  const { ministerio } = useRotulos()
   return useMutation({
     mutationFn: (pessoaId: string) => ministerioService.adicionarMembro(ministerioId, pessoaId),
     onSuccess: () => {
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso(`Pessoa adicionada à ${ROTULO_MINISTERIO.toLowerCase()}.`)
+      // "em X" em vez de "à X" evita depender de crase, que só funciona pro artigo feminino.
+      notificar.sucesso(`Pessoa adicionada em ${ministerio.singular.toLowerCase()}.`)
     },
     onError: (error: unknown) => notificar.erro('Não foi possível adicionar a pessoa', mensagemErro(error, 'Tente novamente.')),
   })

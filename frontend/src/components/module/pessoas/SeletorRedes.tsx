@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
-import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './PessoaForm.module.css'
 
 interface SeletorRedesProps {
@@ -15,6 +15,7 @@ interface SeletorRedesProps {
 
 export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
   const { data: redes = [], isLoading } = useMinisterios()
+  const { ministerio } = useRotulos()
   const [busca, setBusca] = useState('')
 
   function adicionar(id: string) {
@@ -32,11 +33,11 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
   if (redes.length === 0) {
     return (
       <div className={styles.redesWrap}>
-        <span className={styles.labelRedes}>{ROTULO_MINISTERIO_PLURAL.toUpperCase()}</span>
+        <span className={styles.labelRedes}>{ministerio.plural.toUpperCase()}</span>
         <p className={styles.redesVazio}>
-          Nenhuma {ROTULO_MINISTERIO.toLowerCase()} cadastrada ainda. É preciso{' '}
+          Nenhuma {ministerio.singular.toLowerCase()} cadastrada ainda. É preciso{' '}
           <Link href="/ministerios" className={styles.redesLink}>
-            criar uma {ROTULO_MINISTERIO.toLowerCase()}
+            criar uma {ministerio.singular.toLowerCase()}
           </Link>{' '}
           antes de colocar alguém nela.
         </p>
@@ -53,7 +54,7 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
 
   return (
     <div className={styles.redesWrap}>
-      <span className={styles.labelRedes}>{ROTULO_MINISTERIO_PLURAL.toUpperCase()}</span>
+      <span className={styles.labelRedes}>{ministerio.plural.toUpperCase()}</span>
 
       {redesSelecionadas.length > 0 && (
         <div className={styles.redesChips}>
@@ -75,7 +76,7 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
 
       <Input
         id="busca-redes"
-        placeholder={`Buscar ${ROTULO_MINISTERIO.toLowerCase()} pelo nome…`}
+        placeholder={`Buscar ${ministerio.singular.toLowerCase()} pelo nome…`}
         leftIcon={<Search size={16} />}
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
@@ -84,7 +85,7 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
       {buscaNormalizada && (
         resultados.length === 0 ? (
           <p className={styles.redesVazio}>
-            Nenhuma {ROTULO_MINISTERIO.toLowerCase()} encontrada para &quot;{busca.trim()}&quot;.
+            Nenhuma {ministerio.singular.toLowerCase()} encontrada para &quot;{busca.trim()}&quot;.
           </p>
         ) : (
           <ul className={styles.redesResultados}>

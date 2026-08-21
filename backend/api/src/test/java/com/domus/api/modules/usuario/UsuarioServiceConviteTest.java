@@ -9,6 +9,7 @@ import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.DTO.ConcederAcessoRequestDTO;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
+import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.shared.email.EmailService;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class UsuarioServiceConviteTest {
     com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
     com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
     com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     UsuarioService service;
 
     final UUID igrejaId = UUID.randomUUID();
@@ -70,11 +72,12 @@ class UsuarioServiceConviteTest {
         ministerioMembroRepository = mock(com.domus.api.modules.ministerio.MinisterioMembroRepository.class);
         movimentacaoFinanceiraRepository = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository.class);
         visitanteRepository = mock(com.domus.api.modules.visitante.VisitanteRepository.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new UsuarioService(usuarioRepository, igrejaRepository, roleRepository,
                 membroRepository, cacheEvictor, outboxRegistrador, passwordResetService, emailService,
                 eventoRepository, capacidadeRepository, inscricaoRepository, celulaRepository,
                 celulaMembroRepository, ministerioRepository, ministerioMembroRepository,
-                movimentacaoFinanceiraRepository, visitanteRepository);
+                movimentacaoFinanceiraRepository, visitanteRepository, notificacaoService);
 
         Role role = new Role();
         role.setNome("ACESSO_COMUM");
@@ -200,6 +203,18 @@ class UsuarioServiceConviteTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("desativado");
         verify(emailService, never()).enviar(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void concederAcessoNotificaOUsuarioNovo() {
+        Pessoa membro = membroComEmail("joao@teste.com");
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
+
+        service.concederAcesso(new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId);
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.ACESSO_CONCEDIDO), eq(igrejaId), any(), anyString(), eq("/inicio"));
     }
 
     @Test

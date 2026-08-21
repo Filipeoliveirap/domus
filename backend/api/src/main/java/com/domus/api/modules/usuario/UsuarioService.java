@@ -52,6 +52,7 @@ public class UsuarioService {
     private final com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
     private final com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
     private final com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -102,6 +103,11 @@ public class UsuarioService {
         enviarConvite(salvo, email, membro.getIgreja().getNome());
         log.info("Acesso concedido por convite. usuario_id={}, pessoa_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        notificacaoService.criar(
+                com.domus.api.modules.notificacao.TipoNotificacao.ACESSO_CONCEDIDO,
+                igrejaId, salvo.getId(),
+                "Você recebeu acesso ao Domus da igreja " + membro.getIgreja().getNome() + ".",
+                "/inicio");
         return UsuarioResponseDTO.from(salvo);
     }
 
@@ -136,6 +142,11 @@ public class UsuarioService {
         log.info("Acesso reativado por convite. usuario_id={}, pessoa_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
         cacheEvictor.evict("principal", salvo.getId().toString());
+        notificacaoService.criar(
+                com.domus.api.modules.notificacao.TipoNotificacao.ACESSO_CONCEDIDO,
+                igrejaId, salvo.getId(),
+                "Seu acesso ao Domus foi reativado.",
+                "/inicio");
         return UsuarioResponseDTO.from(salvo);
     }
 

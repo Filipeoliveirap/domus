@@ -82,6 +82,7 @@ class EventoArquivamentoNotificaInscritosTest implements PostgresTestContainerSu
     void arquivarEventoComInscritoConfirmadoNaoLancaExcecaoENotifica() {
         Pessoa pessoaInscrita = novaPessoa("Inscrita Teste");
         Usuario usuarioInscrito = novoUsuario(pessoaInscrita);
+        Usuario usuarioAdmin = novoUsuario(novaPessoa("Admin Teste"));
 
         Evento evento = Evento.builder()
                 .igreja(igrejaDoTeste)
@@ -105,7 +106,7 @@ class EventoArquivamentoNotificaInscritosTest implements PostgresTestContainerSu
         entityManager.clear();
 
         // O bug real: isto lançava TransientObjectException antes da correção.
-        assertThatCode(() -> eventoService.arquivarEvento(eventoId, igrejaId))
+        assertThatCode(() -> eventoService.arquivarEvento(eventoId, igrejaId, usuarioAdmin.getId()))
                 .doesNotThrowAnyException();
 
         var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(

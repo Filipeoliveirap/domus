@@ -97,13 +97,17 @@ public class InscricaoService {
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
 
+        // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
+        // quem fez a ação já sabe dela.
         if (evento.getResponsavel() != null && !evento.getResponsavel().getId().equals(pessoaId)) {
-            usuarioRepository.findByPessoaId(evento.getResponsavel().getId()).ifPresent(usuario ->
-                    notificacaoService.criar(
-                            com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL,
-                            igrejaId, usuario.getId(),
-                            membro.getNome() + " se inscreveu em " + evento.getTitulo() + ".",
-                            "/eventos/" + eventoId + "/inscritos"));
+            usuarioRepository.findByPessoaId(evento.getResponsavel().getId())
+                    .filter(usuario -> !usuario.getId().equals(inscritoPorOuNull))
+                    .ifPresent(usuario ->
+                            notificacaoService.criar(
+                                    com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL,
+                                    igrejaId, usuario.getId(),
+                                    membro.getNome() + " se inscreveu em " + evento.getTitulo() + ".",
+                                    "/eventos/" + eventoId + "/inscritos"));
         }
 
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",

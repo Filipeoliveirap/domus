@@ -145,6 +145,8 @@ public class EventoService {
                 salvo.getId(),
                 igrejaId
         );
+        notificarNovoResponsavel(salvo, igrejaId, usuarioId);
+        notificarNovoEvento(salvo, igrejaId, usuarioId);
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
         evictarCacheDeEventosDaFamilia(igrejaId);
         return EventoResponse.from(salvo, igrejaId, true);
@@ -186,6 +188,7 @@ public class EventoService {
         java.time.LocalDateTime inicioAntigo = evento.getInicioEm();
         UUID localIdAntigo = evento.getLocal() != null ? evento.getLocal().getId() : null;
         String localTextoAntigo = evento.getLocalTexto();
+        UUID responsavelIdAntigo = evento.getResponsavel() != null ? evento.getResponsavel().getId() : null;
 
         evento.setTitulo(TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
@@ -232,8 +235,14 @@ public class EventoService {
                 || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
                 || !java.util.Objects.equals(localTextoAntigo, salvo.getLocalTexto());
         if (dataOuLocalMudou) {
-            notificarInscritos(salvo, igrejaId, "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.",
+            notificarInscritos(salvo, igrejaId, usuarioId,
+                    "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.",
                     "/eventos?detalhe=" + salvo.getId());
+        }
+
+        UUID responsavelIdNovo = responsavel != null ? responsavel.getId() : null;
+        if (!java.util.Objects.equals(responsavelIdAntigo, responsavelIdNovo)) {
+            notificarNovoResponsavel(salvo, igrejaId, usuarioId);
         }
 
         // Remove a foto antiga só depois que o evento já aponta para a nova.
@@ -260,7 +269,7 @@ public class EventoService {
     }
 
     @Transactional
-    public void arquivarEvento(UUID id, UUID igrejaId) {
+    public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId) {
         log.info("Arquivando evento. id={}, igreja_id={}", id, igrejaId);
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -272,7 +281,8 @@ public class EventoService {
                     "Não é possível arquivar um evento em andamento.");
         }
 
-        notificarInscritos(evento, igrejaId, "O evento \"" + evento.getTitulo() + "\" foi cancelado.", "/eventos");
+        notificarInscritos(evento, igrejaId, usuarioId,
+                "O evento \"" + evento.getTitulo() + "\" foi cancelado.", "/eventos");
 
         eventoRepository.delete(evento);
         outboxRegistrador.registrar(
@@ -285,14 +295,43 @@ public class EventoService {
         evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
-    private void notificarInscritos(Evento evento, UUID igrejaId, String texto, String link) {
+    /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem fez a mudança já sabe dela. */
+    private void notificarInscritos(Evento evento, UUID igrejaId, UUID usuarioIdAtor, String texto, String link) {
         List<UUID> pessoaIds = inscricaoRepository.findPessoaIdsByEventoIdAndStatus(
                 evento.getId(), com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA);
         for (UUID pessoaId : pessoaIds) {
-            usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario ->
-                    notificacaoService.criar(
-                            com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
-                            igrejaId, usuario.getId(), texto, link));
+            usuarioRepository.findByPessoaId(pessoaId)
+                    .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
+                    .ifPresent(usuario ->
+                            notificacaoService.criar(
+                                    com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
+                                    igrejaId, usuario.getId(), texto, link));
+        }
+    }
+
+    /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem se colocou como responsável já sabe. */
+    private void notificarNovoResponsavel(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
+        if (evento.getResponsavel() == null) return;
+        usuarioRepository.findByPessoaId(evento.getResponsavel().getId())
+                .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
+                .ifPresent(usuario ->
+                        notificacaoService.criar(
+                                com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO,
+                                igrejaId, usuario.getId(),
+                                "Você foi definido como responsável pelo evento \"" + evento.getTitulo() + "\".",
+                                "/eventos?detalhe=" + evento.getId()));
+    }
+
+    /** Convite pra todo mundo da igreja dar uma olhada no evento novo — exceto quem cadastrou. */
+    private void notificarNovoEvento(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
+        List<UUID> usuarioIds = usuarioRepository.findIdsAtivosPorIgreja(igrejaId);
+        for (UUID usuarioId : usuarioIds) {
+            if (usuarioId.equals(usuarioIdAtor)) continue;
+            notificacaoService.criar(
+                    com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO,
+                    igrejaId, usuarioId,
+                    "Novo evento: \"" + evento.getTitulo() + "\". Dá uma olhada!",
+                    "/eventos?detalhe=" + evento.getId());
         }
     }
 

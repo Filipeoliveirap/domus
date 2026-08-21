@@ -6,6 +6,8 @@ import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
+import com.domus.api.modules.igreja.DTO.RotulosDTO;
+import com.domus.api.modules.igreja.DTO.RotulosRequest;
 import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
@@ -189,6 +191,48 @@ public class IgrejaService {
 
         log.info("Igreja atualizada. igreja_id={}, por_usuario_id={}", igrejaId, usuarioId);
         return IgrejaDetalheDTO.from(igreja, nomeDoAutor(igreja.getAtualizadoPor()));
+    }
+
+    /** Cada bloco vem completo (3 campos) ou totalmente vazio (reseta pro padrão) — nunca parcial. */
+    @Transactional
+    public RotulosDTO atualizarRotulos(UUID igrejaId, RotulosRequest data) {
+        Igreja igreja = igrejaRepository.findById(igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+
+        aplicarBloco(data.ministerio(), igreja::setMinisterioNomeSingular,
+                igreja::setMinisterioNomePlural, igreja::setMinisterioGenero);
+        aplicarBloco(data.congregacao(), igreja::setCongregacaoNomeSingular,
+                igreja::setCongregacaoNomePlural, igreja::setCongregacaoGenero);
+        aplicarBloco(data.celula(), igreja::setCelulaNomeSingular,
+                igreja::setCelulaNomePlural, igreja::setCelulaGenero);
+
+        igrejaRepository.save(igreja);
+        cacheManager.getCache("igreja").evictIfPresent(igrejaId);
+
+        log.info("Rótulos customizados atualizados. igreja_id={}", igrejaId);
+        return RotulosDTO.from(igreja);
+    }
+
+    private void aplicarBloco(
+            RotulosRequest.Bloco bloco,
+            java.util.function.Consumer<String> setSingular,
+            java.util.function.Consumer<String> setPlural,
+            java.util.function.Consumer<GeneroGramatical> setGenero) {
+        if (bloco == null) return;
+
+        boolean algumPreenchido = bloco.singular() != null || bloco.plural() != null || bloco.genero() != null;
+        boolean todosPreenchidos = bloco.singular() != null && !bloco.singular().isBlank()
+                && bloco.plural() != null && !bloco.plural().isBlank()
+                && bloco.genero() != null;
+
+        if (algumPreenchido && !todosPreenchidos) {
+            throw new BusinessException("ROTULO_INCOMPLETO",
+                    "Preencha singular, plural e gênero, ou deixe os três em branco pra restaurar o padrão.");
+        }
+
+        setSingular.accept(todosPreenchidos ? bloco.singular() : null);
+        setPlural.accept(todosPreenchidos ? bloco.plural() : null);
+        setGenero.accept(todosPreenchidos ? bloco.genero() : null);
     }
 
     /** CNPJ é UNIQUE: string vazia viraria um valor real e colidiria na segunda igreja sem CNPJ. */

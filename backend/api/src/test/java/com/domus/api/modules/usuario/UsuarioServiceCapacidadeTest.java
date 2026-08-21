@@ -39,6 +39,7 @@ class UsuarioServiceCapacidadeTest {
     com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
     com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
     com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     UsuarioService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -64,11 +65,13 @@ class UsuarioServiceCapacidadeTest {
         ministerioMembroRepository = mock(com.domus.api.modules.ministerio.MinisterioMembroRepository.class);
         movimentacaoFinanceiraRepository = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository.class);
         visitanteRepository = mock(com.domus.api.modules.visitante.VisitanteRepository.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new UsuarioService(usuarioRepository, igrejaRepository, roleRepository,
                 membroRepository, cacheEvictor, outboxRegistrador, passwordResetService,
                 emailService, eventoRepository, capacidadeRepository, inscricaoRepository,
                 celulaRepository, celulaMembroRepository, ministerioRepository,
-                ministerioMembroRepository, movimentacaoFinanceiraRepository, visitanteRepository);
+                ministerioMembroRepository, movimentacaoFinanceiraRepository, visitanteRepository,
+                notificacaoService);
     }
 
     private Usuario usuario() {

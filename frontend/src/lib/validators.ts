@@ -151,6 +151,15 @@ const eventoSchemaBase = z.object({
   restricaoSexo: z.enum(['HOMEM', 'MULHER']).nullable().optional(),
 
   restritoPropriaIgreja: z.boolean().default(false),
+
+  repetir: z.boolean().default(false),
+  recorrenciaFrequencia: z.enum(['DIARIA', 'SEMANAL', 'MENSAL']).optional(),
+  recorrenciaIntervalo: opcionalNumero(z.coerce.number().int().positive('O intervalo deve ser maior que zero.')),
+  recorrenciaDiasSemana: z.array(z.string()).default([]),
+  recorrenciaTipoMensal: z.enum(['DIA_FIXO', 'DIA_DA_SEMANA']).optional(),
+  recorrenciaFimTipo: z.enum(['NUNCA', 'DATA', 'CONTAGEM']).default('NUNCA'),
+  recorrenciaDataFim: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
+  recorrenciaNumeroOcorrencias: opcionalNumero(z.coerce.number().int().positive('Deve ser maior que zero.')),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -168,6 +177,12 @@ export const eventoSchema = eventoSchemaBase.refine(
     return data.idadeMin <= data.idadeMax
   },
   { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
+).refine(
+  (data) => !data.repetir || !!data.recorrenciaFrequencia,
+  { message: 'Escolha a frequência da repetição.', path: ['recorrenciaFrequencia'] }
+).refine(
+  (data) => !data.repetir || data.recorrenciaFrequencia !== 'SEMANAL' || data.recorrenciaDiasSemana.length > 0,
+  { message: 'Escolha pelo menos um dia da semana.', path: ['recorrenciaDiasSemana'] }
 )
 
 export const categoriaSchema = z.object({

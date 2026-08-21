@@ -8,8 +8,23 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { eventoSchema, type EventoFormInput, type EventoFormData } from '@/lib/validators'
 import { eventosService } from '@/services/evento.service'
-import type { EventoRequest, EventoResponse, InscritoImpactado } from '@/types/evento.type'
+import type { EventoRequest, EventoResponse, InscritoImpactado, RecorrenciaRequest, DiaSemana } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
+
+function montarRecorrencia(data: EventoFormData): RecorrenciaRequest {
+  return {
+    frequencia: data.recorrenciaFrequencia!,
+    intervalo: data.recorrenciaIntervalo ?? 1,
+    diasSemana: data.recorrenciaFrequencia === 'SEMANAL'
+      ? (data.recorrenciaDiasSemana as DiaSemana[])
+      : undefined,
+    tipoRecorrenciaMensal: data.recorrenciaFrequencia === 'MENSAL'
+      ? data.recorrenciaTipoMensal
+      : undefined,
+    dataFim: data.recorrenciaFimTipo === 'DATA' ? data.recorrenciaDataFim : undefined,
+    numeroOcorrencias: data.recorrenciaFimTipo === 'CONTAGEM' ? data.recorrenciaNumeroOcorrencias : undefined,
+  }
+}
 
 interface UseEventoFormParams {
   eventoId?: string
@@ -48,6 +63,14 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       restricaoSexo: null,
       fotoId: null,
       restritoPropriaIgreja: false,
+      repetir: false,
+      recorrenciaFrequencia: undefined,
+      recorrenciaIntervalo: undefined,
+      recorrenciaDiasSemana: [],
+      recorrenciaTipoMensal: undefined,
+      recorrenciaFimTipo: 'NUNCA',
+      recorrenciaDataFim: undefined,
+      recorrenciaNumeroOcorrencias: undefined,
     },
     requiredFields: ['titulo', 'inicioData', 'inicioHora'],
   })
@@ -177,6 +200,9 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         restricaoSexo: data.restricaoSexo ?? null,
         fotoId: data.fotoId ?? null,
         restritoPropriaIgreja: data.restritoPropriaIgreja,
+        // Recorrência só se aplica ao cadastro — editar uma ocorrência existente usa o
+        // seletor de escopo (só esta/esta e as seguintes/toda a série), não este toggle.
+        recorrencia: (!ehEdicao && data.repetir) ? montarRecorrencia(data) : null,
       }
 
       // Evento novo nunca tem inscritos — vai direto, sem checar impacto. Na edição,

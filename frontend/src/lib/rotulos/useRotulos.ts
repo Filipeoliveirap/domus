@@ -14,8 +14,11 @@ interface Rotulos {
   celula: RotuloModulo
 }
 
+// "Rede" (não "Ministério") é o padrão real hoje — herdado de rotulosMinisterio.ts,
+// que este mecanismo substitui. Trocar aqui mudaria o texto visível de toda igreja
+// que nunca customizou nada.
 const PADRAO: Rotulos = {
-  ministerio: { singular: 'Ministério', plural: 'Ministérios', genero: 'MASCULINO' },
+  ministerio: { singular: 'Rede', plural: 'Redes', genero: 'FEMININO' },
   congregacao: { singular: 'Unidade', plural: 'Unidades', genero: 'FEMININO' },
   celula: { singular: 'Célula', plural: 'Células', genero: 'FEMININO' },
 }

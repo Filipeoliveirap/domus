@@ -24,6 +24,7 @@ import styles from './DrawerDetalheEvento.module.css'
 import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
+import { RespostasCamposPersonalizados } from '@/components/module/eventos/RespostasCamposPersonalizados'
 import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
 import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
@@ -49,6 +50,9 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
   const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
+  // Vira true no exato momento em que a auto-inscrição dá certo — usado só pra decidir se o
+  // modal de campos personalizados abre sozinho na hora (ver RespostasCamposPersonalizados).
+  const [acabouDeInscrever, setAcabouDeInscrever] = useState(false)
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
@@ -314,6 +318,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 requerInscricao={evento.requerInscricao}
                 situacao={evento.situacao}
                 preco={evento.preco}
+                onInscritoComSucesso={() => setAcabouDeInscrever(true)}
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
@@ -343,6 +348,14 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
                 </>
               )}
             </div>
+
+            {evento.requerInscricao && minha?.inscrito && minha.id && (
+              <RespostasCamposPersonalizados
+                eventoId={evento.id}
+                inscricaoId={minha.id}
+                abrirAutomaticamente={acabouDeInscrever}
+              />
+            )}
 
             {podeVerInscritos && evento.requerInscricao && (
               <Link href={`/eventos/${evento.id}/inscritos`} className={styles.acaoInscritos}>

@@ -23,9 +23,14 @@ interface Props {
   requerInscricao: boolean
   situacao: SituacaoEvento
   preco?: number | null
+  /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo —
+   *  o drawer usa isso pra abrir na hora o modal de campos personalizados, se o evento tiver. */
+  onInscritoComSucesso?: () => void
 }
 
-export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco }: Props) {
+export function BotaoConfirmarPresenca({
+  eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco, onInscritoComSucesso,
+}: Props) {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [mostrarModalPagamento, setMostrarModalPagamento] = useState(false)
   // 422 contornável: gestor quebrando recorte de elegibilidade
@@ -53,7 +58,10 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
 
   function aoConfirmarMesmoAssim() {
     inscrever.mutate({ confirmado: true }, {
-      onSuccess: () => setImpedimentosParaConfirmar(null),
+      onSuccess: () => {
+        setImpedimentosParaConfirmar(null)
+        onInscritoComSucesso?.()
+      },
     })
   }
 
@@ -198,7 +206,9 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
         type="button"
         className={styles.botao}
         disabled={inscrever.isPending || !!impedimento}
-        onClick={() => (preco ? setMostrarModalPagamento(true) : inscrever.mutate({}))}
+        onClick={() => (preco
+          ? setMostrarModalPagamento(true)
+          : inscrever.mutate({}, { onSuccess: onInscritoComSucesso }))}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
         {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
@@ -215,7 +225,12 @@ export function BotaoConfirmarPresenca({ eventoId, inicioEm, vagasRestantes, req
         <ModalConfirmarPagamento
           preco={preco}
           isLoading={inscrever.isPending}
-          onConfirmar={() => inscrever.mutate(undefined, { onSuccess: () => setMostrarModalPagamento(false) })}
+          onConfirmar={() => inscrever.mutate(undefined, {
+            onSuccess: () => {
+              setMostrarModalPagamento(false)
+              onInscritoComSucesso?.()
+            },
+          })}
           onClose={() => setMostrarModalPagamento(false)}
         />
       )}

@@ -23,17 +23,19 @@ export function TopBar() {
 
       <BuscaGlobal />
 
-      <SinoNotificacoes />
+      <div className={styles.grupoDireita}>
+        <SinoNotificacoes />
 
-      <div className={styles.igreja}>
-        <div className={styles.igrejaIcone}>
-          {urlFoto(igrejaLogoId, 'THUMB') ? (
-            <Image src={urlFoto(igrejaLogoId, 'THUMB')!} alt={igrejaNome ?? 'Igreja'} width={32} height={32} unoptimized className={styles.igrejaLogo} />
-          ) : (
-            <Church size={18} />
-          )}
+        <div className={styles.igreja}>
+          <div className={styles.igrejaIcone}>
+            {urlFoto(igrejaLogoId, 'THUMB') ? (
+              <Image src={urlFoto(igrejaLogoId, 'THUMB')!} alt={igrejaNome ?? 'Igreja'} width={32} height={32} unoptimized className={styles.igrejaLogo} />
+            ) : (
+              <Church size={18} />
+            )}
+          </div>
+          <span className={styles.igrejaNome}>{igrejaSigla ?? igrejaNome ?? 'Minha Igreja'}</span>
         </div>
-        <span className={styles.igrejaNome}>{igrejaSigla ?? igrejaNome ?? 'Minha Igreja'}</span>
       </div>
     </header>
   )

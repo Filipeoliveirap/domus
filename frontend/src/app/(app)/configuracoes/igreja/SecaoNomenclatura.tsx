@@ -11,8 +11,9 @@ import styles from './SecaoNomenclatura.module.css'
 
 interface BlocoEstado { singular: string; plural: string; genero: Genero }
 
+// Mesmo padrão de useRotulos.ts — "Rede" é o texto real hoje (herdado de rotulosMinisterio.ts).
 const PADRAO: Record<'ministerio' | 'congregacao' | 'celula', BlocoEstado> = {
-  ministerio: { singular: 'Ministério', plural: 'Ministérios', genero: 'MASCULINO' },
+  ministerio: { singular: 'Rede', plural: 'Redes', genero: 'FEMININO' },
   congregacao: { singular: 'Unidade', plural: 'Unidades', genero: 'FEMININO' },
   celula: { singular: 'Célula', plural: 'Células', genero: 'FEMININO' },
 }
@@ -76,7 +77,7 @@ export function SecaoNomenclatura({ rotulosAtuais }: Props) {
   }
 
   const modulos: { chave: keyof typeof blocos; titulo: string; ajuda: string }[] = [
-    { chave: 'ministerio', titulo: 'Ministério', ajuda: 'Sugestões: Departamento, Rede, Equipe.' },
+    { chave: 'ministerio', titulo: 'Ministério', ajuda: 'Padrão: Rede. Outras sugestões: Departamento, Equipe.' },
     { chave: 'congregacao', titulo: 'Congregação', ajuda: 'Sugestões: Unidade, Filial, Polo.' },
     { chave: 'celula', titulo: 'Célula', ajuda: 'Sugestões: Pequeno Grupo, GC, Grupo de Multiplicação.' },
   ]

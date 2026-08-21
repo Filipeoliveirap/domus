@@ -15,11 +15,12 @@ import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
+import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
-import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
+import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
   isFormIncomplete: boolean
@@ -32,6 +33,9 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
   onFecharImpacto: () => void
+  aguardandoEscopoEdicao: boolean
+  onEscolherEscopoEdicao: (escopo: EscopoEdicaoEvento) => void
+  onFecharEscopoEdicao: () => void
 }
 
 const DIAS_SEMANA_OPTIONS = [
@@ -51,6 +55,7 @@ export function EventoForm(props: EventoFormProps) {
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
   const repetir = watch('repetir')
@@ -526,6 +531,14 @@ export function EventoForm(props: EventoFormProps) {
           onManterTodos={() => onConfirmarImpacto(false)}
           onCancelarNaoElegiveis={() => onConfirmarImpacto(true)}
           onClose={onFecharImpacto}
+        />
+      )}
+
+      {aguardandoEscopoEdicao && (
+        <ModalEscopoEdicaoEvento
+          titulo={(watch('titulo') as string) ?? ''}
+          onEscolher={onEscolherEscopoEdicao}
+          onClose={onFecharEscopoEdicao}
         />
       )}
     </form>

@@ -34,6 +34,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -53,6 +54,7 @@ class EventoServiceTest {
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -72,11 +74,12 @@ class EventoServiceTest {
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
 
         service = new EventoService(
                 eventoRepository, igrejaRepository, cacheEvictor, outboxRegistrador,
                 inscricaoService, inscricaoRepository, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository, familiaIgrejaService
+                localEventoRepository, usuarioRepository, familiaIgrejaService, notificacaoService
         );
 
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));
@@ -183,6 +186,74 @@ class EventoServiceTest {
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
 
         assertThat(existente.isRestritoPropriaIgreja()).isTrue();
+    }
+
+    @Test
+    void atualizarEventoNotificaInscritosQuandoDataMuda() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaIdInscrito = UUID.randomUUID();
+        UUID usuarioIdInscrito = UUID.randomUUID();
+        LocalDateTime dataAntiga = LocalDateTime.now().plusDays(1);
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(dataAntiga)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaIdInscrito));
+        when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
+                eq(usuarioIdInscrito), anyString(), eq("/eventos?detalhe=" + eventoId));
+    }
+
+    @Test
+    void atualizarEventoNaoConsultaInscritosQuandoDataELocalNaoMudam() {
+        UUID eventoId = UUID.randomUUID();
+        EventoRequest req = requestComRestricao(false);
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(req.inicioEm())
+                .localTexto(req.localTexto())
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(inscricaoRepository, never()).findPessoaIdsByEventoIdAndStatus(any(), any());
+    }
+
+    @Test
+    void arquivarEventoNotificaInscritos() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaIdInscrito = UUID.randomUUID();
+        UUID usuarioIdInscrito = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaIdInscrito));
+        when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
+
+        service.arquivarEvento(eventoId, igrejaId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
+                eq(usuarioIdInscrito), anyString(), eq("/eventos"));
     }
 
     @Test

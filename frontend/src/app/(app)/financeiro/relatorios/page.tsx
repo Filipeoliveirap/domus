@@ -48,6 +48,14 @@ const GRUPOS_FILTRO: GrupoFiltro[] = [
 
 type Aba = 'MINHA_IGREJA' | 'CONGREGACOES'
 
+const ABAS: { valor: Aba; rotulo: string }[] = [
+  { valor: 'MINHA_IGREJA', rotulo: 'Minha igreja' },
+  { valor: 'CONGREGACOES', rotulo: 'Unidades' },
+]
+
+const idAba = (valor: Aba) => `aba-relatorios-${valor}`
+const ID_PAINEL_ABAS = 'painel-relatorios'
+
 function PaginaCarregando() {
   return (
     <div className={styles.pagina}>
@@ -116,6 +124,23 @@ export default function RelatoriosPage() {
     setIgrejaSelecionada(null)
   }
 
+  // Navegação por setas entre abas (WAI-ARIA Tabs pattern): move o foco E troca a aba —
+  // não só uma das duas, senão o teclado e o mouse ficam com comportamentos diferentes.
+  function aoNavegarAbas(e: React.KeyboardEvent<HTMLDivElement>) {
+    const indiceAtual = ABAS.findIndex((a) => a.valor === abaEfetiva)
+    let proximoIndice: number | null = null
+    if (e.key === 'ArrowRight') proximoIndice = (indiceAtual + 1) % ABAS.length
+    else if (e.key === 'ArrowLeft') proximoIndice = (indiceAtual - 1 + ABAS.length) % ABAS.length
+    else if (e.key === 'Home') proximoIndice = 0
+    else if (e.key === 'End') proximoIndice = ABAS.length - 1
+    if (proximoIndice === null) return
+
+    e.preventDefault()
+    const proxima = ABAS[proximoIndice].valor
+    trocarAba(proxima)
+    document.getElementById(idAba(proxima))?.focus()
+  }
+
   if (!hidratado) {
     return <PaginaCarregando />
   }
@@ -124,82 +149,8 @@ export default function RelatoriosPage() {
     return <AcessoRestrito />
   }
 
-  return (
-    <div className={styles.pagina}>
-      <header className={styles.cabecalho}>
-        <div>
-          <h1 className={styles.titulo}>Relatórios</h1>
-          <p className={styles.subtitulo}>Análise das movimentações financeiras.</p>
-        </div>
-        <PainelFiltros
-          grupos={GRUPOS_FILTRO}
-          valores={filtros}
-          onAplicar={(v) => setFiltros(v as { vinculo: string })}
-        />
-      </header>
-
-      {ehMae && (
-        <div className={styles.abas} role="tablist">
-          <button
-            role="tab"
-            aria-selected={abaEfetiva === 'MINHA_IGREJA'}
-            className={`${styles.aba} ${abaEfetiva === 'MINHA_IGREJA' ? styles.abaAtiva : ''}`}
-            onClick={() => trocarAba('MINHA_IGREJA')}
-          >
-            Minha igreja
-          </button>
-          <button
-            role="tab"
-            aria-selected={abaEfetiva === 'CONGREGACOES'}
-            className={`${styles.aba} ${abaEfetiva === 'CONGREGACOES' ? styles.abaAtiva : ''}`}
-            onClick={() => trocarAba('CONGREGACOES')}
-          >
-            Unidades
-          </button>
-        </div>
-      )}
-
-      <div className={styles.filtroPeriodo}>
-        <div className={styles.presets}>
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              className={`${styles.botaoPeriodo} ${!custom && preset === p ? styles.periodoAtivo : ''}`}
-              onClick={() => escolherPreset(p)}
-            >
-              {ROTULOS_PRESET[p]}
-            </button>
-          ))}
-          <button
-            className={`${styles.botaoPeriodo} ${custom ? styles.periodoAtivo : ''}`}
-            onClick={() => setCustom(true)}
-          >
-            Personalizado
-          </button>
-        </div>
-
-        {custom && (
-          <div className={styles.customDatas}>
-            <div className={styles.customCampo}>
-              <label className={styles.customLabel}>DE</label>
-              <CampoData
-                semLabel
-                value={dataInicio}
-                onChange={setDataInicio}
-              />
-            </div>
-            <div className={styles.customCampo}>
-              <label className={styles.customLabel}>ATÉ</label>
-              <CampoData
-                semLabel
-                value={dataFim}
-                onChange={setDataFim}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
+  const conteudoDaAba = (
+    <>
       {abaEfetiva === 'CONGREGACOES' && !selecao && (
         <VisaoGeralCongregacoes
           data={consolidado.data}
@@ -249,6 +200,98 @@ export default function RelatoriosPage() {
             aoTentarNovamente={() => porContribuinte.refetch()}
           />
         </>
+      )}
+    </>
+  )
+
+  return (
+    <div className={styles.pagina}>
+      <header className={styles.cabecalho}>
+        <div>
+          <h1 className={styles.titulo}>Relatórios</h1>
+          <p className={styles.subtitulo}>Análise das movimentações financeiras.</p>
+        </div>
+        <PainelFiltros
+          grupos={GRUPOS_FILTRO}
+          valores={filtros}
+          onAplicar={(v) => setFiltros(v as { vinculo: string })}
+        />
+      </header>
+
+      {ehMae && (
+        <div className={styles.abas} role="tablist" onKeyDown={aoNavegarAbas}>
+          {ABAS.map(({ valor, rotulo }) => (
+            <button
+              key={valor}
+              id={idAba(valor)}
+              role="tab"
+              type="button"
+              aria-selected={abaEfetiva === valor}
+              aria-controls={ID_PAINEL_ABAS}
+              tabIndex={abaEfetiva === valor ? 0 : -1}
+              className={`${styles.aba} ${abaEfetiva === valor ? styles.abaAtiva : ''}`}
+              onClick={() => trocarAba(valor)}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.filtroPeriodo}>
+        <div className={styles.presets}>
+          {PRESETS.map((p) => (
+            <button
+              key={p}
+              className={`${styles.botaoPeriodo} ${!custom && preset === p ? styles.periodoAtivo : ''}`}
+              onClick={() => escolherPreset(p)}
+            >
+              {ROTULOS_PRESET[p]}
+            </button>
+          ))}
+          <button
+            className={`${styles.botaoPeriodo} ${custom ? styles.periodoAtivo : ''}`}
+            onClick={() => setCustom(true)}
+          >
+            Personalizado
+          </button>
+        </div>
+
+        {custom && (
+          <div className={styles.customDatas}>
+            <div className={styles.customCampo}>
+              <label className={styles.customLabel}>DE</label>
+              <CampoData
+                semLabel
+                value={dataInicio}
+                onChange={setDataInicio}
+              />
+            </div>
+            <div className={styles.customCampo}>
+              <label className={styles.customLabel}>ATÉ</label>
+              <CampoData
+                semLabel
+                value={dataFim}
+                onChange={setDataFim}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {ehMae ? (
+        <div
+          role="tabpanel"
+          id={ID_PAINEL_ABAS}
+          aria-labelledby={idAba(abaEfetiva)}
+          // tabIndex 0: um painel de aba precisa ser alcançável por teclado mesmo quando
+          // não tem nenhum elemento focável dentro (ex.: só texto/gráfico, sem botão).
+          tabIndex={0}
+        >
+          {conteudoDaAba}
+        </div>
+      ) : (
+        conteudoDaAba
       )}
     </div>
   )

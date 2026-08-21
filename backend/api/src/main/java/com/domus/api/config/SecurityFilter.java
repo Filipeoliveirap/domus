@@ -1,7 +1,8 @@
 package com.domus.api.config;
 
+import com.domus.api.modules.usuario.PrincipalCache;
+import com.domus.api.modules.usuario.PrincipalCacheService;
 import com.domus.api.modules.usuario.Usuario;
-import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.security.AuthCookieFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,7 +25,7 @@ import java.util.UUID;
 public class SecurityFilter extends OncePerRequestFilter {
 
     private final TokenService tokenService;
-    private final UsuarioRepository usuarioRepository;
+    private final PrincipalCacheService principalCacheService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -34,19 +34,19 @@ public class SecurityFilter extends OncePerRequestFilter {
             var subject = tokenService.validateToken(token);
             if (subject != null) {
                 try {
-                    UserDetails user = usuarioRepository.findById(UUID.fromString(subject)).orElse(null);
-                    if (user != null && user.isEnabled()) {
-                        var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    PrincipalCache cache = principalCacheService.buscar(UUID.fromString(subject));
+                    Usuario usuario = cache == null ? null : principalCacheService.reidratar(cache);
+                    if (usuario != null && usuario.isEnabled()) {
+                        var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                         // Enriquece o contexto de log com quem é o usuário e a igreja (multi-tenant).
                         // O RequestIdFilter limpa o MDC ao fim da requisição.
                         org.slf4j.MDC.put("usuario_id", subject);
-                        Usuario usuario = (Usuario) user;
                         if (usuario.getIgreja() != null) {
                             org.slf4j.MDC.put("igreja_id", String.valueOf(usuario.getIgreja().getId()));
                         }
                         log.debug("Usuário autenticado via token. id={}", subject);
-                    } else if (user == null) {
+                    } else if (usuario == null) {
                         log.warn("Token válido mas usuário não encontrado. id={}", subject);
                     } else {
                         log.warn("Usuário desativado tentou usar token. id={}", subject);

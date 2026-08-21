@@ -26,11 +26,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Regressão: arquivar a categoria não pode fazer a movimentação sumir da listagem/total/detalhe. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class MovimentacaoFinanceiraRepositoryTest {
+class MovimentacaoFinanceiraRepositoryTest implements PostgresTestContainerSupport {
 
     @Autowired MovimentacaoFinanceiraRepository movimentacaoRepository;
     @Autowired CategoriaFinanceiraRepository categoriaRepository;

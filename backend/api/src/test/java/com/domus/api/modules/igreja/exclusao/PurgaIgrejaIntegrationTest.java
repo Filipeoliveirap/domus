@@ -49,6 +49,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * O teste mais importante do projeto (conforme a spec de exclusão de igreja): cria uma igreja de
@@ -59,7 +60,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @Transactional
-class PurgaIgrejaIntegrationTest {
+class PurgaIgrejaIntegrationTest implements PostgresTestContainerSupport {
 
     @Autowired PurgaIgrejaService purgaIgrejaService;
     @Autowired IgrejaRepository igrejaRepository;

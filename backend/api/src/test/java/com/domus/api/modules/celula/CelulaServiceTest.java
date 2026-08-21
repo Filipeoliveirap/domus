@@ -8,6 +8,8 @@ import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
+import com.domus.api.modules.notificacao.TipoNotificacao;
+import com.domus.api.modules.usuario.Usuario;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
@@ -25,6 +27,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class CelulaServiceTest {
@@ -37,6 +41,7 @@ class CelulaServiceTest {
     VisitanteRepository visitanteRepository;
     FotoService fotoService;
     OutboxRegistrador outboxRegistrador;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     CelulaService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -52,8 +57,10 @@ class CelulaServiceTest {
         visitanteRepository = mock(VisitanteRepository.class);
         fotoService = mock(FotoService.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new CelulaService(celulaRepository, membroRepository, igrejaRepository,
-                usuarioRepository, pessoaRepository, visitanteRepository, fotoService, outboxRegistrador);
+                usuarioRepository, pessoaRepository, visitanteRepository, fotoService, outboxRegistrador,
+                notificacaoService);
 
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja()));
         when(celulaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -280,6 +287,32 @@ class CelulaServiceTest {
     }
 
     @Test
+    void adicionarPessoaNotificaOsOutrosMembrosMasNaoQuemEntrou() {
+        UUID membroExistentePessoaId = UUID.randomUUID();
+        UUID membroExistenteUsuarioId = UUID.randomUUID();
+        UUID pessoaNovaId = UUID.randomUUID();
+        dadoQueExiste();
+        Pessoa pessoaNova = Pessoa.builder().id(pessoaNovaId).nome("Novato").igreja(igreja()).build();
+        CelulaMembro membroExistente = CelulaMembro.builder()
+                .pessoa(Pessoa.builder().id(membroExistentePessoaId).build()).build();
+        Usuario usuarioMembroExistente = Usuario.builder().id(membroExistenteUsuarioId).build();
+
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaNovaId, igrejaId)).thenReturn(Optional.of(pessoaNova));
+        when(membroRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.empty());
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId))
+                .thenReturn(List.of(membroExistente));
+        when(usuarioRepository.findByPessoaId(membroExistentePessoaId)).thenReturn(Optional.of(usuarioMembroExistente));
+
+        service.adicionarMembro(celulaId, new AdicionarMembroCelulaRequest(pessoaNovaId, null),
+                igrejaId, UUID.randomUUID(), true, UUID.randomUUID());
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.ENTRADA_CELULA), eq(igrejaId), eq(membroExistenteUsuarioId),
+                anyString(), eq("/celulas/" + celulaId));
+        verify(notificacaoService, never()).criar(any(), any(), eq(pessoaNovaId), anyString(), anyString());
+    }
+
+    @Test
     void atualizarPapelVisitanteLancaErro() {
         dadoQueExiste();
         CelulaMembro membro = CelulaMembro.builder()
@@ -308,6 +341,43 @@ class CelulaServiceTest {
                 new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
 
         assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
+    }
+
+    @Test
+    void promoverParaLiderNotificaAPessoaPromovida() {
+        dadoQueExiste();
+        UUID pessoaIdPromovida = UUID.randomUUID();
+        UUID usuarioIdPromovido = UUID.randomUUID();
+        Pessoa pessoa = Pessoa.builder().id(pessoaIdPromovida).nome("João").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(pessoa).papel(PapelCelula.MEMBRO)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaId(pessoaIdPromovida))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioIdPromovido).build()));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.PROMOVIDO_LIDER_CELULA), eq(igrejaId), eq(usuarioIdPromovido),
+                anyString(), eq("/celulas/" + celulaId));
+    }
+
+    @Test
+    void naoNotificaQuandoJaEraLiderEContinuaLider() {
+        dadoQueExiste();
+        UUID pessoaIdLider = UUID.randomUUID();
+        Pessoa pessoa = Pessoa.builder().id(pessoaIdLider).nome("João").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(pessoa).papel(PapelCelula.LIDER)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test

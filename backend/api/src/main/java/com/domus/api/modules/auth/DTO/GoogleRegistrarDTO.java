@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 /** Nome/e-mail do dono não entram aqui — vêm sempre do ID token validado. */
 public record GoogleRegistrarDTO(
         @NotBlank(message = "idToken é obrigatório")
+        @Size(max = 4096, message = "idToken inválido")
         String idToken,
 
         @NotBlank(message = "Nome da igreja é obrigatório")

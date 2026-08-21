@@ -25,6 +25,7 @@ public class ExclusaoIgrejaJob {
     private final UsuarioRepository usuarioRepository;
     private final EmailService emailService;
     private final PurgaIgrejaService purgaIgrejaService;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -76,6 +77,15 @@ public class ExclusaoIgrejaJob {
 
         for (String destinatario : destinatarios) {
             emailService.enviar(destinatario, assunto, corpo);
+        }
+
+        java.util.List<com.domus.api.modules.usuario.Usuario> admins = usuarioRepository
+                .findByIgrejaIdAndRole_NomeAndAtivoTrue(igreja.getId(),
+                        com.domus.api.shared.security.Perfil.ADMIN_IGREJA.name());
+        for (var admin : admins) {
+            notificacaoService.criar(
+                    com.domus.api.modules.notificacao.TipoNotificacao.EXCLUSAO_IGREJA_AGENDADA,
+                    igreja.getId(), admin.getId(), assunto, "/configuracoes/igreja");
         }
     }
 

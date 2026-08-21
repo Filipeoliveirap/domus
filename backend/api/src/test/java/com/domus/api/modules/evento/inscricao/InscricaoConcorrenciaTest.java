@@ -13,13 +13,14 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Prova que duas inscrições simultâneas na última vaga não passam as duas. Precisa de Postgres real (Neon) com duas conexões disputando a mesma linha — mock não expõe corrida.
  * O cenário é criado e commitado antes das threads começarem, fora da transação do teste, senão as outras conexões não enxergam o setup ainda.
  */
 @SpringBootTest
-class InscricaoConcorrenciaTest {
+class InscricaoConcorrenciaTest implements PostgresTestContainerSupport {
 
     @Autowired
     InscricaoService inscricaoService;

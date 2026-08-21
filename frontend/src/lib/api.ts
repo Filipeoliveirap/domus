@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import * as Sentry from '@sentry/nextjs'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
 import { Endpoints } from '@/lib/endpoints'
@@ -20,7 +21,21 @@ const rotasAuth = [Endpoints.auth.LOGIN, Endpoints.auth.REFRESH, Endpoints.auth.
 // Single-flight: 401s concorrentes esperam a mesma promessa em vez de refreshes paralelos (a rotação do backend invalidaria um ao outro).
 let refreshPromise: Promise<void> | null = null
 
-function encerrarSessao() {
+// Mesma lógica de single-flight, mas pro token CSRF (ver tratamento do 403 CSRF_INVALIDO abaixo).
+let csrfRenovacaoPromise: Promise<void> | null = null
+
+function encerrarSessao(motivo: 'refresh_falhou' | 'logout', urlOriginal?: string) {
+  if (motivo === 'refresh_falhou') {
+    // Instrumentação (BACKLOG "logout indevido ao falhar refresh"): sem repro conhecido
+    // até 2026-08-20, esta é a pulga que fica — se voltar a acontecer com um usuário que
+    // não devia ter sido deslogado, este evento no Sentry carrega a rota que disparou o
+    // 401 original, pra investigar de verdade em vez de continuar só "observando".
+    Sentry.captureMessage('Sessão encerrada por falha no refresh do token', {
+      level: 'warning',
+      tags: { origem: 'api.interceptor' },
+      extra: { urlOriginal },
+    })
+  }
   useAuthStore.getState().logout()
   // Hoje o redirect abaixo dá reload (window.location) e o cache morreria junto, mas
   // depender disso é frágil: se um dia virar navegação SPA, o cache vazaria entre sessões.
@@ -45,23 +60,48 @@ async function renovarAccessToken(): Promise<void> {
   await api.post(Endpoints.auth.REFRESH)
 }
 
-// Interceptor de response — no 401, tenta renovar o access token uma vez e reenvia a
-// requisição original. Se o refresh falhar, encerra a sessão de verdade.
+// GET qualquer (mesmo 401) já grava um XSRF-TOKEN novo — mesmo mecanismo de
+// garantirCsrfCookie() do auth.service.ts, reaproveitado aqui pro caso pós-login.
+async function renovarTokenCsrf(): Promise<void> {
+  await api.get(Endpoints.auth.ME).catch(() => undefined)
+}
+
+type RequestComRetry = InternalAxiosRequestConfig & { _retry?: boolean; _retryCsrf?: boolean }
+
+// Interceptor de response:
+// - 401: tenta renovar o access token uma vez e reenvia a requisição original. Se o
+//   refresh falhar, encerra a sessão de verdade.
+// - 403 com codigo=CSRF_INVALIDO: busca um XSRF-TOKEN novo e reenvia uma vez. Um 403
+//   ACESSO_NEGADO (negação de role de verdade) NÃO cai aqui — ver SecurityConfig no back,
+//   que distingue os dois casos pelo tipo da exceção.
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+  async (error: AxiosError<{ error?: string }>) => {
+    const original = error.config as RequestComRetry | undefined
     const status = error.response?.status
     const url = original?.url ?? ''
-
     const ehRotaAuth = rotasAuth.some((rota) => url.includes(rota))
+
+    if (status === 403 && original && error.response?.data?.error === 'CSRF_INVALIDO') {
+      if (original._retryCsrf) {
+        return Promise.reject(error)
+      }
+      original._retryCsrf = true
+      if (!csrfRenovacaoPromise) {
+        csrfRenovacaoPromise = renovarTokenCsrf().finally(() => {
+          csrfRenovacaoPromise = null
+        })
+      }
+      await csrfRenovacaoPromise
+      return api(original)
+    }
 
     if (status !== 401 || !original || ehRotaAuth) {
       return Promise.reject(error)
     }
 
     if (original._retry) {
-      encerrarSessao()
+      encerrarSessao('refresh_falhou', url)
       return Promise.reject(error)
     }
     original._retry = true
@@ -77,7 +117,7 @@ api.interceptors.response.use(
     } catch {
       // Sem sessão renovável: limpa o estado. Não chamamos /auth/logout aqui — o refresh
       // já está morto, e o cookie de access expira sozinho em 10 min.
-      encerrarSessao()
+      encerrarSessao('refresh_falhou', url)
       return Promise.reject(error)
     }
   }

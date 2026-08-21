@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -23,6 +24,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.domus.api.shared.security.Perfil;
+import com.domus.api.shared.exception.ErrorResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 
 @Configuration
@@ -32,6 +35,7 @@ public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
     private final com.domus.api.shared.security.RateLimitFilter rateLimitFilter;
+    private final ObjectMapper objectMapper;
 
     private static final String ADMIN = Perfil.ADMIN_IGREJA.name();
     private static final String LIDER = Perfil.LIDER.name();
@@ -45,14 +49,7 @@ public class SecurityConfig {
         return httpSecurity
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
-                        .csrfTokenRequestHandler(csrfTokenRequestHandler())
-                        .ignoringRequestMatchers(
-                                "/auth/login",
-                                "/auth/google/login",
-                                "/auth/google/registrar",
-                                "/auth/forgot-password",
-                                "/auth/reset-password",
-                                "/igrejas/registrar"))
+                        .csrfTokenRequestHandler(csrfTokenRequestHandler()))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -159,11 +156,31 @@ public class SecurityConfig {
                                 "default-src 'none'; frame-ancestors 'none'")))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                        .accessDeniedHandler((req, res, e) ->
-                                res.setStatus(HttpStatus.FORBIDDEN.value())))
+                        .accessDeniedHandler(this::responderAcessoNegado))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, SecurityFilter.class)
+                // Antes do CsrfFilter: requisição barrada por CSRF (403) também conta no
+                // limite — senão um flood sem token nunca incrementa o contador (ver BACKLOG).
+                .addFilterBefore(rateLimitFilter, CsrfFilter.class)
                 .build();
+    }
+
+    /** Chamado tanto pra falha de CSRF (CsrfFilter) quanto pra negação de role em
+     *  requestMatchers (AuthorizationFilter) — os dois rodam antes do DispatcherServlet,
+     *  então nunca chegam no GlobalExceptionHandler. Sem distinguir o tipo aqui, o front
+     *  não tem como saber se vale a pena tentar de novo (token CSRF velho) ou se é
+     *  negação de verdade (não teria sentido reenviar). */
+    private void responderAcessoNegado(jakarta.servlet.http.HttpServletRequest req,
+                                        jakarta.servlet.http.HttpServletResponse res,
+                                        org.springframework.security.access.AccessDeniedException e) throws java.io.IOException {
+        boolean ehFalhaDeCsrf = e instanceof org.springframework.security.web.csrf.CsrfException;
+        String codigo = ehFalhaDeCsrf ? "CSRF_INVALIDO" : "ACESSO_NEGADO";
+        String mensagem = ehFalhaDeCsrf
+                ? "Token de segurança ausente ou expirado. Tente novamente."
+                : "Você não tem permissão para acessar este recurso.";
+
+        res.setStatus(HttpStatus.FORBIDDEN.value());
+        res.setContentType("application/json");
+        objectMapper.writeValue(res.getWriter(), ErrorResponse.of(403, codigo, mensagem));
     }
 
     private CookieCsrfTokenRepository csrfTokenRepository() {

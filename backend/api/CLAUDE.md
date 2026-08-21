@@ -136,14 +136,41 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 | Camada | Ferramenta | Quando usar |
 |---|---|---|
 | **Service (regra de negócio)** | Mockito puro, sem contexto Spring | **Regra padrão.** 90% dos testes do projeto. |
-| **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra o Neon de testes. |
+| **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra Postgres real via Testcontainers (ver nota abaixo). |
 | **Integração JPA complexa** | `@SpringBootTest` + `@Transactional` | FK constraints, triggers, concorrência com lock, migration. **Exceção, não regra.** |
-| **Controller (HTTP + Security)** | `@WebMvcTest` ou `@SpringBootTest` + `MockMvc` | **Não existe no projeto ainda.** Dívida técnica. Hoje a validação de rotas e matchers do Spring Security é manual (curl/navegador). |
+| **Controller (HTTP + Security)** | `@SpringBootTest` + `@AutoConfigureMockMvc` + `AutenticacaoTestSupport` | Harness introduzido em 2026-08-20 (piloto: `VisitanteControllerTest`). Ainda **não aplicado a todos os controllers** — expandir módulo a módulo conforme mexer neles. |
 
 > **Por que Mockito puro é a regra?** Serviços com Mockito rodam em milissegundos, não
 > precisam de banco, não precisam de `.env`, e testam a lógica de negócio isolada. Mas
 > **não pegam** bugs de lazy loading, ordem de `requestMatchers` do Spring Security, ou FK
 > constraints — esses precisam de `@SpringBootTest`.
+
+> **Banco de testes via Testcontainers (2026-08-20):** toda classe `@DataJpaTest`/
+> `@SpringBootTest` implementa `PostgresTestContainerSupport`
+> (`src/test/java/.../shared/testcontainers/`) — uma interface com o container Postgres
+> (`postgres:16-alpine`) como campo estático e um `@DynamicPropertySource` que sobrescreve
+> `spring.datasource.*`. Por ser estático numa interface, o container sobe **uma vez só**
+> por execução do `mvn test` (o Surefire deste projeto roda tudo numa JVM só), não uma vez
+> por classe. Migrations do Flyway (inclusive `unaccent` e os triggers em plpgsql) rodam
+> sozinhas contra o banco novo. **Não precisa mais de `.env`/Neon pra rodar a suíte** — só
+> Docker instalado e rodando. Ao escrever um teste novo nessas camadas, lembre que o banco
+> começa **vazio** (só schema, sem dado nenhum): não assuma que já existe uma `igreja` ou
+> qualquer outra linha — crie o fixture que o teste precisa (foi isso que quebrou 3 testes
+> do `MigracaoV3Test`, escritos assumindo o Neon compartilhado sempre ter dado de sobra).
+
+> **Harness de teste de controller (`AutenticacaoTestSupport`):** o `SecurityFilter` do
+> projeto lê o JWT direto de um cookie (`domus_access`), não usa o mecanismo padrão do
+> Spring Security — então `@WithMockUser` não autentica nada aqui. `AutenticacaoTestSupport`
+> (em `src/test/java/.../shared/security/`) gera um JWT real via `TokenService` e devolve um
+> `Cookie` pronto pra `mockMvc.perform(...)`; o método `autenticado(builder, usuario)` já
+> anexa esse cookie **e** um token CSRF válido (via `csrf()` do `spring-security-test`, que
+> já estava no `pom.xml` mas não era usado). Uso: `@SpringBootTest @AutoConfigureMockMvc
+> @Transactional`, instanciar `new AutenticacaoTestSupport(tokenService)` no `@BeforeEach`,
+> fixtures de Igreja/Pessoa/Role/Usuario montadas inline por teste (sem fixture
+> compartilhada de domínio — só a mecânica de autenticação é compartilhada). Cobre os dois
+> ângulos ao mesmo tempo: validação de `@Valid` (pega bug de anotação ausente, tipo o de
+> `MoverParaCelulaRequest`) **e** autorização por perfil (`requestMatchers` do
+> `SecurityConfig` + checagens `Permissoes.*` dentro do controller).
 
 ### Padrão de mock
 
@@ -213,10 +240,11 @@ class SecurityFilterTest {
 ### Rodando os testes
 
 ```bash
-# Todos os testes (precisa do .env exportado — o Neon é usado por @DataJpaTest/@SpringBootTest)
-set -a; source .env >/dev/null 2>&1; set +a; mvn -q test
+# Todos os testes (precisa de Docker rodando — o Postgres do @DataJpaTest/@SpringBootTest
+# sobe via Testcontainers, não precisa mais de .env)
+mvn -q test
 
-# Um teste específico (não precisa do .env se for Mockito puro)
+# Um teste específico
 mvn -q test -Dtest=NomeDaClasse
 
 # Offline (dependências já cacheadas)
@@ -234,7 +262,6 @@ mvn -q -o test -Dtest=NomeDaClasse
 
 | Dívida | Impacto |
 |---|---|
-| **Sem Testcontainers / H2** — `@DataJpaTest` roda contra o Neon de testes compartilhado | Exige `.env` exportado; testes concorrentes podem se atropelar |
 | **Sem harness de autorização por endpoint** — não existe `@WebMvcTest` com `SecurityConfig` real | Bugs de ordem de `requestMatchers` só são pegos manualmente |
 | **Mockito self-attaching agent** — warning nos logs | Em JDKs futuros vai quebrar; precisa configurar byte-buddy como Java agent no surefire |
 | **Sem testes de frontend** — não há Jest, Vitest, Cypress ou Playwright configurados | Validação de front é manual no navegador |
@@ -603,7 +630,11 @@ erDiagram
       `npm audit` saiu de 7 (1 baixa, 3 médias, 3 altas) para **0**. Como: `npm audit fix` (sem
       `--force`, que rebaixaria o Next p/ 9.3.3 e quebraria o build), `next@16.2.10` explícito e
       `overrides.postcss ^8.5.15`. **Falta:** avaliar o back (ex.: OWASP dependency-check).
-    - [ ] Revisão de **validação de input** em toda entrada — contínuo.
+    - [x] Revisão de **validação de input** em toda entrada — **FEITO** (2026-08-20, detalhe
+      no BACKLOG): harness de teste de controller, `@Valid`/`@NotNull` faltando em 2 lugares
+      (1 causava 500 real), `@Size` em texto livre, teto de paginação, `@Size` em parâmetros
+      de busca livre. Segunda passada cobriu célula/ministério/local-evento/financeiro —
+      nenhum bug real, só pontos descartados por julgamento. Todos os módulos auditados.
     - [x] **Verificar domínio no Resend** — **FEITO** (2026-07-18): domínio `domusigreja.com.br`
       verificado (DKIM + SPF/MX no subdomínio `send`, via DNS na Cloudflare). Remetente de
       produção `Domus <nao-responda@domusigreja.com.br>` (env `EMAIL_FROM`). Testado ao vivo:

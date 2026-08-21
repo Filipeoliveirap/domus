@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Diferente da pessoa (que carrega o login junto), aqui é o próprio módulo Usuários: excluir
@@ -29,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @Transactional
-class UsuarioArquivadoExclusaoTest {
+class UsuarioArquivadoExclusaoTest implements PostgresTestContainerSupport {
 
     @Autowired UsuarioService usuarioService;
     @Autowired UsuarioRepository usuarioRepository;

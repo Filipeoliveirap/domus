@@ -14,9 +14,10 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Mockito puro de propósito: essa rotina roda de madrugada contra dados reais de demonstração, e sem @SpringBootTest o @Scheduled nem existe aqui. */
-class LimpezaFotosJobTest {
+class LimpezaFotosJobTest implements PostgresTestContainerSupport {
 
     FotoRepository fotoRepository;
     FotoService fotoService;

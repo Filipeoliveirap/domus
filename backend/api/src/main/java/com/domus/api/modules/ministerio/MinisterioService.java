@@ -40,6 +40,7 @@ public class MinisterioService {
     private final PessoaRepository pessoaRepository;
     private final FotoService fotoService;
     private final OutboxRegistrador outboxRegistrador;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listar(UUID igrejaId) {
@@ -272,6 +273,17 @@ public class MinisterioService {
                 .papel(Papel.MEMBRO)
                 .status(StatusMembro.PENDENTE)
                 .build());
+
+        List<MinisterioMembro> lideres = membroRepository.findByMinisterioIdAndPapelAndStatus(
+                ministerioId, Papel.LIDER.name(), StatusMembro.ATIVO.name());
+        for (MinisterioMembro lider : lideres) {
+            usuarioRepository.findByPessoaId(lider.getPessoa().getId()).ifPresent(usuario ->
+                    notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_MINISTERIO,
+                            igrejaId, usuario.getId(),
+                            pessoa.getNome() + " pediu pra entrar em " + ministerio.getNome() + ".",
+                            "/ministerios/" + ministerioId));
+        }
     }
 
     @Transactional

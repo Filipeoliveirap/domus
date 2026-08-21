@@ -10,11 +10,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 // replace = NONE: usa o datasource configurado (Neon de testes), não um H2 em memória.
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class UsuarioRepositoryTest {
+class UsuarioRepositoryTest implements PostgresTestContainerSupport {
 
     @Autowired
     UsuarioRepository usuarioRepository;

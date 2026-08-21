@@ -7,7 +7,9 @@ import com.domus.api.modules.evento.elegibilidade.DTOs.ElegibilidadeResponse;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/eventos")
 @RequiredArgsConstructor
+@Validated
 public class EventoController {
 
     private final EventoService eventoService;
@@ -28,7 +31,7 @@ public class EventoController {
 
     @GetMapping
     public ResponseEntity<PagedResponse<EventoResponse>> listar(
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String recorteEtario,
             @PageableDefault(size = 12) Pageable pageable) {

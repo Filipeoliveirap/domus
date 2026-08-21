@@ -40,6 +40,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     UUID findFotoIdById(@Param("id") UUID id);
     long countByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
+    List<Usuario> findByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
+
     /** Ordenação no banco (ativos primeiro) antes de paginar — ordenar no front
      *  só acertaria a página aberta, deixando inconsistência entre páginas. */
     @Query("""

@@ -14,11 +14,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Prova que a ordenação por situação é feita no ORDER BY do banco, não em memória sobre a página já paginada. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class EventoRepositoryOrdenacaoTest {
+class EventoRepositoryOrdenacaoTest implements PostgresTestContainerSupport {
 
     @Autowired
     EventoRepository eventoRepository;

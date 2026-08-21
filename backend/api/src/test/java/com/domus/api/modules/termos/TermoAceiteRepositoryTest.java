@@ -18,10 +18,11 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class TermoAceiteRepositoryTest {
+class TermoAceiteRepositoryTest implements PostgresTestContainerSupport {
 
     @Autowired TermoAceiteRepository termoAceiteRepository;
     @Autowired UsuarioRepository usuarioRepository;

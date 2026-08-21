@@ -96,6 +96,10 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
+                        .requestMatchers(HttpMethod.GET, "/inscricoes/*/respostas")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
+                        .requestMatchers(HttpMethod.PUT, "/inscricoes/*/respostas")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
 
                         .requestMatchers(HttpMethod.GET, "/eventos/*/elegibilidade")
                         .authenticated()

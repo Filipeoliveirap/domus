@@ -424,14 +424,25 @@ public class EventoService {
     /** Convite pra todo mundo da igreja dar uma olhada no evento novo — exceto quem cadastrou. */
     private void notificarNovoEvento(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
         List<UUID> usuarioIds = usuarioRepository.findIdsAtivosPorIgreja(igrejaId);
+        String texto = evento.getSerie() != null
+                ? textoLembreteDeSerie(evento)
+                : "Novo evento: \"" + evento.getTitulo() + "\". Dá uma olhada!";
         for (UUID usuarioId : usuarioIds) {
             if (usuarioId.equals(usuarioIdAtor)) continue;
             notificacaoService.criar(
                     com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO,
-                    igrejaId, usuarioId,
-                    "Novo evento: \"" + evento.getTitulo() + "\". Dá uma olhada!",
-                    "/eventos?detalhe=" + evento.getId());
+                    igrejaId, usuarioId, texto, "/eventos?detalhe=" + evento.getId());
         }
+    }
+
+    private static final java.time.format.DateTimeFormatter FORMATADOR_LEMBRETE =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm", new java.util.Locale("pt", "BR"));
+
+    private String textoLembreteDeSerie(Evento evento) {
+        String diaDaSemana = evento.getInicioEm().getDayOfWeek()
+                .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("pt", "BR"));
+        return evento.getTitulo() + " é " + diaDaSemana + ", "
+                + evento.getInicioEm().format(FORMATADOR_LEMBRETE) + ". Vem participar!";
     }
 
     @Transactional(readOnly = true)

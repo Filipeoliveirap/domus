@@ -456,6 +456,29 @@ class EventoServiceTest {
     }
 
     @Test
+    void cadastrarEventoDeSerieNotificaComTextoDeLembrete() {
+        UUID outroUsuarioId = UUID.randomUUID();
+        when(usuarioRepository.findIdsAtivosPorIgreja(igrejaId)).thenReturn(List.of(outroUsuarioId));
+        when(eventoSerieRepository.save(any())).thenAnswer(inv -> {
+            var s = (com.domus.api.modules.evento.serie.EventoSerie) inv.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+        var recorrencia = new com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest(
+                com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL, 1,
+                java.util.Set.of(com.domus.api.modules.celula.DiaSemana.QUINTA), null, null, null);
+        EventoRequest req = requestComRecorrencia(recorrencia);
+
+        service.cadastrarEvento(req, igrejaId, usuarioId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO), eq(igrejaId),
+                eq(outroUsuarioId),
+                argThat(texto -> !texto.startsWith("Novo evento") && texto.contains("Vem participar")),
+                anyString());
+    }
+
+    @Test
     void atualizarEventoNotificaSoQuandoResponsavelMuda() {
         UUID eventoId = UUID.randomUUID();
         UUID pessoaResponsavelAntigaId = UUID.randomUUID();

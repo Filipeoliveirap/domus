@@ -115,10 +115,12 @@ public class EventoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
+    public ResponseEntity<Void> arquivar(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "ESTA") com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UUID usuarioId = usuarioAutenticado.getUsuarioId();
-        eventoService.arquivarEvento(id, igrejaId, usuarioId);
+        eventoService.arquivarEvento(id, igrejaId, usuarioId, escopo);
         return ResponseEntity.noContent().build();
     }
 

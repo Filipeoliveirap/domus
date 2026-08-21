@@ -285,10 +285,10 @@ public class EventoService {
     }
 
     private void notificarInscritos(Evento evento, UUID igrejaId, String texto) {
-        List<com.domus.api.modules.evento.inscricao.InscricaoEvento> inscricoes = inscricaoRepository
-                .findByEventoIdAndStatus(evento.getId(), com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA);
-        for (var inscricao : inscricoes) {
-            usuarioRepository.findByPessoaId(inscricao.getPessoa().getId()).ifPresent(usuario ->
+        List<UUID> pessoaIds = inscricaoRepository.findPessoaIdsByEventoIdAndStatus(
+                evento.getId(), com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA);
+        for (UUID pessoaId : pessoaIds) {
+            usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario ->
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
                             igrejaId, usuario.getId(), texto, "/eventos/" + evento.getId()));

@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { notificacaoCentralService } from '@/services/notificacaoCentral.service'
 
-// Polling: sem WebSocket no projeto, 30s é suficiente pro volume de uma igreja.
+// Rede de segurança: a entrega principal é via SSE (useNotificacoesSSE), esse
+// polling só cobre o caso de a conexão SSE cair/aba ficar suspensa.
 export function useContagemNaoLidas() {
   return useQuery({
     queryKey: ['notificacoes', 'contagem-nao-lidas'],
     queryFn: () => notificacaoCentralService.contagemNaoLidas(),
-    refetchInterval: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 }

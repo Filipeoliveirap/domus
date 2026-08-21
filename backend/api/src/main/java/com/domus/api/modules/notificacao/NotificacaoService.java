@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +27,7 @@ public class NotificacaoService {
     private final NotificacaoRepository notificacaoRepository;
     private final IgrejaRepository igrejaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final NotificacaoSseRegistry sseRegistry;
 
     @Transactional
     public void criar(TipoNotificacao tipo, UUID igrejaId, UUID usuarioDestinatarioId, String texto, String link) {
@@ -36,6 +39,25 @@ public class NotificacaoService {
                 .link(link)
                 .lida(false)
                 .build());
+
+        avisarPorSseDepoisDoCommit(usuarioDestinatarioId);
+    }
+
+    /** O aviso SSE só sai depois que a transação do produtor confirma de verdade — senão o
+     *  cliente recarregaria pra buscar uma notificação que pode nem existir mais (a transação
+     *  do produtor pode dar rollback depois deste ponto). Fora de uma transação (não deveria
+     *  acontecer em produção, mas cobre testes chamando o serviço direto), avisa na hora. */
+    private void avisarPorSseDepoisDoCommit(UUID usuarioDestinatarioId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sseRegistry.notificar(usuarioDestinatarioId);
+                }
+            });
+        } else {
+            sseRegistry.notificar(usuarioDestinatarioId);
+        }
     }
 
     @Transactional(readOnly = true)

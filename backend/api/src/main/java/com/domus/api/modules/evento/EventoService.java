@@ -65,6 +65,7 @@ public class EventoService {
     private final UsuarioRepository usuarioRepository;
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    private final com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
 
     @Cacheable(
             value = "eventos",
@@ -139,6 +140,13 @@ public class EventoService {
                 .build();
 
         Evento salvo = eventoRepository.save(evento);
+
+        if (data.recorrencia() != null) {
+            var serie = criarSerie(data.recorrencia(), igreja, usuario);
+            salvo.setSerie(serie);
+            salvo = eventoRepository.save(salvo);
+        }
+
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
                 TipoEventoOutbox.CRIADO,
@@ -153,14 +161,16 @@ public class EventoService {
     }
 
     @Transactional
-    public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId) {
-        return atualizarEvento(id, data, igrejaId, usuarioId, false);
+    public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
+                                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
+        return atualizarEvento(id, data, igrejaId, usuarioId, false, escopo);
     }
 
     /** @param cancelarNaoElegiveis padrão {@code false} nunca cancela ninguém sozinho. */
     @Transactional
     public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
-                                          boolean cancelarNaoElegiveis) {
+                                          boolean cancelarNaoElegiveis,
+                                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         log.info("Atualizando evento. id={}, igreja_id={}", id, igrejaId);
         validarDatas(data);
         validarIdades(data);
@@ -231,6 +241,17 @@ public class EventoService {
 
         Evento salvo = eventoRepository.save(evento);
 
+        if (evento.getSerie() != null) {
+            switch (escopo) {
+                case ESTA -> {
+                    evento.setDivergeDaSerie(true);
+                    salvo = eventoRepository.save(evento);
+                }
+                case SERIE -> salvo = propagarParaSerie(salvo, igrejaId);
+                case ESTA_E_SEGUINTES -> salvo = dividirSerie(salvo, igrejaId);
+            }
+        }
+
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
                 || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
                 || !java.util.Objects.equals(localTextoAntigo, salvo.getLocalTexto());
@@ -269,7 +290,8 @@ public class EventoService {
     }
 
     @Transactional
-    public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId) {
+    public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId,
+                               com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         log.info("Arquivando evento. id={}, igreja_id={}", id, igrejaId);
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -281,17 +303,24 @@ public class EventoService {
                     "Não é possível arquivar um evento em andamento.");
         }
 
-        notificarInscritos(evento, igrejaId, usuarioId,
-                "O evento \"" + evento.getTitulo() + "\" foi cancelado.", "/eventos");
+        List<Evento> paraArquivar = List.of(evento);
+        if (evento.getSerie() != null
+                && escopo != com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA) {
+            paraArquivar = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                    evento.getSerie().getId(), evento.getInicioEm());
+            evento.getSerie().setAtiva(false);
+            eventoSerieRepository.save(evento.getSerie());
+        }
 
-        eventoRepository.delete(evento);
-        outboxRegistrador.registrar(
-                TipoEntidadeOutbox.EVENTO,
-                TipoEventoOutbox.REMOVIDO,
-                evento.getId(),
-                igrejaId
-        );
-        log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
+        for (Evento ocorrencia : paraArquivar) {
+            if (ocorrencia.getSituacao() == SituacaoEvento.EM_ANDAMENTO) continue;
+            notificarInscritos(ocorrencia, igrejaId, usuarioId,
+                    "O evento \"" + ocorrencia.getTitulo() + "\" foi cancelado.", "/eventos");
+            eventoRepository.delete(ocorrencia);
+            outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.REMOVIDO,
+                    ocorrencia.getId(), igrejaId);
+        }
+        log.info("Evento(s) arquivado(s). id={}, igreja_id={}, total={}", id, igrejaId, paraArquivar.size());
         evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
@@ -307,6 +336,76 @@ public class EventoService {
                                     com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
                                     igrejaId, usuario.getId(), texto, link));
         }
+    }
+
+    /** Copia os campos editáveis pra toda ocorrência AGENDADO da mesma série — limpa
+     *  divergeDaSerie de todas (edição de série sempre vence uma divergência antiga). */
+    private Evento propagarParaSerie(Evento editado, UUID igrejaId) {
+        List<Evento> futuras = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                editado.getSerie().getId(), editado.getInicioEm());
+        for (Evento ocorrencia : futuras) {
+            if (ocorrencia.getId().equals(editado.getId())) continue;
+            if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO) continue;
+            ocorrencia.setTitulo(editado.getTitulo());
+            ocorrencia.setDescricao(editado.getDescricao());
+            ocorrencia.setLocal(editado.getLocal());
+            ocorrencia.setLocalTexto(editado.getLocalTexto());
+            ocorrencia.setTipo(editado.getTipo());
+            ocorrencia.setResponsavel(editado.getResponsavel());
+            ocorrencia.setRecorteEtario(editado.getRecorteEtario());
+            ocorrencia.setIdadeMin(editado.getIdadeMin());
+            ocorrencia.setIdadeMax(editado.getIdadeMax());
+            ocorrencia.setRestricaoEstadoCivil(editado.getRestricaoEstadoCivil());
+            ocorrencia.setRestricaoSexo(editado.getRestricaoSexo());
+            ocorrencia.setVagas(editado.getVagas());
+            ocorrencia.setPreco(editado.getPreco());
+            ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
+            ocorrencia.setRequerInscricao(editado.isRequerInscricao());
+            ocorrencia.setControlaPresenca(editado.isControlaPresenca());
+            ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());
+            ocorrencia.setDivergeDaSerie(false);
+            eventoRepository.save(ocorrencia);
+        }
+        editado.setDivergeDaSerie(false);
+        return eventoRepository.save(editado);
+    }
+
+    /** "Esta e as seguintes": encerra a série atual na véspera desta ocorrência, cria uma
+     *  série nova (clone da regra) e reponta essa ocorrência + as futuras agendadas pra ela. */
+    private Evento dividirSerie(Evento editado, UUID igrejaId) {
+        var antiga = editado.getSerie();
+        antiga.setDataFim(editado.getInicioEm().toLocalDate().minusDays(1));
+        antiga.setNumeroOcorrencias(null); // CHECK de exclusão mútua no banco
+        eventoSerieRepository.save(antiga);
+
+        var nova = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .igreja(antiga.getIgreja())
+                .frequencia(antiga.getFrequencia())
+                .intervalo(antiga.getIntervalo())
+                .diasSemana(antiga.getDiasSemana())
+                .tipoRecorrenciaMensal(antiga.getTipoRecorrenciaMensal())
+                .criadoPor(antiga.getCriadoPor())
+                .build();
+        nova = eventoSerieRepository.save(nova);
+
+        List<Evento> futuras = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                antiga.getId(), editado.getInicioEm());
+        for (Evento ocorrencia : futuras) {
+            if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO
+                    && !ocorrencia.getId().equals(editado.getId())) continue;
+            ocorrencia.setSerie(nova);
+            ocorrencia.setDivergeDaSerie(false);
+            if (!ocorrencia.getId().equals(editado.getId())) {
+                ocorrencia.setTitulo(editado.getTitulo());
+                ocorrencia.setDescricao(editado.getDescricao());
+                ocorrencia.setLocal(editado.getLocal());
+                ocorrencia.setLocalTexto(editado.getLocalTexto());
+            }
+            eventoRepository.save(ocorrencia);
+        }
+        editado.setSerie(nova);
+        editado.setDivergeDaSerie(false);
+        return eventoRepository.save(editado);
     }
 
     /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem se colocou como responsável já sabe. */
@@ -325,14 +424,25 @@ public class EventoService {
     /** Convite pra todo mundo da igreja dar uma olhada no evento novo — exceto quem cadastrou. */
     private void notificarNovoEvento(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
         List<UUID> usuarioIds = usuarioRepository.findIdsAtivosPorIgreja(igrejaId);
+        String texto = evento.getSerie() != null
+                ? textoLembreteDeSerie(evento)
+                : "Novo evento: \"" + evento.getTitulo() + "\". Dá uma olhada!";
         for (UUID usuarioId : usuarioIds) {
             if (usuarioId.equals(usuarioIdAtor)) continue;
             notificacaoService.criar(
                     com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO,
-                    igrejaId, usuarioId,
-                    "Novo evento: \"" + evento.getTitulo() + "\". Dá uma olhada!",
-                    "/eventos?detalhe=" + evento.getId());
+                    igrejaId, usuarioId, texto, "/eventos?detalhe=" + evento.getId());
         }
+    }
+
+    private static final java.time.format.DateTimeFormatter FORMATADOR_LEMBRETE =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm", new java.util.Locale("pt", "BR"));
+
+    private String textoLembreteDeSerie(Evento evento) {
+        String diaDaSemana = evento.getInicioEm().getDayOfWeek()
+                .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("pt", "BR"));
+        return evento.getTitulo() + " é " + diaDaSemana + ", "
+                + evento.getInicioEm().format(FORMATADOR_LEMBRETE) + ". Vem participar!";
     }
 
     @Transactional(readOnly = true)
@@ -343,8 +453,23 @@ public class EventoService {
     }
 
     @Transactional
-    public void restaurar(UUID id, UUID igrejaId) {
-        int linhas = eventoRepository.restaurarPorId(id, igrejaId);
+    public void restaurar(UUID id, UUID igrejaId,
+                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
+        Evento evento = eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        int linhas;
+        if (evento.getSerie() != null && escopo != com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA) {
+            var serie = evento.getSerie();
+            linhas = escopo == com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE
+                    ? eventoRepository.restaurarPorSerie(serie.getId(), igrejaId)
+                    : eventoRepository.restaurarPorSerieAPartirDe(serie.getId(), igrejaId, evento.getInicioEm());
+            serie.setAtiva(true);
+            eventoSerieRepository.save(serie);
+        } else {
+            linhas = eventoRepository.restaurarPorId(id, igrejaId);
+        }
+
         if (linhas == 0) {
             throw new ResourceNotFoundException("Evento não encontrado.");
         }
@@ -448,6 +573,25 @@ public class EventoService {
         if (responsavelPessoaId == null) return null;
         return pessoaRepository.findByIdAndIgrejaId(responsavelPessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
+    }
+
+    private com.domus.api.modules.evento.serie.EventoSerie criarSerie(
+            com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest data, Igreja igreja, Usuario usuario) {
+        String dias = data.diasSemana() == null || data.diasSemana().isEmpty()
+                ? null
+                : data.diasSemana().stream().map(Enum::name)
+                        .collect(java.util.stream.Collectors.joining(","));
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .igreja(igreja)
+                .frequencia(data.frequencia())
+                .intervalo(data.intervalo() == null ? 1 : data.intervalo())
+                .diasSemana(dias)
+                .tipoRecorrenciaMensal(data.tipoRecorrenciaMensal())
+                .dataFim(data.dataFim())
+                .numeroOcorrencias(data.numeroOcorrencias())
+                .criadoPor(usuario)
+                .build();
+        return eventoSerieRepository.save(serie);
     }
 
     /** Reusa grafia já existente da igreja se a forma normalizada bater — evita "Vigília"/"vigilia" duplicados. */

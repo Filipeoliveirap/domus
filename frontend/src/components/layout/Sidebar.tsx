@@ -93,12 +93,6 @@ export function Sidebar() {
     } catch {
     }
     logout()
-    /*
-     * O queryClient é um singleton de módulo e o logout é navegação SPA (sem reload), então
-     * sem isto o cache SOBREVIVE à troca de usuário: o próximo admin a logar neste navegador
-     * veria, por até 5 minutos (staleTime), os números financeiros da igreja anterior — com
-     * cara de dado legítimo, porque as queryKeys não carregam identidade de tenant.
-     */
     queryClient.clear()
     router.replace('/login')
   }
@@ -120,10 +114,13 @@ export function Sidebar() {
       aria-hidden="true"
     />
     <aside className={`${styles.sidebar} ${navAberta ? styles.sidebarAberta : ''}`}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>DOMUS</h1>
-        <p className={styles.subtitle}>Gestão Eclesiástica</p>
-      </div>
+      <Link href="/inicio" className={styles.header}>
+        <Image src="/images/logo2.png" alt="Domus" width={28} height={47} className={styles.logo} />
+        <span>
+          <h1 className={styles.title}>DOMUS</h1>
+          <p className={styles.subtitle}>Gestão Eclesiástica</p>
+        </span>
+      </Link>
 
       <nav className={styles.nav}>
         {filtrar(navItems).map(renderLink)}

@@ -6,6 +6,7 @@ import { useEventosArquivados } from '@/hooks/evento/useEventosArquivados'
 import { useRestaurarEvento } from '@/hooks/evento/useRestaurarEvento'
 import { useExcluirEventoDefinitivamente } from '@/hooks/evento/useExcluirEventoDefinitivamente'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
+import { ModalEscopoEdicaoEvento } from '@/components/module/eventos/ModalEscopoEdicaoEvento'
 import { DrawerDetalheEvento } from '@/app/(app)/eventos/(lista)/(detalhe)/DrawerDetalheEvento'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -23,6 +24,9 @@ export default function EventosArquivadosPage() {
   const { restaurar, isLoading: restaurando } = useRestaurarEvento()
   const [excluindo, setExcluindo] = useState<EventoArquivadoResponse | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
+  // Evento de série pergunta o alcance (só este/estes e os seguintes/toda a série) antes de
+  // restaurar — evento avulso (serieId null) restaura direto, sem esse passo a mais.
+  const [restaurandoComEscopo, setRestaurandoComEscopo] = useState<EventoArquivadoResponse | null>(null)
 
   if (!podeGerenciar) {
     return <EstadoErro titulo="Sem acesso" mensagem="Só administradores e líderes veem eventos arquivados." />
@@ -63,7 +67,7 @@ export default function EventosArquivadosPage() {
               <button
                 className={styles.botaoRestaurar}
                 disabled={restaurando}
-                onClick={() => restaurar(e.id, e.titulo)}
+                onClick={() => (e.serieId ? setRestaurandoComEscopo(e) : restaurar(e.id, e.titulo))}
               >
                 <RotateCcw size={14} /> Restaurar
               </button>
@@ -77,6 +81,18 @@ export default function EventosArquivadosPage() {
 
       {excluindo && (
         <ModalExcluirDefinitivo evento={excluindo} onClose={() => setExcluindo(null)} />
+      )}
+
+      {restaurandoComEscopo && (
+        <ModalEscopoEdicaoEvento
+          titulo={restaurandoComEscopo.titulo}
+          pergunta="O que você quer restaurar?"
+          onEscolher={(escopo) => {
+            restaurar(restaurandoComEscopo.id, restaurandoComEscopo.titulo, escopo)
+            setRestaurandoComEscopo(null)
+          }}
+          onClose={() => setRestaurandoComEscopo(null)}
+        />
       )}
 
       {detalheId && (

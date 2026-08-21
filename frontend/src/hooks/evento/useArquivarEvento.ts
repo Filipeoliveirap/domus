@@ -4,10 +4,10 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { eventosService } from '@/services/evento.service'
-import type { EventoResponse } from '@/types/evento.type'
+import type { EventoResponse, EscopoEdicaoEvento } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
 
-export function useArquivarEvento(evento: EventoResponse, onClose: () => void) {
+export function useArquivarEvento(evento: EventoResponse, onClose: () => void, escopo?: EscopoEdicaoEvento) {
   const queryClient = useQueryClient()
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -16,7 +16,7 @@ export function useArquivarEvento(evento: EventoResponse, onClose: () => void) {
     setErroGeral(null)
     setIsLoading(true)
     try {
-      await eventosService.arquivar(evento.id)
+      await eventosService.arquivar(evento.id, escopo)
       invalidarCache(queryClient, 'evento')
       notificar.sucesso(`"${evento.titulo}" foi arquivado.`)
       onClose()

@@ -49,6 +49,7 @@ class EventoTipoENormalizacaoTest {
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -75,10 +76,11 @@ class EventoTipoENormalizacaoTest {
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        eventoSerieRepository = mock(com.domus.api.modules.evento.serie.EventoSerieRepository.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
                 pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
-                notificacaoService);
+                notificacaoService, eventoSerieRepository);
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));
@@ -148,35 +150,35 @@ class EventoTipoENormalizacaoTest {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, tipo, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComLocal(UUID localId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 localId, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComAmbos() {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 UUID.randomUUID(), "Chácara", null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComResponsavel(UUID pessoaId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, pessoaId,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComIdades(Integer min, Integer max) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, null,
                 null, min, max, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -279,7 +281,8 @@ class EventoTipoENormalizacaoTest {
         outroUsuario.setPessoa(pessoaDoUsuario(outroUsuarioId));
         when(usuarioRepository.findByIdAndIgrejaId(outroUsuarioId, igrejaId)).thenReturn(Optional.of(outroUsuario));
 
-        service.atualizarEvento(id, requestComTipo("Culto"), igrejaId, outroUsuarioId);
+        service.atualizarEvento(id, requestComTipo("Culto"), igrejaId, outroUsuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").atualizadoPor().id()).isEqualTo(outroUsuarioId);
     }

@@ -211,7 +211,7 @@ class EventoServiceTest {
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
-                eq(usuarioIdInscrito), anyString(), eq("/eventos/" + eventoId));
+                eq(usuarioIdInscrito), anyString(), eq("/eventos?detalhe=" + eventoId));
     }
 
     @Test
@@ -253,7 +253,7 @@ class EventoServiceTest {
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
-                eq(usuarioIdInscrito), anyString(), eq("/eventos/" + eventoId));
+                eq(usuarioIdInscrito), anyString(), eq("/eventos"));
     }
 
     @Test

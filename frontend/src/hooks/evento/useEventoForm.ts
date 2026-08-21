@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { eventoSchema, type EventoFormInput, type EventoFormData } from '@/lib/validators'
 import { eventosService } from '@/services/evento.service'
-import type { EventoRequest, EventoResponse, InscritoImpactado, RecorrenciaRequest, DiaSemana } from '@/types/evento.type'
+import type { EventoRequest, EventoResponse, InscritoImpactado, RecorrenciaRequest, DiaSemana, EscopoEdicaoEvento } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
 
 function montarRecorrencia(data: EventoFormData): RecorrenciaRequest {
@@ -41,6 +41,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const [impactoAfetados, setImpactoAfetados] = useState<InscritoImpactado[] | null>(null)
   const [isVerificandoImpacto, setIsVerificandoImpacto] = useState(false)
   const [payloadPendente, setPayloadPendente] = useState<EventoRequest | null>(null)
+
+  // Evento que pertence a uma série pergunta o alcance (só este/estes e os seguintes/toda a
+  // série) antes de qualquer outra coisa — payload fica pendente até a escolha chegar.
+  const [payloadAguardandoEscopo, setPayloadAguardandoEscopo] = useState<EventoRequest | null>(null)
+  const [escopoEscolhido, setEscopoEscolhido] = useState<EscopoEdicaoEvento>('ESTA')
 
   const form = useAppForm<EventoFormInput, EventoFormData>({
     resolver: zodResolver(eventoSchema),
@@ -127,6 +132,21 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         restricaoSexo: eventoInicial.restricaoSexo,
         fotoId: eventoInicial.fotoId ?? null,
         restritoPropriaIgreja: eventoInicial.restritoPropriaIgreja ?? false,
+        // Recorrência não se edita por aqui (usa o seletor de escopo), mas os campos
+        // precisam estar presentes no reset() mesmo assim — reset() substitui TODOS os
+        // valores do form pelos fornecidos; uma chave ausente aqui vira uma chave AUSENTE
+        // (não apenas undefined) no objeto que o zodResolver recebe, e um bug real do Zod
+        // 4 faz `z.preprocess(...).optional()` rejeitar chave ausente com "expected
+        // nonoptional" mesmo aceitando `undefined` explícito — por isso todo campo tem que
+        // vir default aqui, nunca ficar de fora do objeto.
+        repetir: false,
+        recorrenciaFrequencia: undefined,
+        recorrenciaIntervalo: undefined,
+        recorrenciaDiasSemana: [],
+        recorrenciaTipoMensal: undefined,
+        recorrenciaFimTipo: 'NUNCA',
+        recorrenciaDataFim: undefined,
+        recorrenciaNumeroOcorrencias: undefined,
       })
     }
   }, [eventoInicial, reset])
@@ -134,11 +154,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   // Grava de fato (POST no cadastro, PUT na edição). Isolado do onSubmit porque o PUT
   // pode acontecer em dois momentos: direto (sem impacto) ou só depois da escolha do
   // admin no <ModalImpactoRestricao> — mas o "salvar" em si é sempre o mesmo código.
-  async function salvarEvento(payload: EventoRequest, cancelarNaoElegiveis: boolean) {
+  async function salvarEvento(payload: EventoRequest, cancelarNaoElegiveis: boolean, escopo?: EscopoEdicaoEvento) {
     setIsLoading(true)
     try {
       if (ehEdicao) {
-        await eventosService.atualizar(eventoId!, payload, cancelarNaoElegiveis)
+        await eventosService.atualizar(eventoId!, payload, cancelarNaoElegiveis, escopo)
         invalidarCache(queryClient, 'evento')
         queryClient.invalidateQueries({ queryKey: ['evento', eventoId] })
         notificar.sucesso('Evento atualizado com sucesso!')
@@ -205,26 +225,20 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         recorrencia: (!ehEdicao && data.repetir) ? montarRecorrencia(data) : null,
       }
 
-      // Evento novo nunca tem inscritos — vai direto, sem checar impacto. Na edição,
-      // primeiro pergunta ao backend quem ficaria de fora com esta versão do evento;
-      // só abre o modal se de fato sobrar alguém afetado.
+      // Evento novo nunca tem inscritos — vai direto, sem checar impacto.
       if (!ehEdicao) {
         await salvarEvento(payload, false)
         return
       }
 
-      setIsVerificandoImpacto(true)
-      try {
-        const { afetados } = await eventosService.impactoRestricao(eventoId!, payload)
-        if (afetados.length === 0) {
-          await salvarEvento(payload, false)
-        } else {
-          setPayloadPendente(payload)
-          setImpactoAfetados(afetados)
-        }
-      } finally {
-        setIsVerificandoImpacto(false)
+      // Evento que pertence a uma série pergunta o alcance antes de qualquer outra coisa —
+      // a checagem de impacto (abaixo) só roda depois que o admin escolher o escopo.
+      if (eventoInicial?.serieId) {
+        setPayloadAguardandoEscopo(payload)
+        return
       }
+
+      await verificarImpactoEProsseguir(payload)
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data
@@ -239,11 +253,66 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     }
   }
 
+  // Pergunta ao backend quem ficaria de fora com esta versão do evento; só abre o modal
+  // de impacto se de fato sobrar alguém afetado. Roda depois do escopo (se aplicável),
+  // porque só faz sentido conferir impacto no payload que realmente vai ser gravado.
+  async function verificarImpactoEProsseguir(payload: EventoRequest) {
+    setIsVerificandoImpacto(true)
+    try {
+      const { afetados } = await eventosService.impactoRestricao(eventoId!, payload)
+      if (afetados.length === 0) {
+        await salvarEvento(payload, false, escopoEscolhido)
+      } else {
+        setPayloadPendente(payload)
+        setImpactoAfetados(afetados)
+      }
+    } catch (error: unknown) {
+      if (axios.isAxiosError<ApiError>(error)) {
+        setErroGeral(error.response?.data?.message ?? 'Erro ao salvar evento. Tente novamente.')
+      } else {
+        setErroGeral('Erro ao salvar evento. Tente novamente.')
+      }
+    } finally {
+      setIsVerificandoImpacto(false)
+    }
+  }
+
+  // Escolha do admin no <ModalEscopoEdicaoEvento> (evento de série): guarda o escopo e
+  // segue pro mesmo fluxo de verificação de impacto que evento avulso já usa.
+  async function onEscolherEscopoEdicao(escopo: EscopoEdicaoEvento) {
+    if (!payloadAguardandoEscopo) return
+    setEscopoEscolhido(escopo)
+    const payload = payloadAguardandoEscopo
+    setPayloadAguardandoEscopo(null)
+    setIsVerificandoImpacto(true)
+    try {
+      const { afetados } = await eventosService.impactoRestricao(eventoId!, payload)
+      if (afetados.length === 0) {
+        await salvarEvento(payload, false, escopo)
+      } else {
+        setPayloadPendente(payload)
+        setImpactoAfetados(afetados)
+      }
+    } catch (error: unknown) {
+      if (axios.isAxiosError<ApiError>(error)) {
+        setErroGeral(error.response?.data?.message ?? 'Erro ao salvar evento. Tente novamente.')
+      } else {
+        setErroGeral('Erro ao salvar evento. Tente novamente.')
+      }
+    } finally {
+      setIsVerificandoImpacto(false)
+    }
+  }
+
+  function onFecharEscopoEdicao() {
+    setPayloadAguardandoEscopo(null)
+  }
+
   // Escolha do admin no <ModalImpactoRestricao>: cancelarNaoElegiveis vira o parâmetro
   // do PUT. O payload já foi validado pelo impacto — não recalcula nada, só decide.
   async function onConfirmarImpacto(cancelarNaoElegiveis: boolean) {
     if (!payloadPendente) return
-    await salvarEvento(payloadPendente, cancelarNaoElegiveis)
+    await salvarEvento(payloadPendente, cancelarNaoElegiveis, escopoEscolhido)
     setImpactoAfetados(null)
     setPayloadPendente(null)
   }
@@ -259,5 +328,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   return {
     ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsavelNomeInicial,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    aguardandoEscopoEdicao: !!payloadAguardandoEscopo,
+    onEscolherEscopoEdicao, onFecharEscopoEdicao,
   }
 }

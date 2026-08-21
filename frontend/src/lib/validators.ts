@@ -153,13 +153,19 @@ const eventoSchemaBase = z.object({
   restritoPropriaIgreja: z.boolean().default(false),
 
   repetir: z.boolean().default(false),
-  recorrenciaFrequencia: z.enum(['DIARIA', 'SEMANAL', 'MENSAL']).optional(),
+  recorrenciaFrequencia: z.enum(['DIARIA', 'SEMANAL', 'MENSAL'], {
+    message: 'Escolha se repete por dia, semana ou mês.',
+  }).optional(),
   recorrenciaIntervalo: opcionalNumero(z.coerce.number().int().positive('O intervalo deve ser maior que zero.')),
   recorrenciaDiasSemana: z.array(z.string()).default([]),
-  recorrenciaTipoMensal: z.enum(['DIA_FIXO', 'DIA_DA_SEMANA']).optional(),
-  recorrenciaFimTipo: z.enum(['NUNCA', 'DATA', 'CONTAGEM']).default('NUNCA'),
-  recorrenciaDataFim: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
-  recorrenciaNumeroOcorrencias: opcionalNumero(z.coerce.number().int().positive('Deve ser maior que zero.')),
+  recorrenciaTipoMensal: z.enum(['DIA_FIXO', 'DIA_DA_SEMANA'], {
+    message: 'Escolha como a repetição mensal se repete.',
+  }).optional(),
+  recorrenciaFimTipo: z.enum(['NUNCA', 'DATA', 'CONTAGEM'], {
+    message: 'Escolha quando a repetição termina.',
+  }).default('NUNCA'),
+  recorrenciaDataFim: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Escolha a data final.')),
+  recorrenciaNumeroOcorrencias: opcionalNumero(z.coerce.number().int().positive('Informe quantas vezes repete.')),
 })
 
 export const eventoSchema = eventoSchemaBase.refine(
@@ -179,10 +185,22 @@ export const eventoSchema = eventoSchemaBase.refine(
   { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
 ).refine(
   (data) => !data.repetir || !!data.recorrenciaFrequencia,
-  { message: 'Escolha a frequência da repetição.', path: ['recorrenciaFrequencia'] }
+  { message: 'Escolha se repete por dia, semana ou mês.', path: ['recorrenciaFrequencia'] }
+).refine(
+  (data) => !data.repetir || (data.recorrenciaIntervalo != null && data.recorrenciaIntervalo >= 1),
+  { message: 'Informe a cada quantos dias/semanas/meses repete.', path: ['recorrenciaIntervalo'] }
 ).refine(
   (data) => !data.repetir || data.recorrenciaFrequencia !== 'SEMANAL' || data.recorrenciaDiasSemana.length > 0,
   { message: 'Escolha pelo menos um dia da semana.', path: ['recorrenciaDiasSemana'] }
+).refine(
+  (data) => !data.repetir || data.recorrenciaFrequencia !== 'MENSAL' || !!data.recorrenciaTipoMensal,
+  { message: 'Escolha como a repetição mensal se repete.', path: ['recorrenciaTipoMensal'] }
+).refine(
+  (data) => !data.repetir || data.recorrenciaFimTipo !== 'DATA' || !!data.recorrenciaDataFim,
+  { message: 'Escolha a data final.', path: ['recorrenciaDataFim'] }
+).refine(
+  (data) => !data.repetir || data.recorrenciaFimTipo !== 'CONTAGEM' || !!data.recorrenciaNumeroOcorrencias,
+  { message: 'Informe quantas vezes repete.', path: ['recorrenciaNumeroOcorrencias'] }
 )
 
 export const categoriaSchema = z.object({

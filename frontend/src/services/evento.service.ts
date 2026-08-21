@@ -46,8 +46,8 @@ export const eventosService = {
   listarArquivados: (): Promise<EventoArquivadoResponse[]> =>
     api.get<EventoArquivadoResponse[]>(Endpoints.eventos.ARQUIVADOS).then(res => res.data),
 
-  restaurar: (id: string): Promise<void> =>
-    api.post(Endpoints.eventos.RESTAURAR(id)).then(() => undefined),
+  restaurar: (id: string, escopo?: EscopoEdicaoEvento): Promise<void> =>
+    api.post(Endpoints.eventos.RESTAURAR(id), null, { params: { escopo } }).then(() => undefined),
 
   excluirDefinitivo: (id: string): Promise<void> =>
     api.delete(Endpoints.eventos.DEFINITIVO(id)).then(() => undefined),

@@ -10,11 +10,12 @@ interface Props {
   titulo: string
   onEscolher: (escopo: EscopoEdicaoEvento) => void
   onClose: () => void
+  pergunta?: string
 }
 
 /** Esta ocorrência faz parte de uma série recorrente — pergunta o alcance antes de
- *  editar/arquivar, igual qualquer calendário maduro (Google Calendar) já resolve. */
-export function ModalEscopoEdicaoEvento({ titulo, onEscolher, onClose }: Props) {
+ *  editar/arquivar/restaurar, igual qualquer calendário maduro (Google Calendar) já resolve. */
+export function ModalEscopoEdicaoEvento({ titulo, onEscolher, onClose, pergunta = 'O que você quer alterar?' }: Props) {
   const primeiraRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export function ModalEscopoEdicaoEvento({ titulo, onEscolher, onClose }: Props) 
         </div>
 
         <div className={baseStyles.corpo}>
-          <p>O que você quer alterar?</p>
+          <p>{pergunta}</p>
         </div>
 
         <div className={styles.opcoes}>

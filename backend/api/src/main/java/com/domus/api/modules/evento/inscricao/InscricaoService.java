@@ -53,6 +53,7 @@ public class InscricaoService {
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     private final com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
+    private final com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -342,11 +343,16 @@ public class InscricaoService {
                 inscricaoId, convidados, usuarioId, igrejaId);
     }
 
-    /** Reusado pelo cancelamento manual e pela remoção por restrição — convidados não voltam numa reinscrição. */
+    /** Reusado pelo cancelamento manual e pela remoção por restrição — convidados não voltam
+     *  numa reinscrição, e as respostas de campo personalizado também não: a linha de
+     *  inscrição é reaproveitada (UNIQUE evento+pessoa), então sem isso a reinscrição
+     *  herdaria resposta velha e pareceria "já respondido" sem a pessoa ter respondido nada
+     *  desta vez. */
     private void cancelarInterno(InscricaoEvento inscricao) {
         inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
+        respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
     }
 
     /**

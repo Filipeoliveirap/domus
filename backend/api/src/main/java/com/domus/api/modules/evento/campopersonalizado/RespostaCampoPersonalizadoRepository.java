@@ -12,4 +12,6 @@ public interface RespostaCampoPersonalizadoRepository extends JpaRepository<Resp
 
     Optional<RespostaCampoPersonalizado> findByCampoIdAndInscricaoIdAndAcompanhanteId(
             UUID campoId, UUID inscricaoId, UUID acompanhanteId);
+
+    void deleteByInscricaoId(UUID inscricaoId);
 }

@@ -106,7 +106,8 @@ class EventoArquivamentoNotificaInscritosTest implements PostgresTestContainerSu
         entityManager.clear();
 
         // O bug real: isto lançava TransientObjectException antes da correção.
-        assertThatCode(() -> eventoService.arquivarEvento(eventoId, igrejaId, usuarioAdmin.getId()))
+        assertThatCode(() -> eventoService.arquivarEvento(eventoId, igrejaId, usuarioAdmin.getId(),
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA))
                 .doesNotThrowAnyException();
 
         var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(

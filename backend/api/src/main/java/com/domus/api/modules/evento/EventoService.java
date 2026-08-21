@@ -290,7 +290,8 @@ public class EventoService {
     }
 
     @Transactional
-    public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId) {
+    public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId,
+                               com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         log.info("Arquivando evento. id={}, igreja_id={}", id, igrejaId);
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -302,17 +303,24 @@ public class EventoService {
                     "Não é possível arquivar um evento em andamento.");
         }
 
-        notificarInscritos(evento, igrejaId, usuarioId,
-                "O evento \"" + evento.getTitulo() + "\" foi cancelado.", "/eventos");
+        List<Evento> paraArquivar = List.of(evento);
+        if (evento.getSerie() != null
+                && escopo != com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA) {
+            paraArquivar = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                    evento.getSerie().getId(), evento.getInicioEm());
+            evento.getSerie().setAtiva(false);
+            eventoSerieRepository.save(evento.getSerie());
+        }
 
-        eventoRepository.delete(evento);
-        outboxRegistrador.registrar(
-                TipoEntidadeOutbox.EVENTO,
-                TipoEventoOutbox.REMOVIDO,
-                evento.getId(),
-                igrejaId
-        );
-        log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
+        for (Evento ocorrencia : paraArquivar) {
+            if (ocorrencia.getSituacao() == SituacaoEvento.EM_ANDAMENTO) continue;
+            notificarInscritos(ocorrencia, igrejaId, usuarioId,
+                    "O evento \"" + ocorrencia.getTitulo() + "\" foi cancelado.", "/eventos");
+            eventoRepository.delete(ocorrencia);
+            outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.REMOVIDO,
+                    ocorrencia.getId(), igrejaId);
+        }
+        log.info("Evento(s) arquivado(s). id={}, igreja_id={}, total={}", id, igrejaId, paraArquivar.size());
         evictarCacheDeEventosDaFamilia(igrejaId);
     }
 

@@ -45,7 +45,7 @@ public class IgrejaController {
                         response.igrejaId(), response.igrejaNome(), null,
                         null, null, null, java.util.List.of(),
                         termoAceiteService.precisaAceitar(response.id()),
-                        termoAceiteService.dataUltimoAceite(response.id())));
+                        termoAceiteService.dataUltimoAceite(response.id()), null));
     }
 
     // GET /igrejas/{id} foi removido: vazava dados de outra igreja sem checar tenant. Use /igrejas/minha (tenant vem do JWT).

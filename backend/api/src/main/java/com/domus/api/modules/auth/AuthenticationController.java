@@ -62,7 +62,7 @@ public class AuthenticationController {
                 .body(new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
                         null, null, null, null, java.util.List.of(),
                         termoAceiteService.precisaAceitar(r.id()),
-                        termoAceiteService.dataUltimoAceite(r.id())));
+                        termoAceiteService.dataUltimoAceite(r.id()), null));
     }
 
     // O principal é carregado no SecurityFilter (antes do open-in-view): ler campo LAZY lança
@@ -127,6 +127,6 @@ public class AuthenticationController {
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
         return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
                 r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId(), r.capacidadesExtras(),
-                termoAceiteService.precisaAceitar(r.id()), termoAceiteService.dataUltimoAceite(r.id()));
+                termoAceiteService.precisaAceitar(r.id()), termoAceiteService.dataUltimoAceite(r.id()), null);
     }
 }

@@ -23,6 +23,7 @@ import { podeVerFinanceiro } from '@/lib/permissoes'
 import { useConsolidado, useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { VisaoGeralCongregacoes } from './VisaoGeralCongregacoes'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
@@ -47,11 +48,6 @@ const GRUPOS_FILTRO: GrupoFiltro[] = [
 ]
 
 type Aba = 'MINHA_IGREJA' | 'CONGREGACOES'
-
-const ABAS: { valor: Aba; rotulo: string }[] = [
-  { valor: 'MINHA_IGREJA', rotulo: 'Minha igreja' },
-  { valor: 'CONGREGACOES', rotulo: 'Unidades' },
-]
 
 const idAba = (valor: Aba) => `aba-relatorios-${valor}`
 const ID_PAINEL_ABAS = 'painel-relatorios'
@@ -79,6 +75,12 @@ export default function RelatoriosPage() {
   // Guarda id E nome: derivar o nome de `consolidado.data` fazia o título sumir durante o
   // refetch (trocar o período), deixando os valores financeiros na tela sem dizer de quem são.
   const [igrejaSelecionada, setIgrejaSelecionada] = useState<{ id: string; nome: string } | null>(null)
+  const { congregacao } = useRotulos()
+
+  const ABAS: { valor: Aba; rotulo: string }[] = [
+    { valor: 'MINHA_IGREJA', rotulo: 'Minha igreja' },
+    { valor: 'CONGREGACOES', rotulo: congregacao.plural },
+  ]
 
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)

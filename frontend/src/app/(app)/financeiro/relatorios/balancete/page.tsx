@@ -9,6 +9,7 @@ import { useBalanceteAnual } from '@/hooks/financeiro/balancete/useBalanceteAnua
 import { useBalanceteFamilia } from '@/hooks/financeiro/balancete/useBalanceteFamilia'
 import { BalanceteTabela } from './BalanceteTabela'
 import { BalanceteCardsMes } from './BalanceteCardsMes'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './balancete.module.css'
 
 type Aba = 'MINHA_IGREJA' | 'CONSOLIDADO' | 'POR_CONGREGACAO'
@@ -27,6 +28,7 @@ export default function BalanceteAnualPage() {
 
   const balancetePropria = useBalanceteAnual(ano, !!autorizado && aba === 'MINHA_IGREJA')
   const balanceteFamilia = useBalanceteFamilia(ano, !!autorizado && ehSede && aba !== 'MINHA_IGREJA')
+  const { congregacao } = useRotulos()
 
   if (!hidratado) return null
   if (!autorizado) return <AcessoRestrito />
@@ -51,7 +53,7 @@ export default function BalanceteAnualPage() {
             Consolidado
           </button>
           <button role="tab" aria-selected={aba === 'POR_CONGREGACAO'} className={aba === 'POR_CONGREGACAO' ? styles.abaAtiva : styles.aba} onClick={() => setAba('POR_CONGREGACAO')}>
-            Por Congregação
+            Por {congregacao.singular}
           </button>
         </div>
       )}

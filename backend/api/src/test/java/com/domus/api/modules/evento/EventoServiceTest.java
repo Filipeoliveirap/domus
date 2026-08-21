@@ -274,6 +274,32 @@ class EventoServiceTest {
     }
 
     @Test
+    void atualizarEventoComEscopoSerieAtualizaTodasAsFuturasAgendadas() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraOcorrenciaId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serie).build();
+        Evento outraFutura = Evento.builder()
+                .id(outraOcorrenciaId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .serie(serie).divergeDaSerie(true).build(); // divergência antiga — deve ser limpa
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+                .thenReturn(List.of(existente, outraFutura));
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(outraFutura.getTitulo()).isEqualTo(req.titulo());
+        assertThat(outraFutura.isDivergeDaSerie()).isFalse();
+    }
+
+    @Test
     void atualizarEventoNotificaInscritosQuandoDataMuda() {
         UUID eventoId = UUID.randomUUID();
         UUID pessoaIdInscrito = UUID.randomUUID();

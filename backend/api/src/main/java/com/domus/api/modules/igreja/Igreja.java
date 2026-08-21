@@ -48,6 +48,36 @@ public class Igreja {
     @Column(name = "sigla", length = 20)
     private String sigla;
 
+    @Column(name = "ministerio_nome_singular", length = 40)
+    private String ministerioNomeSingular;
+
+    @Column(name = "ministerio_nome_plural", length = 40)
+    private String ministerioNomePlural;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ministerio_genero", length = 9)
+    private GeneroGramatical ministerioGenero;
+
+    @Column(name = "congregacao_nome_singular", length = 40)
+    private String congregacaoNomeSingular;
+
+    @Column(name = "congregacao_nome_plural", length = 40)
+    private String congregacaoNomePlural;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "congregacao_genero", length = 9)
+    private GeneroGramatical congregacaoGenero;
+
+    @Column(name = "celula_nome_singular", length = 40)
+    private String celulaNomeSingular;
+
+    @Column(name = "celula_nome_plural", length = 40)
+    private String celulaNomePlural;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "celula_genero", length = 9)
+    private GeneroGramatical celulaGenero;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "logo_foto_id")
     private com.domus.api.modules.foto.Foto logoFoto;

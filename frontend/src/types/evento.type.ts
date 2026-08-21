@@ -13,6 +13,7 @@ export interface EventoArquivadoResponse {
   tipo: string | null
   temVinculo: boolean
   totalInscritos: number
+  serieId: string | null
 }
 
 export interface EventoLocalInfo {

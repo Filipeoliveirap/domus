@@ -62,6 +62,8 @@ export function EventoForm(props: EventoFormProps) {
   const recorrenciaFrequencia = watch('recorrenciaFrequencia')
   const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
   const recorrenciaFimTipo = watch('recorrenciaFimTipo')
+  const recorrenciaIntervaloValor = Number(watch('recorrenciaIntervalo')) || 1
+  const noPlural = recorrenciaIntervaloValor !== 1
   const requerInscricao = watch('requerInscricao')
   const tipoInscricao = watch('tipoInscricao')
   const exclusivoMembros = watch('exclusivoMembros')
@@ -248,19 +250,34 @@ export function EventoForm(props: EventoFormProps) {
 
                 {repetir && (
                   <>
-                    <Select id="recorrencia-frequencia" label="FREQUÊNCIA" placeholder="Selecione"
-                      options={[
-                        { value: 'DIARIA', label: 'Diária' },
-                        { value: 'SEMANAL', label: 'Semanal' },
-                        { value: 'MENSAL', label: 'Mensal' },
-                      ]}
-                      error={errors.recorrenciaFrequencia?.message}
-                      {...register('recorrenciaFrequencia')} />
-
-                    <Input id="recorrencia-intervalo" label="A CADA (INTERVALO)" type="number" min={1}
-                      placeholder="1"
-                      error={errors.recorrenciaIntervalo?.message}
-                      {...register('recorrenciaIntervalo')} />
+                    <div>
+                      <span className={styles.labelData}>REPETE A CADA</span>
+                      <div className={styles.linhaRecorrencia}>
+                        <Input id="recorrencia-intervalo" type="number" min={1}
+                          placeholder="1"
+                          aria-label="Intervalo de repetição, em número"
+                          error={errors.recorrenciaIntervalo?.message}
+                          {...register('recorrenciaIntervalo')} />
+                        <Select id="recorrencia-frequencia" placeholder="dia, semana ou mês"
+                          aria-label="Unidade de repetição: dia, semana ou mês"
+                          options={[
+                            { value: 'DIARIA', label: noPlural ? 'dias' : 'dia' },
+                            { value: 'SEMANAL', label: noPlural ? 'semanas' : 'semana' },
+                            { value: 'MENSAL', label: noPlural ? 'meses' : 'mês' },
+                          ]}
+                          error={errors.recorrenciaFrequencia?.message}
+                          {...register('recorrenciaFrequencia')} />
+                      </div>
+                      <span className={styles.exemploRecorrencia}>
+                        {recorrenciaFrequencia
+                          ? `Ex.: repete a cada ${recorrenciaIntervaloValor} ${
+                              recorrenciaFrequencia === 'DIARIA' ? (noPlural ? 'dias' : 'dia')
+                                : recorrenciaFrequencia === 'SEMANAL' ? (noPlural ? 'semanas' : 'semana')
+                                : (noPlural ? 'meses' : 'mês')
+                            }.`
+                          : 'Ex.: a cada 1 semana repete toda semana; a cada 2 semanas, uma sim uma não.'}
+                      </span>
+                    </div>
 
                     {recorrenciaFrequencia === 'SEMANAL' && (
                       <div>
@@ -307,6 +324,7 @@ export function EventoForm(props: EventoFormProps) {
                         { value: 'DATA', label: 'Em uma data' },
                         { value: 'CONTAGEM', label: 'Depois de um número de vezes' },
                       ]}
+                      error={errors.recorrenciaFimTipo?.message}
                       {...register('recorrenciaFimTipo')} />
 
                     {recorrenciaFimTipo === 'DATA' && (

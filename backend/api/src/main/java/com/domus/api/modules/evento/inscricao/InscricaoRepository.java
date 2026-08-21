@@ -26,6 +26,8 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     Optional<InscricaoEvento> findByEventoIdAndPessoaId(UUID eventoId, UUID pessoaId);
 
+    List<InscricaoEvento> findByEventoIdAndStatus(UUID eventoId, StatusInscricao status);
+
     /** Nativa: JPQL aqui herda o @SQLRestriction de Evento e some com evento arquivado. */
     @Query(value = "SELECT * FROM inscricao_evento WHERE evento_id = :eventoId", nativeQuery = true)
     List<InscricaoEvento> findByEventoId(@Param("eventoId") UUID eventoId);

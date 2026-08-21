@@ -64,6 +64,7 @@ public class EventoService {
     private final LocalEventoRepository localEventoRepository;
     private final UsuarioRepository usuarioRepository;
     private final FamiliaIgrejaService familiaIgrejaService;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Cacheable(
             value = "eventos",
@@ -182,6 +183,10 @@ public class EventoService {
         Usuario usuario = usuarioRepository.findByIdAndIgrejaId(usuarioId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
+        java.time.LocalDateTime inicioAntigo = evento.getInicioEm();
+        UUID localIdAntigo = evento.getLocal() != null ? evento.getLocal().getId() : null;
+        String localTextoAntigo = evento.getLocalTexto();
+
         evento.setTitulo(TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
         evento.setInicioEm(data.inicioEm());
@@ -223,6 +228,13 @@ public class EventoService {
 
         Evento salvo = eventoRepository.save(evento);
 
+        boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
+                || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
+                || !java.util.Objects.equals(localTextoAntigo, salvo.getLocalTexto());
+        if (dataOuLocalMudou) {
+            notificarInscritos(salvo, igrejaId, "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.");
+        }
+
         // Remove a foto antiga só depois que o evento já aponta para a nova.
         boolean fotoMudou = !java.util.Objects.equals(
                 fotoAntiga == null ? null : fotoAntiga.getId(),
@@ -259,6 +271,8 @@ public class EventoService {
                     "Não é possível arquivar um evento em andamento.");
         }
 
+        notificarInscritos(evento, igrejaId, "O evento \"" + evento.getTitulo() + "\" foi cancelado.");
+
         eventoRepository.delete(evento);
         outboxRegistrador.registrar(
                 TipoEntidadeOutbox.EVENTO,
@@ -268,6 +282,17 @@ public class EventoService {
         );
         log.info("Evento arquivado. id={}, igreja_id={}", id, igrejaId);
         evictarCacheDeEventosDaFamilia(igrejaId);
+    }
+
+    private void notificarInscritos(Evento evento, UUID igrejaId, String texto) {
+        List<com.domus.api.modules.evento.inscricao.InscricaoEvento> inscricoes = inscricaoRepository
+                .findByEventoIdAndStatus(evento.getId(), com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA);
+        for (var inscricao : inscricoes) {
+            usuarioRepository.findByPessoaId(inscricao.getPessoa().getId()).ifPresent(usuario ->
+                    notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
+                            igrejaId, usuario.getId(), texto, "/eventos/" + evento.getId()));
+        }
     }
 
     @Transactional(readOnly = true)

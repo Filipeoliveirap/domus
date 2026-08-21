@@ -51,6 +51,7 @@ public class InscricaoService {
     private final UsuarioRepository usuarioRepository;
     private final ElegibilidadeService elegibilidadeService;
     private final FamiliaIgrejaService familiaIgrejaService;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -95,6 +96,16 @@ public class InscricaoService {
         }
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
+
+        if (evento.getResponsavel() != null && !evento.getResponsavel().getId().equals(pessoaId)) {
+            usuarioRepository.findByPessoaId(evento.getResponsavel().getId()).ifPresent(usuario ->
+                    notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL,
+                            igrejaId, usuario.getId(),
+                            membro.getNome() + " se inscreveu em " + evento.getTitulo() + ".",
+                            "/eventos/" + eventoId));
+        }
+
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
                 eventoId, pessoaId, inscritoPorOuNull, igrejaId);
         return MinhaInscricaoResponse.from(salva);

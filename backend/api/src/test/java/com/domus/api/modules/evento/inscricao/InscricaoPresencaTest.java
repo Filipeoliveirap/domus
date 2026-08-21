@@ -30,6 +30,7 @@ class InscricaoPresencaTest {
     PessoaRepository pessoaRepository;
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -47,9 +48,10 @@ class InscricaoPresencaTest {
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(List.of());
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService);
+                familiaIgrejaService, notificacaoService);
     }
 
     private Igreja igreja() {

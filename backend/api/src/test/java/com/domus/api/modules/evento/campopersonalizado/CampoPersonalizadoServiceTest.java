@@ -90,4 +90,99 @@ class CampoPersonalizadoServiceTest {
         assertThatThrownBy(() -> service.salvar(eventoId, igrejaId, List.of()))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test
+    void respondeComTodosObrigatoriosPreenchidosSalvaAsRespostas() {
+        UUID inscricaoId = UUID.randomUUID();
+        UUID pessoaId = UUID.randomUUID();
+        UUID campoObrigatorioId = UUID.randomUUID();
+
+        var pessoa = new com.domus.api.modules.pessoa.Pessoa();
+        pessoa.setId(pessoaId);
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).pessoa(pessoa).build();
+
+        var campoObrigatorio = CampoPersonalizadoEvento.builder()
+                .id(campoObrigatorioId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Restrição alimentar")
+                .tipo(TipoCampoPersonalizado.TEXTO_CURTO).obrigatorio(true).build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(List.of(campoObrigatorio));
+        when(respostaRepository.findByCampoIdAndInscricaoIdAndAcompanhanteId(campoObrigatorioId, inscricaoId, null))
+                .thenReturn(Optional.empty());
+
+        service.responder(inscricaoId, null,
+                List.of(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest(campoObrigatorioId, "Sem lactose")),
+                igrejaId, pessoaId, "ACESSO_COMUM");
+
+        verify(respostaRepository).save(any());
+    }
+
+    @Test
+    void respondeSemPreencherObrigatorioLancaExcecao() {
+        UUID inscricaoId = UUID.randomUUID();
+        UUID pessoaId = UUID.randomUUID();
+        UUID campoObrigatorioId = UUID.randomUUID();
+
+        var pessoa = new com.domus.api.modules.pessoa.Pessoa();
+        pessoa.setId(pessoaId);
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).pessoa(pessoa).build();
+
+        var campoObrigatorio = CampoPersonalizadoEvento.builder()
+                .id(campoObrigatorioId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Restrição alimentar")
+                .tipo(TipoCampoPersonalizado.TEXTO_CURTO).obrigatorio(true).build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(List.of(campoObrigatorio));
+
+        assertThatThrownBy(() -> service.responder(inscricaoId, null, List.of(), igrejaId, pessoaId, "ACESSO_COMUM"))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
+
+        verify(respostaRepository, never()).save(any());
+    }
+
+    @Test
+    void terceiroSemGerenciarNaoPodeResponderPorOutraPessoa() {
+        UUID inscricaoId = UUID.randomUUID();
+        UUID donoDaInscricaoId = UUID.randomUUID();
+        UUID quemTaTentandoId = UUID.randomUUID();
+
+        var pessoa = new com.domus.api.modules.pessoa.Pessoa();
+        pessoa.setId(donoDaInscricaoId);
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).pessoa(pessoa).build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() -> service.responder(inscricaoId, null, List.of(), igrejaId, quemTaTentandoId, "ACESSO_COMUM"))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
+    }
+
+    @Test
+    void gestorPodeResponderPorQualquerPessoa() {
+        UUID inscricaoId = UUID.randomUUID();
+        UUID donoDaInscricaoId = UUID.randomUUID();
+        UUID gestorId = UUID.randomUUID();
+
+        var pessoa = new com.domus.api.modules.pessoa.Pessoa();
+        pessoa.setId(donoDaInscricaoId);
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).pessoa(pessoa).build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of());
+
+        service.responder(inscricaoId, null, List.of(), igrejaId, gestorId, "LIDER");
+
+        // Não lança — chegou até o fim sem exceção de autorização.
+    }
 }

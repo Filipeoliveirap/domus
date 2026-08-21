@@ -6,6 +6,7 @@ import { Bell } from 'lucide-react'
 import { useContagemNaoLidas } from '@/hooks/notificacoes/useContagemNaoLidas'
 import { useListaNotificacoes } from '@/hooks/notificacoes/useListaNotificacoes'
 import { useMarcarNotificacaoLida, useMarcarTodasNotificacoesLidas } from '@/hooks/notificacoes/useMarcarNotificacaoLida'
+import { useNotificacoesSSE } from '@/hooks/notificacoes/useNotificacoesSSE'
 import type { NotificacaoCentral } from '@/types/notificacaoCentral.type'
 import styles from './SinoNotificacoes.module.css'
 
@@ -13,6 +14,8 @@ export function SinoNotificacoes() {
   const [aberto, setAberto] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  useNotificacoesSSE()
 
   const { data: totalNaoLidas } = useContagemNaoLidas()
   const { data: pagina, isLoading } = useListaNotificacoes(aberto)

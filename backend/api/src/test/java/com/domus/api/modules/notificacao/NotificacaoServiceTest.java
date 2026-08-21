@@ -24,6 +24,7 @@ class NotificacaoServiceTest {
     NotificacaoRepository notificacaoRepository;
     IgrejaRepository igrejaRepository;
     UsuarioRepository usuarioRepository;
+    NotificacaoSseRegistry sseRegistry;
     NotificacaoService service;
 
     @BeforeEach
@@ -31,7 +32,8 @@ class NotificacaoServiceTest {
         notificacaoRepository = mock(NotificacaoRepository.class);
         igrejaRepository = mock(IgrejaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
-        service = new NotificacaoService(notificacaoRepository, igrejaRepository, usuarioRepository);
+        sseRegistry = mock(NotificacaoSseRegistry.class);
+        service = new NotificacaoService(notificacaoRepository, igrejaRepository, usuarioRepository, sseRegistry);
     }
 
     @Test
@@ -52,6 +54,7 @@ class NotificacaoServiceTest {
                         && !n.isLida()
                         && n.getIgreja() == igreja
                         && n.getUsuarioDestinatario() == usuario));
+        verify(sseRegistry).notificar(usuarioId);
     }
 
     @Test

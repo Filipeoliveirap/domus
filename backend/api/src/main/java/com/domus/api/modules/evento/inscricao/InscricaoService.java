@@ -103,7 +103,7 @@ public class InscricaoService {
                             com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL,
                             igrejaId, usuario.getId(),
                             membro.getNome() + " se inscreveu em " + evento.getTitulo() + ".",
-                            "/eventos/" + eventoId));
+                            "/eventos/" + eventoId + "/inscritos"));
         }
 
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",

@@ -1,8 +1,9 @@
 .modalLargo { max-width: 480px; width: 100%; }
 .corpoScroll { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
-.aviso { font-size: var(--font-size-sm); color: var(--color-warning); margin: 0; }
 .campo { display: flex; flex-direction: column; gap: 6px; }
+.erroCampo { font-size: var(--font-size-xs); color: var(--color-danger); }
+.comErro { border-color: var(--color-danger) !important; }
 .label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); display: block; margin-bottom: 4px; }
 .asterisco { color: var(--color-danger); }
 
@@ -25,3 +26,5 @@
 }
 
 .erro { font-size: var(--font-size-sm); color: var(--color-danger); margin: 0; }
+
+.segmentado.comErro .segmentoBtn { border-color: var(--color-danger); }

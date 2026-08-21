@@ -35,11 +35,14 @@ import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 interface DrawerDetalheEventoProps {
   eventoId: string
   onClose: () => void
+  /** Veio do selo de pendência clicado no card da listagem — abre o drawer já com o modal
+   *  de resposta de campos personalizados aberto. */
+  abrirPendenciaAoMontar?: boolean
 }
 
 const MAX_AVATARES = 3
 
-export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoProps) {
+export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar = false }: DrawerDetalheEventoProps) {
   const { data: evento, isPending, isError, refetch } = useEvento(eventoId)
   const role = useAuthStore((s) => s.role)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
@@ -353,7 +356,7 @@ export function DrawerDetalheEvento({ eventoId, onClose }: DrawerDetalheEventoPr
               <RespostasCamposPersonalizados
                 eventoId={evento.id}
                 inscricaoId={minha.id}
-                abrirAutomaticamente={acabouDeInscrever}
+                abrirAutomaticamente={acabouDeInscrever || abrirPendenciaAoMontar}
               />
             )}
 

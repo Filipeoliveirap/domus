@@ -371,11 +371,17 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
 
 Dois agentes revisaram back e front. 9 dos 11 achados foram corrigidos na hora. Ficaram:
 
-- **Focus trap no `ModalConfirmacaoCritica`.** `Esc` e clique fora fecham, mas `Tab` escapa do
-  diálogo para o conteúdo de fundo. Acessibilidade, não segurança.
-- **Semântica ARIA das abas em `/financeiro/relatorios`.** Lá são abas de verdade e faltam
-  `aria-controls` + `role="tabpanel"` + navegação por setas. (Em `/configuracoes` já foi
-  corrigido: eram links de navegação e viraram `aria-current="page"`.)
+- ~~**Focus trap no `ModalConfirmacaoCritica`.**~~ **RESOLVIDO** (2026-08-20): `Tab`/`Shift+Tab`
+  agora ficam presos nos elementos focáveis do `formRef` (mesmo padrão de outros diálogos),
+  excluindo os desabilitados — testado ao vivo (`Arquivar categoria` desabilitado até digitar
+  a confirmação: o ciclo vai só entre o input e "Cancelar", nunca escapa pro fundo).
+- ~~**Semântica ARIA das abas em `/financeiro/relatorios`.**~~ **RESOLVIDO** (2026-08-20):
+  `role="tab"`/`aria-selected`/`aria-controls` nos botões, `role="tabpanel"` +
+  `aria-labelledby` envolvendo o conteúdo que muda com a aba, e navegação por
+  `ArrowLeft`/`ArrowRight`/`Home`/`End` (move o foco **e** troca a aba — testado ao vivo:
+  seta direita em "Minha igreja" move o foco pro botão "Unidades" e troca o painel).
+  (Em `/configuracoes` já tinha sido corrigido antes: eram links de navegação e viraram
+  `aria-current="page"`.)
 - ~~**`CascadeType.ALL` + `orphanRemoval` nas 5 coleções de `Igreja`.**~~ **RESOLVIDO**: as
   coleções foram removidas de `Igreja.java` (ver item equivalente mais acima nesta lista).
 - **Trigger e lock cobrem a regra dos 2 níveis, mas por caminhos diferentes.** O lock

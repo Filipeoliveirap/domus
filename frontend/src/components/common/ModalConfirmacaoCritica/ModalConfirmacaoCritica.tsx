@@ -43,6 +43,7 @@ export function ModalConfirmacaoCritica({
 }: Props) {
   const [digitado, setDigitado] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const inputId = useId()
 
   // Compara ignorando acento e caixa ("retiro de jovens" bate com "Retiro de Jovens") —
@@ -58,7 +59,28 @@ export function ModalConfirmacaoCritica({
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) onClose()
+      if (e.key === 'Escape' && !isLoading) {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !formRef.current) return
+
+      // Tab escaparia do diálogo pro conteúdo de fundo sem isto — prende o foco nos elementos focáveis do modal.
+      const focaveis = formRef.current.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), [href], select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focaveis.length === 0) return
+
+      const primeiro = focaveis[0]
+      const ultimo = focaveis[focaveis.length - 1]
+
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault()
+        ultimo.focus()
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault()
+        primeiro.focus()
+      }
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
@@ -72,6 +94,7 @@ export function ModalConfirmacaoCritica({
   return (
     <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
       <form
+        ref={formRef}
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={aoEnviar}

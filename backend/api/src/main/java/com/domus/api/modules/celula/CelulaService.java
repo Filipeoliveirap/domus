@@ -41,6 +41,7 @@ public class CelulaService {
     private final VisitanteRepository visitanteRepository;
     private final FotoService fotoService;
     private final OutboxRegistrador outboxRegistrador;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional(readOnly = true)
     public List<CelulaResponse> listar(UUID igrejaId, UUID pessoaLogadaId) {
@@ -191,7 +192,8 @@ public class CelulaService {
         exigirAdminOuLider(celulaId, atorPessoaId, isAdmin);
 
         if (data.pessoaId() != null) {
-            adicionarPessoa(celula, data.pessoaId(), igrejaId, usuarioId);
+            Pessoa pessoa = adicionarPessoa(celula, data.pessoaId(), igrejaId, usuarioId);
+            notificarEntradaNaCelula(celula, igrejaId, pessoa.getNome(), pessoa.getId());
         } else if (data.visitanteId() != null) {
             adicionarVisitante(celula, data.visitanteId(), igrejaId, usuarioId);
 
@@ -201,13 +203,29 @@ public class CelulaService {
                 v.setEntrouEmCelulaEm(LocalDateTime.now());
                 visitanteRepository.save(v);
             }
+            notificarEntradaNaCelula(celula, igrejaId, v.getNome(), null);
         } else {
             throw new BusinessException("MEMBRO_INVALIDO",
                     "Informe pessoaId ou visitanteId.");
         }
     }
 
-    private void adicionarPessoa(Celula celula, UUID pessoaId, UUID igrejaId, UUID usuarioId) {
+    /** Notifica todo mundo que já está na célula, exceto quem acabou de entrar. */
+    private void notificarEntradaNaCelula(Celula celula, UUID igrejaId, String nomeEntrante, UUID pessoaIdEntranteOuNull) {
+        List<CelulaMembro> membros = membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celula.getId());
+        for (CelulaMembro membro : membros) {
+            UUID pessoaIdMembro = membro.getPessoa().getId();
+            if (pessoaIdMembro.equals(pessoaIdEntranteOuNull)) continue;
+            usuarioRepository.findByPessoaId(pessoaIdMembro).ifPresent(usuario ->
+                    notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.ENTRADA_CELULA,
+                            igrejaId, usuario.getId(),
+                            nomeEntrante + " entrou na célula " + celula.getNome() + ".",
+                            "/celulas/" + celula.getId()));
+        }
+    }
+
+    private Pessoa adicionarPessoa(Celula celula, UUID pessoaId, UUID igrejaId, UUID usuarioId) {
         Pessoa pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
 
@@ -215,13 +233,14 @@ public class CelulaService {
         if (existente != null) {
             existente.setCelula(celula);
             membroRepository.save(existente);
-            return;
+            return pessoa;
         }
 
         Usuario usuario = usuarioId != null ? usuarioRepository.findById(usuarioId).orElse(null) : null;
         membroRepository.save(CelulaMembro.builder()
                 .igreja(celula.getIgreja()).celula(celula).pessoa(pessoa)
                 .criadoPor(usuario).atualizadoPor(usuario).build());
+        return pessoa;
     }
 
     private void adicionarVisitante(Celula celula, UUID visitanteId, UUID igrejaId, UUID usuarioId) {
@@ -263,7 +282,7 @@ public class CelulaService {
     @Transactional
     public void atualizarPapel(UUID celulaId, UUID membroId, AtualizarPapelCelulaRequest data,
                                 UUID igrejaId, boolean isAdmin) {
-        buscarDaIgrejaOuFalhar(celulaId, igrejaId);
+        Celula celula = buscarDaIgrejaOuFalhar(celulaId, igrejaId);
         if (!isAdmin) {
             throw new AccessDeniedException(
                     "Só um administrador pode promover ou rebaixar líder de célula.");
@@ -275,8 +294,18 @@ public class CelulaService {
             throw new BusinessException("VISITANTE_NAO_PODE_SER_LIDER",
                     "Um visitante não pode ser promovido a líder de célula.");
         }
+        boolean vaiVirarLider = data.papel() == PapelCelula.LIDER && membro.getPapel() != PapelCelula.LIDER;
         membro.setPapel(data.papel());
         membroRepository.save(membro);
+
+        if (vaiVirarLider) {
+            usuarioRepository.findByPessoaId(membro.getPessoa().getId()).ifPresent(usuario ->
+                    notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.PROMOVIDO_LIDER_CELULA,
+                            igrejaId, usuario.getId(),
+                            "Você foi promovido a líder da célula " + celula.getNome() + ".",
+                            "/celulas/" + celula.getId()));
+        }
     }
 
     @Transactional

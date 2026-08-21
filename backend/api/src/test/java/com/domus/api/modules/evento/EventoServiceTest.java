@@ -132,6 +132,7 @@ class EventoServiceTest {
                 false,
                 false,
                 restritoPropriaIgreja,
+                null,
                 null
         );
     }

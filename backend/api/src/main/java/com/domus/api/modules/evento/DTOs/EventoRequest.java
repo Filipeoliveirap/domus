@@ -55,5 +55,9 @@ public record EventoRequest(
         Boolean restritoPropriaIgreja,
 
         /** Id da foto já enviada via {@code POST /fotos}; {@code null} = sem foto. */
-        UUID fotoId
+        UUID fotoId,
+
+        /** {@code null} = evento avulso. Preenchido = cria uma EventoSerie junto. */
+        @jakarta.validation.Valid
+        com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia
 ) {}

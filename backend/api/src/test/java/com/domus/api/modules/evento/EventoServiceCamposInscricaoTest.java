@@ -97,7 +97,7 @@ class EventoServiceCamposInscricaoTest {
     private EventoRequest request(Integer vagas, BigDecimal preco, Boolean exclusivoMembros) {
         return new EventoRequest("Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                vagas, preco, exclusivoMembros, true, null, null, null);
+                vagas, preco, exclusivoMembros, true, null, null, null, null);
     }
 
     @Test
@@ -372,7 +372,7 @@ class EventoServiceCamposInscricaoTest {
         EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
                 "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                50, new BigDecimal("120.00"), true, false, true, null, null);
+                50, new BigDecimal("120.00"), true, false, true, null, null, null);
 
         assertThatThrownBy(() -> service.cadastrarEvento(
                 requestComControlaPresencaSemInscricao, igrejaId, usuarioId))
@@ -394,7 +394,7 @@ class EventoServiceCamposInscricaoTest {
         EventoRequest requestComControlaPresencaSemInscricao = new EventoRequest(
                 "Retiro", "desc", LocalDateTime.now().plusDays(5), null,
                 null, "Templo", null, null, null, null, null, null, null,
-                50, new BigDecimal("120.00"), true, false, true, null, null);
+                50, new BigDecimal("120.00"), true, false, true, null, null, null);
 
         assertThatThrownBy(() -> service.atualizarEvento(
                 eventoId, requestComControlaPresencaSemInscricao, igrejaId, usuarioId))

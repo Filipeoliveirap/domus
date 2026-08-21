@@ -38,24 +38,19 @@ próprio mecanismo de aviso. Fora isso, a ordem é só "o que destrava mais cois
 
 ---
 
-## 1. Estudo de provedor de pagamento
+## 1. ~~Estudo de provedor de pagamento~~ RESOLVIDO (2026-08-20)
 
-**Não é build — é decisão.** Repete o que a Fase 6 do `CLAUDE.md` já pedia, nunca feito.
+**Não era build — era decisão.** Repetia o que a Fase 6 do `CLAUDE.md` sempre pedia, nunca
+feito antes. Ver documento completo com comparativo, recomendação e fontes:
+**[`ESTUDO-PROVEDOR-PAGAMENTO.md`](./ESTUDO-PROVEDOR-PAGAMENTO.md)**.
 
-Comparar Stripe / Mercado Pago / Asaas / Pagar.me nos dois casos de uso que o Domus precisa
-(são requisitos diferentes, o provedor escolhido tem que servir aos dois):
+**Decisão: Mercado Pago**, um único provedor pros dois casos de uso (cobrança de assinatura
+do Domus via produto "Assinaturas", e cobrança de evento pago via split nativo). Stripe
+descartado (PIX não funciona em conta configurada no Brasil). Asaas cogitado só pro caso (a),
+descartado por ora pra evitar dois provedores/dois webhooks logo de saída — não é porta
+fechada, ver o documento.
 
-- **(a) Cobrança recorrente da assinatura do Domus** (igreja paga o Domus todo mês) — importa:
-  suporte a assinatura/recorrência nativo, taxa fixa vs. percentual, split não é necessário
-  aqui (o dinheiro vai só pro Domus).
-- **(b) Cobrança de evento pago** (pessoa física paga a igreja por uma inscrição) — importa:
-  **split de pagamento** (o dinheiro tem que ir pra conta da igreja, não pra do Domus — a não
-  ser que o modelo de negócio seja o Domus reter e repassar, o que é mais operação pra
-  manter), PIX como método (baixa taxa, e é o que igreja brasileira espera), e como funciona
-  reembolso se a pessoa cancelar a inscrição.
-
-**Saída:** recomendação de provedor + modelo (documento, não código) — igual a Fase 6 sempre
-pediu. Só depois desta decisão os itens 2 e 3 abaixo têm por onde começar.
+Itens 2 e 3 abaixo já têm por onde começar.
 
 ---
 

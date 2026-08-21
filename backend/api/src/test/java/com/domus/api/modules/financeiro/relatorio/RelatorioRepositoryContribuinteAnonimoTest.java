@@ -25,11 +25,12 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Contribuição de pessoa excluída definitivamente (pessoa_id NULL) precisa continuar contando no relatório geral. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class RelatorioRepositoryContribuinteAnonimoTest {
+class RelatorioRepositoryContribuinteAnonimoTest implements PostgresTestContainerSupport {
 
     @Autowired RelatorioRepository relatorioRepository;
     @Autowired MovimentacaoFinanceiraRepository movimentacaoRepository;

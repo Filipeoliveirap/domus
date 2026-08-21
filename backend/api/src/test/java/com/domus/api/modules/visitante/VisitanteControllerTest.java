@@ -28,6 +28,7 @@ import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Piloto do harness de teste de controller (JWT real em cookie + CSRF do spring-security-test,
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class VisitanteControllerTest {
+class VisitanteControllerTest implements PostgresTestContainerSupport {
 
     @Autowired MockMvc mockMvc;
     @Autowired TokenService tokenService;

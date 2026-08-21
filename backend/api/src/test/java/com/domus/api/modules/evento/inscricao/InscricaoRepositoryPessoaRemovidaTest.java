@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Regressão: pessoa excluída definitivamente continua contando no total de inscritos
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class InscricaoRepositoryPessoaRemovidaTest {
+class InscricaoRepositoryPessoaRemovidaTest implements PostgresTestContainerSupport {
 
     @Autowired InscricaoRepository inscricaoRepository;
     @Autowired PessoaRepository pessoaRepository;

@@ -25,10 +25,18 @@
   `movimentacoes`) de 5 para 30 min — todos já tinham eviction cobrindo 100% dos pontos de
   escrita, então o TTL curto não protegia nada, só gerava mais miss.
 
-- **Infra de teste de banco (Testcontainers).** O projeto não tem H2 nem Testcontainers; os
-  testes de repositório rodam contra o Neon de testes (via `@AutoConfigureTestDatabase(replace=NONE)`)
-  e exigem exportar as envs do `.env` no terminal. Ideal: subir um Postgres real em Docker por
-  teste (fidelidade + isolamento), sem depender do Neon nem de env manual.
+- ~~**Infra de teste de banco (Testcontainers).**~~ **RESOLVIDO** (2026-08-20):
+  `PostgresTestContainerSupport` (`src/test/java/.../shared/testcontainers/`) — interface
+  com o container Postgres (`postgres:16-alpine`) como campo estático + `@DynamicPropertySource`,
+  implementada pelas 34 classes `@DataJpaTest`/`@SpringBootTest`. Sobe um container só por
+  execução do `mvn test` (Surefire deste projeto roda numa JVM só), migrations do Flyway
+  aplicam sozinhas. `mvn test` não depende mais do `.env`/Neon — só de Docker rodando.
+  Escolhido em vez de H2 de propósito: o schema usa trigger em plpgsql (regra dos 2 níveis
+  de igreja), extensão `unaccent`, `gen_random_uuid()` — H2 daria falso positivo nesses
+  testes (passa no H2, quebra no Postgres real). Achado no processo: 3 testes de
+  `MigracaoV3Test` assumiam que sempre existia uma `igreja` no banco (verdade no Neon
+  compartilhado, falso num banco isolado que começa vazio) — corrigido criando o próprio
+  fixture em vez de depender de dado alheio.
 
 - ~~**Maven wrapper quebrado.**~~ **RESOLVIDO** (2026-08-16): `.mvn/wrapper/maven-wrapper.properties`
   existe, `./mvnw` roda normalmente.

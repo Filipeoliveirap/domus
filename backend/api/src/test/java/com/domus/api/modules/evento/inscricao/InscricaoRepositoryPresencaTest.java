@@ -17,11 +17,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Insere linhas "decoy" (canceladas, outro evento, outra igreja) pra provar que a contagem as exclui, não só que bate no caso feliz. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class InscricaoRepositoryPresencaTest {
+class InscricaoRepositoryPresencaTest implements PostgresTestContainerSupport {
 
     @Autowired
     InscricaoRepository inscricaoRepository;

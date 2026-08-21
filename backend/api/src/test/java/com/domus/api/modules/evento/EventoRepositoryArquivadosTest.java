@@ -20,11 +20,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Arquivados + exclusão definitiva de Evento — mesma família de bugs já corrigida em Célula/Ministério. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class EventoRepositoryArquivadosTest {
+class EventoRepositoryArquivadosTest implements PostgresTestContainerSupport {
 
     @Autowired EventoRepository eventoRepository;
     @Autowired InscricaoRepository inscricaoRepository;

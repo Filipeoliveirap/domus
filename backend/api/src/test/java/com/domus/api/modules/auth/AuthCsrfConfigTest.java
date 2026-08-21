@@ -15,6 +15,7 @@ import java.util.Set;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * As rotas públicas de auth (login, Google, forgot/reset-password, registrar igreja) saíram do
@@ -24,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-class AuthCsrfConfigTest {
+class AuthCsrfConfigTest implements PostgresTestContainerSupport {
 
     @Autowired MockMvc mockMvc;
     @Autowired StringRedisTemplate redisTemplate;

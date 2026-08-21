@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * SQL direto, sem passar por VinculoService de propósito — o trigger existe pro dia em que alguém escrever num caminho que não conhece as regras da aplicação.
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class HierarquiaIgrejaTriggerTest {
+class HierarquiaIgrejaTriggerTest implements PostgresTestContainerSupport {
 
     @Autowired
     EntityManager em;

@@ -9,6 +9,7 @@ import type {
   AcompanhanteResponse,
   ElegibilidadeResponse,
 } from '@/types/inscricao.type'
+import type { RespostaRequest, RespostaResponse } from '@/types/campoPersonalizado.type'
 
 export const inscricoesService = {
   /** `confirmado=true` só tem efeito para quem gerencia inscrições — deixa o gestor se
@@ -53,6 +54,14 @@ export const inscricoesService = {
 
   removerAcompanhante: (acompanhanteId: string): Promise<void> =>
     api.delete(Endpoints.inscricoes.REMOVER_ACOMPANHANTE(acompanhanteId)).then(() => undefined),
+
+  respostas: (inscricaoId: string, acompanhanteId?: string): Promise<RespostaResponse[]> =>
+    api.get<RespostaResponse[]>(Endpoints.inscricoes.RESPOSTAS(inscricaoId), { params: { acompanhanteId } })
+      .then(res => res.data),
+
+  responder: (inscricaoId: string, dados: RespostaRequest[], acompanhanteId?: string): Promise<void> =>
+    api.put(Endpoints.inscricoes.RESPOSTAS(inscricaoId), dados, { params: { acompanhanteId } })
+      .then(() => undefined),
 
   marcarTodosPresentes: (eventoId: string): Promise<void> =>
     api.post(Endpoints.presenca.MARCAR_TODOS(eventoId)).then(() => undefined),

@@ -5,6 +5,7 @@ import { Church, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
 import { BuscaGlobal } from './busca/BuscaGlobal'
+import { SinoNotificacoes } from './notificacoes/SinoNotificacoes'
 import { urlFoto } from '@/lib/urlFoto'
 import styles from './TopBar.module.css'
 
@@ -21,6 +22,8 @@ export function TopBar() {
       </button>
 
       <BuscaGlobal />
+
+      <SinoNotificacoes />
 
       <div className={styles.igreja}>
         <div className={styles.igrejaIcone}>

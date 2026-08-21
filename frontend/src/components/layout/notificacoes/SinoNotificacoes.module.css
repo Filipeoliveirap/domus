@@ -1,0 +1,102 @@
+.wrapper {
+  position: relative;
+}
+
+.botaoSino {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: #1e293b;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+}
+.botaoSino:hover { background: #eff6ff; }
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  z-index: 50;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+
+.marcarTodas {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #2563eb;
+}
+.marcarTodas:hover { text-decoration: underline; }
+
+.vazio {
+  padding: 24px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.lista {
+  list-style: none;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.8125rem;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  background: #eff6ff;
+}
+.item:hover { background: #dbeafe; }
+
+.itemLido {
+  background: #fff;
+  color: #64748b;
+}
+.itemLido:hover { background: #f8fafc; }
+
+@media (max-width: 767px) {
+  .dropdown {
+    width: 280px;
+    right: -8px;
+  }
+}

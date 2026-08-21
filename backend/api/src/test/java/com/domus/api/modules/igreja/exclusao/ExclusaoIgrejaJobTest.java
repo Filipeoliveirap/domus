@@ -20,6 +20,7 @@ class ExclusaoIgrejaJobTest {
     UsuarioRepository usuarioRepository;
     EmailService emailService;
     PurgaIgrejaService purgaIgrejaService;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     ExclusaoIgrejaJob job;
 
     @BeforeEach
@@ -28,7 +29,9 @@ class ExclusaoIgrejaJobTest {
         usuarioRepository = mock(UsuarioRepository.class);
         emailService = mock(EmailService.class);
         purgaIgrejaService = mock(PurgaIgrejaService.class);
-        job = new ExclusaoIgrejaJob(igrejaRepository, usuarioRepository, emailService, purgaIgrejaService);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        job = new ExclusaoIgrejaJob(igrejaRepository, usuarioRepository, emailService, purgaIgrejaService,
+                notificacaoService);
     }
 
     private Igreja igrejaAgendadaHa(int dias) {
@@ -44,6 +47,23 @@ class ExclusaoIgrejaJobTest {
 
         verify(emailService).enviar(eq("x@x.com"), contains("5 dias"), anyString());
         verify(purgaIgrejaService, never()).purgar(any());
+    }
+
+    @Test
+    void enviarLembreteNotificaTodosOsAdminsAtivos() {
+        UUID usuarioIdAdmin = UUID.randomUUID();
+        Igreja igreja = igrejaAgendadaHa(5);
+        com.domus.api.modules.usuario.Usuario admin = com.domus.api.modules.usuario.Usuario.builder()
+                .id(usuarioIdAdmin).build();
+        when(igrejaRepository.buscarComExclusaoAgendada()).thenReturn(List.of(igreja));
+        when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(igreja.getId(), "ADMIN_IGREJA"))
+                .thenReturn(List.of(admin));
+
+        job.verificarPrazos();
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.EXCLUSAO_IGREJA_AGENDADA), eq(igreja.getId()),
+                eq(usuarioIdAdmin), anyString(), eq("/configuracoes/igreja"));
     }
 
     @Test

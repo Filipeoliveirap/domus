@@ -21,10 +21,11 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Postgres real (não Mockito): o caminho feliz depende de FotoRepository gravando de verdade; storage é {@link ArmazenamentoEmMemoria} (property de teste). */
 @SpringBootTest
-class FotoServiceTest {
+class FotoServiceTest implements PostgresTestContainerSupport {
 
     @Autowired
     FotoService service;

@@ -9,8 +9,10 @@ import com.domus.api.modules.usuario.busca.BuscaUsuarioService;
 import com.domus.api.shared.DTO.ResultadoBusca;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/busca")
 @RequiredArgsConstructor
+@Validated
 public class BuscaController {
 
     private final BuscaPessoaService buscaPessoaService;
@@ -46,7 +49,7 @@ public class BuscaController {
     }
 
     @GetMapping("/pessoas")
-    public List<ResultadoBusca> buscarMembros(@RequestParam String q) {
+    public List<ResultadoBusca> buscarMembros(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         if (q == null || q.isBlank()) {
             return List.of();
         }
@@ -54,7 +57,7 @@ public class BuscaController {
     }
 
     @GetMapping("/eventos")
-    public List<ResultadoBusca> buscarEventos(@RequestParam String q) {
+    public List<ResultadoBusca> buscarEventos(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         if (q == null || q.isBlank()) {
             return List.of();
         }
@@ -63,7 +66,7 @@ public class BuscaController {
     }
 
     @GetMapping("/usuarios")
-    public List<ResultadoBusca> buscarUsuarios(@RequestParam String q) {
+    public List<ResultadoBusca> buscarUsuarios(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         exigirUsuarios();
         if (q == null || q.isBlank()) {
             return List.of();
@@ -72,7 +75,7 @@ public class BuscaController {
     }
 
     @GetMapping("/movimentacoes")
-    public List<ResultadoBusca> buscarMovimentacoes(@RequestParam String q) {
+    public List<ResultadoBusca> buscarMovimentacoes(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         exigirFinanceiro();
         if (q == null || q.isBlank()) {
             return List.of();
@@ -81,7 +84,7 @@ public class BuscaController {
     }
 
     @GetMapping("/categorias")
-    public List<ResultadoBusca> buscarCategorias(@RequestParam String q) {
+    public List<ResultadoBusca> buscarCategorias(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         exigirFinanceiro();
         if (q == null || q.isBlank()) {
             return List.of();
@@ -90,7 +93,7 @@ public class BuscaController {
     }
 
     @GetMapping("/global")
-    public List<ResultadoBusca> buscarGlobal(@RequestParam String q) {
+    public List<ResultadoBusca> buscarGlobal(@RequestParam @Size(max = 200, message = "Termo de busca muito longo.") String q) {
         if (q == null || q.isBlank()) {
             return List.of();
         }

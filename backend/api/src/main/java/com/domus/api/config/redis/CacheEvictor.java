@@ -31,4 +31,15 @@ public class CacheEvictor {
             log.warn("Falha ao invalidar cache '{}'. igreja_id={}", nomeCache, igrejaId, ex);
         }
     }
+
+    /** Invalida uma entrada exata (chave conhecida), ao contrário de {@link #evictPorIgreja}
+     *  que varre por padrão. Usado pelo cache "principal" (key = usuarioId), que não é
+     *  prefixado por igreja porque o SecurityFilter só tem o id do usuário no token. */
+    public void evict(String nomeCache, String key) {
+        try {
+            redisTemplate.delete(nomeCache + "::" + key);
+        } catch (RuntimeException ex) {
+            log.warn("Falha ao invalidar cache '{}'. key={}", nomeCache, key, ex);
+        }
+    }
 }

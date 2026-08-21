@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Apertar restrição de elegibilidade em evento com inscritos nunca cancela em silêncio — exige {@code cancelarNaoElegiveis=true}.
@@ -37,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @Transactional
-class ImpactoRestricaoTest {
+class ImpactoRestricaoTest implements PostgresTestContainerSupport {
 
     @Autowired EventoService eventoService;
     @Autowired InscricaoService inscricaoService;

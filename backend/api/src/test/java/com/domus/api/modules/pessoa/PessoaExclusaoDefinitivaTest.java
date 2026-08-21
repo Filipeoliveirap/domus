@@ -45,6 +45,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Direito de eliminação (LGPD): excluir uma pessoa de vez não pode bloquear pelo próprio
@@ -53,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @Transactional
-class PessoaExclusaoDefinitivaTest {
+class PessoaExclusaoDefinitivaTest implements PostgresTestContainerSupport {
 
     @Autowired PessoaService pessoaService;
     @Autowired PessoaRepository pessoaRepository;

@@ -11,15 +11,32 @@
 
 ## Dívida técnica (adiada de propósito, YAGNI/tempo)
 
-- **Cache de `Usuario` no `SecurityFilter`.** Hoje o filtro de segurança bate no Postgres a
-  cada requisição para carregar o usuário do JWT. Adiado por YAGNI (volume do piloto é baixo).
-  Quando o tráfego crescer, cachear o usuário (ex.: Redis com TTL curto + invalidação em
-  logout/alteração de role). Ver memória `cache-usuario-security-filter-adiado`.
+- ~~**Cache de `Usuario` no `SecurityFilter`.**~~ **RESOLVIDO** (2026-08-20):
+  `PrincipalCacheService` (`@Cacheable("principal")`, Redis, TTL 5 min) cacheia só os
+  campos que o principal autenticado realmente usa (id, igreja.id, pessoa.id, role —
+  conferido por grep em todo o projeto), reidratados num `Usuario` "casca" via builder —
+  `instanceof Usuario`/`.getId()`/`.getIgreja().getId()`/`.getRole().getNome()` continuam
+  funcionando sem tocar em `UsuarioAutenticado` nem controllers. `UsuarioService` invalida
+  a chave exata (`CacheEvictor.evict`) em todo ponto que já invalidava a lista `usuarios`
+  (ativo, role, arquivar, reativar, restaurar, excluir definitivo) — revogar acesso ou
+  trocar role vale na próxima requisição, não espera o TTL. Validado ao vivo: chave
+  `principal::<id>` some do Redis no instante da ação (não só depois do TTL). Aproveitado
+  pra subir os TTLs dos caches de lista (`usuarios`/`pessoas`/`eventos`/`categorias`/
+  `movimentacoes`) de 5 para 30 min — todos já tinham eviction cobrindo 100% dos pontos de
+  escrita, então o TTL curto não protegia nada, só gerava mais miss.
 
-- **Infra de teste de banco (Testcontainers).** O projeto não tem H2 nem Testcontainers; os
-  testes de repositório rodam contra o Neon de testes (via `@AutoConfigureTestDatabase(replace=NONE)`)
-  e exigem exportar as envs do `.env` no terminal. Ideal: subir um Postgres real em Docker por
-  teste (fidelidade + isolamento), sem depender do Neon nem de env manual.
+- ~~**Infra de teste de banco (Testcontainers).**~~ **RESOLVIDO** (2026-08-20):
+  `PostgresTestContainerSupport` (`src/test/java/.../shared/testcontainers/`) — interface
+  com o container Postgres (`postgres:16-alpine`) como campo estático + `@DynamicPropertySource`,
+  implementada pelas 34 classes `@DataJpaTest`/`@SpringBootTest`. Sobe um container só por
+  execução do `mvn test` (Surefire deste projeto roda numa JVM só), migrations do Flyway
+  aplicam sozinhas. `mvn test` não depende mais do `.env`/Neon — só de Docker rodando.
+  Escolhido em vez de H2 de propósito: o schema usa trigger em plpgsql (regra dos 2 níveis
+  de igreja), extensão `unaccent`, `gen_random_uuid()` — H2 daria falso positivo nesses
+  testes (passa no H2, quebra no Postgres real). Achado no processo: 3 testes de
+  `MigracaoV3Test` assumiam que sempre existia uma `igreja` no banco (verdade no Neon
+  compartilhado, falso num banco isolado que começa vazio) — corrigido criando o próprio
+  fixture em vez de depender de dado alheio.
 
 - ~~**Maven wrapper quebrado.**~~ **RESOLVIDO** (2026-08-16): `.mvn/wrapper/maven-wrapper.properties`
   existe, `./mvnw` roda normalmente.
@@ -60,19 +77,28 @@
   `trustForwardedFor_usaUltimoIpDoHeader` e um teste simulando um atacante variando o
   primeiro elemento a cada requisição (`RateLimitFilterTest`).
 
-- **Rate limiting não conta requisições barradas pelo CSRF.** Descoberto na revisão da
-  migração de cookie (2026-07-16): o `CsrfFilter` do Spring roda em ~order 1300 e o nosso
-  `RateLimitFilter` em ~1898, então um flood de POST sem `X-XSRF-TOKEN` leva 403 e **nunca
-  incrementa** `rl:global:<ip>`. As respostas são baratas (403 seco, sem tocar no banco),
-  por isso ficou assim. Se virar vetor de abuso, mover o `RateLimitFilter` para antes do
-  `CsrfFilter`.
+- ~~**Rate limiting não conta requisições barradas pelo CSRF.**~~ **RESOLVIDO**
+  (2026-08-20): `RateLimitFilter` movido para antes do `CsrfFilter`
+  (`.addFilterBefore(rateLimitFilter, CsrfFilter.class)` em `SecurityConfig`) — agora toda
+  requisição, inclusive a barrada por CSRF (403), conta no limite. Provado por
+  `RateLimitCsrfOrderTest` (semeia o contador no Redis e confirma 429 antes do 403, sem
+  depender da virada do minuto da janela fixa). Efeito colateral descoberto no processo:
+  `AuthCsrfConfigTest` batia nas mesmas rotas de auth-tier (limite 10/min) sem isolar o
+  contador — execuções repetidas na mesma janela levavam 429 legítimo mascarando o que o
+  teste queria provar. Corrigido com limpeza do Redis no `@BeforeEach` desse teste.
 
-- **HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.** O Spring só vê
-  o salto HTTP interno do proxy, então `request.isSecure()` é false e o `HstsHeaderWriter`
-  não escreve nada. A property foi adicionada (default `none`, como o `trust-forwarded-for`),
-  mas **precisa virar `framework` em produção** — senão o bloco de HSTS do `SecurityConfig`
-  é letra morta. Quem protege de fato é o HSTS do front (`next.config.ts`), que cobre a
-  origem inteira; o do back é defesa em profundidade.
+- ~~**HSTS do backend depende de `FORWARD_HEADERS_STRATEGY=framework` em prod.**~~
+  **RESOLVIDO** (2026-08-20): confirmado que `/root/deploy/.env.prod` na VPS **não** tinha
+  `FORWARD_HEADERS_STRATEGY` nem `RATELIMIT_TRUST_FORWARDED_FOR` — as duas ficaram no
+  default (`none`/`false`) desde o deploy original, então o `HstsHeaderWriter` nunca
+  escrevia o header em produção, e o rate limiting por IP estava usando o IP interno do
+  túnel Cloudflare (mesmo "IP" pra todo mundo, balde único). Adicionadas as duas linhas ao
+  `.env.prod` (backup do arquivo feito antes) e o container `domus-api-1` recriado
+  (`docker compose up -d --force-recreate api`). Validado ao vivo:
+  `curl -sI https://domusigreja.com.br/api/auth/me` agora traz
+  `strict-transport-security: max-age=31536000 ; includeSubDomains`. Quem protege de fato
+  é o HSTS do front (`next.config.ts`), que cobre a origem inteira; o do back era defesa em
+  profundidade que ficou letra morta por ~1 mês (desde a Fase 1) sem ninguém notar.
 
 - **Backup: janela de perda de 24h e restauração manual.** O backup roda 1×/dia, então o
   pior caso é perder um dia de lançamentos. Aceito: a igreja lança dízimo no domingo e
@@ -122,17 +148,81 @@
   no repositório local, e o `maven-surefire-plugin` usa isso como `-javaagent`. Warning
   sumiu (`mvn test` sem nenhuma ocorrência de "self-attaching"), suíte completa continua verde.
 
+### Revisão de validação de input em toda entrada — item do CLAUDE.md, primeira passada 2026-08-20
+
+Levantamento (agente de exploração) de todos os `*RequestDTO`/`*Request` usados como
+`@RequestBody`, cobertura de Bean Validation, uso de `@Valid`/`@Validated`, e parâmetros
+livres (`q`/`busca`/paginação) sem limite. Corrigido nesta passada:
+
+- **Bug real**: `VisitanteController.moverParaCelula` sem `@Valid` e `MoverParaCelulaRequest.celulaId`
+  sem `@NotNull` — ver seção do harness de teste acima.
+- **`@Size` em texto livre sem limite**: `EventoRequest` (descricao 5000, titulo/localTexto 255,
+  tipo 80, recorteEtario 40), `PessoaRequestDTO` (email 255, observacoes 5000), `VisitanteRequest`
+  (observacoes 5000, telefone com `@Pattern` que faltava, quantidadeFilhos com `@Min`/`@Max`),
+  `AgendarExclusaoRequest` (senha 255, googleIdToken 4096, nomeConfirmacao 255), DTOs de auth
+  (`AuthenticationDTO`, `ChangePasswordDTO`, `ResetPasswordDTO`, `GoogleLoginDTO`,
+  `GoogleRegistrarDTO`, `ForgotPasswordDTO`, `RegistrarIgrejaAdminRequest` — senha/token/email
+  sem teto de tamanho), `VinculoDTOs.EntrarNaFamiliaRequest` (código).
+- **Bug real #2**: `MovimentacaoRequestDTO.contribuintes` não tinha `@Valid` — Bean Validation
+  só cascateia pra dentro de listas quando o campo tem `@Valid`, então o `@NotNull` de
+  `ContribuinteDTO.valor`/`pessoaId` nunca era checado. Um contribuinte com `valor: null`
+  estourava `NullPointerException` (500) em `MovimentacaoFinanceiraService.validarContribuintes`
+  (`BigDecimal::add` na soma) em vez de 400. Corrigido com `@Valid` + `@Size(max=200)` no campo.
+- **Bug real #3**: `CelulaRequest.horario` era `String` livre sem `@Pattern`; o service fazia
+  `LocalTime.parse(data.horario())` sem tratamento — string malformada estourava
+  `DateTimeParseException` não capturada (500) em vez de 400. Corrigido com
+  `@Pattern` aceitando vazio/null ou `HH:mm`.
+- **Listas sem limite**: `InscreverPessoasRequest.pessoaIds` ganhou `@Size(max=500)`.
+- **Teto de paginação**: `spring.data.web.pageable.max-page-size=100` em
+  `application.properties` — o default do Spring é 2000, então `?size=2000` funcionava em
+  qualquer listagem paginada. Confirmado que nenhum `@PageableDefault` do projeto passa de 20.
+- **`q`/`busca` sem limite**: `@Validated` na classe + `@Size(max=200)` no parâmetro, em
+  `BuscaController` (6 endpoints), `VisitanteController`, `UsuarioController`,
+  `PessoaController`, `EventoController`, `MovimentacaoFinanceiraController` (2),
+  `CategoriaFinanceiraController`, `InscricaoController`. Exigiu um handler novo em
+  `GlobalExceptionHandler` para `ConstraintViolationException` — violação de `@Validated` em
+  `@RequestParam` não é `MethodArgumentNotValidException` (essa só cobre `@Valid` em
+  `@RequestBody`); sem o handler, cairia no genérico e devolveria 500 em vez de 400.
+- **Investigado e descartado como falso positivo**: `role`/`capacidade` como `String` livre
+  (`UpdateRoleRequest`, `ConcederAcessoRequestDTO`, `CapacidadeRequest`) já são validados no
+  service (`RoleRepository.findByNome` → 404 se inválido; `UsuarioService.validarCapacidade`
+  → `BusinessException` 400) — não é bug, é validação na camada certa, não na anotação.
+  `AdicionarMembroCelulaRequest` (pessoaId/visitanteId sem `@NotNull`) também é falso
+  positivo: `CelulaService.adicionarMembro` já lança `BusinessException("MEMBRO_INVALIDO", ...)`
+  quando os dois vêm nulos — regra XOR de negócio, não dá pra expressar em Bean Validation
+  simples sem `@AssertTrue` num validador custom (avaliar se compensar depois).
+
+~~**Ficou de fora desta passada**~~ **RESOLVIDO** (2026-08-20): módulos de
+célula/ministério/local-evento/financeiro auditados campo a campo (agente de exploração).
+Nenhum bug real encontrado — todos os controllers já usam `@Valid`, campos de texto livre
+já têm `@Size`/`@NotBlank` onde cabe. Únicos pontos levantados e descartados por
+julgamento (não são bugs, é regra hipotética que ninguém pediu):
+`AdicionarMembroCelulaRequest.pessoaId`/`visitanteId` sem `@NotNull` (já é falso positivo
+documentado acima — regra XOR resolvida no service); `LocalEventoRequest.capacidade` sem
+`@Max` (só `@Positive`); `MovimentacaoRequestDTO.dataMovimentacao` sem limite temporal
+(aceita data futura). Revisão de validação de input **concluída** para os módulos que
+faltavam — item do CLAUDE.md pode ser marcado como feito.
+
 ---
 
 ## Segurança / autorização — a discutir (decisão de produto)
 
-- **Login CSRF (resíduo aceito na migração de cookie, 2026-07-16).** As rotas públicas de
-  auth (`/auth/login`, `/auth/google/*`, `/igrejas/registrar`, `/auth/forgot-password`,
-  `/auth/reset-password`) são isentas do double-submit: rodam sem sessão para um atacante
-  cavalgar, e protegê-las exigiria buscar um token CSRF antes de cada formulário público em
-  4 telas. Fica possível o **login CSRF** (forçar a vítima a logar na conta do atacante e
-  digitar dados achando que é a própria). Impacto modesto e o `SameSite=Lax` já o barra na
-  prática (é POST cross-site). Reavaliar se surgir fluxo sensível pré-login.
+- ~~**Login CSRF (resíduo aceito na migração de cookie, 2026-07-16).**~~ **RESOLVIDO**
+  (2026-08-20): as rotas públicas de auth (`/auth/login`, `/auth/google/login`,
+  `/auth/google/registrar`, `/auth/forgot-password`, `/auth/reset-password`,
+  `/igrejas/registrar`) saíram do `ignoringRequestMatchers` do CSRF em `SecurityConfig`, e
+  agora exigem o double-submit token como qualquer rota autenticada. O obstáculo original
+  (buscar token antes de cada form público) resolvido sem endpoint novo: o backend já faz
+  resolução **eager** do token CSRF (`csrfTokenRequestHandler`, `setCsrfRequestAttributeName(null)`),
+  então qualquer `GET`, mesmo 401, já grava o cookie `XSRF-TOKEN`. `authService`
+  (`frontend/src/services/auth.service.ts`) ganhou `garantirCsrfCookie()`, chamada antes
+  das 6 mutações públicas: dispara `GET /auth/me` só quando o cookie ainda não existe
+  (`document.cookie` sem `XSRF-TOKEN=`), e o axios já anexa `X-XSRF-TOKEN` sozinho (default
+  do axios pra requisição same-origin — sem precisar de interceptor manual). Testado:
+  backend (`AuthCsrfConfigTest`, POST sem token → 403, com token → passa da camada CSRF) e
+  ao vivo no navegador + curl simulando o fluxo do axios — as 4 telas (login, cadastro,
+  esqueci senha, reset de senha) funcionando normalmente, inclusive no pior caso (visita
+  fria numa página sem passar por `/login` antes, sem cookie nenhum).
 
 - **Janela de convivência cookie+header.** A migração para cookie httpOnly matou toda sessão
   existente (o `SecurityFilter` parou de ler o header `Authorization`). Foi aceitável porque
@@ -155,31 +245,37 @@
   esquecimento). A implementação (`PessoaResponse.from(..., incluirDadosSensiveis)`,
   já usada em `GET /pessoas` e `GET /pessoas/{id}`) já existia — faltava só teste
   provando; adicionado em `PessoaServiceTest` (`buscarPorId_semDadosSensiveis_...`).
-- **Revisão de autorização por perfil, módulo a módulo (escopo maior, ainda aberto).**
-  Nunca foi feita uma varredura sistemática de "quem vê o quê" em todos os módulos — só
-  correções pontuais conforme apareceram (esta mesma, célula, visitantes...). Vale um
-  brainstorm próprio se decidir fazer. Descoberto em 2026-07-16 discutindo o item acima.
+- ~~**Revisão de autorização por perfil, módulo a módulo.**~~ **RESOLVIDO** (confirmado
+  pelo autor em 2026-08-20): feito via brainstorm próprio, cobrindo "quem vê o quê" nos
+  módulos do sistema.
 
 ---
 
 ## Frontend — robustez de sessão (a vigiar)
 
-- **Logout indevido ao falhar refresh (a vigiar).** Descoberto em 2026-07-16: um MEMBRO abrindo
-  `/financeiro/movimentacoes` era deslogado. Causa: a página disparava uma query de admin
-  **sem gate de permissão** (`useCategoriasSelect()`), que tomava 401 (token expirado) e o refresh
-  falhava → `encerrarSessao()`. **Corrigido** gateando a query por `autorizado` e adicionando o
-  `AuthGuard` no layout `(app)`. *Pulga que fica:* se um 401 + refresh problemático desloga, em
-  tese pode atingir um usuário autorizado num momento ruim (ex.: corrida na rotação/detecção de
-  reuso do refresh). Sem repro por ora — observar; se reaparecer, instrumentar o interceptor do
-  axios (`src/lib/api.ts`) e o fluxo de rotação.
-- **403 de CSRF não tem caminho de recuperação no front (a vigiar).** O interceptor do
-  `api.ts` só reage a 401. Se o cookie `XSRF-TOKEN` faltar quando um POST dispara, o Spring
-  devolve 403 e o usuário vê um erro genérico sem saída além de recarregar. Hoje isso não
-  deve acontecer: o `setCsrfRequestAttributeName(null)` força a resolução ansiosa do token,
-  então **toda** resposta traz `Set-Cookie: XSRF-TOKEN` — inclusive o 401 do `/auth/me`, que
-  sempre precede qualquer POST. Ou seja, funciona por causa da ORDEM dos eventos, não por
-  uma defesa explícita. Se aparecer 403 inexplicado, tratar o código de erro de CSRF
-  refazendo a busca do token.
+- ~~**Logout indevido ao falhar refresh (a vigiar).**~~ **INSTRUMENTADO** (2026-08-20):
+  ainda sem repro, então não dava pra "consertar" às cegas — mas em vez de continuar só
+  observando, `encerrarSessao()` (`src/lib/api.ts`) agora manda um `Sentry.captureMessage`
+  toda vez que é chamada por falha de refresh (não por logout normal), com a URL que
+  disparou o 401 original. Se reaparecer em produção, o Sentry tem o dado pra investigar
+  de verdade em vez de ficar só "observando". Histórico original mantido: descoberto em
+  2026-07-16 (MEMBRO em `/financeiro/movimentacoes` era deslogado por query de admin sem
+  gate de permissão, `useCategoriasSelect()`) e corrigido gateando por `autorizado` +
+  `AuthGuard` no layout `(app)`; a pulga que ficou era a corrida teórica na
+  rotação/detecção de reuso do refresh, que segue sem repro.
+- ~~**403 de CSRF não tem caminho de recuperação no front (a vigiar).**~~ **RESOLVIDO**
+  (2026-08-20): o `accessDeniedHandler` do `SecurityConfig` era o mesmo pra falha de CSRF
+  **e** pra negação de role em `requestMatchers` (`.hasAnyRole(...)`) — os dois rodam antes
+  do `DispatcherServlet`, então nunca chegavam no `GlobalExceptionHandler`, e o 403 saía
+  sem corpo nos dois casos, indistinguíveis. Agora `responderAcessoNegado` checa o tipo da
+  exceção (`CsrfException` vs. resto) e devolve `codigo=CSRF_INVALIDO` ou `ACESSO_NEGADO`
+  no mesmo formato `ErrorResponse` do resto da API. O interceptor do `api.ts` trata só o
+  primeiro caso: busca um XSRF-TOKEN novo (`GET /auth/me`, single-flight igual ao refresh
+  de access token) e reenvia a requisição original uma vez (`_retryCsrf`, evita loop). Um
+  403 `ACESSO_NEGADO` continua batendo direto no erro — não mascara negação de permissão
+  como se fosse token velho. Testado em `AuthCsrfConfigTest`
+  (`negacaoDeRoleE403ComCodigoAcessoNegadoNaoCsrf` prova que os dois códigos não se
+  confundem).
 
 - **Padrão a varrer:** garantir que nenhuma página acessível a papéis sem permissão dispare
   queries de admin (gate por `enabled: autorizado`). Só a de movimentações tinha o problema, mas
@@ -204,11 +300,6 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
   refresh token do Google **por usuário**, com botão explícito "Conectar agenda". NÃO se mistura
   com o login (que é só identidade). Ver memória `google-oauth-auth`.
 
-- **Fluxo de convite por e-mail (novo provisionamento).** Hoje o admin, ao "conceder acesso",
-  define a senha do membro. Desejado: admin só escolhe a role e **convida por e-mail**; o próprio
-  usuário define a senha (reusa o reset). Já movido para a **Fase 2** do roadmap (o Google OAuth
-  já deixou `senha_hash` nullable, então o back está pronto para usuários sem senha).
-
 - Itens já listados em "Fora do escopo desta versão" no `CLAUDE.md` (filtros extras em
   financeiro, múltiplos atribuintes, verificação de posse de telefone via SMS, expansão de
   campos de membro por uso real) — mantidos lá; referência cruzada aqui.
@@ -224,6 +315,19 @@ O Sentry (back + front) e os logs estruturados foram feitos. Ficou para depois:
   nossa CSP/COOP (não setamos COOP). Verificado em 2026-07-15. Em prod (HTTPS + domínio real)
   tende a sumir. Se incomodar em dev: conferir a origem em "Authorized JavaScript origins" e
   aguardar propagação.
+
+## Deploy / operação — gotchas descobertos ao vivo
+
+- **Run do GitHub Actions pode ficar travada em `queued` para sempre (2026-08-19).** O
+  workflow "Build e publicar imagens" (dispara em todo push pra `main`) ficou quase 8h em
+  `queued`, sem nenhum step iniciar — não é billing/quota (backup do Postgres, mesmo
+  runner `ubuntu-latest`, rodou normal no meio desse intervalo) nem outage do GitHub
+  (status page limpo). Parece um bug pontual do lado do GitHub numa run específica.
+  `gh run cancel` nela devolveu **erro 500** — nem cancelar dava. **Solução:** disparar
+  uma run nova manualmente (`gh workflow run build-images.yml --ref main`, o workflow já
+  tem `workflow_dispatch`) — pega runner normal, a antiga só fica de lixo visual no
+  histórico. Se o deploy não completar depois de um merge aprovado, checar
+  `gh run list --workflow=build-images.yml` antes de supor que o problema é no código.
 
 ## Bugs conhecidos (corrigir na fase apropriada)
 
@@ -267,11 +371,17 @@ Decidido durante a implementação da feature (2026-07-19). Nada aqui é esqueci
 
 Dois agentes revisaram back e front. 9 dos 11 achados foram corrigidos na hora. Ficaram:
 
-- **Focus trap no `ModalConfirmacaoCritica`.** `Esc` e clique fora fecham, mas `Tab` escapa do
-  diálogo para o conteúdo de fundo. Acessibilidade, não segurança.
-- **Semântica ARIA das abas em `/financeiro/relatorios`.** Lá são abas de verdade e faltam
-  `aria-controls` + `role="tabpanel"` + navegação por setas. (Em `/configuracoes` já foi
-  corrigido: eram links de navegação e viraram `aria-current="page"`.)
+- ~~**Focus trap no `ModalConfirmacaoCritica`.**~~ **RESOLVIDO** (2026-08-20): `Tab`/`Shift+Tab`
+  agora ficam presos nos elementos focáveis do `formRef` (mesmo padrão de outros diálogos),
+  excluindo os desabilitados — testado ao vivo (`Arquivar categoria` desabilitado até digitar
+  a confirmação: o ciclo vai só entre o input e "Cancelar", nunca escapa pro fundo).
+- ~~**Semântica ARIA das abas em `/financeiro/relatorios`.**~~ **RESOLVIDO** (2026-08-20):
+  `role="tab"`/`aria-selected`/`aria-controls` nos botões, `role="tabpanel"` +
+  `aria-labelledby` envolvendo o conteúdo que muda com a aba, e navegação por
+  `ArrowLeft`/`ArrowRight`/`Home`/`End` (move o foco **e** troca a aba — testado ao vivo:
+  seta direita em "Minha igreja" move o foco pro botão "Unidades" e troca o painel).
+  (Em `/configuracoes` já tinha sido corrigido antes: eram links de navegação e viraram
+  `aria-current="page"`.)
 - ~~**`CascadeType.ALL` + `orphanRemoval` nas 5 coleções de `Igreja`.**~~ **RESOLVIDO**: as
   coleções foram removidas de `Igreja.java` (ver item equivalente mais acima nesta lista).
 - **Trigger e lock cobrem a regra dos 2 níveis, mas por caminhos diferentes.** O lock
@@ -314,7 +424,6 @@ abaixo. Banner reusou o `<UploadFoto>` já existente da Fase 2.
 **Ficou de fora desta entrega** (ver itens específicos mais abaixo neste arquivo):
 - Capacidade do local **impondo** limite de vagas (hoje só sugere; nada barra cadastrar
   vagas acima da capacidade).
-- Lista de espera quando as vagas esgotam.
 - Recorrência (Spec C), campos personalizados (Spec D) e programação/equipe (Spec E) —
   continuam como specs futuras, não tocadas por esta entrega.
 
@@ -368,7 +477,7 @@ outra pessoa, mas `VAGAS_ESGOTADAS` **não é contornável** por ninguém — e 
 nunca contorna nada, nem para admin.
 
 **Ficou de fora:** nada pendente da elegibilidade em si — os itens de fora são os já listados
-acima na Spec B (capacidade impondo limite de vagas, lista de espera) e as Specs C/D/E.
+acima na Spec B (capacidade impondo limite de vagas) e as Specs C/D/E.
 
 ### Selos e filtros por tipo de evento — **CONCLUÍDA (2026-07-22)**
 
@@ -387,20 +496,27 @@ o que a igreja realmente digita.
 
 ---
 
-## Falta harness de teste de autorização por endpoint (descoberto 2026-07-20)
+## Harness de teste de autorização por endpoint — FEITO (2026-08-20)
 
-Ao adicionar os matchers de `/eventos/*/inscricoes**` no `SecurityConfig`, a Task 2 original
-previa um teste MockMvc batendo na `SecurityFilterChain` de verdade (`membroPodeSeInscreverEmEvento`
-/ `membroNaoVeListaDeInscritos`). **Não existe esse harness no projeto.** `SecurityFilterTest`
-é um teste unitário do `SecurityFilter` (o JWT filter) com Mockito puro — não sobe contexto
-Spring, não passa pela `authorizeHttpRequests`, então não tem como pegar bug de **ordem** de
-`requestMatchers`.
+Ao adicionar os matchers de `/eventos/*/inscricoes**` no `SecurityConfig` (2026-07-20), a Task 2
+original previa um teste MockMvc batendo na `SecurityFilterChain` de verdade
+(`membroPodeSeInscreverEmEvento`/`membroNaoVeListaDeInscritos`), mas o harness não existia:
+`SecurityFilterTest` é um teste unitário do `SecurityFilter` (o JWT filter) com Mockito puro —
+não sobe contexto Spring, não passa pela `authorizeHttpRequests`, então não tinha como pegar
+bug de **ordem** de `requestMatchers`. Erro de ordenação de matcher (curinga genérico casando
+antes da regra específica) compilava limpo e passava em todos os testes unitários, só aparecendo
+testando ao vivo (curl/Postman) — foi assim que a armadilha de `/igrejas/*` foi descoberta.
 
-Consequência prática: erro de ordenação de matcher (curinga genérico casando antes da regra
-específica) **compila limpo e passa em todos os testes unitários**, e só aparece testando ao
-vivo (curl/Postman) contra o servidor rodando. Foi exatamente assim que a armadilha de
-`/igrejas/*` foi descoberta antes, e é como esta de `/eventos/*/inscricoes` está sendo validada
-agora — não há rede automatizada pegando isso hoje.
+**Resolvido:** `AutenticacaoTestSupport` (`src/test/java/.../shared/security/`) + padrão
+`@SpringBootTest @AutoConfigureMockMvc` — gera JWT real via `TokenService` num cookie
+`domus_access` (o `SecurityFilter` do projeto lê o cookie na mão, não usa `@WithMockUser`) e
+anexa CSRF via `csrf()` do `spring-security-test` (já estava no `pom.xml`, não era usado).
+Piloto em `VisitanteControllerTest`, cobrindo validação (`@Valid` não acionado — o mesmo bug
+real corrigido em `MoverParaCelulaRequest` nesta sessão) e autorização (403 por perfil, 401 sem
+sessão, 403 sem CSRF). Documentado na tabela de convenções de teste do `CLAUDE.md`.
+
+**Ficou de fora:** aplicar o harness aos demais controllers — hoje só `Visitante` está coberto.
+Expandir módulo a módulo conforme for mexendo neles, não de uma vez.
 
 Ideal futuro: um `@SpringBootTest` com `@AutoConfigureMockMvc` (ou `WebMvcTest` importando o
 `SecurityConfig`) que suba a `SecurityFilterChain` real e teste, por perfil, quais rotas dão

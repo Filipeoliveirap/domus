@@ -12,11 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Pessoa tem @SQLRestriction("deleted_at IS NULL"); só banco real prova que o UPDATE nativo bate na pessoa arquivada sem ser filtrado. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class PessoaRepositoryDesvincularFotoTest {
+class PessoaRepositoryDesvincularFotoTest implements PostgresTestContainerSupport {
 
     @Autowired
     PessoaRepository pessoaRepository;

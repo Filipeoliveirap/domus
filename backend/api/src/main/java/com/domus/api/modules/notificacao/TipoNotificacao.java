@@ -1,0 +1,14 @@
+package com.domus.api.modules.notificacao;
+
+/** Um tipo por produtor. Extensível: adicionar produtor novo é uma entrada nova aqui — nunca
+ *  editar NotificacaoService, banco ou frontend por causa de um tipo novo. */
+public enum TipoNotificacao {
+    PEDIDO_MINISTERIO,
+    ENTRADA_CELULA,
+    ACESSO_CONCEDIDO,
+    INSCRICAO_EVENTO_RESPONSAVEL,
+    PROMOVIDO_LIDER_CELULA,
+    EVENTO_ALTERADO,
+    PEDIDO_VINCULO_FAMILIA,
+    EXCLUSAO_IGREJA_AGENDADA
+}

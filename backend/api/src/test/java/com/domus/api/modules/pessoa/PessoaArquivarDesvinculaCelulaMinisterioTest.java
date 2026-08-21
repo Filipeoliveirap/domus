@@ -39,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Regressão de produção: arquivar uma pessoa que é membro de célula/ministério deixava a
@@ -49,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @Transactional
-class PessoaArquivarDesvinculaCelulaMinisterioTest {
+class PessoaArquivarDesvinculaCelulaMinisterioTest implements PostgresTestContainerSupport {
 
     @Autowired PessoaService pessoaService;
     @Autowired PessoaRepository pessoaRepository;

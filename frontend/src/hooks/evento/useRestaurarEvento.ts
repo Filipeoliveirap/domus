@@ -5,15 +5,16 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { eventosService } from '@/services/evento.service'
 import type { ApiError } from '@/types/api.types'
+import type { EscopoEdicaoEvento } from '@/types/evento.type'
 
 export function useRestaurarEvento() {
   const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = useState(false)
 
-  async function restaurar(id: string, titulo: string) {
+  async function restaurar(id: string, titulo: string, escopo?: EscopoEdicaoEvento) {
     setIsLoading(true)
     try {
-      await eventosService.restaurar(id)
+      await eventosService.restaurar(id, escopo)
       invalidarCache(queryClient, 'evento')
       notificar.sucesso(`"${titulo}" foi restaurado.`)
     } catch (error: unknown) {

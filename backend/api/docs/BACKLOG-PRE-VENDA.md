@@ -206,32 +206,42 @@ ponto. Ver spec/plano em `docs/superpowers/`.
 
 ---
 
-## 7. Campos personalizados + formulário público (Spec D, com escopo maior)
+## 7. ~~Campos personalizados de evento (Spec 1)~~ RESOLVIDO (2026-08-21) — formulário público (Spec 2) ainda pendente
 
 Já estava na Spec D do roadmap, mas o escopo cresceu no brainstorm de 2026-08-20: além de
-"pergunta extra no cadastro de inscrição" (ex.: tamanho de camiseta), agora inclui **inscrição
-de gente de fora sem login**, via link — funciona como um Google Forms embutido no evento.
+"pergunta extra no cadastro de inscrição" (ex.: tamanho de camiseta), passou a incluir
+**inscrição de gente de fora sem login**, via link — funciona como um Google Forms embutido
+no evento. No brainstorm de fechamento (2026-08-21), a spec foi dividida em duas: **Spec 1**
+(campos personalizados, uso interno) fechada nesta entrega; **Spec 2** (formulário público
+sem login) fica pra depois, como item novo próprio.
 
-Duas capacidades, construídas juntas (são a mesma spec, o público-sem-login é só um modo do
-formulário):
+**Spec 1 feita:** `campo_personalizado_evento` (definição — rótulo, placeholder, tipo
+TEXTO_CURTO/OPCAO_UNICA/MULTIPLA_ESCOLHA/SIM_NAO, obrigatório, `visivel_ao_publico` já como
+groundwork pra Spec 2) + `resposta_campo_personalizado` (snapshot em texto, índices únicos
+parciais pra titular/acompanhante). Painel de configuração dentro do evento (edição), com
+prévia interativa de verdade (clica e testa, não só ilustrativa). Resposta pendente após
+inscrição em lote nunca bloqueia `inscrever()` — vira um aviso compacto que abre um modal,
+e o modal já abre sozinho quando a auto-inscrição dá certo. Notificação (central de
+notificações) quando um campo obrigatório novo é adicionado num evento que já tem gente
+confirmada, e quando alguém é inscrito em lote num evento que já tem campo obrigatório.
+Selo de pendência clicável nos cards da listagem de eventos e na lista de inscritos (admin).
+Cancelar inscrição limpa as respostas (a linha é reaproveitada numa reinscrição). Erro de
+campo obrigatório vazio valida no cliente, aparece só junto do campo — sem toast. Ver
+spec/plano em `docs/superpowers/`.
 
-- **Campos personalizados no evento**: admin/líder marca "este evento precisa de dado extra"
-  e monta o formulário (tipo de campo, obrigatório ou não, texto/opção/checkbox). Respostas
-  ficam vinculadas à inscrição, visíveis em relatório.
-- **Link público de inscrição**: evento com esse modo ligado gera uma URL sem autenticação
-  (`/inscricao-publica/{token}` ou parecido) — pessoa de fora preenche nome/e-mail/telefone +
-  os campos personalizados, sem precisar virar `pessoa` cadastrada na igreja. Decisão de
-  desenho: a inscrição pública vira um registro à parte (não uma `Pessoa`) ou cria uma `Pessoa`
-  com `vinculo=CONGREGANTE` automaticamente? Precisa decidir antes de desenhar o schema —
-  afeta se essa pessoa aparece depois nas listagens normais da igreja.
-- Vagas/lotação do formulário público valem a mesma regra de vagas do evento normal (lock
-  pessimista já existe, reusa).
-- Link **não pode vazar dado de outra igreja** — token por evento, escopado por `igreja_id`
-  como tudo mais no sistema.
+**Spec 2 (pendente):** link público de inscrição sem autenticação — pessoa de fora preenche
+nome/e-mail/telefone + os campos personalizados marcados como `visivel_ao_publico`, sem
+precisar virar `pessoa` cadastrada na igreja. Decisão de desenho ainda em aberto: a inscrição
+pública vira um registro à parte ou cria uma `Pessoa` com `vinculo=CONGREGANTE`
+automaticamente — e como reaproveitar cadastro já existente (mesmo padrão do fluxo de
+visitante de Célula) sem deixar o link vazar nome/telefone de gente real pra qualquer um.
+Vagas/lotação do formulário público valem a mesma regra de vagas do evento normal (lock
+pessimista já existe, reusa). Link não pode vazar dado de outra igreja (token por evento,
+escopado por `igreja_id`).
 
-**Fora desta entrega, fica pra depois (não pediu, YAGNI):** builder visual arrastar-e-soltar
-de formulário — a v1 é uma lista de campos com tipo fixo (texto curto, texto longo, opção
-única, múltipla escolha, sim/não), não um editor livre de layout.
+**Fora de escopo (não pediu, YAGNI):** builder visual arrastar-e-soltar de formulário — a v1
+é uma lista de campos com tipo fixo, não um editor livre de layout. Campo reutilizável entre
+eventos (template) — cada campo pertence a um evento só.
 
 ---
 

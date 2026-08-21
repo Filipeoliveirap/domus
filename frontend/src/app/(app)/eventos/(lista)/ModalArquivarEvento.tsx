@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { ModalConfirmacaoCritica, type Consequencia } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import { ModalEscopoEdicaoEvento } from '@/components/module/eventos/ModalEscopoEdicaoEvento'
 import { useArquivarEvento } from '@/hooks/evento/useArquivarEvento'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
-import { EventoResponse } from '@/types/evento.type'
+import { EventoResponse, type EscopoEdicaoEvento } from '@/types/evento.type'
 
 /**
  * Confirmação por escrito só quando arquivar tem consequência real pra alguém: o evento já
@@ -13,11 +15,27 @@ import { EventoResponse } from '@/types/evento.type'
  * tudo ao normal, inscrições e presença ficam intactas).
  */
 export function ModalArquivarEvento({ evento, onClose }: { evento: EventoResponse; onClose: () => void }) {
-  const { confirmar, isLoading, erroGeral } = useArquivarEvento(evento, onClose)
+  // Evento de série pergunta o alcance (só este/estes e os seguintes/toda a série) antes
+  // de qualquer outra coisa — evento avulso (serieId null) pula direto pro fluxo de sempre.
+  const [escopo, setEscopo] = useState<EscopoEdicaoEvento | undefined>(
+    evento.serieId ? undefined : 'ESTA',
+  )
+  const { confirmar, isLoading, erroGeral } = useArquivarEvento(evento, onClose, escopo)
   const podePedirCount = evento.requerInscricao
   const { data: lista } = useListaInscritos(evento.id, podePedirCount, '', 0, 1)
   const totalInscritos = lista?.totalPessoas ?? 0
   const jaEncerrado = evento.situacao === 'ENCERRADO'
+
+  if (escopo === undefined) {
+    return (
+      <ModalEscopoEdicaoEvento
+        titulo={evento.titulo}
+        pergunta="O que você quer arquivar?"
+        onEscolher={setEscopo}
+        onClose={onClose}
+      />
+    )
+  }
 
   if (totalInscritos === 0 && !jaEncerrado) {
     return (

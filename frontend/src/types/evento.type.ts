@@ -62,6 +62,22 @@ export interface EventoResponse {
   podeGerenciarEsteEvento: boolean
   restritoPropriaIgreja: boolean
   arquivado: boolean
+  serieId: string | null
+  divergeDaSerie: boolean
+}
+
+export type FrequenciaRecorrencia = 'DIARIA' | 'SEMANAL' | 'MENSAL'
+export type TipoRecorrenciaMensal = 'DIA_FIXO' | 'DIA_DA_SEMANA'
+export type EscopoEdicaoEvento = 'ESTA' | 'ESTA_E_SEGUINTES' | 'SERIE'
+export type DiaSemana = 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO' | 'DOMINGO'
+
+export interface RecorrenciaRequest {
+  frequencia: FrequenciaRecorrencia
+  intervalo: number
+  diasSemana?: DiaSemana[]
+  tipoRecorrenciaMensal?: TipoRecorrenciaMensal | null
+  dataFim?: string | null
+  numeroOcorrencias?: number | null
 }
 
 export interface EventoRequest {
@@ -85,6 +101,7 @@ export interface EventoRequest {
   restricaoEstadoCivil?: RestricaoEstadoCivil | null
   restricaoSexo?: RestricaoSexo | null
   restritoPropriaIgreja?: boolean
+  recorrencia?: RecorrenciaRequest | null
 }
 
 export interface InscritoImpactado {

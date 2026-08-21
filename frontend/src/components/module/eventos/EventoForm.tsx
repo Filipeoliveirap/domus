@@ -16,6 +16,7 @@ import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
+import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -27,6 +28,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
+  eventoId?: string
   responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
   impactoAfetados: InscritoImpactado[] | null
@@ -53,7 +55,7 @@ export function EventoForm(props: EventoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
+    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
@@ -518,6 +520,13 @@ export function EventoForm(props: EventoFormProps) {
                       Informativo. O pagamento é combinado com a igreja — informe o PIX ou um
                       contato na descrição do evento.
                     </span>
+                  </div>
+                )}
+
+                {ehEdicao && eventoId && (
+                  <div>
+                    <span className={styles.labelData}>CAMPOS PERSONALIZADOS</span>
+                    <CamposPersonalizadosPainel eventoId={eventoId} />
                   </div>
                 )}
               </div>

@@ -5,6 +5,10 @@ import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.campopersonalizado.DTOs.CampoPersonalizadoRequest;
 import com.domus.api.modules.evento.campopersonalizado.DTOs.CampoPersonalizadoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.inscricao.StatusInscricao;
+import com.domus.api.modules.notificacao.NotificacaoService;
+import com.domus.api.modules.notificacao.TipoNotificacao;
+import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,8 @@ public class CampoPersonalizadoService {
     private final RespostaCampoPersonalizadoRepository respostaRepository;
     private final EventoRepository eventoRepository;
     private final InscricaoRepository inscricaoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final NotificacaoService notificacaoService;
 
     public List<CampoPersonalizadoResponse> listar(UUID eventoId, UUID igrejaId) {
         return campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId).stream()
@@ -34,7 +40,8 @@ public class CampoPersonalizadoService {
      *  (soft delete) o que já existia e sumiu da lista enviada. Editar campo (inclusive
      *  opções) é sempre livre, mesmo com resposta já dada — resposta guarda snapshot. */
     @Transactional
-    public List<CampoPersonalizadoResponse> salvar(UUID eventoId, UUID igrejaId, List<CampoPersonalizadoRequest> dados) {
+    public List<CampoPersonalizadoResponse> salvar(UUID eventoId, UUID igrejaId, List<CampoPersonalizadoRequest> dados,
+                                                    UUID usuarioIdAtor) {
         Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -45,13 +52,20 @@ public class CampoPersonalizadoService {
 
         java.util.Set<UUID> idsEnviados = new java.util.HashSet<>();
         List<CampoPersonalizadoEvento> resultado = new java.util.ArrayList<>();
+        boolean surgiuCampoObrigatorioNovo = false;
 
         for (CampoPersonalizadoRequest r : dados) {
             CampoPersonalizadoEvento campo = r.id() != null ? porId.get(r.id()) : null;
+            boolean eraObrigatorioAntes = campo != null && campo.isObrigatorio();
             if (campo == null) {
                 campo = CampoPersonalizadoEvento.builder().igreja(evento.getIgreja()).evento(evento).build();
             } else {
                 idsEnviados.add(campo.getId());
+            }
+            // Campo novo obrigatório, ou campo existente que virou obrigatório agora —
+            // quem já estava confirmado no evento precisa saber que tem pergunta nova.
+            if (r.obrigatorio() && !eraObrigatorioAntes) {
+                surgiuCampoObrigatorioNovo = true;
             }
             campo.setLabel(r.label());
             campo.setPlaceholder(r.placeholder());
@@ -69,7 +83,27 @@ public class CampoPersonalizadoService {
             }
         }
 
+        if (surgiuCampoObrigatorioNovo) {
+            notificarInscritosSobrePendencia(evento, igrejaId, usuarioIdAtor);
+        }
+
         return resultado.stream().map(CampoPersonalizadoResponse::from).toList();
+    }
+
+    /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem editou já sabe. */
+    private void notificarInscritosSobrePendencia(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
+        List<UUID> pessoaIds = inscricaoRepository.findPessoaIdsByEventoIdAndStatus(
+                evento.getId(), StatusInscricao.CONFIRMADA);
+        String texto = "\"" + evento.getTitulo() + "\" tem uma pergunta nova pra você responder.";
+        String link = "/eventos?detalhe=" + evento.getId();
+        for (UUID pessoaId : pessoaIds) {
+            usuarioRepository.findByPessoaId(pessoaId)
+                    .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
+                    .ifPresent(usuario ->
+                            notificacaoService.criar(
+                                    TipoNotificacao.CAMPO_PERSONALIZADO_PENDENTE,
+                                    igrejaId, usuario.getId(), texto, link));
+        }
     }
 
     /** Titular responde quando {@code acompanhanteId == null}; senão, responde por esse

@@ -28,6 +28,7 @@ public class CampoPersonalizadoController {
     public ResponseEntity<List<CampoPersonalizadoResponse>> salvar(
             @PathVariable UUID eventoId,
             @Valid @RequestBody List<CampoPersonalizadoRequest> dados) {
-        return ResponseEntity.ok(service.salvar(eventoId, usuarioAutenticado.getIgrejaId(), dados));
+        return ResponseEntity.ok(service.salvar(
+                eventoId, usuarioAutenticado.getIgrejaId(), dados, usuarioAutenticado.getUsuarioId()));
     }
 }

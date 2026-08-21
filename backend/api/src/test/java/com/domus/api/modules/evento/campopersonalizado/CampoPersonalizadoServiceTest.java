@@ -16,6 +16,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class CampoPersonalizadoServiceTest {
@@ -24,10 +26,13 @@ class CampoPersonalizadoServiceTest {
     RespostaCampoPersonalizadoRepository respostaRepository;
     EventoRepository eventoRepository;
     com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
+    com.domus.api.modules.usuario.UsuarioRepository usuarioRepository;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     CampoPersonalizadoService service;
 
     UUID igrejaId;
     UUID eventoId;
+    UUID usuarioIdAtor;
 
     @BeforeEach
     void setup() {
@@ -35,10 +40,15 @@ class CampoPersonalizadoServiceTest {
         respostaRepository = mock(RespostaCampoPersonalizadoRepository.class);
         eventoRepository = mock(EventoRepository.class);
         inscricaoRepository = mock(com.domus.api.modules.evento.inscricao.InscricaoRepository.class);
-        service = new CampoPersonalizadoService(campoRepository, respostaRepository, eventoRepository, inscricaoRepository);
+        usuarioRepository = mock(com.domus.api.modules.usuario.UsuarioRepository.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        service = new CampoPersonalizadoService(
+                campoRepository, respostaRepository, eventoRepository, inscricaoRepository,
+                usuarioRepository, notificacaoService);
 
         igrejaId = UUID.randomUUID();
         eventoId = UUID.randomUUID();
+        usuarioIdAtor = UUID.randomUUID();
     }
 
     private Evento evento() {
@@ -60,7 +70,7 @@ class CampoPersonalizadoServiceTest {
                 null, "Tamanho da camiseta", null, TipoCampoPersonalizado.OPCAO_UNICA,
                 List.of("P", "M", "G"), true, true, 0);
 
-        List<CampoPersonalizadoResponse> resultado = service.salvar(eventoId, igrejaId, List.of(request));
+        List<CampoPersonalizadoResponse> resultado = service.salvar(eventoId, igrejaId, List.of(request), usuarioIdAtor);
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).label()).isEqualTo("Tamanho da camiseta");
@@ -78,7 +88,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(existente));
 
-        service.salvar(eventoId, igrejaId, List.of());
+        service.salvar(eventoId, igrejaId, List.of(), usuarioIdAtor);
 
         verify(campoRepository).delete(existente);
     }
@@ -87,8 +97,82 @@ class CampoPersonalizadoServiceTest {
     void salvarLancaNotFoundQuandoEventoNaoPertenceAIgreja() {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.salvar(eventoId, igrejaId, List.of()))
+        assertThatThrownBy(() -> service.salvar(eventoId, igrejaId, List.of(), usuarioIdAtor))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void salvarNotificaInscritosQuandoCampoObrigatorioNovoEAdicionado() {
+        UUID pessoaInscritaId = UUID.randomUUID();
+        var usuarioInscrito = com.domus.api.modules.usuario.Usuario.builder().id(UUID.randomUUID()).build();
+
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento()));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of());
+        when(campoRepository.save(any())).thenAnswer(inv -> {
+            CampoPersonalizadoEvento c = inv.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId,
+                com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaInscritaId));
+        when(usuarioRepository.findByPessoaId(pessoaInscritaId)).thenReturn(Optional.of(usuarioInscrito));
+
+        var request = new CampoPersonalizadoRequest(
+                null, "Restrição alimentar", null, TipoCampoPersonalizado.TEXTO_CURTO,
+                null, true, true, 0);
+
+        service.salvar(eventoId, igrejaId, List.of(request), usuarioIdAtor);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.CAMPO_PERSONALIZADO_PENDENTE),
+                eq(igrejaId), eq(usuarioInscrito.getId()), anyString(), anyString());
+    }
+
+    @Test
+    void salvarNaoNotificaQuemEditouOFormulario() {
+        var usuarioQueEditou = com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdAtor).build();
+
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento()));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of());
+        when(campoRepository.save(any())).thenAnswer(inv -> {
+            CampoPersonalizadoEvento c = inv.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId,
+                com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(UUID.randomUUID()));
+        when(usuarioRepository.findByPessoaId(any())).thenReturn(Optional.of(usuarioQueEditou));
+
+        var request = new CampoPersonalizadoRequest(
+                null, "Restrição alimentar", null, TipoCampoPersonalizado.TEXTO_CURTO,
+                null, true, true, 0);
+
+        service.salvar(eventoId, igrejaId, List.of(request), usuarioIdAtor);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void salvarNaoNotificaQuandoCampoContinuaObrigatorio() {
+        var campoJaObrigatorio = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Restrição alimentar").tipo(TipoCampoPersonalizado.TEXTO_CURTO)
+                .obrigatorio(true).build();
+
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento()));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(List.of(campoJaObrigatorio));
+        when(campoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CampoPersonalizadoRequest(
+                campoJaObrigatorio.getId(), "Restrição alimentar (editado)", null,
+                TipoCampoPersonalizado.TEXTO_CURTO, null, true, true, 0);
+
+        service.salvar(eventoId, igrejaId, List.of(request), usuarioIdAtor);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test

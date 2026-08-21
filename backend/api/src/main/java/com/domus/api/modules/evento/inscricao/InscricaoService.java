@@ -52,6 +52,7 @@ public class InscricaoService {
     private final ElegibilidadeService elegibilidadeService;
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    private final com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -110,9 +111,34 @@ public class InscricaoService {
                                     "/eventos/" + eventoId + "/inscritos"));
         }
 
+        // Auto-inscrição já abre o modal de perguntas na hora, no próprio front — só quem
+        // foi inscrito por OUTRA pessoa (lote do admin) precisa ser avisado, senão só
+        // descobre a pendência se abrir o evento sozinho.
+        if (inscritoPorOuNull != null) {
+            notificarPendenciaDeCamposSeHouver(evento, membro, igrejaId, inscritoPorOuNull);
+        }
+
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
                 eventoId, pessoaId, inscritoPorOuNull, igrejaId);
         return MinhaInscricaoResponse.from(salva);
+    }
+
+    private void notificarPendenciaDeCamposSeHouver(Evento evento, Pessoa pessoaInscrita, UUID igrejaId, UUID usuarioIdAtor) {
+        long totalObrigatorios = campoPersonalizadoRepository
+                .findByEventoIdAndIgrejaIdOrderByOrdemAsc(evento.getId(), igrejaId).stream()
+                .filter(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEvento::isObrigatorio)
+                .count();
+        if (totalObrigatorios == 0) return;
+
+        usuarioRepository.findByPessoaId(pessoaInscrita.getId())
+                .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
+                .ifPresent(usuario -> notificacaoService.criar(
+                        com.domus.api.modules.notificacao.TipoNotificacao.CAMPO_PERSONALIZADO_PENDENTE,
+                        igrejaId, usuario.getId(),
+                        "Você foi inscrito em \"" + evento.getTitulo() + "\" — responda "
+                                + (totalObrigatorios == 1 ? "1 pergunta pendente" : totalObrigatorios + " perguntas pendentes")
+                                + " do evento.",
+                        "/eventos?detalhe=" + evento.getId()));
     }
 
     /** Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro. */

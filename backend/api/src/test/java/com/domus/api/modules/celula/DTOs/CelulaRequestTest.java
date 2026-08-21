@@ -23,6 +23,22 @@ class CelulaRequestTest {
     }
 
     @Test
+    void horarioComSegundos_naoGeraViolacao() {
+        // O front sempre manda com segundos (data.horario + ':00') — regressão real: a
+        // @Pattern só aceitava HH:mm e recusava toda edição de célula com horário definido.
+        var request = new CelulaRequest("Célula Teste", DiaSemana.QUARTA, "19:30:00", null);
+        Set<?> violacoes = VALIDATOR.validate(request);
+        assertThat(violacoes).isEmpty();
+    }
+
+    @Test
+    void horarioComSegundosInvalidos_recusaComViolacao() {
+        var request = new CelulaRequest("Célula Teste", DiaSemana.QUARTA, "19:30:99", null);
+        Set<?> violacoes = VALIDATOR.validate(request);
+        assertThat(violacoes).isNotEmpty();
+    }
+
+    @Test
     void horarioNuloOuVazio_naoGeraViolacao() {
         assertThat(VALIDATOR.validate(new CelulaRequest("Célula", null, null, null))).isEmpty();
         assertThat(VALIDATOR.validate(new CelulaRequest("Célula", null, "", null))).isEmpty();

@@ -178,6 +178,23 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void inscreverNaoNotificaQuandoResponsavelInscreveOutraPessoa() {
+        UUID pessoaIdResponsavel = UUID.randomUUID();
+        UUID usuarioIdResponsavel = UUID.randomUUID();
+        Pessoa responsavel = Pessoa.builder().id(pessoaIdResponsavel).build();
+        Evento evento = evento(10);
+        evento.setResponsavel(responsavel);
+        dado(evento, membro(Vinculo.MEMBRO), 3);
+        when(usuarioRepository.findByPessoaId(pessoaIdResponsavel))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdResponsavel).build()));
+
+        // O próprio responsável inscreve outra pessoa (não a si mesmo) — inscritoPorOuNull == usuarioIdResponsavel.
+        service.inscrever(eventoId, pessoaId, usuarioIdResponsavel, pessoaId, null, false, igrejaId);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
     void recusaQuandoVagasEsgotadas() {
         dado(evento(5), membro(Vinculo.MEMBRO), 5);
 

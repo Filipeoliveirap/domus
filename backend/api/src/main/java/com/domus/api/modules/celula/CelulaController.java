@@ -97,7 +97,8 @@ public class CelulaController {
     public ResponseEntity<Void> atualizarPapel(@PathVariable UUID id,
                                                 @PathVariable UUID membroId,
                                                 @Valid @RequestBody AtualizarPapelCelulaRequest data) {
-        celulaService.atualizarPapel(id, membroId, data, usuarioAutenticado.getIgrejaId(), souAdmin());
+        celulaService.atualizarPapel(id, membroId, data, usuarioAutenticado.getIgrejaId(), souAdmin(),
+                usuarioAutenticado.getUsuarioId());
         return ResponseEntity.noContent().build();
     }
 

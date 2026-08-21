@@ -182,7 +182,7 @@ executando o pagamento").
 
 ---
 
-## 6. Recorrência de evento (Spec C)
+## 6. ~~Recorrência de evento (Spec C)~~ RESOLVIDO (2026-08-21)
 
 Já estava na Spec C do roadmap (`docs/BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`, seção "Módulo de
 eventos"). Confirmado como essencial agora (2026-08-20) — antes estava "esperando uso real",
@@ -194,6 +194,15 @@ atritos que uma igreja notaria comparando com concorrente.
   inteira**? Cancelar um feriado é uma **exceção** da série, não edição.
 - Referência: qualquer calendário maduro (Google Calendar) já resolveu essa UX — não
   reinventar do zero, copiar o modelo mental (série vs. só esta ocorrência).
+
+**Feito:** `EventoSerie` guarda só a regra de recorrência (frequência, intervalo, dias da
+semana, tipo de recorrência mensal, fim por data ou número de ocorrências); `Evento` ganhou
+`serie`/`divergeDaSerie` sem duplicar campo visível nenhum. `RecorrenciaCalculator` (Java puro)
+calcula as próximas datas; `EventoSerieMaterializacaoJob` materializa uma janela rolante de 60
+dias todo dia às 5h, clonando da ocorrência não-divergente mais recente. Editar/arquivar
+pergunta o escopo (`ESTA`/`ESTA_E_SEGUINTES`/`SERIE`) via `ModalEscopoEdicaoEvento`, espelhando
+o modelo mental do Google Calendar — `ESTA_E_SEGUINTES` divide a série em duas a partir daquele
+ponto. Ver spec/plano em `docs/superpowers/`.
 
 ---
 

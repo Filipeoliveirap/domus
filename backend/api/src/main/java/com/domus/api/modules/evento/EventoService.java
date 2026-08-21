@@ -161,14 +161,16 @@ public class EventoService {
     }
 
     @Transactional
-    public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId) {
-        return atualizarEvento(id, data, igrejaId, usuarioId, false);
+    public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
+                                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
+        return atualizarEvento(id, data, igrejaId, usuarioId, false, escopo);
     }
 
     /** @param cancelarNaoElegiveis padrão {@code false} nunca cancela ninguém sozinho. */
     @Transactional
     public EventoResponse atualizarEvento(UUID id, EventoRequest data, UUID igrejaId, UUID usuarioId,
-                                          boolean cancelarNaoElegiveis) {
+                                          boolean cancelarNaoElegiveis,
+                                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         log.info("Atualizando evento. id={}, igreja_id={}", id, igrejaId);
         validarDatas(data);
         validarIdades(data);
@@ -238,6 +240,17 @@ public class EventoService {
         evento.setFoto(fotoNova);
 
         Evento salvo = eventoRepository.save(evento);
+
+        if (evento.getSerie() != null) {
+            switch (escopo) {
+                case ESTA -> {
+                    evento.setDivergeDaSerie(true);
+                    salvo = eventoRepository.save(evento);
+                }
+                case SERIE -> salvo = propagarParaSerie(salvo, igrejaId);
+                case ESTA_E_SEGUINTES -> salvo = dividirSerie(salvo, igrejaId);
+            }
+        }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
                 || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
@@ -315,6 +328,76 @@ public class EventoService {
                                     com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
                                     igrejaId, usuario.getId(), texto, link));
         }
+    }
+
+    /** Copia os campos editáveis pra toda ocorrência AGENDADO da mesma série — limpa
+     *  divergeDaSerie de todas (edição de série sempre vence uma divergência antiga). */
+    private Evento propagarParaSerie(Evento editado, UUID igrejaId) {
+        List<Evento> futuras = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                editado.getSerie().getId(), editado.getInicioEm());
+        for (Evento ocorrencia : futuras) {
+            if (ocorrencia.getId().equals(editado.getId())) continue;
+            if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO) continue;
+            ocorrencia.setTitulo(editado.getTitulo());
+            ocorrencia.setDescricao(editado.getDescricao());
+            ocorrencia.setLocal(editado.getLocal());
+            ocorrencia.setLocalTexto(editado.getLocalTexto());
+            ocorrencia.setTipo(editado.getTipo());
+            ocorrencia.setResponsavel(editado.getResponsavel());
+            ocorrencia.setRecorteEtario(editado.getRecorteEtario());
+            ocorrencia.setIdadeMin(editado.getIdadeMin());
+            ocorrencia.setIdadeMax(editado.getIdadeMax());
+            ocorrencia.setRestricaoEstadoCivil(editado.getRestricaoEstadoCivil());
+            ocorrencia.setRestricaoSexo(editado.getRestricaoSexo());
+            ocorrencia.setVagas(editado.getVagas());
+            ocorrencia.setPreco(editado.getPreco());
+            ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
+            ocorrencia.setRequerInscricao(editado.isRequerInscricao());
+            ocorrencia.setControlaPresenca(editado.isControlaPresenca());
+            ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());
+            ocorrencia.setDivergeDaSerie(false);
+            eventoRepository.save(ocorrencia);
+        }
+        editado.setDivergeDaSerie(false);
+        return eventoRepository.save(editado);
+    }
+
+    /** "Esta e as seguintes": encerra a série atual na véspera desta ocorrência, cria uma
+     *  série nova (clone da regra) e reponta essa ocorrência + as futuras agendadas pra ela. */
+    private Evento dividirSerie(Evento editado, UUID igrejaId) {
+        var antiga = editado.getSerie();
+        antiga.setDataFim(editado.getInicioEm().toLocalDate().minusDays(1));
+        antiga.setNumeroOcorrencias(null); // CHECK de exclusão mútua no banco
+        eventoSerieRepository.save(antiga);
+
+        var nova = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .igreja(antiga.getIgreja())
+                .frequencia(antiga.getFrequencia())
+                .intervalo(antiga.getIntervalo())
+                .diasSemana(antiga.getDiasSemana())
+                .tipoRecorrenciaMensal(antiga.getTipoRecorrenciaMensal())
+                .criadoPor(antiga.getCriadoPor())
+                .build();
+        nova = eventoSerieRepository.save(nova);
+
+        List<Evento> futuras = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
+                antiga.getId(), editado.getInicioEm());
+        for (Evento ocorrencia : futuras) {
+            if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO
+                    && !ocorrencia.getId().equals(editado.getId())) continue;
+            ocorrencia.setSerie(nova);
+            ocorrencia.setDivergeDaSerie(false);
+            if (!ocorrencia.getId().equals(editado.getId())) {
+                ocorrencia.setTitulo(editado.getTitulo());
+                ocorrencia.setDescricao(editado.getDescricao());
+                ocorrencia.setLocal(editado.getLocal());
+                ocorrencia.setLocalTexto(editado.getLocalTexto());
+            }
+            eventoRepository.save(ocorrencia);
+        }
+        editado.setSerie(nova);
+        editado.setDivergeDaSerie(false);
+        return eventoRepository.save(editado);
     }
 
     /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem se colocou como responsável já sabe. */

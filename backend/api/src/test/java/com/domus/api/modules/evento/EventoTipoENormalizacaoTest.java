@@ -281,7 +281,8 @@ class EventoTipoENormalizacaoTest {
         outroUsuario.setPessoa(pessoaDoUsuario(outroUsuarioId));
         when(usuarioRepository.findByIdAndIgrejaId(outroUsuarioId, igrejaId)).thenReturn(Optional.of(outroUsuario));
 
-        service.atualizarEvento(id, requestComTipo("Culto"), igrejaId, outroUsuarioId);
+        service.atualizarEvento(id, requestComTipo("Culto"), igrejaId, outroUsuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(service.buscarPorId(id, igrejaId, "ADMIN_IGREJA").atualizadoPor().id()).isEqualTo(outroUsuarioId);
     }

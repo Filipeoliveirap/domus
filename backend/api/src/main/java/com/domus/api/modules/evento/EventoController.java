@@ -97,11 +97,12 @@ public class EventoController {
     public ResponseEntity<EventoResponse> atualizar(
             @PathVariable UUID id,
             @Valid @RequestBody EventoRequest data,
-            @RequestParam(defaultValue = "false") boolean cancelarNaoElegiveis) {
+            @RequestParam(defaultValue = "false") boolean cancelarNaoElegiveis,
+            @RequestParam(defaultValue = "ESTA") com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         UUID usuarioId = usuarioAutenticado.getUsuarioId();
         return ResponseEntity.ok(eventoService.atualizarEvento(
-                id, data, igrejaId, usuarioId, cancelarNaoElegiveis));
+                id, data, igrejaId, usuarioId, cancelarNaoElegiveis, escopo));
     }
 
     // Prévia de quem ficaria de fora se data fosse salvo, sem gravar. Restrito a quem gerencia eventos.

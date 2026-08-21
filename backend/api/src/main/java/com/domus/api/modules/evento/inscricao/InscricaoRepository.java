@@ -26,7 +26,13 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
 
     Optional<InscricaoEvento> findByEventoIdAndPessoaId(UUID eventoId, UUID pessoaId);
 
-    List<InscricaoEvento> findByEventoIdAndStatus(UUID eventoId, StatusInscricao status);
+    /** Projeção (só o id da pessoa, sem materializar InscricaoEvento/Evento): usada pra
+     *  notificar quem está inscrito quando o evento muda ou é arquivado. Carregar a entidade
+     *  InscricaoEvento gerenciada aqui (em vez da projeção) deixa `evento` referenciado por
+     *  ela ainda no contexto de persistência quando `arquivarEvento` soft-deleta o evento
+     *  logo depois — o próximo autoflush confunde o Hibernate ("unsaved transient instance"). */
+    @Query("SELECT i.pessoa.id FROM InscricaoEvento i WHERE i.evento.id = :eventoId AND i.status = :status")
+    List<UUID> findPessoaIdsByEventoIdAndStatus(@Param("eventoId") UUID eventoId, @Param("status") StatusInscricao status);
 
     /** Nativa: JPQL aqui herda o @SQLRestriction de Evento e some com evento arquivado. */
     @Query(value = "SELECT * FROM inscricao_evento WHERE evento_id = :eventoId", nativeQuery = true)

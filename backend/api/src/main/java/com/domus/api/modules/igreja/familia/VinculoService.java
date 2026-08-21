@@ -26,6 +26,7 @@ public class VinculoService {
     private final FamiliaIgrejaService familiaService;
     private final CodigoVinculoGenerator gerador;
     private final UsuarioRepository usuarioRepository;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional(readOnly = true)
     public VinculoStatusResponse status(UUID igrejaId) {
@@ -132,6 +133,17 @@ public class VinculoService {
         // getReferenceById devolve um proxy: grava a FK sem carregar o usuário do banco.
         filha.setVinculadoPor(usuarioRepository.getReferenceById(usuarioId));
         igrejaRepository.save(filha);
+
+        List<com.domus.api.modules.usuario.Usuario> adminsDaSede = usuarioRepository
+                .findByIgrejaIdAndRole_NomeAndAtivoTrue(mae.getId(),
+                        com.domus.api.shared.security.Perfil.ADMIN_IGREJA.name());
+        for (var admin : adminsDaSede) {
+            notificacaoService.criar(
+                    com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_VINCULO_FAMILIA,
+                    mae.getId(), admin.getId(),
+                    filha.getNome() + " pediu pra entrar na sua família de igrejas.",
+                    "/configuracoes/igrejas-vinculadas");
+        }
 
         log.info("Vínculo criado. filha_igreja_id={}, mae_igreja_id={}, por_usuario_id={}",
                 filha.getId(), mae.getId(), usuarioId);

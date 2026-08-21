@@ -136,7 +136,7 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 | Camada | Ferramenta | Quando usar |
 |---|---|---|
 | **Service (regra de negócio)** | Mockito puro, sem contexto Spring | **Regra padrão.** 90% dos testes do projeto. |
-| **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra o Neon de testes. |
+| **Repository (consulta JPA)** | `@DataJpaTest` + `@AutoConfigureTestDatabase(replace = NONE)` | Quando a consulta tem JPQL/query method não trivial. Roda contra Postgres real via Testcontainers (ver nota abaixo). |
 | **Integração JPA complexa** | `@SpringBootTest` + `@Transactional` | FK constraints, triggers, concorrência com lock, migration. **Exceção, não regra.** |
 | **Controller (HTTP + Security)** | `@SpringBootTest` + `@AutoConfigureMockMvc` + `AutenticacaoTestSupport` | Harness introduzido em 2026-08-20 (piloto: `VisitanteControllerTest`). Ainda **não aplicado a todos os controllers** — expandir módulo a módulo conforme mexer neles. |
 
@@ -144,6 +144,19 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 > precisam de banco, não precisam de `.env`, e testam a lógica de negócio isolada. Mas
 > **não pegam** bugs de lazy loading, ordem de `requestMatchers` do Spring Security, ou FK
 > constraints — esses precisam de `@SpringBootTest`.
+
+> **Banco de testes via Testcontainers (2026-08-20):** toda classe `@DataJpaTest`/
+> `@SpringBootTest` implementa `PostgresTestContainerSupport`
+> (`src/test/java/.../shared/testcontainers/`) — uma interface com o container Postgres
+> (`postgres:16-alpine`) como campo estático e um `@DynamicPropertySource` que sobrescreve
+> `spring.datasource.*`. Por ser estático numa interface, o container sobe **uma vez só**
+> por execução do `mvn test` (o Surefire deste projeto roda tudo numa JVM só), não uma vez
+> por classe. Migrations do Flyway (inclusive `unaccent` e os triggers em plpgsql) rodam
+> sozinhas contra o banco novo. **Não precisa mais de `.env`/Neon pra rodar a suíte** — só
+> Docker instalado e rodando. Ao escrever um teste novo nessas camadas, lembre que o banco
+> começa **vazio** (só schema, sem dado nenhum): não assuma que já existe uma `igreja` ou
+> qualquer outra linha — crie o fixture que o teste precisa (foi isso que quebrou 3 testes
+> do `MigracaoV3Test`, escritos assumindo o Neon compartilhado sempre ter dado de sobra).
 
 > **Harness de teste de controller (`AutenticacaoTestSupport`):** o `SecurityFilter` do
 > projeto lê o JWT direto de um cookie (`domus_access`), não usa o mecanismo padrão do
@@ -227,10 +240,11 @@ class SecurityFilterTest {
 ### Rodando os testes
 
 ```bash
-# Todos os testes (precisa do .env exportado — o Neon é usado por @DataJpaTest/@SpringBootTest)
-set -a; source .env >/dev/null 2>&1; set +a; mvn -q test
+# Todos os testes (precisa de Docker rodando — o Postgres do @DataJpaTest/@SpringBootTest
+# sobe via Testcontainers, não precisa mais de .env)
+mvn -q test
 
-# Um teste específico (não precisa do .env se for Mockito puro)
+# Um teste específico
 mvn -q test -Dtest=NomeDaClasse
 
 # Offline (dependências já cacheadas)
@@ -248,7 +262,6 @@ mvn -q -o test -Dtest=NomeDaClasse
 
 | Dívida | Impacto |
 |---|---|
-| **Sem Testcontainers / H2** — `@DataJpaTest` roda contra o Neon de testes compartilhado | Exige `.env` exportado; testes concorrentes podem se atropelar |
 | **Sem harness de autorização por endpoint** — não existe `@WebMvcTest` com `SecurityConfig` real | Bugs de ordem de `requestMatchers` só são pegos manualmente |
 | **Mockito self-attaching agent** — warning nos logs | Em JDKs futuros vai quebrar; precisa configurar byte-buddy como Java agent no surefire |
 | **Sem testes de frontend** — não há Jest, Vitest, Cypress ou Playwright configurados | Validação de front é manual no navegador |

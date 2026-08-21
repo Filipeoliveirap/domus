@@ -6,10 +6,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Seleção usava @Profile("test"), mas o projeto nunca ativa esse perfil — o bean ativo nos testes era o R2 de verdade. */
 @SpringBootTest
-class ArmazenamentoSelecaoTest {
+class ArmazenamentoSelecaoTest implements PostgresTestContainerSupport {
 
     @Autowired
     ArmazenamentoFotos armazenamento;

@@ -25,11 +25,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Postgres real (não mock): checagem de duplicata e endereço herdado dependem de dado já persistido; @Transactional dá rollback ao final. */
 @SpringBootTest
 @Transactional
-class LocalEventoServiceTest {
+class LocalEventoServiceTest implements PostgresTestContainerSupport {
 
     @Autowired LocalEventoService service;
     @Autowired LocalEventoRepository repository;

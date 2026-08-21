@@ -17,10 +17,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 @SpringBootTest
 @Transactional
-class MinisterioServiceTest {
+class MinisterioServiceTest implements PostgresTestContainerSupport {
 
     @Autowired MinisterioService service;
     @Autowired MinisterioRepository repository;

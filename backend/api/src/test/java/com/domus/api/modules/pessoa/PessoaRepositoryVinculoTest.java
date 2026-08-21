@@ -12,11 +12,12 @@ import org.springframework.data.domain.PageRequest;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Filtro opcional vinculo da listagem paginada: MEMBRO devolve só batizados, null devolve todos. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class PessoaRepositoryVinculoTest {
+class PessoaRepositoryVinculoTest implements PostgresTestContainerSupport {
 
     @Autowired
     PessoaRepository pessoaRepository;

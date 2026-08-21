@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Arquivar a PESSOA responsável ou o USUÁRIO que cadastrou/atualizou um evento nunca pode derrubar {@code GET /eventos}:
@@ -34,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @Transactional
-class EventoAuditoriaArquivamentoTest {
+class EventoAuditoriaArquivamentoTest implements PostgresTestContainerSupport {
 
     @Autowired PessoaService pessoaService;
     @Autowired UsuarioService usuarioService;

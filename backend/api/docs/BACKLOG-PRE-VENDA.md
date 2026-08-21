@@ -104,7 +104,20 @@ cobra nada de verdade. Constrói:
 
 ---
 
-## 4. Central de notificações (in-app)
+## 4. ~~Central de notificações (in-app)~~ RESOLVIDO (2026-08-21)
+
+Implementado exatamente como desenhado abaixo, com um ajuste no brainstorm: entrada na célula
+notifica **todos os membros da célula, exceto quem acabou de entrar** (não só o líder, como o
+texto original sugeria). `TipoNotificacao` (enum) + `NotificacaoService.criar(...)` fachada
+única, chamada síncrona de cada produtor. 8 produtores ligados na v1 (mais do que os 3
+originalmente listados aqui — pedido de ministério, entrada em célula, acesso concedido,
+inscrição em evento com responsável, promoção a líder de célula, evento mudando/cancelado,
+pedido de vínculo de família, exclusão de conta agendada perto do prazo). Sino no `TopBar`
+com badge, dropdown, marcar lida/todas. Ver spec completo em
+`docs/superpowers/specs/2026-08-20-central-notificacoes-design.md` e o plano de implementação
+em `docs/superpowers/plans/2026-08-20-central-notificacoes.md`.
+
+Texto original do brainstorm mantido abaixo por contexto:
 
 **Achado no brainstorm de 2026-08-20** — não existia nenhum mecanismo de notificação dentro do
 produto até agora (só e-mail transacional avulso, um por feature: convite, reset de senha).

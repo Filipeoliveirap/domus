@@ -12,12 +12,14 @@ public record EventoArquivadoResponse(
         LocalDateTime inicioEm,
         String tipo,
         boolean temVinculo,
-        long totalInscritos
+        long totalInscritos,
+        UUID serieId
 ) {
     public static EventoArquivadoResponse de(Evento e, long totalInscritos) {
         return new EventoArquivadoResponse(
                 e.getId(), e.getTitulo(), e.getInicioEm(), e.getTipo(),
-                totalInscritos > 0, totalInscritos
+                totalInscritos > 0, totalInscritos,
+                e.getSerie() != null ? e.getSerie().getId() : null
         );
     }
 }

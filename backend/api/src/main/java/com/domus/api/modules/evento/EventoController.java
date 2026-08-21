@@ -131,9 +131,11 @@ public class EventoController {
     }
 
     @PostMapping("/{id}/restaurar")
-    public ResponseEntity<Void> restaurar(@PathVariable UUID id) {
+    public ResponseEntity<Void> restaurar(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "ESTA") com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
         exigirGerenciar();
-        eventoService.restaurar(id, usuarioAutenticado.getIgrejaId());
+        eventoService.restaurar(id, usuarioAutenticado.getIgrejaId(), escopo);
         return ResponseEntity.noContent().build();
     }
 

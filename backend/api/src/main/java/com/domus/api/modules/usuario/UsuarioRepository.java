@@ -42,6 +42,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     List<Usuario> findByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
+    /** Só o id — usado pra notificar em massa (ex.: novo evento) sem carregar a entidade inteira. */
+    @Query("SELECT u.id FROM Usuario u WHERE u.igreja.id = :igrejaId AND u.ativo = true")
+    List<UUID> findIdsAtivosPorIgreja(@Param("igrejaId") UUID igrejaId);
+
     /** Ordenação no banco (ativos primeiro) antes de paginar — ordenar no front
      *  só acertaria a página aberta, deixando inconsistência entre páginas. */
     @Query("""

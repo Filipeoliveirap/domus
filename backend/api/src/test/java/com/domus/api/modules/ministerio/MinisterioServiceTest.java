@@ -232,6 +232,90 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         service.pedirEntrada(ministerioId, candidataId, igrejaId); // não deve lançar mesmo sem usuário no líder
     }
 
+    @Test
+    void adicionarMembroNotificaAPessoaAdicionada() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa pessoa = novaPessoa("Larissa", igrejaId);
+        com.domus.api.modules.usuario.Usuario usuario = novoUsuario(pessoa);
+
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoa.getId()),
+                igrejaId, null, true, null);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuario.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTipo())
+                .contains(com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO);
+    }
+
+    @Test
+    void naoDuplicaORotuloQuandoONomeJaComecaComRede() {
+        // Nome cadastrado pelo próprio usuário já incluindo o rótulo — sem a checagem, o texto
+        // virava "Você foi adicionado à Rede Rede de Louvor.".
+        UUID ministerioId = service.criar(new MinisterioRequest("Rede de Louvor", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa pessoa = novaPessoa("Paula", igrejaId);
+        com.domus.api.modules.usuario.Usuario usuario = novoUsuario(pessoa);
+
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoa.getId()),
+                igrejaId, null, true, null);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuario.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTexto())
+                .contains("Você foi adicionado à Rede de Louvor.");
+    }
+
+    @Test
+    void removerMembroNotificaAPessoaRemovida() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa pessoa = novaPessoa("Marcos", igrejaId);
+        com.domus.api.modules.usuario.Usuario usuario = novoUsuario(pessoa);
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoa.getId()),
+                igrejaId, null, true, null);
+
+        service.removerMembro(ministerioId, pessoa.getId(), igrejaId, null, true);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuario.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTipo())
+                .contains(com.domus.api.modules.notificacao.TipoNotificacao.REMOVIDO_MINISTERIO);
+    }
+
+    @Test
+    void aceitarPedidoNotificaOCandidato() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Recepção", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa candidata = novaPessoa("Nina", igrejaId);
+        com.domus.api.modules.usuario.Usuario usuarioCandidata = novoUsuario(candidata);
+
+        service.pedirEntrada(ministerioId, candidata.getId(), igrejaId);
+        service.aceitarPedido(ministerioId, candidata.getId(), igrejaId, null, true, null);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuarioCandidata.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTipo())
+                .contains(com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO);
+    }
+
+    @Test
+    void naoNotificaQuandoAtorEOProprioAlvo() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        com.domus.api.modules.pessoa.Pessoa pessoa = novaPessoa("Otávio", igrejaId);
+        com.domus.api.modules.usuario.Usuario usuario = novoUsuario(pessoa);
+
+        // Caso de borda: o próprio ator é o alvo da ação (ex.: admin se adiciona).
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(pessoa.getId()),
+                igrejaId, pessoa.getId(), true, null);
+
+        var notificacoes = notificacaoRepository.findByUsuarioDestinatarioId(
+                usuario.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(notificacoes.getContent())
+                .extracting(n -> n.getTipo())
+                .doesNotContain(com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     jakarta.persistence.EntityManager entityManager;
 

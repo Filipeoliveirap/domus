@@ -33,6 +33,20 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MinisterioService {
 
+    /** Rótulo hardcoded pro texto de notificação (piloto de 1 igreja, que chama o módulo de
+     *  "rede", não "ministério") — ver memória rotulo-ministerio-self-service-fase5. Domínio,
+     *  rotas e nomes de classe continuam "ministerio"; só a cópia visível troca. */
+    private static final String ROTULO_MINISTERIO = "Rede";
+
+    /** "Rede " + nome, sem duplicar quando quem cadastrou já incluiu o rótulo no próprio nome
+     *  (ex.: nome = "Rede de Louvor" viraria "Rede Rede de Louvor" sem esta checagem). */
+    private static String comRotulo(String nomeMinisterio) {
+        String normalizado = nomeMinisterio.trim();
+        boolean jaTemRotulo = normalizado.equalsIgnoreCase(ROTULO_MINISTERIO)
+                || normalizado.toLowerCase().startsWith(ROTULO_MINISTERIO.toLowerCase() + " ");
+        return jaTemRotulo ? normalizado : ROTULO_MINISTERIO + " " + normalizado;
+    }
+
     private final MinisterioRepository ministerioRepository;
     private final MinisterioMembroRepository membroRepository;
     private final IgrejaRepository igrejaRepository;
@@ -226,16 +240,33 @@ public class MinisterioService {
                 .criadoPor(usuario)
                 .atualizadoPor(usuario)
                 .build());
+
+        notificarMembroDoMinisterio(ministerio, igrejaId, data.pessoaId(), atorPessoaId,
+                com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO,
+                "Você foi adicionado à " + comRotulo(ministerio.getNome()) + ".");
     }
 
     @Transactional
     public void removerMembro(UUID ministerioId, UUID pessoaId, UUID igrejaId, UUID atorPessoaId, boolean isAdmin) {
-        buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
+        Ministerio ministerio = buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
         exigirAdminOuLider(ministerioId, atorPessoaId, isAdmin);
 
         MinisterioMembro membro = membroRepository.findByMinisterioIdAndPessoaId(ministerioId, pessoaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vínculo não encontrado."));
         membroRepository.delete(membro);
+
+        notificarMembroDoMinisterio(ministerio, igrejaId, pessoaId, atorPessoaId,
+                com.domus.api.modules.notificacao.TipoNotificacao.REMOVIDO_MINISTERIO,
+                "Você foi removido da " + comRotulo(ministerio.getNome()) + ".");
+    }
+
+    /** Notifica a própria pessoa afetada (adicionada/removida/aceita) — nunca quando ela mesma agiu. */
+    private void notificarMembroDoMinisterio(Ministerio ministerio, UUID igrejaId, UUID pessoaId, UUID pessoaIdAtor,
+                                              com.domus.api.modules.notificacao.TipoNotificacao tipo, String texto) {
+        if (pessoaId.equals(pessoaIdAtor)) return;
+        usuarioRepository.findByPessoaId(pessoaId)
+                .ifPresent(usuario -> notificacaoService.criar(
+                        tipo, igrejaId, usuario.getId(), texto, "/ministerios/" + ministerio.getId()));
     }
 
     @Transactional
@@ -281,7 +312,7 @@ public class MinisterioService {
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_MINISTERIO,
                             igrejaId, usuario.getId(),
-                            pessoa.getNome() + " pediu pra entrar em " + ministerio.getNome() + ".",
+                            pessoa.getNome() + " pediu pra entrar na " + comRotulo(ministerio.getNome()) + ".",
                             "/ministerios/" + ministerioId));
         }
     }
@@ -289,7 +320,7 @@ public class MinisterioService {
     @Transactional
     public void aceitarPedido(UUID ministerioId, UUID pessoaId, UUID igrejaId,
                                UUID atorPessoaId, boolean isAdmin, UUID usuarioId) {
-        buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
+        Ministerio ministerio = buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
         exigirAdminOuLider(ministerioId, atorPessoaId, isAdmin);
 
         MinisterioMembro membro = membroRepository.findByMinisterioIdAndPessoaId(ministerioId, pessoaId)
@@ -299,6 +330,10 @@ public class MinisterioService {
             usuarioRepository.findById(usuarioId).ifPresent(membro::setAtualizadoPor);
         }
         membroRepository.save(membro);
+
+        notificarMembroDoMinisterio(ministerio, igrejaId, pessoaId, atorPessoaId,
+                com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO,
+                "Seu pedido para entrar na " + comRotulo(ministerio.getNome()) + " foi aceito.");
     }
 
     @Transactional

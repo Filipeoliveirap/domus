@@ -32,6 +32,7 @@ class InscricaoPresencaTest {
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
+    com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -51,9 +52,10 @@ class InscricaoPresencaTest {
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(List.of());
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
+        respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService, notificacaoService, campoPersonalizadoRepository);
+                familiaIgrejaService, notificacaoService, campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
     }
 
     private Igreja igreja() {

@@ -55,6 +55,7 @@ class EventoServiceTest {
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -75,11 +76,13 @@ class EventoServiceTest {
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        eventoSerieRepository = mock(com.domus.api.modules.evento.serie.EventoSerieRepository.class);
 
         service = new EventoService(
                 eventoRepository, igrejaRepository, cacheEvictor, outboxRegistrador,
                 inscricaoService, inscricaoRepository, fotoService, elegibilidadeService, pessoaRepository,
-                localEventoRepository, usuarioRepository, familiaIgrejaService, notificacaoService
+                localEventoRepository, usuarioRepository, familiaIgrejaService, notificacaoService,
+                eventoSerieRepository
         );
 
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));
@@ -135,6 +138,39 @@ class EventoServiceTest {
                 null,
                 null
         );
+    }
+
+    private EventoRequest requestComRecorrencia(com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, "Salão Social", "Culto", null, null, null, null, null, null,
+                null, null, false, false, false, false, null, recorrencia);
+    }
+
+    @Test
+    void cadastrarEventoComRecorrenciaCriaASerieEAPrimeiraOcorrencia() {
+        var recorrencia = new com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest(
+                com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL, 1,
+                java.util.Set.of(com.domus.api.modules.celula.DiaSemana.QUINTA), null, null, null);
+        EventoRequest req = requestComRecorrencia(recorrencia);
+        when(eventoSerieRepository.save(any())).thenAnswer(inv -> {
+            var serie = (com.domus.api.modules.evento.serie.EventoSerie) inv.getArgument(0);
+            serie.setId(UUID.randomUUID());
+            return serie;
+        });
+
+        EventoResponse response = service.cadastrarEvento(req, igrejaId, usuarioId);
+
+        assertThat(response.serieId()).isNotNull();
+        assertThat(response.divergeDaSerie()).isFalse();
+    }
+
+    @Test
+    void cadastrarEventoSemRecorrenciaNaoCriaSerie() {
+        EventoRequest req = requestComRestricao(false);
+        service.cadastrarEvento(req, igrejaId, usuarioId);
+        verify(eventoSerieRepository, never()).save(any());
+        verify(eventoRepository).save(argThat(e -> e.getSerie() == null));
     }
 
     @Test

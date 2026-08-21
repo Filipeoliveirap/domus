@@ -115,6 +115,14 @@ public class Evento {
     @Builder.Default
     private boolean restritoPropriaIgreja = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "serie_id")
+    private com.domus.api.modules.evento.serie.EventoSerie serie;
+
+    @Column(name = "diverge_da_serie", nullable = false)
+    @Builder.Default
+    private boolean divergeDaSerie = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

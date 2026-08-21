@@ -1,0 +1,31 @@
+.opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 24px 0;
+}
+
+.opcao {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+.opcao:hover {
+  background: var(--color-bg-page);
+  border-color: var(--color-primary);
+}
+.opcao:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .opcoes { padding: 16px 16px 0; }
+}

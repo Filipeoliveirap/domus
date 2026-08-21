@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2 } from 'lucide-react'
+import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
 import { Input } from '@/components/common/input/Input'
+import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
 import { formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { formatarHoraDigitada } from '@/lib/masks'
@@ -14,11 +15,12 @@ import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
+import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
-import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
+import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
   isFormIncomplete: boolean
@@ -31,7 +33,20 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
   onFecharImpacto: () => void
+  aguardandoEscopoEdicao: boolean
+  onEscolherEscopoEdicao: (escopo: EscopoEdicaoEvento) => void
+  onFecharEscopoEdicao: () => void
 }
+
+const DIAS_SEMANA_OPTIONS = [
+  { value: 'SEGUNDA', label: 'Seg' },
+  { value: 'TERCA', label: 'Ter' },
+  { value: 'QUARTA', label: 'Qua' },
+  { value: 'QUINTA', label: 'Qui' },
+  { value: 'SEXTA', label: 'Sex' },
+  { value: 'SABADO', label: 'Sáb' },
+  { value: 'DOMINGO', label: 'Dom' },
+]
 
 export function EventoForm(props: EventoFormProps) {
   const router = useRouter()
@@ -40,8 +55,15 @@ export function EventoForm(props: EventoFormProps) {
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
+  const repetir = watch('repetir')
+  const recorrenciaFrequencia = watch('recorrenciaFrequencia')
+  const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
+  const recorrenciaFimTipo = watch('recorrenciaFimTipo')
+  const recorrenciaIntervaloValor = Number(watch('recorrenciaIntervalo')) || 1
+  const noPlural = recorrenciaIntervaloValor !== 1
   const requerInscricao = watch('requerInscricao')
   const tipoInscricao = watch('tipoInscricao')
   const exclusivoMembros = watch('exclusivoMembros')
@@ -205,6 +227,126 @@ export function EventoForm(props: EventoFormProps) {
                 </div>
               </div>
             </div>
+
+            {/* Repetição — só faz sentido no cadastro; editar uma ocorrência existente usa o
+                seletor de escopo (só esta/esta e as seguintes/toda a série), não este toggle. */}
+            {!ehEdicao && (
+              <div className={styles.campos}>
+                <label className={styles.toggleRow}>
+                  <span className={styles.toggleTexto}>
+                    <span className={styles.toggleTitulo}>
+                      <Repeat size={16} aria-hidden="true" style={{ marginRight: 6, verticalAlign: 'text-bottom' }} />
+                      Repetir
+                    </span>
+                    <span className={styles.toggleDescricao}>
+                      Cadastre uma vez e as próximas ocorrências aparecem sozinhas.
+                    </span>
+                  </span>
+                  <span className={styles.switch}>
+                    <input type="checkbox" className={styles.switchInput} {...register('repetir')} />
+                    <span className={styles.switchTrilho} />
+                  </span>
+                </label>
+
+                {repetir && (
+                  <>
+                    <div>
+                      <span className={styles.labelData}>REPETE A CADA</span>
+                      <div className={styles.linhaRecorrencia}>
+                        <Input id="recorrencia-intervalo" type="number" min={1}
+                          placeholder="1"
+                          aria-label="Intervalo de repetição, em número"
+                          error={errors.recorrenciaIntervalo?.message}
+                          {...register('recorrenciaIntervalo')} />
+                        <Select id="recorrencia-frequencia" placeholder="dia, semana ou mês"
+                          aria-label="Unidade de repetição: dia, semana ou mês"
+                          options={[
+                            { value: 'DIARIA', label: noPlural ? 'dias' : 'dia' },
+                            { value: 'SEMANAL', label: noPlural ? 'semanas' : 'semana' },
+                            { value: 'MENSAL', label: noPlural ? 'meses' : 'mês' },
+                          ]}
+                          error={errors.recorrenciaFrequencia?.message}
+                          {...register('recorrenciaFrequencia')} />
+                      </div>
+                      <span className={styles.exemploRecorrencia}>
+                        {recorrenciaFrequencia
+                          ? `Ex.: repete a cada ${recorrenciaIntervaloValor} ${
+                              recorrenciaFrequencia === 'DIARIA' ? (noPlural ? 'dias' : 'dia')
+                                : recorrenciaFrequencia === 'SEMANAL' ? (noPlural ? 'semanas' : 'semana')
+                                : (noPlural ? 'meses' : 'mês')
+                            }.`
+                          : 'Ex.: a cada 1 semana repete toda semana; a cada 2 semanas, uma sim uma não.'}
+                      </span>
+                    </div>
+
+                    {recorrenciaFrequencia === 'SEMANAL' && (
+                      <div>
+                        <span className={styles.labelData}>DIAS DA SEMANA</span>
+                        <div className={styles.chipsLinha}>
+                          {DIAS_SEMANA_OPTIONS.map((dia) => {
+                            const marcado = recorrenciaDiasSemana.includes(dia.value)
+                            return (
+                              <button
+                                key={dia.value}
+                                type="button"
+                                className={marcado ? styles.chipDiaAtivo : styles.chipDia}
+                                onClick={() => {
+                                  const novos = marcado
+                                    ? recorrenciaDiasSemana.filter((d) => d !== dia.value)
+                                    : [...recorrenciaDiasSemana, dia.value]
+                                  setValue('recorrenciaDiasSemana', novos, { shouldValidate: true })
+                                }}
+                              >
+                                {dia.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {errors.recorrenciaDiasSemana && (
+                          <span className={styles.erroCampo}>{errors.recorrenciaDiasSemana.message}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {recorrenciaFrequencia === 'MENSAL' && (
+                      <Select id="recorrencia-tipo-mensal" label="REPETE" placeholder="Selecione"
+                        options={[
+                          { value: 'DIA_FIXO', label: 'No mesmo dia do mês' },
+                          { value: 'DIA_DA_SEMANA', label: 'Na mesma posição (ex.: toda 1ª terça)' },
+                        ]}
+                        error={errors.recorrenciaTipoMensal?.message}
+                        {...register('recorrenciaTipoMensal')} />
+                    )}
+
+                    <Select id="recorrencia-fim-tipo" label="TERMINA" placeholder="Selecione"
+                      options={[
+                        { value: 'NUNCA', label: 'Nunca' },
+                        { value: 'DATA', label: 'Em uma data' },
+                        { value: 'CONTAGEM', label: 'Depois de um número de vezes' },
+                      ]}
+                      error={errors.recorrenciaFimTipo?.message}
+                      {...register('recorrenciaFimTipo')} />
+
+                    {recorrenciaFimTipo === 'DATA' && (
+                      <CampoData
+                        id="recorrencia-data-fim"
+                        label="Data final"
+                        value={(watch('recorrenciaDataFim') as string) ?? ''}
+                        onChange={(v) => setValue('recorrenciaDataFim', v, { shouldValidate: true })}
+                        erro={errors.recorrenciaDataFim?.message}
+                      />
+                    )}
+
+                    {recorrenciaFimTipo === 'CONTAGEM' && (
+                      <Input id="recorrencia-numero-ocorrencias" label="NÚMERO DE OCORRÊNCIAS" type="number" min={1}
+                        placeholder="Ex.: 10"
+                        error={errors.recorrenciaNumeroOcorrencias?.message}
+                        {...register('recorrenciaNumeroOcorrencias')} />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Imagem do evento (capa/banner) */}
             <div className={styles.imagemWrap}>
@@ -407,6 +549,14 @@ export function EventoForm(props: EventoFormProps) {
           onManterTodos={() => onConfirmarImpacto(false)}
           onCancelarNaoElegiveis={() => onConfirmarImpacto(true)}
           onClose={onFecharImpacto}
+        />
+      )}
+
+      {aguardandoEscopoEdicao && (
+        <ModalEscopoEdicaoEvento
+          titulo={(watch('titulo') as string) ?? ''}
+          onEscolher={onEscolherEscopoEdicao}
+          onClose={onFecharEscopoEdicao}
         />
       )}
     </form>

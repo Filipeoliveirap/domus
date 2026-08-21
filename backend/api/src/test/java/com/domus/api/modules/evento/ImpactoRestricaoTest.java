@@ -104,7 +104,7 @@ class ImpactoRestricaoTest implements PostgresTestContainerSupport {
     private EventoRequest requestDe(Evento e, Integer idadeMin, Integer idadeMax, Boolean exclusivoMembros) {
         return new EventoRequest(e.getTitulo(), null, e.getInicioEm(), null,
                 null, null, null, null, null, idadeMin, idadeMax, null, null,
-                null, null, exclusivoMembros, true, null, null, null);
+                null, null, exclusivoMembros, true, null, null, null, null);
     }
 
     private long confirmados(UUID eventoId) {
@@ -119,7 +119,8 @@ class ImpactoRestricaoTest implements PostgresTestContainerSupport {
                 admin.getPessoa().getId(), "ADMIN_IGREJA", true, igrejaId);
 
         eventoService.atualizarEvento(eventoJovens.getId(),
-                requestDe(eventoJovens, 18, 25, false), igrejaId, admin.getId(), false);
+                requestDe(eventoJovens, 18, 25, false), igrejaId, admin.getId(), false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         entityManager.flush();
         entityManager.clear();
@@ -153,7 +154,8 @@ class ImpactoRestricaoTest implements PostgresTestContainerSupport {
                 admin.getPessoa().getId(), "ADMIN_IGREJA", true, igrejaId);
 
         eventoService.atualizarEvento(eventoJovens.getId(),
-                requestDe(eventoJovens, 18, 25, false), igrejaId, admin.getId(), true);
+                requestDe(eventoJovens, 18, 25, false), igrejaId, admin.getId(), true,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         entityManager.flush();
         entityManager.clear();
@@ -170,7 +172,8 @@ class ImpactoRestricaoTest implements PostgresTestContainerSupport {
                 congregante.getId(), "ACESSO_COMUM", false, igrejaId);
 
         eventoService.atualizarEvento(eventoAberto.getId(),
-                requestDe(eventoAberto, null, null, true), igrejaId, admin.getId(), false);
+                requestDe(eventoAberto, null, null, true), igrejaId, admin.getId(), false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         entityManager.flush();
         entityManager.clear();

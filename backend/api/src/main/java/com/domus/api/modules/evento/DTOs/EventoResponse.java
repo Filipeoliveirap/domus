@@ -38,7 +38,9 @@ public record EventoResponse(
         IgrejaResumo igrejaOrganizadora,
         boolean podeGerenciarEsteEvento,
         boolean restritoPropriaIgreja,
-        boolean arquivado
+        boolean arquivado,
+        UUID serieId,
+        boolean divergeDaSerie
 ) {
     public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado) {
         static LocalInfo from(Evento e) {
@@ -90,7 +92,9 @@ public record EventoResponse(
                 e.getRecorteEtario(), e.getIdadeMin(), e.getIdadeMax(),
                 e.getRestricaoEstadoCivil(), e.getRestricaoSexo(),
                 IgrejaResumo.de(e.getIgreja()), podeGerenciar, e.isRestritoPropriaIgreja(),
-                e.getDeletedAt() != null
+                e.getDeletedAt() != null,
+                e.getSerie() != null ? e.getSerie().getId() : null,
+                e.isDivergeDaSerie()
         );
     }
 }

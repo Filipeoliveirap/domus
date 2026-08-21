@@ -213,5 +213,30 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query(value = "UPDATE evento SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
+    /** "Este e os seguintes": restaura só quem está a partir da data desta ocorrência. */
+    @Modifying
+    @Query(value = """
+        UPDATE evento SET deleted_at = NULL
+        WHERE serie_id = :serieId AND igreja_id = :igrejaId AND inicio_em >= :apartirDe
+        """, nativeQuery = true)
+    int restaurarPorSerieAPartirDe(@Param("serieId") UUID serieId, @Param("igrejaId") UUID igrejaId,
+                                    @Param("apartirDe") LocalDateTime apartirDe);
+
+    /** "Toda a série": restaura todas as ocorrências arquivadas, sem filtro de data. */
+    @Modifying
+    @Query(value = "UPDATE evento SET deleted_at = NULL WHERE serie_id = :serieId AND igreja_id = :igrejaId",
+           nativeQuery = true)
+    int restaurarPorSerie(@Param("serieId") UUID serieId, @Param("igrejaId") UUID igrejaId);
+
     long countByIgrejaId(UUID igrejaId);
+
+    Optional<Evento> findTopBySerieIdAndDivergeDaSerieFalseOrderByInicioEmDesc(UUID serieId);
+
+    List<Evento> findBySerieIdAndInicioEmGreaterThanEqual(UUID serieId, LocalDateTime de);
+
+    /** Sem @SQLRestriction de propósito — soft-deletado (feriado cancelado) também conta,
+     *  senão o job de materialização ressuscitaria a data no próximo dia de rodagem. */
+    @Query(value = "SELECT COUNT(*) > 0 FROM evento WHERE serie_id = :serieId AND inicio_em = :inicioEm",
+           nativeQuery = true)
+    boolean existsBySerieIdAndInicioEm(@Param("serieId") UUID serieId, @Param("inicioEm") LocalDateTime inicioEm);
 }

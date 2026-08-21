@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type {
   EventoArquivadoResponse, EventoRequest, EventoResponse, ImpactoRestricaoResponse,
-  RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros,
+  RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros, EscopoEdicaoEvento,
 } from '@/types/evento.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
 
@@ -33,19 +33,21 @@ export const eventosService = {
     api.post<EventoResponse>(Endpoints.eventos.CRIAR, data).then(res => res.data),
 
   // cancelarNaoElegiveis: escolha do admin no <ModalImpactoRestricao> — default false
-  // (mantém todo mundo) espelha o default do backend.
-  atualizar: (id: string, data: EventoRequest, cancelarNaoElegiveis = false): Promise<EventoResponse> =>
-    api.put<EventoResponse>(Endpoints.eventos.BY_ID(id), data, { params: { cancelarNaoElegiveis } })
-      .then(res => res.data),
+  // (mantém todo mundo) espelha o default do backend. escopo: só relevante quando o evento
+  // pertence a uma série (serieId != null) — default ESTA no backend cobre evento avulso.
+  atualizar: (id: string, data: EventoRequest, cancelarNaoElegiveis = false, escopo?: EscopoEdicaoEvento): Promise<EventoResponse> =>
+    api.put<EventoResponse>(Endpoints.eventos.BY_ID(id), data, {
+      params: { cancelarNaoElegiveis, escopo },
+    }).then(res => res.data),
 
-  arquivar: (id: string): Promise<void> =>
-    api.delete(Endpoints.eventos.BY_ID(id)).then(() => undefined),
+  arquivar: (id: string, escopo?: EscopoEdicaoEvento): Promise<void> =>
+    api.delete(Endpoints.eventos.BY_ID(id), { params: { escopo } }).then(() => undefined),
 
   listarArquivados: (): Promise<EventoArquivadoResponse[]> =>
     api.get<EventoArquivadoResponse[]>(Endpoints.eventos.ARQUIVADOS).then(res => res.data),
 
-  restaurar: (id: string): Promise<void> =>
-    api.post(Endpoints.eventos.RESTAURAR(id)).then(() => undefined),
+  restaurar: (id: string, escopo?: EscopoEdicaoEvento): Promise<void> =>
+    api.post(Endpoints.eventos.RESTAURAR(id), null, { params: { escopo } }).then(() => undefined),
 
   excluirDefinitivo: (id: string): Promise<void> =>
     api.delete(Endpoints.eventos.DEFINITIVO(id)).then(() => undefined),

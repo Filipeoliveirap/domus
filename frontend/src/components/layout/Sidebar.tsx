@@ -13,21 +13,11 @@ import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
 import { urlFoto } from '@/lib/urlFoto'
-import { ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { podeGerenciarVisitantes, podeVerFinanceiro } from '@/lib/permissoes'
 import styles from './Sidebar.module.css'
 
 type NavItem = { href: string; label: string; icon: typeof Home; roles: Role[]; visivel?: (role: Role | null, caps: string[]) => boolean }
-
-const navItems: NavItem[] = [
-  { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-  { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
-  { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-  { href: '/ministerios', label: ROTULO_MINISTERIO_PLURAL, icon: UsersRound, roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-  { href: '/celulas',    label: 'Células',  icon: Grid3x3,          roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-  { href: '/financeiro/movimentacoes', label: 'Financeiro',  icon: Wallet,          roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeVerFinanceiro(r, c) },
-  { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
-]
 
 const pessoasSubItems: { href: string; label: string; roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }[] = [
   { href: '/pessoas', label: 'Pessoas', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
@@ -55,6 +45,7 @@ const roleStyles: Record<string, string> = {
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { ministerio, celula } = useRotulos()
   const role = useAuthStore((state) => state.role)
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const nome = useAuthStore((state) => state.nome)
@@ -63,6 +54,16 @@ export function Sidebar() {
   const logout = useAuthStore((state) => state.logout)
   const navAberta = useUiStore((state) => state.navAberta)
   const fecharNav = useUiStore((state) => state.fecharNav)
+
+  const navItems: NavItem[] = [
+    { href: '/inicio',     label: 'Início',    icon: Home,            roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+    { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN_IGREJA'] },
+    { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+    { href: '/ministerios', label: ministerio.plural, icon: UsersRound, roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+    { href: '/celulas',    label: celula.plural,  icon: Grid3x3,          roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
+    { href: '/financeiro/movimentacoes', label: 'Financeiro',  icon: Wallet,          roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeVerFinanceiro(r, c) },
+    { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
+  ]
 
   const filtrar = <T extends { roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }>(items: T[]) =>
     items.filter((item) => {

@@ -11,10 +11,19 @@
 
 ## Dívida técnica (adiada de propósito, YAGNI/tempo)
 
-- **Cache de `Usuario` no `SecurityFilter`.** Hoje o filtro de segurança bate no Postgres a
-  cada requisição para carregar o usuário do JWT. Adiado por YAGNI (volume do piloto é baixo).
-  Quando o tráfego crescer, cachear o usuário (ex.: Redis com TTL curto + invalidação em
-  logout/alteração de role). Ver memória `cache-usuario-security-filter-adiado`.
+- ~~**Cache de `Usuario` no `SecurityFilter`.**~~ **RESOLVIDO** (2026-08-20):
+  `PrincipalCacheService` (`@Cacheable("principal")`, Redis, TTL 5 min) cacheia só os
+  campos que o principal autenticado realmente usa (id, igreja.id, pessoa.id, role —
+  conferido por grep em todo o projeto), reidratados num `Usuario` "casca" via builder —
+  `instanceof Usuario`/`.getId()`/`.getIgreja().getId()`/`.getRole().getNome()` continuam
+  funcionando sem tocar em `UsuarioAutenticado` nem controllers. `UsuarioService` invalida
+  a chave exata (`CacheEvictor.evict`) em todo ponto que já invalidava a lista `usuarios`
+  (ativo, role, arquivar, reativar, restaurar, excluir definitivo) — revogar acesso ou
+  trocar role vale na próxima requisição, não espera o TTL. Validado ao vivo: chave
+  `principal::<id>` some do Redis no instante da ação (não só depois do TTL). Aproveitado
+  pra subir os TTLs dos caches de lista (`usuarios`/`pessoas`/`eventos`/`categorias`/
+  `movimentacoes`) de 5 para 30 min — todos já tinham eviction cobrindo 100% dos pontos de
+  escrita, então o TTL curto não protegia nada, só gerava mais miss.
 
 - **Infra de teste de banco (Testcontainers).** O projeto não tem H2 nem Testcontainers; os
   testes de repositório rodam contra o Neon de testes (via `@AutoConfigureTestDatabase(replace=NONE)`)

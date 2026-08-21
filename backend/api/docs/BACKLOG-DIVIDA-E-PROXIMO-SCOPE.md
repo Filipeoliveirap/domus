@@ -253,22 +253,29 @@ faltavam — item do CLAUDE.md pode ser marcado como feito.
 
 ## Frontend — robustez de sessão (a vigiar)
 
-- **Logout indevido ao falhar refresh (a vigiar).** Descoberto em 2026-07-16: um MEMBRO abrindo
-  `/financeiro/movimentacoes` era deslogado. Causa: a página disparava uma query de admin
-  **sem gate de permissão** (`useCategoriasSelect()`), que tomava 401 (token expirado) e o refresh
-  falhava → `encerrarSessao()`. **Corrigido** gateando a query por `autorizado` e adicionando o
-  `AuthGuard` no layout `(app)`. *Pulga que fica:* se um 401 + refresh problemático desloga, em
-  tese pode atingir um usuário autorizado num momento ruim (ex.: corrida na rotação/detecção de
-  reuso do refresh). Sem repro por ora — observar; se reaparecer, instrumentar o interceptor do
-  axios (`src/lib/api.ts`) e o fluxo de rotação.
-- **403 de CSRF não tem caminho de recuperação no front (a vigiar).** O interceptor do
-  `api.ts` só reage a 401. Se o cookie `XSRF-TOKEN` faltar quando um POST dispara, o Spring
-  devolve 403 e o usuário vê um erro genérico sem saída além de recarregar. Hoje isso não
-  deve acontecer: o `setCsrfRequestAttributeName(null)` força a resolução ansiosa do token,
-  então **toda** resposta traz `Set-Cookie: XSRF-TOKEN` — inclusive o 401 do `/auth/me`, que
-  sempre precede qualquer POST. Ou seja, funciona por causa da ORDEM dos eventos, não por
-  uma defesa explícita. Se aparecer 403 inexplicado, tratar o código de erro de CSRF
-  refazendo a busca do token.
+- ~~**Logout indevido ao falhar refresh (a vigiar).**~~ **INSTRUMENTADO** (2026-08-20):
+  ainda sem repro, então não dava pra "consertar" às cegas — mas em vez de continuar só
+  observando, `encerrarSessao()` (`src/lib/api.ts`) agora manda um `Sentry.captureMessage`
+  toda vez que é chamada por falha de refresh (não por logout normal), com a URL que
+  disparou o 401 original. Se reaparecer em produção, o Sentry tem o dado pra investigar
+  de verdade em vez de ficar só "observando". Histórico original mantido: descoberto em
+  2026-07-16 (MEMBRO em `/financeiro/movimentacoes` era deslogado por query de admin sem
+  gate de permissão, `useCategoriasSelect()`) e corrigido gateando por `autorizado` +
+  `AuthGuard` no layout `(app)`; a pulga que ficou era a corrida teórica na
+  rotação/detecção de reuso do refresh, que segue sem repro.
+- ~~**403 de CSRF não tem caminho de recuperação no front (a vigiar).**~~ **RESOLVIDO**
+  (2026-08-20): o `accessDeniedHandler` do `SecurityConfig` era o mesmo pra falha de CSRF
+  **e** pra negação de role em `requestMatchers` (`.hasAnyRole(...)`) — os dois rodam antes
+  do `DispatcherServlet`, então nunca chegavam no `GlobalExceptionHandler`, e o 403 saía
+  sem corpo nos dois casos, indistinguíveis. Agora `responderAcessoNegado` checa o tipo da
+  exceção (`CsrfException` vs. resto) e devolve `codigo=CSRF_INVALIDO` ou `ACESSO_NEGADO`
+  no mesmo formato `ErrorResponse` do resto da API. O interceptor do `api.ts` trata só o
+  primeiro caso: busca um XSRF-TOKEN novo (`GET /auth/me`, single-flight igual ao refresh
+  de access token) e reenvia a requisição original uma vez (`_retryCsrf`, evita loop). Um
+  403 `ACESSO_NEGADO` continua batendo direto no erro — não mascara negação de permissão
+  como se fosse token velho. Testado em `AuthCsrfConfigTest`
+  (`negacaoDeRoleE403ComCodigoAcessoNegadoNaoCsrf` prova que os dois códigos não se
+  confundem).
 
 - **Padrão a varrer:** garantir que nenhuma página acessível a papéis sem permissão dispare
   queries de admin (gate por `enabled: autorizado`). Só a de movimentações tinha o problema, mas

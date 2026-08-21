@@ -201,14 +201,8 @@ class EventoServiceTest {
                 .inicioEm(dataAntiga)
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
-        Pessoa inscrito = new Pessoa();
-        inscrito.setId(pessoaIdInscrito);
-        com.domus.api.modules.evento.inscricao.InscricaoEvento inscricao =
-                com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
-                        .pessoa(inscrito).status(com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA)
-                        .build();
-        when(inscricaoRepository.findByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
-                .thenReturn(List.of(inscricao));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaIdInscrito));
         when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
 
@@ -235,7 +229,7 @@ class EventoServiceTest {
 
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
 
-        verify(inscricaoRepository, never()).findByEventoIdAndStatus(any(), any());
+        verify(inscricaoRepository, never()).findPessoaIdsByEventoIdAndStatus(any(), any());
     }
 
     @Test
@@ -250,14 +244,8 @@ class EventoServiceTest {
                 .inicioEm(LocalDateTime.now().plusDays(1))
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
-        Pessoa inscrito = new Pessoa();
-        inscrito.setId(pessoaIdInscrito);
-        com.domus.api.modules.evento.inscricao.InscricaoEvento inscricao =
-                com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
-                        .pessoa(inscrito).status(com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA)
-                        .build();
-        when(inscricaoRepository.findByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
-                .thenReturn(List.of(inscricao));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaIdInscrito));
         when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
 

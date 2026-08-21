@@ -13,6 +13,7 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * RateLimitFilter agora roda antes do CsrfFilter (SecurityConfig) — requisição barrada por
@@ -23,7 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-class RateLimitCsrfOrderTest {
+class RateLimitCsrfOrderTest implements PostgresTestContainerSupport {
 
     @Autowired MockMvc mockMvc;
     @Autowired StringRedisTemplate redisTemplate;

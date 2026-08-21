@@ -8,10 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 @SpringBootTest
 @Transactional
-class MigracaoV3Test {
+class MigracaoV3Test implements PostgresTestContainerSupport {
 
     @Autowired JdbcTemplate jdbc;
 
@@ -45,7 +46,7 @@ class MigracaoV3Test {
 
     @Test
     void check_recusa_local_id_e_local_texto_juntos() {
-        String igrejaId = jdbc.queryForObject("SELECT id::text FROM igreja LIMIT 1", String.class);
+        String igrejaId = criarIgreja();
         jdbc.update("INSERT INTO local_evento (igreja_id, nome) VALUES (?::uuid, 'Salão Teste')",
                 igrejaId);
         String localId = jdbc.queryForObject(
@@ -61,7 +62,7 @@ class MigracaoV3Test {
 
     @Test
     void check_recusa_idade_min_maior_que_max() {
-        String igrejaId = jdbc.queryForObject("SELECT id::text FROM igreja LIMIT 1", String.class);
+        String igrejaId = criarIgreja();
         assertThatThrownBy(() -> jdbc.update(
                 "INSERT INTO evento (igreja_id, titulo, inicio_em, idade_min, idade_max, " +
                 "exclusivo_membros, requer_inscricao) " +
@@ -71,10 +72,18 @@ class MigracaoV3Test {
 
     @Test
     void check_recusa_sexo_invalido_em_pessoa() {
-        String igrejaId = jdbc.queryForObject("SELECT id::text FROM igreja LIMIT 1", String.class);
+        String igrejaId = criarIgreja();
         assertThatThrownBy(() -> jdbc.update(
                 "INSERT INTO pessoa (igreja_id, nome, vinculo, sexo) " +
                 "VALUES (?::uuid, 'Teste', 'CONGREGANTE', 'OUTRO')", igrejaId))
                 .hasMessageContaining("chk_pessoa_sexo");
+    }
+
+    /** As checagens de CHECK constraint não podem depender de já existir uma igreja no
+     *  banco — banco isolado (Testcontainers) começa vazio, só com as migrations aplicadas. */
+    private String criarIgreja() {
+        return jdbc.queryForObject(
+                "INSERT INTO igreja (nome, email) VALUES ('Igreja Teste V3', 'migracaov3@teste.com') RETURNING id::text",
+                String.class);
     }
 }

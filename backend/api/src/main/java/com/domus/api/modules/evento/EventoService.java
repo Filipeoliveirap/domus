@@ -232,7 +232,8 @@ public class EventoService {
                 || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
                 || !java.util.Objects.equals(localTextoAntigo, salvo.getLocalTexto());
         if (dataOuLocalMudou) {
-            notificarInscritos(salvo, igrejaId, "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.");
+            notificarInscritos(salvo, igrejaId, "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.",
+                    "/eventos?detalhe=" + salvo.getId());
         }
 
         // Remove a foto antiga só depois que o evento já aponta para a nova.
@@ -271,7 +272,7 @@ public class EventoService {
                     "Não é possível arquivar um evento em andamento.");
         }
 
-        notificarInscritos(evento, igrejaId, "O evento \"" + evento.getTitulo() + "\" foi cancelado.");
+        notificarInscritos(evento, igrejaId, "O evento \"" + evento.getTitulo() + "\" foi cancelado.", "/eventos");
 
         eventoRepository.delete(evento);
         outboxRegistrador.registrar(
@@ -284,14 +285,14 @@ public class EventoService {
         evictarCacheDeEventosDaFamilia(igrejaId);
     }
 
-    private void notificarInscritos(Evento evento, UUID igrejaId, String texto) {
+    private void notificarInscritos(Evento evento, UUID igrejaId, String texto, String link) {
         List<UUID> pessoaIds = inscricaoRepository.findPessoaIdsByEventoIdAndStatus(
                 evento.getId(), com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA);
         for (UUID pessoaId : pessoaIds) {
             usuarioRepository.findByPessoaId(pessoaId).ifPresent(usuario ->
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO,
-                            igrejaId, usuario.getId(), texto, "/eventos/" + evento.getId()));
+                            igrejaId, usuario.getId(), texto, link));
         }
     }
 

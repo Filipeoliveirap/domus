@@ -162,7 +162,7 @@ class InscricaoServiceTest {
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL),
-                eq(igrejaId), eq(usuarioIdResponsavel), anyString(), eq("/eventos/" + eventoId));
+                eq(igrejaId), eq(usuarioIdResponsavel), anyString(), eq("/eventos/" + eventoId + "/inscritos"));
     }
 
     @Test

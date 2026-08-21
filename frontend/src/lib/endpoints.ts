@@ -6,6 +6,12 @@ export const Endpoints = {
   dashboard: {
     GET: '/dashboard',
   },
+  notificacoes: {
+    LISTAR: '/notificacoes',
+    CONTAGEM_NAO_LIDAS: '/notificacoes/contagem-nao-lidas',
+    MARCAR_LIDA: (id: string) => `/notificacoes/${id}/lida`,
+    MARCAR_TODAS_LIDAS: '/notificacoes/lidas',
+  },
   auth: {
     LOGIN: '/auth/login',
     GOOGLE_LOGIN: '/auth/google/login',

@@ -52,6 +52,7 @@ public class UsuarioService {
     private final com.domus.api.modules.ministerio.MinisterioMembroRepository ministerioMembroRepository;
     private final com.domus.api.modules.financeiro.movimentacao.MovimentacaoFinanceiraRepository movimentacaoFinanceiraRepository;
     private final com.domus.api.modules.visitante.VisitanteRepository visitanteRepository;
+    private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional
     public UsuarioResponseDTO concederAcesso(ConcederAcessoRequestDTO data, UUID igrejaId) {
@@ -102,6 +103,11 @@ public class UsuarioService {
         enviarConvite(salvo, email, membro.getIgreja().getNome());
         log.info("Acesso concedido por convite. usuario_id={}, pessoa_id={}, igreja_id={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        notificacaoService.criar(
+                com.domus.api.modules.notificacao.TipoNotificacao.ACESSO_CONCEDIDO,
+                igrejaId, salvo.getId(),
+                "Você recebeu acesso ao Domus da igreja " + membro.getIgreja().getNome() + ".",
+                "/inicio");
         return UsuarioResponseDTO.from(salvo);
     }
 
@@ -135,6 +141,12 @@ public class UsuarioService {
         enviarConvite(salvo, email, membro.getIgreja().getNome());
         log.info("Acesso reativado por convite. usuario_id={}, pessoa_id={}, igrejaId={}", salvo.getId(), membro.getId(), igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", salvo.getId().toString());
+        notificacaoService.criar(
+                com.domus.api.modules.notificacao.TipoNotificacao.ACESSO_CONCEDIDO,
+                igrejaId, salvo.getId(),
+                "Seu acesso ao Domus foi reativado.",
+                "/inicio");
         return UsuarioResponseDTO.from(salvo);
     }
 
@@ -262,6 +274,7 @@ public class UsuarioService {
         );
         log.info("status de usuário alterado. id={}, ativo={}, igreja_id={}", id, ativo, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", id.toString());
         return UsuarioResponseDTO.from(salvo);
     }
 
@@ -288,6 +301,7 @@ public class UsuarioService {
         );
         log.info("role de usuário alterado. id={}, role={}, igreja_id={}", id, roleName, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", id.toString());
         return UsuarioResponseDTO.from(salvo);
     }
 
@@ -329,6 +343,7 @@ public class UsuarioService {
         );
         log.info("Usuário arquivado. id={}, igreja_id={}", id, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", id.toString());
     }
 
     @Transactional
@@ -345,6 +360,7 @@ public class UsuarioService {
                     igrejaId
             );
             cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+            cacheEvictor.evict("principal", usuario.getId().toString());
         });
     }
 
@@ -379,6 +395,7 @@ public class UsuarioService {
         }
         outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.ATUALIZADO, id, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", id.toString());
     }
 
     /** Fluxo próprio do módulo Usuários (LGPD): apaga só o login, pessoa e todo o histórico
@@ -412,6 +429,7 @@ public class UsuarioService {
         usuarioRepository.hardDeleteById(usuarioId);
         outboxRegistrador.registrar(TipoEntidadeOutbox.USUARIO, TipoEventoOutbox.REMOVIDO, usuarioId, igrejaId);
         cacheEvictor.evictPorIgreja("usuarios", igrejaId);
+        cacheEvictor.evict("principal", usuarioId.toString());
     }
 
     @Transactional

@@ -19,11 +19,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /** Flush + clear do cache de 1º nível e relê do banco — só assim um default de banco desconectado do Java seria pego. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class EventoDefaultsTest {
+class EventoDefaultsTest implements PostgresTestContainerSupport {
 
     @Autowired
     IgrejaRepository igrejaRepository;

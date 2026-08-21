@@ -17,6 +17,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class VinculoServiceTest {
@@ -25,6 +27,7 @@ class VinculoServiceTest {
     FamiliaIgrejaService familiaService;
     CodigoVinculoGenerator gerador;
     UsuarioRepository usuarioRepository;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     VinculoService service;
 
     Igreja mae;
@@ -40,7 +43,8 @@ class VinculoServiceTest {
         Usuario quemVinculou = new Usuario();
         quemVinculou.setId(usuarioId);
         when(usuarioRepository.getReferenceById(usuarioId)).thenReturn(quemVinculou);
-        service = new VinculoService(igrejaRepository, familiaService, gerador, usuarioRepository);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        service = new VinculoService(igrejaRepository, familiaService, gerador, usuarioRepository, notificacaoService);
 
         mae = igreja("Igreja Sede");
         filha = igreja("Congregação A");
@@ -120,6 +124,21 @@ class VinculoServiceTest {
         assertThat(filha.getVinculadoEm()).isNotNull();
         assertThat(filha.getVinculadoPor().getId()).isEqualTo(usuarioId);
         verify(igrejaRepository).save(filha);
+    }
+
+    @Test
+    void entrarNaFamiliaNotificaAdminsDaSede() {
+        UUID usuarioIdAdminSede = UUID.randomUUID();
+        Usuario adminSede = new Usuario();
+        adminSede.setId(usuarioIdAdminSede);
+        when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(mae.getId(), "ADMIN_IGREJA"))
+                .thenReturn(List.of(adminSede));
+
+        service.entrarNaFamilia(filha.getId(), usuarioId, "XK4P-2M7Q");
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_VINCULO_FAMILIA), eq(mae.getId()),
+                eq(usuarioIdAdminSede), anyString(), eq("/configuracoes/igrejas-vinculadas"));
     }
 
     @Test

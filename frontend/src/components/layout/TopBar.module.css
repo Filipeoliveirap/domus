@@ -29,6 +29,13 @@
 }
 .hamburger:hover { background: #eff6ff; }
 
+.grupoDireita {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 .igreja {
   display: flex;
   align-items: center;

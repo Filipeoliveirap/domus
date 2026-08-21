@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
 /**
  * Diferente de Categoria, movimentação é a própria linha financeira — excluir de vez nunca
@@ -35,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @Transactional
-class MovimentacaoArquivadaExclusaoTest {
+class MovimentacaoArquivadaExclusaoTest implements PostgresTestContainerSupport {
 
     @Autowired MovimentacaoFinanceiraService service;
     @Autowired MovimentacaoFinanceiraRepository movimentacaoRepository;

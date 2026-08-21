@@ -8,7 +8,9 @@ import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.Permissoes;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/visitantes")
 @RequiredArgsConstructor
+@Validated
 public class VisitanteController {
 
     private final VisitanteService visitanteService;
@@ -28,7 +31,7 @@ public class VisitanteController {
 
     @GetMapping
     public ResponseEntity<PagedResponse<VisitanteResponse>> listar(
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @RequestParam(required = false) Boolean contatoRealizado,
             @RequestParam(required = false) Boolean visitaRealizada,
             @RequestParam(required = false) Boolean acompanhamentoFeito,
@@ -94,7 +97,7 @@ public class VisitanteController {
 
     @PutMapping("/{id}/celula")
     public ResponseEntity<VisitanteResponse> moverParaCelula(@PathVariable UUID id,
-                                                              @RequestBody MoverParaCelulaRequest data) {
+                                                              @Valid @RequestBody MoverParaCelulaRequest data) {
         exigirGestao();
         return ResponseEntity.ok(visitanteService.moverParaCelula(
                 id, data.celulaId(), usuarioAutenticado.getIgrejaId()));

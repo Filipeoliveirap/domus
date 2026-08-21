@@ -6,6 +6,7 @@ import com.domus.api.modules.financeiro.movimentacao.DTOs.MovimentacaoResponse;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.modules.usuario.DTO.UsuarioResponseDTO;
+import com.domus.api.modules.usuario.PrincipalCache;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -56,7 +57,7 @@ public class RedisConfig implements CachingConfigurer {
                         new Jackson2JsonRedisSerializer<>(mapper, IgrejaDetalheDTO.class)));
 
         RedisCacheConfiguration usuariosConfig = base
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serUsuarios));
 
         JavaType tipoMembros = mapper.getTypeFactory()
@@ -65,7 +66,7 @@ public class RedisConfig implements CachingConfigurer {
                 new Jackson2JsonRedisSerializer<>(mapper, tipoMembros);
 
         RedisCacheConfiguration pessoasConfig = base
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMembros));
 
         JavaType tipoEventos = mapper.getTypeFactory()
@@ -74,7 +75,7 @@ public class RedisConfig implements CachingConfigurer {
                 new Jackson2JsonRedisSerializer<>(mapper, tipoEventos);
 
         RedisCacheConfiguration eventosConfig = base
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serEventos));
 
         JavaType tipoCategorias = mapper.getTypeFactory()
@@ -83,7 +84,7 @@ public class RedisConfig implements CachingConfigurer {
                 new Jackson2JsonRedisSerializer<>(mapper, tipoCategorias);
 
         RedisCacheConfiguration categoriasConfig = base
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serCategorias));
 
         JavaType tipoMovimentacoes = mapper.getTypeFactory()
@@ -92,13 +93,19 @@ public class RedisConfig implements CachingConfigurer {
                 new Jackson2JsonRedisSerializer<>(mapper, tipoMovimentacoes);
 
         RedisCacheConfiguration movimentacoesConfig = base
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serMovimentacoes));
+
+        RedisCacheConfiguration principalConfig = base
+                .entryTtl(Duration.ofMinutes(5))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                        new Jackson2JsonRedisSerializer<>(mapper, PrincipalCache.class)));
 
         Map<String, RedisCacheConfiguration> caches = new HashMap<>();
 
         caches.put("igreja", igrejaConfig);
         caches.put("usuarios", usuariosConfig);
+        caches.put("principal", principalConfig);
         caches.put("pessoas", pessoasConfig);
         caches.put("eventos", eventosConfig);
         caches.put("categorias", categoriasConfig);

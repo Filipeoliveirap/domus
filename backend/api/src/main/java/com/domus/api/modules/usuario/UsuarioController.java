@@ -5,7 +5,9 @@ import com.domus.api.modules.usuario.DTO.*;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/usuarios")
 @RequiredArgsConstructor
+@Validated
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
@@ -46,7 +49,7 @@ public class UsuarioController {
 
     @GetMapping
     public PagedResponse<UsuarioResponseDTO> listar(
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
             @PageableDefault(size = 20) Pageable pageable) {  // sem sort no default
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         String termo = (q == null || q.isBlank()) ? null : q.trim();

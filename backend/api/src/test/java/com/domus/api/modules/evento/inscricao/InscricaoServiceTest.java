@@ -33,6 +33,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class InscricaoServiceTest {
@@ -43,6 +45,7 @@ class InscricaoServiceTest {
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -65,9 +68,10 @@ class InscricaoServiceTest {
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(java.util.List.of(
                 new RegraFaixaEtaria(), new RegraVinculo(),
                 new RegraEstadoCivil(), new RegraSexo()));
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService);
+                familiaIgrejaService, notificacaoService);
     }
 
     private Igreja igreja() {
@@ -141,6 +145,36 @@ class InscricaoServiceTest {
         service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void inscreverNotificaOResponsavelDoEvento() {
+        UUID pessoaIdResponsavel = UUID.randomUUID();
+        UUID usuarioIdResponsavel = UUID.randomUUID();
+        Pessoa responsavel = Pessoa.builder().id(pessoaIdResponsavel).build();
+        Evento evento = evento(10);
+        evento.setResponsavel(responsavel);
+        dado(evento, membro(Vinculo.MEMBRO), 3);
+        when(usuarioRepository.findByPessoaId(pessoaIdResponsavel))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdResponsavel).build()));
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.INSCRICAO_EVENTO_RESPONSAVEL),
+                eq(igrejaId), eq(usuarioIdResponsavel), anyString(), eq("/eventos/" + eventoId + "/inscritos"));
+    }
+
+    @Test
+    void inscreverNaoNotificaQuandoResponsavelInscreveASiMesmo() {
+        Pessoa responsavelQueTambemSeInscreve = membro(Vinculo.MEMBRO);
+        Evento evento = evento(10);
+        evento.setResponsavel(responsavelQueTambemSeInscreve);
+        dado(evento, responsavelQueTambemSeInscreve, 3);
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test

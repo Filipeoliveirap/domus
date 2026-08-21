@@ -300,6 +300,43 @@ class EventoServiceTest {
     }
 
     @Test
+    void atualizarEventoComEscopoEstaESeguintesDivideASerie() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraFuturaId = UUID.randomUUID();
+        UUID serieAntigaId = UUID.randomUUID();
+        var serieAntiga = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .id(serieAntigaId)
+                .frequencia(com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL)
+                .intervalo(1).diasSemana("QUINTA").build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serieAntiga).build();
+        Evento outraFutura = Evento.builder()
+                .id(outraFuturaId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .serie(serieAntiga).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieAntigaId), any()))
+                .thenReturn(List.of(existente, outraFutura));
+        when(eventoSerieRepository.save(any())).thenAnswer(inv -> {
+            var s = (com.domus.api.modules.evento.serie.EventoSerie) inv.getArgument(0);
+            if (s.getId() == null) s.setId(UUID.randomUUID());
+            return s;
+        });
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA_E_SEGUINTES);
+
+        assertThat(serieAntiga.getDataFim()).isEqualTo(
+                existente.getInicioEm().toLocalDate().minusDays(1));
+        assertThat(outraFutura.getSerie()).isNotSameAs(serieAntiga);
+        assertThat(outraFutura.getSerie().getFrequencia())
+                .isEqualTo(com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL);
+    }
+
+    @Test
     void atualizarEventoNotificaInscritosQuandoDataMuda() {
         UUID eventoId = UUID.randomUUID();
         UUID pessoaIdInscrito = UUID.randomUUID();

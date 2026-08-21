@@ -453,8 +453,23 @@ public class EventoService {
     }
 
     @Transactional
-    public void restaurar(UUID id, UUID igrejaId) {
-        int linhas = eventoRepository.restaurarPorId(id, igrejaId);
+    public void restaurar(UUID id, UUID igrejaId,
+                          com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
+        Evento evento = eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        int linhas;
+        if (evento.getSerie() != null && escopo != com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA) {
+            var serie = evento.getSerie();
+            linhas = escopo == com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE
+                    ? eventoRepository.restaurarPorSerie(serie.getId(), igrejaId)
+                    : eventoRepository.restaurarPorSerieAPartirDe(serie.getId(), igrejaId, evento.getInicioEm());
+            serie.setAtiva(true);
+            eventoSerieRepository.save(serie);
+        } else {
+            linhas = eventoRepository.restaurarPorId(id, igrejaId);
+        }
+
         if (linhas == 0) {
             throw new ResourceNotFoundException("Evento não encontrado.");
         }

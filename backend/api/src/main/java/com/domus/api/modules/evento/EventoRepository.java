@@ -213,6 +213,21 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query(value = "UPDATE evento SET deleted_at = NULL WHERE id = :id AND igreja_id = :igrejaId", nativeQuery = true)
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
+    /** "Este e os seguintes": restaura só quem está a partir da data desta ocorrência. */
+    @Modifying
+    @Query(value = """
+        UPDATE evento SET deleted_at = NULL
+        WHERE serie_id = :serieId AND igreja_id = :igrejaId AND inicio_em >= :apartirDe
+        """, nativeQuery = true)
+    int restaurarPorSerieAPartirDe(@Param("serieId") UUID serieId, @Param("igrejaId") UUID igrejaId,
+                                    @Param("apartirDe") LocalDateTime apartirDe);
+
+    /** "Toda a série": restaura todas as ocorrências arquivadas, sem filtro de data. */
+    @Modifying
+    @Query(value = "UPDATE evento SET deleted_at = NULL WHERE serie_id = :serieId AND igreja_id = :igrejaId",
+           nativeQuery = true)
+    int restaurarPorSerie(@Param("serieId") UUID serieId, @Param("igrejaId") UUID igrejaId);
+
     long countByIgrejaId(UUID igrejaId);
 
     Optional<Evento> findTopBySerieIdAndDivergeDaSerieFalseOrderByInicioEmDesc(UUID serieId);

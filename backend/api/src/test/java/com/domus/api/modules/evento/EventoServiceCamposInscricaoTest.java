@@ -45,6 +45,7 @@ class EventoServiceCamposInscricaoTest {
     LocalEventoRepository localEventoRepository;
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
+    com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     EventoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -65,9 +66,11 @@ class EventoServiceCamposInscricaoTest {
         localEventoRepository = mock(LocalEventoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
+        notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
-                pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService);
+                pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
+                notificacaoService);
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any()))

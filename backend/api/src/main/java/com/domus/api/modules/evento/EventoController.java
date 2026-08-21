@@ -116,7 +116,8 @@ public class EventoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        eventoService.arquivarEvento(id, igrejaId);
+        UUID usuarioId = usuarioAutenticado.getUsuarioId();
+        eventoService.arquivarEvento(id, igrejaId, usuarioId);
         return ResponseEntity.noContent().build();
     }
 

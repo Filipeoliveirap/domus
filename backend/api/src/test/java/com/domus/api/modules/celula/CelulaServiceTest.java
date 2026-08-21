@@ -216,6 +216,56 @@ class CelulaServiceTest {
     }
 
     @Test
+    void atualizarNotificaMembrosQuandoDiaOuHorarioMuda() {
+        UUID pessoaIdMembro = UUID.randomUUID();
+        UUID usuarioIdMembro = UUID.randomUUID();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(
+                Celula.builder().id(celulaId).igreja(igreja()).nome("Célula Bethânia")
+                        .diaSemana(DiaSemana.QUARTA).horario(LocalTime.of(19, 30)).build()));
+        CelulaMembro membro = CelulaMembro.builder()
+                .pessoa(Pessoa.builder().id(pessoaIdMembro).build()).build();
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId)).thenReturn(List.of(membro));
+        when(usuarioRepository.findByPessoaId(pessoaIdMembro))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioIdMembro).build()));
+
+        service.atualizar(celulaId, new CelulaRequest("Célula Bethânia", DiaSemana.QUINTA, "20:00", null),
+                igrejaId, null, null, true);
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.CELULA_ALTERADA), eq(igrejaId), eq(usuarioIdMembro),
+                anyString(), eq("/celulas/" + celulaId));
+    }
+
+    @Test
+    void atualizarNaoNotificaQuandoDiaEHorarioNaoMudam() {
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(
+                Celula.builder().id(celulaId).igreja(igreja()).nome("Célula Bethânia")
+                        .diaSemana(DiaSemana.QUARTA).horario(LocalTime.of(19, 30)).build()));
+
+        service.atualizar(celulaId, new CelulaRequest("Nome Novo", DiaSemana.QUARTA, "19:30", null),
+                igrejaId, null, null, true);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void atualizarNaoNotificaOAtorQueMudouOHorario() {
+        UUID pessoaIdAtor = UUID.randomUUID();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(
+                Celula.builder().id(celulaId).igreja(igreja()).nome("Célula Bethânia")
+                        .diaSemana(DiaSemana.QUARTA).horario(LocalTime.of(19, 30)).build()));
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaIdAtor, "LIDER")).thenReturn(true);
+        CelulaMembro membroAtor = CelulaMembro.builder()
+                .pessoa(Pessoa.builder().id(pessoaIdAtor).build()).build();
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId)).thenReturn(List.of(membroAtor));
+
+        service.atualizar(celulaId, new CelulaRequest("Célula Bethânia", DiaSemana.QUINTA, "20:00", null),
+                igrejaId, null, pessoaIdAtor, false);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
     void atualizarRecusaQuemNaoEAdminNemLider() {
         dadoQueExiste();
         UUID pessoaId = UUID.randomUUID();
@@ -313,6 +363,115 @@ class CelulaServiceTest {
     }
 
     @Test
+    void adicionarPessoaNotificaQuemEntrou() {
+        UUID pessoaNovaId = UUID.randomUUID();
+        UUID usuarioNovaId = UUID.randomUUID();
+        dadoQueExiste();
+        Pessoa pessoaNova = Pessoa.builder().id(pessoaNovaId).nome("Novato").igreja(igreja()).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaNovaId, igrejaId)).thenReturn(Optional.of(pessoaNova));
+        when(membroRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.empty());
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId)).thenReturn(List.of());
+        when(usuarioRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.of(Usuario.builder().id(usuarioNovaId).build()));
+
+        service.adicionarMembro(celulaId, new AdicionarMembroCelulaRequest(pessoaNovaId, null),
+                igrejaId, UUID.randomUUID(), true, UUID.randomUUID());
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.ADICIONADO_CELULA), eq(igrejaId), eq(usuarioNovaId),
+                anyString(), eq("/celulas/" + celulaId));
+    }
+
+    @Test
+    void adicionarPessoaNaoNotificaQuemEntrouSeAdicionouASiMesma() {
+        UUID pessoaNovaId = UUID.randomUUID();
+        UUID usuarioNovaId = UUID.randomUUID();
+        dadoQueExiste();
+        Pessoa pessoaNova = Pessoa.builder().id(pessoaNovaId).nome("Novato").igreja(igreja()).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaNovaId, igrejaId)).thenReturn(Optional.of(pessoaNova));
+        when(membroRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.empty());
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId)).thenReturn(List.of());
+        when(usuarioRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.of(Usuario.builder().id(usuarioNovaId).build()));
+
+        service.adicionarMembro(celulaId, new AdicionarMembroCelulaRequest(pessoaNovaId, null),
+                igrejaId, pessoaNovaId, true, usuarioNovaId);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void removerMembroNotificaAPessoaRemovida() {
+        UUID pessoaIdRemovida = UUID.randomUUID();
+        UUID usuarioIdRemovido = UUID.randomUUID();
+        UUID membroId = UUID.randomUUID();
+        dadoQueExiste();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(membroId).pessoa(Pessoa.builder().id(pessoaIdRemovida).build()).build();
+        when(membroRepository.findById(membroId)).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaId(pessoaIdRemovida))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioIdRemovido).build()));
+
+        service.removerMembro(celulaId, membroId, igrejaId, UUID.randomUUID(), true);
+
+        verify(notificacaoService).criar(
+                eq(TipoNotificacao.REMOVIDO_CELULA), eq(igrejaId), eq(usuarioIdRemovido),
+                anyString(), eq("/celulas/" + celulaId));
+    }
+
+    @Test
+    void removerMembroNaoNotificaQuandoAlguemRemoveASiMesmo() {
+        UUID pessoaIdRemovida = UUID.randomUUID();
+        UUID usuarioIdRemovido = UUID.randomUUID();
+        UUID membroId = UUID.randomUUID();
+        dadoQueExiste();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(membroId).pessoa(Pessoa.builder().id(pessoaIdRemovida).build()).build();
+        when(membroRepository.findById(membroId)).thenReturn(Optional.of(membro));
+
+        service.removerMembro(celulaId, membroId, igrejaId, pessoaIdRemovida, true);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void removerMembroVisitanteNaoTentaNotificar() {
+        UUID membroId = UUID.randomUUID();
+        dadoQueExiste();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(membroId)
+                .visitante(Visitante.builder().id(UUID.randomUUID()).igreja(igreja()).nome("V").build())
+                .build();
+        when(membroRepository.findById(membroId)).thenReturn(Optional.of(membro));
+
+        service.removerMembro(celulaId, membroId, igrejaId, UUID.randomUUID(), true);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+        verify(usuarioRepository, never()).findByPessoaId(any());
+    }
+
+    @Test
+    void adicionarPessoaNaoNotificaOLiderQueAdicionouSendoTambemMembro() {
+        UUID pessoaIdLiderAtor = UUID.randomUUID();
+        UUID usuarioIdLiderAtor = UUID.randomUUID();
+        UUID pessoaNovaId = UUID.randomUUID();
+        dadoQueExiste();
+        Pessoa pessoaNova = Pessoa.builder().id(pessoaNovaId).nome("Novato").igreja(igreja()).build();
+        // O próprio líder que está adicionando também é membro da célula, e por isso
+        // apareceria na lista de "quem já está na célula" se não fosse excluído por ator.
+        CelulaMembro membroLiderAtor = CelulaMembro.builder()
+                .pessoa(Pessoa.builder().id(pessoaIdLiderAtor).build()).build();
+
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaNovaId, igrejaId)).thenReturn(Optional.of(pessoaNova));
+        when(membroRepository.findByPessoaId(pessoaNovaId)).thenReturn(Optional.empty());
+        when(membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celulaId))
+                .thenReturn(List.of(membroLiderAtor));
+
+        service.adicionarMembro(celulaId, new AdicionarMembroCelulaRequest(pessoaNovaId, null),
+                igrejaId, pessoaIdLiderAtor, true, usuarioIdLiderAtor);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
     void atualizarPapelVisitanteLancaErro() {
         dadoQueExiste();
         CelulaMembro membro = CelulaMembro.builder()
@@ -322,7 +481,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("visitante");
     }
@@ -338,7 +497,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
 
         assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
     }
@@ -357,11 +516,30 @@ class CelulaServiceTest {
                 .thenReturn(Optional.of(Usuario.builder().id(usuarioIdPromovido).build()));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
 
         verify(notificacaoService).criar(
                 eq(TipoNotificacao.PROMOVIDO_LIDER_CELULA), eq(igrejaId), eq(usuarioIdPromovido),
                 anyString(), eq("/celulas/" + celulaId));
+    }
+
+    @Test
+    void naoNotificaQuandoAdminPromoveASiMesmo() {
+        dadoQueExiste();
+        UUID pessoaIdPromovida = UUID.randomUUID();
+        UUID usuarioIdAtor = UUID.randomUUID();
+        Pessoa pessoa = Pessoa.builder().id(pessoaIdPromovida).nome("João").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(pessoa).papel(PapelCelula.MEMBRO)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaId(pessoaIdPromovida))
+                .thenReturn(Optional.of(Usuario.builder().id(usuarioIdAtor).build()));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, usuarioIdAtor);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test
@@ -375,7 +553,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true);
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
@@ -385,7 +563,7 @@ class CelulaServiceTest {
         dadoQueExiste();
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, UUID.randomUUID(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, false))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, false, UUID.randomUUID()))
                 .isInstanceOf(AccessDeniedException.class);
     }
 

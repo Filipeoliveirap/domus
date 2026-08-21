@@ -341,7 +341,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        assertThatThrownBy(() -> service.arquivarEvento(eventoId, igrejaId))
+        assertThatThrownBy(() -> service.arquivarEvento(eventoId, igrejaId, usuarioId))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
                 .hasMessageContaining("em andamento");
     }
@@ -358,7 +358,7 @@ class EventoServiceCamposInscricaoTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
 
-        service.arquivarEvento(eventoId, igrejaId);
+        service.arquivarEvento(eventoId, igrejaId, usuarioId);
 
         verify(eventoRepository).delete(existente);
     }

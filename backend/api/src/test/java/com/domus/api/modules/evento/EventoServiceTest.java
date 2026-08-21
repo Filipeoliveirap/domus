@@ -104,6 +104,14 @@ class EventoServiceTest {
     }
 
     private EventoRequest requestComRestricao(Boolean valor) {
+        return requestComResponsavel(null, valor);
+    }
+
+    private EventoRequest requestComResponsavel(UUID responsavelPessoaId) {
+        return requestComResponsavel(responsavelPessoaId, false);
+    }
+
+    private EventoRequest requestComResponsavel(UUID responsavelPessoaId, Boolean restritoPropriaIgreja) {
         return new EventoRequest(
                 "Culto Dominical",
                 "Descrição do evento",
@@ -112,7 +120,7 @@ class EventoServiceTest {
                 null,
                 "Salão Social",
                 "Culto",
-                null,
+                responsavelPessoaId,
                 null,
                 null,
                 null,
@@ -123,7 +131,7 @@ class EventoServiceTest {
                 false,
                 false,
                 false,
-                valor,
+                restritoPropriaIgreja,
                 null
         );
     }
@@ -233,6 +241,131 @@ class EventoServiceTest {
     }
 
     @Test
+    void atualizarEventoNaoNotificaAtorQuandoEleMesmoEstaInscrito() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eq(eventoId), any()))
+                .thenReturn(List.of(UUID.randomUUID()));
+        // O próprio ator (quem está editando) é um dos inscritos — não deve receber a notificação.
+        when(usuarioRepository.findByPessoaId(any()))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioId).build()));
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void cadastrarEventoNotificaNovoResponsavel() {
+        UUID pessoaResponsavelId = UUID.randomUUID();
+        UUID usuarioResponsavelId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaResponsavelId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioResponsavelId).build()));
+        Pessoa responsavel = new Pessoa();
+        responsavel.setId(pessoaResponsavelId);
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelId, igrejaId)).thenReturn(Optional.of(responsavel));
+
+        EventoRequest req = requestComResponsavel(pessoaResponsavelId);
+        service.cadastrarEvento(req, igrejaId, usuarioId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), eq(igrejaId),
+                eq(usuarioResponsavelId), anyString(), anyString());
+    }
+
+    @Test
+    void cadastrarEventoNaoNotificaQuandoAtorEOProprioResponsavel() {
+        UUID pessoaResponsavelId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaResponsavelId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioId).build()));
+        Pessoa responsavel = new Pessoa();
+        responsavel.setId(pessoaResponsavelId);
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelId, igrejaId)).thenReturn(Optional.of(responsavel));
+
+        EventoRequest req = requestComResponsavel(pessoaResponsavelId);
+        service.cadastrarEvento(req, igrejaId, usuarioId);
+
+        verify(notificacaoService, never()).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), any(), any(), any(), any());
+    }
+
+    @Test
+    void cadastrarEventoNotificaTodosOsUsuariosAtivosDaIgrejaMenosQuemCadastrou() {
+        UUID outroUsuarioId = UUID.randomUUID();
+        when(usuarioRepository.findIdsAtivosPorIgreja(igrejaId))
+                .thenReturn(List.of(usuarioId, outroUsuarioId));
+
+        EventoRequest req = requestComRestricao(false);
+        service.cadastrarEvento(req, igrejaId, usuarioId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO), eq(igrejaId),
+                eq(outroUsuarioId), anyString(), anyString());
+        verify(notificacaoService, never()).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.NOVO_EVENTO), any(), eq(usuarioId), any(), any());
+    }
+
+    @Test
+    void atualizarEventoNotificaSoQuandoResponsavelMuda() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaResponsavelAntigaId = UUID.randomUUID();
+        UUID pessoaResponsavelNovaId = UUID.randomUUID();
+        UUID usuarioResponsavelNovoId = UUID.randomUUID();
+        Pessoa responsavelAntigo = new Pessoa();
+        responsavelAntigo.setId(pessoaResponsavelAntigaId);
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .responsavel(responsavelAntigo)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        Pessoa responsavelNovo = new Pessoa();
+        responsavelNovo.setId(pessoaResponsavelNovaId);
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelNovaId, igrejaId)).thenReturn(Optional.of(responsavelNovo));
+        when(usuarioRepository.findByPessoaId(pessoaResponsavelNovaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioResponsavelNovoId).build()));
+
+        EventoRequest req = requestComResponsavel(pessoaResponsavelNovaId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), eq(igrejaId),
+                eq(usuarioResponsavelNovoId), anyString(), anyString());
+    }
+
+    @Test
+    void atualizarEventoNaoNotificaResponsavelQuandoNaoMudou() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaResponsavelId = UUID.randomUUID();
+        Pessoa responsavel = new Pessoa();
+        responsavel.setId(pessoaResponsavelId);
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .responsavel(responsavel)
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelId, igrejaId)).thenReturn(Optional.of(responsavel));
+
+        EventoRequest req = requestComResponsavel(pessoaResponsavelId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+
+        verify(notificacaoService, never()).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), any(), any(), any(), any());
+    }
+
+    @Test
     void arquivarEventoNotificaInscritos() {
         UUID eventoId = UUID.randomUUID();
         UUID pessoaIdInscrito = UUID.randomUUID();
@@ -249,11 +382,32 @@ class EventoServiceTest {
         when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
 
-        service.arquivarEvento(eventoId, igrejaId);
+        service.arquivarEvento(eventoId, igrejaId, usuarioId);
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
                 eq(usuarioIdInscrito), anyString(), eq("/eventos"));
+    }
+
+    @Test
+    void arquivarEventoNaoNotificaAtorQuandoEleMesmoEstaInscrito() {
+        UUID eventoId = UUID.randomUUID();
+        UUID pessoaIdInscrito = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(inscricaoRepository.findPessoaIdsByEventoIdAndStatus(eventoId, com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA))
+                .thenReturn(List.of(pessoaIdInscrito));
+        when(usuarioRepository.findByPessoaId(pessoaIdInscrito))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioId).build()));
+
+        service.arquivarEvento(eventoId, igrejaId, usuarioId);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test

@@ -117,6 +117,19 @@ com badge, dropdown, marcar lida/todas. Ver spec completo em
 `docs/superpowers/specs/2026-08-20-central-notificacoes-design.md` e o plano de implementação
 em `docs/superpowers/plans/2026-08-20-central-notificacoes.md`.
 
+**Fechamento (2026-08-21):** entrega passou a ser instantânea via SSE (`GET
+/notificacoes/stream`, `NotificacaoSseRegistry` em memória — dispensa Redis pub/sub por ora,
+YAGNI de 1 instância só) em vez de só o polling de 60s (que virou rede de segurança). Achado
+testando: `ResponseEntity<SseEmitter>` quebra o dispatch assíncrono do Spring — o controller
+tem que retornar `SseEmitter` puro; e a rewrite genérica do Next não serve pra stream que
+nunca termina, por isso existe uma rota dedicada em `app/api/notificacoes/stream/route.ts`
+com `http.request` puro do Node. Também: mais produtores (responsável de evento definido,
+evento novo cadastrado avisando toda a igreja, entrada/saída de célula, entrada/saída de rede
+— inclusive pedido aceito —, mudança de dia/horário de célula), supressão de auto-notificação
+em todo produtor onde o ator podia ser o próprio destinatário, e correção do rótulo
+"ministério" → "Rede" nos textos (sem duplicar quando o nome cadastrado já começa com
+"Rede"). 12 tipos de notificação no total.
+
 Texto original do brainstorm mantido abaixo por contexto:
 
 **Achado no brainstorm de 2026-08-20** — não existia nenhum mecanismo de notificação dentro do

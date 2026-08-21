@@ -214,4 +214,14 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
     long countByIgrejaId(UUID igrejaId);
+
+    Optional<Evento> findTopBySerieIdAndDivergeDaSerieFalseOrderByInicioEmDesc(UUID serieId);
+
+    List<Evento> findBySerieIdAndInicioEmGreaterThanEqual(UUID serieId, LocalDateTime de);
+
+    /** Sem @SQLRestriction de propósito — soft-deletado (feriado cancelado) também conta,
+     *  senão o job de materialização ressuscitaria a data no próximo dia de rodagem. */
+    @Query(value = "SELECT COUNT(*) > 0 FROM evento WHERE serie_id = :serieId AND inicio_em = :inicioEm",
+           nativeQuery = true)
+    boolean existsBySerieIdAndInicioEm(@Param("serieId") UUID serieId, @Param("inicioEm") LocalDateTime inicioEm);
 }

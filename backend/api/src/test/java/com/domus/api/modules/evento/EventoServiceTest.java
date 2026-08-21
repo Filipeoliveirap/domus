@@ -202,7 +202,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(existente));
 
         EventoRequest req = requestComRestricao(true);
-        EventoResponse response = service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        EventoResponse response = service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(response.restritoPropriaIgreja()).isTrue();
     }
@@ -228,9 +229,48 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(existente));
 
         EventoRequest req = requestComRestricao(true);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(existente.isRestritoPropriaIgreja()).isTrue();
+    }
+
+    @Test
+    void atualizarEventoComEscopoEstaMarcaDivergeDaSerie() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build())
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        assertThat(existente.isDivergeDaSerie()).isTrue();
+    }
+
+    @Test
+    void atualizarEventoAvulsoIgnoraEscopo() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build(); // sem série
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        EventoRequest req = requestComRestricao(false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        assertThat(existente.isDivergeDaSerie()).isFalse(); // nunca marca quem não tem série
     }
 
     @Test
@@ -252,7 +292,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
 
         EventoRequest req = requestComRestricao(false);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_ALTERADO), eq(igrejaId),
@@ -272,7 +313,8 @@ class EventoServiceTest {
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
 
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(inscricaoRepository, never()).findPessoaIdsByEventoIdAndStatus(any(), any());
     }
@@ -294,7 +336,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioId).build()));
 
         EventoRequest req = requestComRestricao(false);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
@@ -372,7 +415,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioResponsavelNovoId).build()));
 
         EventoRequest req = requestComResponsavel(pessoaResponsavelNovaId);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), eq(igrejaId),
@@ -396,7 +440,8 @@ class EventoServiceTest {
         when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelId, igrejaId)).thenReturn(Optional.of(responsavel));
 
         EventoRequest req = requestComResponsavel(pessoaResponsavelId);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(notificacaoService, never()).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), any(), any(), any(), any());
@@ -593,7 +638,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(existente));
 
         EventoRequest req = requestComRestricao(null);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(existente.isRestritoPropriaIgreja()).isFalse();
     }
@@ -638,7 +684,8 @@ class EventoServiceTest {
                 .thenReturn(Optional.of(existente));
 
         EventoRequest req = requestComRestricao(null);
-        service.atualizarEvento(eventoId, req, igrejaId, usuarioId);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(cacheEvictor).evictPorIgreja("eventos", igrejaId);
         verify(cacheEvictor).evictPorIgreja("eventos", outraIgrejaId);

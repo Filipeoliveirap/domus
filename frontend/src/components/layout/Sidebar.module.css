@@ -47,8 +47,16 @@
 }
 
 .header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
   padding: 1.5rem 1rem;
   margin-bottom: 1rem;
+  text-decoration: none;
+}
+.logo {
+  flex-shrink: 0;
+  height: auto;
 }
 
 .title {

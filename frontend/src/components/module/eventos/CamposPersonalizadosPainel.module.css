@@ -12,10 +12,13 @@
   background: var(--color-bg-subtle); border-radius: var(--radius-lg); padding: 16px;
   position: sticky; top: 16px;
 }
-.cabecalhoPreview { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.tituloPreview { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-muted); }
+/* flex-wrap + min-width:0 no título: sem isso, o título comprido ("Prévia — clique e
+   preencha pra testar") empurrava o botão "Limpar" pra fora do card em telas mais estreitas
+   em vez de quebrar linha ou encolher. */
+.cabecalhoPreview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.tituloPreview { flex: 1; min-width: 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-muted); }
 .botaoLimparPreview {
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; gap: 4px; flex-shrink: 0;
   background: none; border: none; color: var(--color-text-muted); cursor: pointer;
   font-size: var(--font-size-xs); padding: 2px 4px;
 }

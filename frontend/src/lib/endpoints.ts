@@ -67,6 +67,7 @@ export const Endpoints = {
     RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
     CAMPOS_PERSONALIZADOS: (id: string) => `/eventos/${id}/campos-personalizados`,
+    CAMPOS_PERSONALIZADOS_MINHA: (id: string) => `/eventos/${id}/campos-personalizados/minha`,
   },
 
   locaisEvento: {

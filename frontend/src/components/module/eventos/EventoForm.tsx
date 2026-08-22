@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
@@ -18,6 +19,7 @@ import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
+import type { CamposPersonalizadosHandle } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -91,8 +93,17 @@ export function EventoForm(props: EventoFormProps) {
   const { data: vinculoStatus } = useVinculoStatus()
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
 
+  // Um botão só ("Salvar alterações") salva evento + campos personalizados — sem isso,
+  // existiam dois botões de salvar na mesma tela, confuso qual fazia o quê.
+  const camposPersonalizadosRef = useRef<CamposPersonalizadosHandle>(null)
+
+  async function aoSubmeter(data: EventoFormData) {
+    await camposPersonalizadosRef.current?.salvar()
+    onSubmit(data)
+  }
+
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form className={styles.form} onSubmit={(e) => handleSubmit(aoSubmeter)(e)}>
       <div className={styles.colunas}>
         {/* ─── Coluna esquerda ─── */}
         <div className={styles.colunaEsquerda}>
@@ -525,31 +536,40 @@ export function EventoForm(props: EventoFormProps) {
                   </div>
                 )}
 
-                {ehEdicao && eventoId && (
-                  <div>
-                    <span className={styles.labelData}>CAMPOS PERSONALIZADOS</span>
-                    <CamposPersonalizadosPainel eventoId={eventoId} />
-                  </div>
-                )}
               </div>
             )}
           </section>
+        </div>
+      </div>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+      {/* Fora do grid de 2 colunas de propósito: o editor + prévia lado a lado de campos
+          personalizados fica espremido preso na largura de meia página — aqui usa a largura
+          inteira do formulário. */}
+      <div className={styles.blocoFinal}>
+        {ehEdicao && eventoId && (
+          <section className={styles.secao}>
+            <div className={styles.secaoHeader}>
+              <span className={styles.secaoIcone}><ClipboardCheck size={20} /></span>
+              <h2 className={styles.secaoTitulo}>Campos personalizados</h2>
+            </div>
+            <CamposPersonalizadosPainel ref={camposPersonalizadosRef} eventoId={eventoId} />
+          </section>
+        )}
 
-          <div className={styles.acoes}>
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isLoading || isVerificandoImpacto}
-              disabled={isFormIncomplete || isLoading || isVerificandoImpacto}
-              style={{ width: '100%' }}
-            >
-              {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}
-            </Button>
-            <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
-          </div>
+        {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+
+        <div className={styles.acoes}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isLoading || isVerificandoImpacto}
+            disabled={isFormIncomplete || isLoading || isVerificandoImpacto}
+            style={{ width: '100%' }}
+          >
+            {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}
+          </Button>
+          <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
         </div>
       </div>
 

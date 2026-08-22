@@ -1,6 +1,7 @@
 package com.domus.api.modules.evento.campopersonalizado.DTOs;
 
 import com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEvento;
+import com.domus.api.modules.evento.campopersonalizado.MapeamentoCampoPersonalizado;
 import com.domus.api.modules.evento.campopersonalizado.TipoCampoPersonalizado;
 
 import java.util.List;
@@ -14,12 +15,14 @@ public record CampoPersonalizadoResponse(
         List<String> opcoes,
         boolean obrigatorio,
         boolean visivelAoPublico,
-        int ordem
+        int ordem,
+        MapeamentoCampoPersonalizado mapeamento
 ) {
     public static CampoPersonalizadoResponse from(CampoPersonalizadoEvento c) {
         return new CampoPersonalizadoResponse(
                 c.getId(), c.getLabel(), c.getPlaceholder(), c.getTipo(),
-                c.getOpcoesComoLista(), c.isObrigatorio(), c.isVisivelAoPublico(), c.getOrdem()
+                c.getOpcoesComoLista(), c.isObrigatorio(), c.isVisivelAoPublico(), c.getOrdem(),
+                c.getMapeamento()
         );
     }
 }

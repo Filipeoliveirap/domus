@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2 } from 'lucide-react'
+import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useInicio } from '@/hooks/inicio/useInicio'
+import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
@@ -37,6 +38,19 @@ function Avatar({ nome, fotoId }: { nome: string; fotoId: string | null }) {
       ) : (
         iniciais(nome)
       )}
+    </span>
+  )
+}
+
+/** Selo leve "Você está inscrito" nos cards compactos de evento — mesma checagem do modal
+ *  de detalhe, só que sem precisar abri-lo pra saber. */
+function SeloInscritoCard({ eventoId }: { eventoId: string }) {
+  const { data: minha } = useMinhaInscricao(eventoId)
+  if (!minha?.inscrito) return null
+  return (
+    <span className={styles.eventoInscrito}>
+      <CheckCircle2 size={11} aria-hidden="true" />
+      Você está inscrito
     </span>
   )
 }
@@ -215,6 +229,7 @@ export default function InicioPage() {
                             Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
                           </span>
                         )}
+                        <SeloInscritoCard eventoId={e.id} />
                       </div>
                       <span className={styles.eventoAcao}>Ver detalhes</span>
                     </button>

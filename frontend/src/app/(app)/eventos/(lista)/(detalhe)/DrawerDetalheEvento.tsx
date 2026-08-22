@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, UserPlus, Ticket, Flame, Pencil, UserCircle, Building2, Archive } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -25,8 +25,8 @@ import { SkeletonDrawerEvento } from "./SkeletonDrawerEvento";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
 import { RespostasCamposPersonalizados } from '@/components/module/eventos/RespostasCamposPersonalizados'
-import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
-import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
+import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscreverAlguem'
+import { ModalCompartilharConvite } from '@/components/module/eventos/ModalCompartilharConvite'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
@@ -52,7 +52,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
 
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
-  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
+  const [modalAberto, setModalAberto] = useState<'inscrever-alguem' | 'compartilhar' | 'lista' | null>(null)
   // Vira true no exato momento em que a auto-inscrição dá certo — usado só pra decidir se o
   // modal de campos personalizados abre sozinho na hora (ver RespostasCamposPersonalizados).
   const [acabouDeInscrever, setAcabouDeInscrever] = useState(false)
@@ -330,24 +330,21 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                   <button
                     type="button"
                     className={styles.acaoSecundaria}
-                    onClick={() => setModalAberto('membros')}
+                    onClick={() => setModalAberto('inscrever-alguem')}
                     disabled={esgotado}
                   >
                     <Users size={16} aria-hidden="true" />
-                    {esgotado ? 'Vagas esgotadas' : 'Inscrever membros'}
+                    {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
                   </button>
 
-                  {!evento.exclusivoMembros && minha?.inscrito && (
-                    <button
-                      type="button"
-                      className={styles.acaoSecundaria}
-                      onClick={() => setModalAberto('convidado')}
-                      disabled={esgotado}
-                    >
-                      <UserPlus size={16} aria-hidden="true" />
-                      {esgotado ? 'Vagas esgotadas' : 'Vou levar alguém de fora'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setModalAberto('compartilhar')}
+                  >
+                    <Share2 size={16} aria-hidden="true" />
+                    Compartilhar
+                  </button>
                 </>
               )}
             </div>
@@ -367,8 +364,8 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
               </Link>
             )}
 
-            {modalAberto === 'membros' && (
-              <ModalInscreverPessoas
+            {modalAberto === 'inscrever-alguem' && (
+              <ModalInscreverAlguem
                 eventoId={evento.id}
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
@@ -376,10 +373,9 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
               />
             )}
 
-            {modalAberto === 'convidado' && minha?.id && (
-              <ModalConvidado
+            {modalAberto === 'compartilhar' && (
+              <ModalCompartilharConvite
                 eventoId={evento.id}
-                inscricaoId={minha.id}
                 onClose={() => setModalAberto(null)}
               />
             )}

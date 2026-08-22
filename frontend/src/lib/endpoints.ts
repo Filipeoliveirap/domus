@@ -67,6 +67,7 @@ export const Endpoints = {
     RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
     CAMPOS_PERSONALIZADOS: (id: string) => `/eventos/${id}/campos-personalizados`,
+    CAMPOS_PERSONALIZADOS_MINHA: (id: string) => `/eventos/${id}/campos-personalizados/minha`,
   },
 
   locaisEvento: {
@@ -99,6 +100,7 @@ export const Endpoints = {
     INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/pessoas`,
     ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
       `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
+    CONVIDADOS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/convidados`,
     PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
@@ -171,6 +173,13 @@ export const Endpoints = {
     TOGGLE_VISITA: (id: string) => `/visitantes/${id}/visita`,
     TOGGLE_ACOMPANHAMENTO: (id: string) => `/visitantes/${id}/acompanhamento`,
     TOGGLE_CELULA: (id: string) => `/visitantes/${id}/celula`,
+    BUSCA_LEVE: '/visitantes/busca-leve',
+  },
+
+  convites: {
+    GERAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha/convite`,
+    CONSULTAR: (token: string) => `/convites/${token}`,
+    ENTRAR: (token: string) => `/convites/${token}/entrar`,
   },
 
   fotos: {

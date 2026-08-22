@@ -702,3 +702,20 @@ confirmação. Resolvido: `GET /igrejas/exclusao/resumo` agora expõe `temSenhaN
 (`ExclusaoIgrejaService.resumo`, a partir de `usuario.senhaHash`); o modal mostra o campo
 de senha OU o botão `GoogleLogin` (reusando `@react-oauth/google`, mesmo componente do
 `/login`) conforme esse campo.
+
+### Testes automatizados de frontend (Vitest + React Testing Library) — pendente
+
+Levantado durante a Spec 2 de convite público de evento (2026-08-22): hoje o front não tem
+Jest/Vitest/Cypress/Playwright configurado (já listado como dívida técnica conhecida no
+`CLAUDE.md`) — toda validação é manual no navegador. O `tsc --noEmit` pega erro de tipo
+(assinatura errada, campo inexistente), mas não pega erro de **comportamento**: prop de
+componente chutada errado (só descoberta se alguém clicar naquele caminho específico),
+mutation/branch condicional errado, invalidação de query key faltando.
+
+**Proposta:** configurar Vitest + React Testing Library (mais leve que Jest pra App Router)
+depois que o fluxo visual de uma feature já estiver validado manualmente pelo autor — não
+travar a entrega da feature pra montar a infra primeiro. Escopo inicial sugerido: hooks de
+mutation (`useCriarConvidado`, `useGerarConvite`, etc.) e componentes com mais estado
+condicional (`ModalInscreverAlguem`, com a pergunta "você também vai participar?"), não a
+base de código inteira de uma vez.
+`/login`) conforme esse campo.

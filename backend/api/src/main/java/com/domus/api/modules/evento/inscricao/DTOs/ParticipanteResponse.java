@@ -15,17 +15,31 @@ public record ParticipanteResponse(
         UUID pessoaId,
         String nome,
         UUID fotoId,
+        String convidadoPorNome,
         List<String> convidados,
+        /** Preenchido só quando o convidado veio de um Visitante cadastrado (ver
+         *  {@link InscricaoEvento#getVisitante()}) — usado pra bloquear, na busca de
+         *  visitantes do modal "Inscrever alguém", quem já está inscrito neste evento. */
+        UUID visitanteId,
         EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
-    /** @param pessoaResolvida resolvida em lote via bypass — ver Javadoc de {@link InscritoResponse#from}. */
-    public static ParticipanteResponse from(InscricaoEvento i, Pessoa pessoaResolvida) {
+    private static final String NOME_PESSOA_REMOVIDA = "Pessoa removida do sistema";
+
+    /** @param pessoaResolvida/@param convidadoPorResolvida resolvidas em lote via bypass —
+     *  ver Javadoc de {@link InscritoResponse#from}. */
+    public static ParticipanteResponse from(InscricaoEvento i, Pessoa pessoaResolvida, Pessoa convidadoPorResolvida) {
+        String nome = pessoaResolvida != null ? pessoaResolvida.getNome()
+                : i.getNomeConvidado() != null ? i.getNomeConvidado()
+                : NOME_PESSOA_REMOVIDA;
+
         return new ParticipanteResponse(
                 i.getId(),
                 pessoaResolvida == null ? null : pessoaResolvida.getId(),
-                pessoaResolvida == null ? "Pessoa removida do sistema" : pessoaResolvida.getNome(),
+                nome,
                 pessoaResolvida != null && pessoaResolvida.getFoto() != null ? pessoaResolvida.getFoto().getId() : null,
+                convidadoPorResolvida == null ? null : convidadoPorResolvida.getNome(),
                 i.getAcompanhantes().stream().map(a -> a.getNome()).toList(),
+                i.getVisitante() == null ? null : i.getVisitante().getId(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );
     }

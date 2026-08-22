@@ -18,13 +18,17 @@ export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
   const { data: minha } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId, true)
   const gerarConvite = useGerarConvite(eventoId)
-  const [decidiuNaoParticipar, setDecidiuNaoParticipar] = useState(false)
+  // Marca que a pergunta "você também vai participar?" já foi respondida (sim ou não) —
+  // precisa ser um estado PRÓPRIO, não derivado de `minha.inscrito`: a resposta da API só
+  // chega depois (assíncrono), então usar só `minha.inscrito` deixava a pergunta reaparecendo
+  // (ou travada) entre o clique em "sim" e o refetch confirmar a inscrição.
+  const [jaRespondeu, setJaRespondeu] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const jaTentouGerar = useRef(false)
 
-  // Já inscrito (ou decidiu não participar): gera o convite sozinho, sem perguntar nada.
+  // Já inscrito (sem precisar perguntar) OU já respondeu a pergunta: gera o convite sozinho.
   // Só chama mutate() aqui — nunca setState direto no corpo do efeito.
-  const podeGerarDireto = minha !== undefined && (minha.inscrito || decidiuNaoParticipar)
+  const podeGerarDireto = (minha !== undefined && minha.inscrito) || jaRespondeu
   useEffect(() => {
     if (!podeGerarDireto || jaTentouGerar.current) return
     jaTentouGerar.current = true
@@ -32,7 +36,7 @@ export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [podeGerarDireto])
 
-  const perguntaParticipar = minha !== undefined && !minha.inscrito && !decidiuNaoParticipar
+  const perguntaParticipar = minha !== undefined && !minha.inscrito && !jaRespondeu
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -43,11 +47,10 @@ export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
   }, [onClose])
 
   function aoResponderParticipar(sim: boolean) {
+    setJaRespondeu(true)
     if (sim) {
       jaTentouGerar.current = true
       inscrever.mutate(undefined, { onSuccess: () => gerarConvite.mutate(), onError: () => gerarConvite.mutate() })
-    } else {
-      setDecidiuNaoParticipar(true)
     }
   }
 

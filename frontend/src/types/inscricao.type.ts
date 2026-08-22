@@ -1,5 +1,6 @@
 import type { PagedResponse } from './pagedResponse.type'
 import type { IgrejaResumo } from './evento.type'
+import type { RespostaRequest } from './campoPersonalizado.type'
 
 export type CodigoImpedimento =
   | 'FAIXA_ETARIA'
@@ -40,6 +41,8 @@ export interface ParticipanteResponse {
   pessoaId: string | null
   nome: string
   fotoId: string | null
+  /** Preenchido só pra convidado sem cadastro (inscrição própria com pessoa_id nulo). */
+  convidadoPorNome: string | null
   convidados: string[]
   igrejaDaPessoa: IgrejaResumo
 }
@@ -53,10 +56,24 @@ export interface InscritoResponse {
   inscritoPorUsuarioId: string | null
   inscritoPorNome: string | null
   inscritoPorFotoId: string | null
+  /** Preenchido só pra convidado sem cadastro (inscrição própria com pessoa_id nulo). */
+  convidadoPorNome: string | null
   inscritoEm: string
   compareceu: boolean
   acompanhantes: AcompanhanteResponse[]
   igrejaDaPessoa: IgrejaResumo
+}
+
+export interface CriarConvidadoRequest {
+  nome: string
+  telefone?: string
+  respostas?: RespostaRequest[]
+}
+
+export interface ConvidadoResponse {
+  inscricaoId: string
+  nome: string
+  telefone: string | null
 }
 
 export interface ListaInscritosResponse {

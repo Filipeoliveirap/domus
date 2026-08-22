@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
+import { ModalCompartilharConvite } from './ModalCompartilharConvite'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { useVisitantesBuscaLeve } from '@/hooks/visitante/useVisitantesBuscaLeve'
 import { useCriarConvidado } from '@/hooks/inscricao/useCriarConvidado'
@@ -48,6 +49,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   const criarConvidado = useCriarConvidado(eventoId)
 
   const [aguardandoRespostaParticipar, setAguardandoRespostaParticipar] = useState<DadosConvidado | null>(null)
+  const [compartilharAberto, setCompartilharAberto] = useState(false)
 
   const isPending = criarConvidado.isPending || inscrever.isPending
 
@@ -274,6 +276,12 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               ))}
             </div>
 
+            {aba === 'fora' && (
+              <button type="button" className={styles.btnLinkCompartilhar} onClick={() => setCompartilharAberto(true)}>
+                Ou compartilhar um link pra essa pessoa se inscrever sozinha
+              </button>
+            )}
+
             <div className={styles.footer}>
               <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={isPending}>
                 Cancelar
@@ -286,6 +294,10 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
         )}
       </div>
     </div>
+
+    {compartilharAberto && (
+      <ModalCompartilharConvite eventoId={eventoId} onClose={() => setCompartilharAberto(false)} />
+    )}
 
     {aguardandoRespostaParticipar && (
       <ModalConfirmacao

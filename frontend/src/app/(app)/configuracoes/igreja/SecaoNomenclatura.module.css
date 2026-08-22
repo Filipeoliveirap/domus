@@ -17,12 +17,25 @@
   font-size: var(--font-size-sm); width: 100%;
 }
 
+.segmentado { display: flex; gap: 6px; }
+.segmentoBtn {
+  flex: 1; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white); font-size: var(--font-size-sm); cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.segmentoAtivo {
+  background: var(--color-primary); border-color: var(--color-primary); color: var(--color-bg-white);
+}
+
 .preview {
-  display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px;
+  display: flex; align-items: center; gap: 8px 12px; margin-top: 12px; padding-top: 12px;
   border-top: 1px dashed var(--color-border); flex-wrap: wrap;
 }
 .previewRotulo { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
-.previewValor { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-primary); }
+.previewValor {
+  font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-primary);
+  padding: 2px 8px; background: var(--color-primary-container, rgba(0, 74, 198, 0.08)); border-radius: var(--radius-full);
+}
 .botaoRestaurar {
   margin-left: auto; display: flex; align-items: center; gap: 4px; background: none; border: none;
   color: var(--color-text-secondary); font-size: var(--font-size-xs); cursor: pointer;

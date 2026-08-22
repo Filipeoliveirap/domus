@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
-import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
+import { useCamposPersonalizadosMinha } from '@/hooks/evento/useCamposPersonalizadosMinha'
 import { useResponderCampos } from '@/hooks/inscricao/useResponderCampos'
 import { CamposExtrasForm } from '@/components/module/eventos/CamposExtrasForm'
 import styles from './ConvitePublico.module.css'
@@ -22,7 +22,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
   const router = useRouter()
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId, true)
-  const { data: campos = [] } = useCamposPersonalizados(eventoId)
+  const { data: campos = [] } = useCamposPersonalizadosMinha(eventoId)
   const { responder, isLoading: respondendo } = useResponderCampos()
 
   const [inscricaoId, setInscricaoId] = useState<string | null>(null)

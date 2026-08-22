@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
-import { Button } from '@/components/common/button/Button'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useSalvarCamposPersonalizados } from '@/hooks/evento/useSalvarCamposPersonalizados'
 import type { CampoPersonalizadoRequest, CampoPersonalizadoResponse, TipoCampoPersonalizado } from '@/types/campoPersonalizado.type'
@@ -39,19 +38,38 @@ function paraRequest(c: CampoPersonalizadoResponse): CampoPersonalizadoRequest {
   }
 }
 
-export function CamposPersonalizadosPainel({ eventoId }: { eventoId: string }) {
-  const { data, isLoading } = useCamposPersonalizados(eventoId)
-
-  if (isLoading || !data) return null
-
-  // key={eventoId} garante que o estado local reinicia dos dados do servidor sempre que o
-  // evento muda — sem precisar de useEffect pra sincronizar query -> estado editável.
-  return <PainelEditor key={eventoId} eventoId={eventoId} dadosIniciais={data} />
+/** Exposto via ref pro formulário do evento chamar junto do próprio submit — um botão só
+ *  ("Salvar alterações") salva os dois, evita ter "Salvar campos personalizados" e "Salvar
+ *  alterações" lado a lado confundindo qual botão faz o quê. */
+export interface CamposPersonalizadosHandle {
+  salvar: () => Promise<void>
 }
 
-function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosIniciais: CampoPersonalizadoResponse[] }) {
-  const { salvar, isLoading: salvando } = useSalvarCamposPersonalizados()
+export const CamposPersonalizadosPainel = forwardRef<CamposPersonalizadosHandle, { eventoId: string }>(
+  function CamposPersonalizadosPainel({ eventoId }, ref) {
+    const { data, isLoading } = useCamposPersonalizados(eventoId)
+
+    if (isLoading || !data) return null
+
+    // key={eventoId} garante que o estado local reinicia dos dados do servidor sempre que o
+    // evento muda — sem precisar de useEffect pra sincronizar query -> estado editável.
+    return <PainelEditor key={eventoId} ref={ref} eventoId={eventoId} dadosIniciais={data} />
+  },
+)
+
+const PainelEditor = forwardRef<
+  CamposPersonalizadosHandle,
+  { eventoId: string; dadosIniciais: CampoPersonalizadoResponse[] }
+>(function PainelEditor({ eventoId, dadosIniciais }, ref) {
+  const { salvar } = useSalvarCamposPersonalizados()
   const [campos, setCampos] = useState<CampoPersonalizadoRequest[]>(() => dadosIniciais.map(paraRequest))
+
+  useImperativeHandle(ref, () => ({
+    salvar: async () => {
+      const camposLimpos = campos.map((c) => ({ ...c, opcoes: c.opcoes ? limparOpcoes(c.opcoes) : null }))
+      await salvar(eventoId, camposLimpos)
+    },
+  }), [campos, eventoId, salvar])
 
   function atualizarCampo(indice: number, patch: Partial<CampoPersonalizadoRequest>) {
     setCampos((atual) => atual.map((c, i) => {
@@ -101,11 +119,6 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
     setCampos((atual) => atual.filter((_, i) => i !== indice).map((c, i) => ({ ...c, ordem: i })))
   }
 
-  async function aoSalvar() {
-    const camposLimpos = campos.map((c) => ({ ...c, opcoes: c.opcoes ? limparOpcoes(c.opcoes) : null }))
-    await salvar(eventoId, camposLimpos)
-  }
-
   return (
     <div className={styles.wrap}>
       <div className={styles.colunaEditor}>
@@ -122,6 +135,11 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
         <button type="button" className={styles.botaoTemplate} onClick={usarTemplateDadosBasicos}>
           Usar template de dados básicos
         </button>
+        <p className={styles.dicaTemplate}>
+          Use quando precisar de idade, estado civil, sexo ou endereço de quem vai. Criar cada
+          um desses campos na mão faz até quem já é cadastrado ter que digitar de novo um dado
+          que o sistema já tem.
+        </p>
 
         {campos.map((campo, indice) => (
           <div key={campo.id ?? `novo-${indice}`} className={styles.cartaoCampo}>
@@ -203,14 +221,6 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
               </span>
             </label>
 
-            {/* Sem efeito ainda — groundwork pro formulário público (spec futura). */}
-            <label className={styles.toggleLinha} title="Ainda sem efeito — chega com o formulário público, pra inscrição de gente sem cadastro">
-              <input type="checkbox" checked={campo.visivelAoPublico} disabled />
-              <span>
-                Visível ao público
-                <span className={styles.dicaInline}> — em breve, pra quando existir link público de inscrição</span>
-              </span>
-            </label>
           </div>
         ))}
 
@@ -218,15 +228,16 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
           <Plus size={16} /> Adicionar pergunta
         </button>
 
-        <Button type="button" onClick={aoSalvar} disabled={salvando}>
-          {salvando ? 'Salvando…' : 'Salvar campos personalizados'}
-        </Button>
+        <p className={styles.dicaSalvar}>
+          As perguntas são salvas junto com o resto do evento, no botão &ldquo;Salvar
+          alterações&rdquo; no final da página.
+        </p>
       </div>
 
       <PreviaInterativa campos={campos} />
     </div>
   )
-}
+})
 
 /** Prévia de verdade, não só ilustrativa: os campos respondem a clique/digitação, com estado
  *  próprio (nunca é enviado a lugar nenhum) — deixa o admin realmente sentir como vai ficar. */
@@ -252,16 +263,27 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
         </button>
       </div>
 
-      {/* Nunca campo de verdade — nome/telefone são sempre coletados automaticamente
-          (titular/convidado), não fazem parte da lista de CampoPersonalizadoRequest. Só pra
-          quem está montando o formulário ver como fica completo. */}
+      {/* Interativos igual aos outros campos (prévia de verdade, nunca disabled — ver
+          CLAUDE.md), mas nunca viram CampoPersonalizadoRequest de verdade: nome/telefone já
+          são sempre coletados automaticamente (titular/convidado). Só pra quem está montando
+          o formulário sentir como fica completo, digitando algo real se quiser. */}
       <div className={styles.previewCampo}>
         <label className={styles.previewLabel}>Nome</label>
-        <input disabled placeholder="Sempre coletado automaticamente" />
+        <input
+          placeholder="Ex.: Maria Souza"
+          value={valorTexto('__nome')}
+          onChange={(e) => setValores((v) => ({ ...v, __nome: e.target.value }))}
+        />
+        <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
       </div>
       <div className={styles.previewCampo}>
         <label className={styles.previewLabel}>Telefone</label>
-        <input disabled placeholder="Sempre coletado automaticamente" />
+        <input
+          placeholder="(00) 00000-0000"
+          value={valorTexto('__telefone')}
+          onChange={(e) => setValores((v) => ({ ...v, __telefone: e.target.value }))}
+        />
+        <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
       </div>
 
       {campos.length === 0 && (

@@ -1,0 +1,60 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+}
+
+.asterisco {
+  color: var(--color-error, #dc2626);
+}
+
+.campo input,
+.campo select {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  background: var(--color-bg-white);
+}
+
+.campo input:focus,
+.campo select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.comErro {
+  border-color: var(--color-error, #dc2626) !important;
+}
+
+.opcoesMultiplas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checkboxLinha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.erro {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-error, #dc2626);
+}

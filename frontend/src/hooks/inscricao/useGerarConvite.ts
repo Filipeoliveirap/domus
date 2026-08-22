@@ -1,17 +1,19 @@
-import axios from 'axios'
-import { useMutation } from '@tanstack/react-query'
-import { notificar } from '@/components/common/Notificacao/notificar'
+import { useQuery } from '@tanstack/react-query'
 import { conviteService } from '@/services/convite.service'
-import type { ApiError } from '@/types/api.types'
 
-export function useGerarConvite(eventoId: string) {
-  return useMutation({
-    mutationFn: () => conviteService.gerar(eventoId),
-    onError: (error: unknown) => {
-      const mensagem = axios.isAxiosError<ApiError>(error)
-        ? error.response?.data?.message
-        : undefined
-      notificar.erro('Não foi possível gerar o link', mensagem ?? 'Tente novamente.')
-    },
+/** `useQuery`, não `useMutation`: precisa disparar sozinho assim que `habilitado` vira
+ *  true (a pessoa já está inscrita, ou acabou de responder que sim/não quer participar) —
+ *  disparar um POST a partir de um useEffect+mutate ficava vulnerável ao "mount, unmount,
+ *  remount" de efeitos do StrictMode (dev): duas chamadas reais chegavam a acontecer no
+ *  servidor, mas o componente que ficava montado no fim nunca via o resultado, preso pra
+ *  sempre em "Gerando link…". `useQuery` com `enabled` é o padrão certo pra "buscar quando
+ *  a condição for verdadeira" — o próprio React Query dedupe e cuida do ciclo de vida. */
+export function useGerarConvite(eventoId: string, habilitado: boolean) {
+  return useQuery({
+    queryKey: ['convite-compartilhar', eventoId],
+    queryFn: () => conviteService.gerar(eventoId),
+    enabled: habilitado,
+    staleTime: Infinity,
+    retry: false,
   })
 }

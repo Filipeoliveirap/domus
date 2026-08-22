@@ -180,7 +180,7 @@
 
 .tabelaHeader {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.2fr 1fr 100px;
+  grid-template-columns: 2fr 1fr 1.2fr 100px;
   gap: 16px;
   padding: 0 16px 12px;
   font-size: 10px;
@@ -204,7 +204,7 @@
 .linha,
 .linhaConvidado {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.2fr 1fr 100px;
+  grid-template-columns: 2fr 1fr 1.2fr 100px;
   gap: 16px;
   align-items: center;
   padding: 14px 16px;
@@ -281,6 +281,11 @@
   height: 100%;
   object-fit: cover;
 }
+.colParticipanteTextos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .nome {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
@@ -289,6 +294,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+}
+.subtitulo {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .pillConvidado {
   flex-shrink: 0;
@@ -337,10 +349,6 @@
   flex-shrink: 0;
   overflow: hidden;
 }
-.colConvidados {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
 .colAcoes {
   display: flex;
   justify-content: flex-end;
@@ -363,7 +371,7 @@
 /* ─── Presença ─── */
 .tabelaHeaderComPresenca,
 .linhaComPresenca {
-  grid-template-columns: 2fr 1fr 1.2fr 1fr 140px 100px;
+  grid-template-columns: 2fr 1fr 1.2fr 140px 100px;
 }
 .colPresenca {
   display: flex;
@@ -480,6 +488,28 @@
   flex-direction: column;
   gap: 16px;
 }
+.detalheConvidadoHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.detalheConvidadoNome {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.detalheConvidadoLista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .confirmInlineTexto {
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
@@ -519,7 +549,7 @@
     grid-template-areas:
       "participante acoes"
       "data data"
-      "inscritopor convidados";
+      "inscritopor inscritopor";
     gap: 6px 12px;
     padding: 14px 16px;
   }
@@ -528,14 +558,13 @@
   .colAcoes { grid-area: acoes; }
   .colData { grid-area: data; }
   .colInscritoPor { grid-area: inscritopor; }
-  .colConvidados { grid-area: convidados; }
 
   .linhaComPresenca {
     grid-template-areas:
       "participante acoes"
       "presenca acoes"
       "data data"
-      "inscritopor convidados";
+      "inscritopor inscritopor";
   }
   .colPresenca { grid-area: presenca; justify-content: flex-start; gap: 6px; }
   .colPresenca::before {
@@ -545,8 +574,7 @@
   }
 
   .colData,
-  .colInscritoPor,
-  .colConvidados {
+  .colInscritoPor {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
   }

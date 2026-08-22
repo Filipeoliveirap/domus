@@ -38,9 +38,15 @@ public interface VisitanteRepository extends JpaRepository<Visitante, UUID> {
                                     @Param("acompanhamento") Boolean acompanhamentoFeito,
                                     Pageable pageable);
 
+    /** Diferente de {@link #buscarPorIgreja} (gestão de visitantes/CRM), esta busca alimenta o
+     *  seletor "Inscrever alguém" de evento — inclui quem já está numa célula como visitante
+     *  (a pessoa não sabe que o sistema chama isso de "visitante", só sabe que já é conhecida
+     *  da igreja). Só quem já converteu pra Pessoa fica de fora (esse já aparece na aba
+     *  "Pessoas da igreja"). */
     @Query("""
         SELECT v FROM Visitante v
         WHERE v.igreja.id = :igrejaId
+          AND v.convertidoPessoaId IS NULL
           AND (CAST(:q AS string) IS NULL OR LOWER(v.nome) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
         ORDER BY v.nome ASC
         """)

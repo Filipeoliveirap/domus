@@ -1,14 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { X, Share2 } from 'lucide-react'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
 import { ModalCompartilharConvite } from './ModalCompartilharConvite'
-import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { useVisitantesBuscaLeve } from '@/hooks/visitante/useVisitantesBuscaLeve'
 import { useCriarConvidado } from '@/hooks/inscricao/useCriarConvidado'
-import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
-import { useInscrever } from '@/hooks/inscricao/useInscrever'
+import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useDebounce } from '@/hooks/useDebounce'
 import { formatarTelefone } from '@/lib/masks'
@@ -25,11 +23,6 @@ interface Props {
   onClose: () => void
 }
 
-interface DadosConvidado {
-  nome: string
-  telefone: string
-}
-
 export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, onClose }: Props) {
   const [aba, setAba] = useState<Aba>('pessoas')
 
@@ -38,20 +31,26 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   const { data: visitantes = [] } = useVisitantesBuscaLeve(buscaDebounced)
   const [visitanteSelecionadoId, setVisitanteSelecionadoId] = useState<string | null>(null)
 
+  // Quem já está inscrito neste evento precisa aparecer bloqueado na busca — mesmo padrão
+  // da aba "Pessoas da igreja" (ver ModalInscreverPessoas), agora possível pra visitantes
+  // graças ao vínculo visitante_id na inscrição.
+  const { data: participantes = [] } = useParticipantes(eventoId)
+  const visitantesJaInscritos = useMemo(
+    () => new Set(participantes.map((p) => p.visitanteId).filter((id): id is string => id !== null)),
+    [participantes],
+  )
+
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
   const [camposValores, setCamposValores] = useState<Record<string, string>>({})
   const [tentouConfirmar, setTentouConfirmar] = useState(false)
 
   const { data: campos = [] } = useCamposPersonalizados(eventoId)
-  const { data: minha } = useMinhaInscricao(eventoId)
-  const inscrever = useInscrever(eventoId, true)
   const criarConvidado = useCriarConvidado(eventoId)
 
-  const [aguardandoRespostaParticipar, setAguardandoRespostaParticipar] = useState<DadosConvidado | null>(null)
   const [compartilharAberto, setCompartilharAberto] = useState(false)
 
-  const isPending = criarConvidado.isPending || inscrever.isPending
+  const isPending = criarConvidado.isPending
 
   /** Troca de aba limpa nome/telefone/campos — sem isso, selecionar um visitante e depois
    *  ir pra "Pessoa de fora" deixava os dados dele preenchidos lá, como se já tivessem sido
@@ -67,6 +66,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   }
 
   function selecionarVisitante(id: string) {
+    if (visitantesJaInscritos.has(id)) return
     const v = visitantes.find((x) => x.id === id)
     if (!v) return
     setVisitanteSelecionadoId(id)
@@ -82,36 +82,20 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
     return campos.some((c) => c.obrigatorio && !(camposValores[c.id]?.trim()))
   }
 
-  function aoConfirmar() {
-    setTentouConfirmar(true)
-    if (!nome.trim() || camposObrigatoriosPendentes()) return
-
-    const dados: DadosConvidado = { nome: nome.trim(), telefone }
-    if (minha && !minha.inscrito) {
-      setAguardandoRespostaParticipar(dados)
-      return
-    }
-    criarConvidado.mutate(
-      { nome: dados.nome, telefone: dados.telefone || undefined, respostas: montarRespostas() },
-      { onSuccess: () => onClose() },
-    )
+  function telefoneValido(): boolean {
+    const digitos = telefone.replace(/\D/g, '')
+    return digitos.length === 10 || digitos.length === 11
   }
 
-  function aoResponderTambemVouParticipar(sim: boolean) {
-    const dados = aguardandoRespostaParticipar
-    setAguardandoRespostaParticipar(null)
-    if (!dados) return
+  function aoConfirmar() {
+    setTentouConfirmar(true)
+    if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
 
-    const criar = () => criarConvidado.mutate(
-      { nome: dados.nome, telefone: dados.telefone || undefined, respostas: montarRespostas() },
+    const visitanteId = aba === 'visitantes' ? visitanteSelecionadoId ?? undefined : undefined
+    criarConvidado.mutate(
+      { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), visitanteId, respostas: montarRespostas() },
       { onSuccess: () => onClose() },
     )
-
-    if (sim) {
-      inscrever.mutate(undefined, { onSuccess: criar, onError: criar })
-    } else {
-      criar()
-    }
   }
 
   return (
@@ -181,16 +165,21 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                     />
                     {visitantes.length > 0 && !visitanteSelecionadoId && (
                       <div className={styles.listaVisitantes}>
-                        {visitantes.map((v) => (
-                          <button
-                            key={v.id}
-                            type="button"
-                            className={styles.linhaVisitante}
-                            onClick={() => selecionarVisitante(v.id)}
-                          >
-                            {v.nome}{v.telefone ? ` — ${v.telefone}` : ''}
-                          </button>
-                        ))}
+                        {visitantes.map((v) => {
+                          const bloqueado = visitantesJaInscritos.has(v.id)
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              className={`${styles.linhaVisitante} ${bloqueado ? styles.linhaVisitanteBloqueada : ''}`}
+                              onClick={() => selecionarVisitante(v.id)}
+                              disabled={bloqueado}
+                            >
+                              {v.nome}{v.telefone ? ` — ${v.telefone}` : ''}
+                              {bloqueado && <span className={styles.avisoBloqueado}>Já inscrito neste evento</span>}
+                            </button>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -208,11 +197,11 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                   value={nome}
                   onChange={(e) => { setNome(e.target.value); if (aba === 'visitantes') setVisitanteSelecionadoId(null) }}
                 />
-                {tentouConfirmar && !nome.trim() && <span className={styles.avisoCamposExtra}>O nome é obrigatório.</span>}
+                {tentouConfirmar && !nome.trim() && <span className={styles.avisoErro}>O nome é obrigatório.</span>}
               </label>
 
               <label className={styles.campo}>
-                <span>Telefone (opcional)</span>
+                <span>Telefone*</span>
                 <input
                   type="text"
                   placeholder="(00) 00000-0000"
@@ -220,6 +209,12 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                   value={telefone}
                   onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                 />
+                {tentouConfirmar && !telefone.trim() && (
+                  <span className={styles.avisoErro}>O telefone é obrigatório.</span>
+                )}
+                {tentouConfirmar && telefone.trim() && !telefoneValido() && (
+                  <span className={styles.avisoErro}>Telefone inválido. Digite um número válido com DDD.</span>
+                )}
               </label>
 
               {campos.length > 0 && (
@@ -270,7 +265,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                     />
                   )}
                   {tentouConfirmar && campo.obrigatorio && !(camposValores[campo.id]?.trim()) && (
-                    <span className={styles.avisoCamposExtra}>Essa pergunta é obrigatória.</span>
+                    <span className={styles.avisoErro}>Essa pergunta é obrigatória.</span>
                   )}
                 </label>
               ))}
@@ -298,18 +293,6 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
     {compartilharAberto && (
       <ModalCompartilharConvite eventoId={eventoId} onClose={() => setCompartilharAberto(false)} />
-    )}
-
-    {aguardandoRespostaParticipar && (
-      <ModalConfirmacao
-        titulo="Você também vai participar?"
-        textoConfirmar="Sim, também vou"
-        textoCancelar="Não, só estou cadastrando"
-        isLoading={isPending}
-        onConfirmar={() => aoResponderTambemVouParticipar(true)}
-        onClose={() => aoResponderTambemVouParticipar(false)}
-        mensagem={<p>Quer se inscrever nesse evento também, junto com quem você está cadastrando?</p>}
-      />
     )}
     </>
   )

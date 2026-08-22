@@ -44,6 +44,8 @@ export interface ParticipanteResponse {
   /** Preenchido só pra convidado sem cadastro (inscrição própria com pessoa_id nulo). */
   convidadoPorNome: string | null
   convidados: string[]
+  /** Preenchido só quando o convidado veio de um Visitante cadastrado. */
+  visitanteId: string | null
   igrejaDaPessoa: IgrejaResumo
 }
 
@@ -58,6 +60,8 @@ export interface InscritoResponse {
   inscritoPorFotoId: string | null
   /** Preenchido só pra convidado sem cadastro (inscrição própria com pessoa_id nulo). */
   convidadoPorNome: string | null
+  /** Preenchido só pra convidado sem cadastro. */
+  telefoneConvidado: string | null
   inscritoEm: string
   compareceu: boolean
   acompanhantes: AcompanhanteResponse[]
@@ -67,6 +71,8 @@ export interface InscritoResponse {
 export interface CriarConvidadoRequest {
   nome: string
   telefone?: string
+  /** Preenchido só quando o admin selecionou um Visitante existente na busca (aba "Visitantes"). */
+  visitanteId?: string
   respostas?: RespostaRequest[]
 }
 

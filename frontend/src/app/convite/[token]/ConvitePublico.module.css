@@ -201,6 +201,19 @@
   background: var(--color-bg-page);
 }
 
+.linkJaTenhoConta {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.linkJaTenhoConta:hover {
+  text-decoration: underline;
+}
+
 .formulario {
   display: flex;
   flex-direction: column;

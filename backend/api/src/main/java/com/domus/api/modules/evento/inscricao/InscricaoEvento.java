@@ -3,6 +3,7 @@ package com.domus.api.modules.evento.inscricao;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.visitante.Visitante;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -45,6 +46,13 @@ public class InscricaoEvento {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "convidado_por_pessoa_id")
     private Pessoa convidadoPor;
+
+    /** Preenchido só quando o convidado veio da busca de Visitante existente (aba
+     *  "Visitantes" do modal) — NULL pra "Pessoa de fora" (nunca teve Visitante) e pro
+     *  convite público (quem preenche não escolhe um Visitante, digita os próprios dados). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "visitante_id")
+    private Visitante visitante;
 
     @Column(name = "inscrito_por_usuario_id")
     private UUID inscritoPorUsuarioId;

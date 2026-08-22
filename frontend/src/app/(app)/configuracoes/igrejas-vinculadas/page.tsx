@@ -33,7 +33,7 @@ export default function IgrejasVinculadasPage() {
   const entrar = useEntrarNaFamilia()
   const desvincular = useDesvincularCongregacao()
   const sair = useSairDaFamilia()
-  const { congregacao } = useRotulos()
+  const { congregacao, concordar } = useRotulos()
 
   const [codigoDigitado, setCodigoDigitado] = useState('')
   const [mostrandoCampo, setMostrandoCampo] = useState(false)
@@ -58,8 +58,8 @@ export default function IgrejasVinculadasPage() {
         notificar.sucesso(
           rotacionando ? 'Novo código gerado' : 'Código gerado',
           rotacionando
-            ? `O código anterior deixou de funcionar. As ${congregacao.plural.toLowerCase()} já vinculadas continuam na família.`
-            : `Compartilhe com as ${congregacao.plural.toLowerCase()} que devem entrar na sua família.`,
+            ? `O código anterior deixou de funcionar. ${concordar(congregacao.genero, 'os')} ${congregacao.plural.toLowerCase()} já ${concordar(congregacao.genero, 'vinculados')} continuam na família.`
+            : `Compartilhe com ${concordar(congregacao.genero, 'os_min')} ${congregacao.plural.toLowerCase()} que devem entrar na sua família.`,
         )
       },
       onError: (e) => notificar.erro('Não foi possível gerar o código', mensagemDeErro(e, 'Tente novamente.')),
@@ -85,7 +85,7 @@ export default function IgrejasVinculadasPage() {
     desvincular.mutate(alvo.id, {
       onSuccess: () => {
         setCongregacaoParaRemover(null)
-        notificar.sucesso(`${congregacao.singular} removida`, `"${alvo.nome}" saiu da família.`)
+        notificar.sucesso(`${congregacao.singular} ${concordar(congregacao.genero, 'removido')}`, `"${alvo.nome}" saiu da família.`)
       },
       onError: (e) => notificar.erro('Não foi possível remover', mensagemDeErro(e, 'Tente novamente.')),
     })
@@ -106,7 +106,7 @@ export default function IgrejasVinculadasPage() {
     return (
       <div className={styles.container}>
         <section className={styles.cartaoFilha}>
-          <span className={styles.codigoRotulo}>Sua igreja é uma {congregacao.singular.toLowerCase()} de</span>
+          <span className={styles.codigoRotulo}>Sua igreja é {concordar(congregacao.genero, 'um')} {congregacao.singular.toLowerCase()} de</span>
           <p className={styles.maeNome}>{status.mae?.nome}</p>
           <p className={styles.maeDetalhe}>
             Vinculada desde {formatarData(status.mae?.vinculadoEm ?? null)}
@@ -166,7 +166,7 @@ export default function IgrejasVinculadasPage() {
           <h2 className={styles.faixaTitulo}>Gerenciar {congregacao.plural.toLowerCase()}</h2>
           <p className={styles.faixaSubtitulo}>
             {ehMae
-              ? `${congregacao.plural} vinculadas compartilham os números delas com a sede.`
+              ? `${congregacao.plural} ${concordar(congregacao.genero, 'vinculados')} compartilham os números delas com a sede.`
               : `Gere um código para suas ${congregacao.plural.toLowerCase()} entrarem, ou entre na família de outra igreja usando o código dela.`}
           </p>
         </div>

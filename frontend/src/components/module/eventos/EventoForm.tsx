@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
@@ -60,6 +61,7 @@ export function EventoForm(props: EventoFormProps) {
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
+  const { congregacao, concordar } = useRotulos()
   const repetir = watch('repetir')
   const recorrenciaFrequencia = watch('recorrenciaFrequencia')
   const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
@@ -388,7 +390,7 @@ export function EventoForm(props: EventoFormProps) {
                     Apenas minha igreja
                   </span>
                   <span className={styles.toggleDescricao}>
-                    Ative para este evento não aparecer para as demais unidades da Rede.
+                    Ative para este evento não aparecer para {concordar(congregacao.genero, 'os_min')} demais {congregacao.plural.toLowerCase()}.
                   </span>
                 </span>
                 <span className={styles.switch}>

@@ -5,6 +5,7 @@ import { Type, Save, RotateCcw } from 'lucide-react'
 import { rotulosService } from '@/services/igreja/rotulos.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
+import { concordar } from '@/lib/rotulos/concordancia'
 import type { RotulosCustomizados, Genero, RotulosRequest, BlocoRotuloRequest } from '@/types/igreja/igreja.type'
 import baseStyles from '../configuracoes.module.css'
 import styles from './SecaoNomenclatura.module.css'
@@ -124,20 +125,30 @@ export function SecaoNomenclatura({ rotulosAtuais }: Props) {
                 />
               </div>
               <div className={styles.campo}>
-                <label className={styles.rotulo} htmlFor={`${chave}-genero`}>Concordância</label>
-                <select
-                  id={`${chave}-genero`}
-                  className={styles.input}
-                  value={blocos[chave].genero}
-                  onChange={(e) => atualizarCampo(chave, 'genero', e.target.value as Genero)}
-                >
-                  <option value="MASCULINO">Masculino (ex.: &quot;Novo {blocos[chave].singular || '...'}&quot;)</option>
-                  <option value="FEMININO">Feminino (ex.: &quot;Nova {blocos[chave].singular || '...'}&quot;)</option>
-                </select>
+                <span className={styles.rotulo}>Se diz &quot;o&quot; ou &quot;a&quot; antes desse termo?</span>
+                <div className={styles.segmentado}>
+                  <button
+                    type="button"
+                    className={`${styles.segmentoBtn} ${blocos[chave].genero === 'MASCULINO' ? styles.segmentoAtivo : ''}`}
+                    onClick={() => atualizarCampo(chave, 'genero', 'MASCULINO')}
+                  >
+                    &quot;O&quot; (masculino)
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.segmentoBtn} ${blocos[chave].genero === 'FEMININO' ? styles.segmentoAtivo : ''}`}
+                    onClick={() => atualizarCampo(chave, 'genero', 'FEMININO')}
+                  >
+                    &quot;A&quot; (feminino)
+                  </button>
+                </div>
               </div>
             </div>
             <div className={styles.preview}>
-              <span className={styles.previewRotulo}>Como vai aparecer no menu:</span>
+              <span className={styles.previewRotulo}>Vai aparecer assim, por exemplo:</span>
+              <span className={styles.previewValor}>
+                {concordar(blocos[chave].genero, 'novo')} {blocos[chave].singular || PADRAO[chave].singular}
+              </span>
               <span className={styles.previewValor}>{blocos[chave].plural || PADRAO[chave].plural}</span>
               <button type="button" className={styles.botaoRestaurar} onClick={() => restaurarPadrao(chave)}>
                 <RotateCcw size={14} aria-hidden="true" />

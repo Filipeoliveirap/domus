@@ -33,7 +33,7 @@ export default function MinisterioDetalhePage() {
   const pedirEntrada = usePedirEntrada(id)
   const aceitarPedido = useAceitarPedido(id)
   const recusarPedido = useRecusarPedido(id)
-  const { ministerio: rotuloMinisterio } = useRotulos()
+  const { ministerio: rotuloMinisterio, concordar } = useRotulos()
 
   const [adicionarAberto, setAdicionarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
@@ -77,7 +77,7 @@ export default function MinisterioDetalhePage() {
         <Link href="/ministerios/arquivados" className={styles.avisoArquivada}>
           <ArrowLeft size={16} />
           <Archive size={16} />
-          <span>Esta {rotuloMinisterio.singular.toLowerCase()} está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+          <span>{concordar(rotuloMinisterio.genero, 'este')} {rotuloMinisterio.singular.toLowerCase()} está {concordar(rotuloMinisterio.genero, 'arquivado')}. Toque para restaurá-{concordar(rotuloMinisterio.genero, 'lo')} na lista de {concordar(rotuloMinisterio.genero, 'arquivados')}.</span>
         </Link>
       )}
 

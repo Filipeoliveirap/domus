@@ -115,8 +115,10 @@ public class CampoPersonalizadoService {
         var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
-        boolean ehDono = inscricao.getPessoa() != null
-                && java.util.Objects.equals(inscricao.getPessoa().getId(), pessoaLogadaId);
+        boolean ehDono = (inscricao.getPessoa() != null
+                        && java.util.Objects.equals(inscricao.getPessoa().getId(), pessoaLogadaId))
+                || (inscricao.getConvidadoPor() != null
+                        && java.util.Objects.equals(inscricao.getConvidadoPor().getId(), pessoaLogadaId));
         if (!ehDono && !com.domus.api.shared.security.Permissoes.podeGerenciarEventos(role)) {
             throw new com.domus.api.shared.exception.BusinessException(
                     "SEM_PERMISSAO", "Você não pode responder por essa inscrição.");

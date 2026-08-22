@@ -25,8 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 
@@ -151,5 +154,40 @@ class VisitanteControllerTest implements PostgresTestContainerSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"celulaId\":\"" + c.getId() + "\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void buscaLeveDevolveApenasIdNomeTelefone() throws Exception {
+        Visitante v = Visitante.builder()
+                .igreja(igreja).nome("Pedro Visitante " + UUID.randomUUID())
+                .telefone("11988887777")
+                .observacoes("Observação sensível que não deve vazar aqui.")
+                .build();
+        v = visitanteRepository.save(v);
+        entityManager.flush();
+
+        Usuario comum = usuarioComRole("ACESSO_COMUM");
+
+        mockMvc.perform(auth.autenticado(get("/visitantes/busca-leve").param("q", "Pedro"), comum))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(v.getNome())))
+                .andExpect(content().string(not(containsString("Observação sensível"))));
+    }
+
+    @Test
+    void buscaLeveRespeitaIsolamentoPorIgreja() throws Exception {
+        Igreja outraIgreja = igrejaRepository.save(Igreja.builder()
+                .nome("Outra Igreja " + UUID.randomUUID())
+                .emailContato("outra-" + UUID.randomUUID() + "@teste.com")
+                .build());
+        visitanteRepository.save(Visitante.builder()
+                .igreja(outraIgreja).nome("Visitante de Outra Igreja").build());
+        entityManager.flush();
+
+        Usuario comum = usuarioComRole("ACESSO_COMUM");
+
+        mockMvc.perform(auth.autenticado(get("/visitantes/busca-leve").param("q", "Outra Igreja"), comum))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Visitante de Outra Igreja"))));
     }
 }

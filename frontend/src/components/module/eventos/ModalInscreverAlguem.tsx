@@ -51,6 +51,19 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
   const isPending = criarConvidado.isPending || inscrever.isPending
 
+  /** Troca de aba limpa nome/telefone/campos — sem isso, selecionar um visitante e depois
+   *  ir pra "Pessoa de fora" deixava os dados dele preenchidos lá, como se já tivessem sido
+   *  digitados pra outra pessoa. */
+  function trocarAba(novaAba: Aba) {
+    setAba(novaAba)
+    setNome('')
+    setTelefone('')
+    setVisitanteSelecionadoId(null)
+    setBuscaVisitante('')
+    setCamposValores({})
+    setTentouConfirmar(false)
+  }
+
   function selecionarVisitante(id: string) {
     const v = visitantes.find((x) => x.id === id)
     if (!v) return
@@ -126,13 +139,13 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
         </div>
 
         <div className={styles.abas}>
-          <button type="button" className={aba === 'pessoas' ? styles.abaAtiva : styles.aba} onClick={() => setAba('pessoas')}>
+          <button type="button" className={aba === 'pessoas' ? styles.abaAtiva : styles.aba} onClick={() => trocarAba('pessoas')}>
             Pessoas da igreja
           </button>
-          <button type="button" className={aba === 'visitantes' ? styles.abaAtiva : styles.aba} onClick={() => setAba('visitantes')}>
+          <button type="button" className={aba === 'visitantes' ? styles.abaAtiva : styles.aba} onClick={() => trocarAba('visitantes')}>
             Visitantes
           </button>
-          <button type="button" className={aba === 'fora' ? styles.abaAtiva : styles.aba} onClick={() => setAba('fora')}>
+          <button type="button" className={aba === 'fora' ? styles.abaAtiva : styles.aba} onClick={() => trocarAba('fora')}>
             Pessoa de fora
           </button>
         </div>
@@ -153,8 +166,8 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               {aba === 'visitantes' && (
                 <>
                   <p className={styles.avisoCamposExtra}>
-                    Busque alguém que já visitou a igreja antes — inclusive quem está numa célula
-                    como visitante, mesmo sem cadastro completo.
+                    Busque alguém que já está cadastrado como visitante na igreja, ou alguém que
+                    está numa célula.
                   </p>
                   <div className={styles.buscaContainer}>
                     <input

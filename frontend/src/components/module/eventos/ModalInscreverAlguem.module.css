@@ -1,0 +1,183 @@
+.abas {
+  display: flex;
+  gap: 4px;
+  margin: 16px 24px 0;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.aba,
+.abaAtiva {
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.abaAtiva {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  border-bottom-color: var(--color-primary);
+}
+
+.conteudoAba {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buscaInput {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.buscaInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.listaVisitantes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.linhaVisitante {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  transition: background-color var(--transition-fast);
+}
+
+.linhaVisitante:hover {
+  background: var(--color-bg-page);
+}
+
+.linhaVisitanteSelecionada {
+  background: var(--color-primary-light);
+}
+
+.selecionado {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+}
+
+.campo input,
+.campo select {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.campo input:focus,
+.campo select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.avisoCamposExtra {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+  margin-top: -4px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.btnCancelar {
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.btnCancelar:hover:not(:disabled) {
+  background: var(--color-bg-page);
+}
+
+.btnConfirmar {
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.btnConfirmar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btnCancelar:disabled,
+.btnConfirmar:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 767px) {
+  .abas {
+    margin-left: 16px;
+    margin-right: 16px;
+    overflow-x: auto;
+  }
+
+  .conteudoAba {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .footer {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+  }
+
+  .btnCancelar,
+  .btnConfirmar {
+    width: 100%;
+    text-align: center;
+  }
+}

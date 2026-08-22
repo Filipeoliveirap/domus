@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useQueryClient } from '@tanstack/react-query'
@@ -41,6 +41,20 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const [impactoAfetados, setImpactoAfetados] = useState<InscritoImpactado[] | null>(null)
   const [isVerificandoImpacto, setIsVerificandoImpacto] = useState(false)
   const [payloadPendente, setPayloadPendente] = useState<EventoRequest | null>(null)
+
+  // Campos personalizados agora podem ser montados ANTES do evento existir (evento novo,
+  // sem id ainda) — o painel registra aqui como salvar a si mesmo, e o próprio salvarEvento
+  // chama isso logo depois de criar/atualizar o evento, já com o id definitivo em mãos.
+  // Só existe pra permitir que CamposPersonalizadosPainel viva fora do conhecimento de
+  // criar-vs-editar; sem isso, EventoForm precisaria orquestrar duas chamadas assíncronas
+  // em ordens diferentes conforme o modo.
+  const salvarCamposPersonalizadosRef = useRef<((eventoId: string) => Promise<void>) | null>(null)
+  const registrarSalvarCamposPersonalizados = useCallback(
+    (fn: ((eventoId: string) => Promise<void>) | null) => {
+      salvarCamposPersonalizadosRef.current = fn
+    },
+    [],
+  )
 
   // Evento que pertence a uma série pergunta o alcance (só este/estes e os seguintes/toda a
   // série) antes de qualquer outra coisa — payload fica pendente até a escolha chegar.
@@ -159,11 +173,13 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     try {
       if (ehEdicao) {
         await eventosService.atualizar(eventoId!, payload, cancelarNaoElegiveis, escopo)
+        await salvarCamposPersonalizadosRef.current?.(eventoId!)
         invalidarCache(queryClient, 'evento')
         queryClient.invalidateQueries({ queryKey: ['evento', eventoId] })
         notificar.sucesso('Evento atualizado com sucesso!')
       } else {
-        await eventosService.criar(payload)
+        const criado = await eventosService.criar(payload)
+        await salvarCamposPersonalizadosRef.current?.(criado.id)
         invalidarCache(queryClient, 'evento')
         notificar.sucesso('Evento cadastrado com sucesso!')
       }
@@ -327,6 +343,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const responsavelNomeInicial = eventoInicial?.responsavel?.nome
   return {
     ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsavelNomeInicial,
+    registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     aguardandoEscopoEdicao: !!payloadAguardandoEscopo,
     onEscolherEscopoEdicao, onFecharEscopoEdicao,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
@@ -34,6 +34,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   eventoId?: string
   responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
+  registrarSalvarCamposPersonalizados: (fn: ((eventoId: string) => Promise<void>) | null) => void
   impactoAfetados: InscritoImpactado[] | null
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
@@ -59,6 +60,7 @@ export function EventoForm(props: EventoFormProps) {
     register, handleSubmit, watch, setValue,
     formState: { errors },
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
+    registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
@@ -94,16 +96,21 @@ export function EventoForm(props: EventoFormProps) {
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
 
   // Um botão só ("Salvar alterações") salva evento + campos personalizados — sem isso,
-  // existiam dois botões de salvar na mesma tela, confuso qual fazia o quê.
+  // existiam dois botões de salvar na mesma tela, confuso qual fazia o quê. O painel pode
+  // existir ANTES do evento ter id (evento novo) — por isso quem chama `salvar()` de
+  // verdade é o próprio useEventoForm (registrado aqui), depois de criar/atualizar o
+  // evento e já sabendo o id definitivo.
   const camposPersonalizadosRef = useRef<CamposPersonalizadosHandle>(null)
 
-  async function aoSubmeter(data: EventoFormData) {
-    await camposPersonalizadosRef.current?.salvar()
-    onSubmit(data)
-  }
+  useEffect(() => {
+    registrarSalvarCamposPersonalizados((eventoIdSalvo) => (
+      camposPersonalizadosRef.current?.salvar(eventoIdSalvo) ?? Promise.resolve()
+    ))
+    return () => registrarSalvarCamposPersonalizados(null)
+  }, [registrarSalvarCamposPersonalizados])
 
   return (
-    <form className={styles.form} onSubmit={(e) => handleSubmit(aoSubmeter)(e)}>
+    <form className={styles.form} onSubmit={(e) => handleSubmit(onSubmit)(e)}>
       <div className={styles.colunas}>
         {/* ─── Coluna esquerda ─── */}
         <div className={styles.colunaEsquerda}>
@@ -546,12 +553,15 @@ export function EventoForm(props: EventoFormProps) {
           personalizados fica espremido preso na largura de meia página — aqui usa a largura
           inteira do formulário. */}
       <div className={styles.blocoFinal}>
-        {ehEdicao && eventoId && requerInscricao && (
+        {requerInscricao && (
           <section className={styles.secao}>
             <div className={styles.secaoHeader}>
               <span className={styles.secaoIcone}><ClipboardCheck size={20} /></span>
               <h2 className={styles.secaoTitulo}>Campos personalizados</h2>
             </div>
+            {/* Sem eventoId (evento novo, ainda não salvo): o painel funciona só em
+                memória — `salvar()` é chamado depois, já com o id definitivo, por quem
+                registrou o callback (ver useEffect acima e useEventoForm.salvarEvento). */}
             <CamposPersonalizadosPainel ref={camposPersonalizadosRef} eventoId={eventoId} />
           </section>
         )}

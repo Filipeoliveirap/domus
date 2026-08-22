@@ -50,14 +50,14 @@ public class ConviteService {
     public InscricaoEvento resolverInscricaoConvidante(String token) {
         String inscricaoIdTexto = redisTemplate.opsForValue().get(chave(token));
         if (inscricaoIdTexto == null) {
-            throw new BusinessException("CONVITE_INVALIDO", "Este convite não é mais válido.");
+            throw new ResourceNotFoundException("Este convite não é mais válido.");
         }
 
         InscricaoEvento inscricao = inscricaoRepository.findById(UUID.fromString(inscricaoIdTexto))
-                .orElseThrow(() -> new BusinessException("CONVITE_INVALIDO", "Este convite não é mais válido."));
+                .orElseThrow(() -> new ResourceNotFoundException("Este convite não é mais válido."));
 
         if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
-            throw new BusinessException("CONVITE_INVALIDO", "Este convite não é mais válido.");
+            throw new ResourceNotFoundException("Este convite não é mais válido.");
         }
         if (inscricao.getEvento().getSituacao() == SituacaoEvento.ENCERRADO) {
             throw new BusinessException("EVENTO_ENCERRADO", "Este evento já aconteceu.");

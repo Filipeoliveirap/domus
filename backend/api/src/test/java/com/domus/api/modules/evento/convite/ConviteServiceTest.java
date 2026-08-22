@@ -105,8 +105,7 @@ class ConviteServiceTest {
         when(valueOps.get("convite:abc")).thenReturn(null);
 
         assertThatThrownBy(() -> service.resolverInscricaoConvidante("abc"))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getCodigo()).isEqualTo("CONVITE_INVALIDO"));
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -135,7 +134,6 @@ class ConviteServiceTest {
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
 
         assertThatThrownBy(() -> service.resolverInscricaoConvidante("abc"))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getCodigo()).isEqualTo("CONVITE_INVALIDO"));
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

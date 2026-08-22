@@ -156,6 +156,15 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     @Query(value = "UPDATE inscricao_evento SET inscrito_por_usuario_id = NULL WHERE inscrito_por_usuario_id = :usuarioId", nativeQuery = true)
     void desvincularInscritoPor(@Param("usuarioId") UUID usuarioId);
 
+    /** Convidados de topo (sem Pessoa vinculada) confirmados no evento — usado pra checar
+     *  duplicidade antes de criar mais um (ver {@link InscricaoService#inscreverConvidado}). */
+    @Query("""
+        SELECT i FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId AND i.pessoa IS NULL
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+    """)
+    List<InscricaoEvento> listarConvidadosSemCadastroPorEvento(@Param("eventoId") UUID eventoId);
+
     /** Purga da igreja: acompanhante_inscricao cascadeia sozinho via ON DELETE CASCADE. */
     @Modifying
     @Query(value = "DELETE FROM inscricao_evento WHERE igreja_id = :igrejaId", nativeQuery = true)

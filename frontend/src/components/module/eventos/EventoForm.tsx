@@ -546,7 +546,7 @@ export function EventoForm(props: EventoFormProps) {
           personalizados fica espremido preso na largura de meia página — aqui usa a largura
           inteira do formulário. */}
       <div className={styles.blocoFinal}>
-        {ehEdicao && eventoId && (
+        {ehEdicao && eventoId && requerInscricao && (
           <section className={styles.secao}>
             <div className={styles.secaoHeader}>
               <span className={styles.secaoIcone}><ClipboardCheck size={20} /></span>

@@ -43,6 +43,19 @@ class InscritoResponseTest {
 
         assertThat(resp.nome()).isEqualTo("Maria de Fora");
         assertThat(resp.pessoaRemovida()).isFalse();
+        assertThat(resp.telefoneConvidado()).isEqualTo("11999998888");
+    }
+
+    @Test
+    void mostraCompareceuDaInscricao() {
+        Igreja igreja = igreja();
+        InscricaoEvento i = inscricaoBase(igreja);
+        i.setNomeConvidado("Maria de Fora");
+        i.setCompareceu(true);
+
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+
+        assertThat(resp.compareceu()).isTrue();
     }
 
     @Test

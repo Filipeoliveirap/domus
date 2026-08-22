@@ -20,8 +20,6 @@ function ajudaDoTipo(tipo: TipoCampoPersonalizado): string {
   return TIPOS.find((t) => t.value === tipo)?.ajuda ?? ''
 }
 
-/** Trim + remove linha vazia — só na hora de usar (salvar ou renderizar opção), nunca
- *  enquanto a pessoa ainda está digitando (ver comentário no onChange da textarea). */
 function limparOpcoes(opcoes: string[] | null): string[] {
   return (opcoes ?? []).map((o) => o.trim()).filter(Boolean)
 }
@@ -38,9 +36,6 @@ function paraRequest(c: CampoPersonalizadoResponse): CampoPersonalizadoRequest {
   }
 }
 
-/** Exposto via ref pro formulário do evento chamar junto do próprio submit — um botão só
- *  ("Salvar alterações") salva os dois, evita ter "Salvar campos personalizados" e "Salvar
- *  alterações" lado a lado confundindo qual botão faz o quê. */
 export interface CamposPersonalizadosHandle {
   salvar: () => Promise<void>
 }
@@ -50,9 +45,6 @@ export const CamposPersonalizadosPainel = forwardRef<CamposPersonalizadosHandle,
     const { data, isLoading } = useCamposPersonalizados(eventoId)
 
     if (isLoading || !data) return null
-
-    // key={eventoId} garante que o estado local reinicia dos dados do servidor sempre que o
-    // evento muda — sem precisar de useEffect pra sincronizar query -> estado editável.
     return <PainelEditor key={eventoId} ref={ref} eventoId={eventoId} dadosIniciais={data} />
   },
 )
@@ -71,46 +63,37 @@ const PainelEditor = forwardRef<
     },
   }), [campos, eventoId, salvar])
 
+  // O mapeamento não depende mais de tipo/opções: o valor auto-preenchido/pulado vem sempre
+  // do cadastro da Pessoa (pessoa.estadoCivil, pessoa.sexo…), nunca do texto das opções do
+  // campo — então mudar tipo ou reescrever as opções não invalida o "pula pergunta pra quem
+  // já tem esse dado". A única forma de tirar o mapeamento é escolher outro no seletor.
   function atualizarCampo(indice: number, patch: Partial<CampoPersonalizadoRequest>) {
-    setCampos((atual) => atual.map((c, i) => {
-      if (i !== indice) return c
-      // Mexeu em tipo ou opções de um campo vindo do template: perde o mapeamento — ele só
-      // garante "pular pergunta pra quem já tem o dado" enquanto a estrutura for a do
-      // template original. Editar só o rótulo não conta como mudar estrutura.
-      const mexeuNaEstrutura = 'tipo' in patch || 'opcoes' in patch
-      return { ...c, ...patch, mapeamento: mexeuNaEstrutura && c.mapeamento ? null : c.mapeamento }
-    }))
+    setCampos((atual) => atual.map((c, i) => (i === indice ? { ...c, ...patch } : c)))
   }
 
   function adicionarCampo() {
     setCampos((atual) => [...atual, campoVazio(atual.length)])
   }
 
-  /** Adiciona de uma vez os 4 campos que o Domus já trata como dado estruturado de Pessoa —
-   *  cada um marcado com `mapeamento`, que faz o backend pular a pergunta pra quem já tem o
-   *  dado no cadastro (ver CampoPersonalizadoService.listarParaResponder). */
+  const TEMPLATE_DADOS_BASICOS: { mapeamento: NonNullable<CampoPersonalizadoRequest['mapeamento']>; campo: Omit<CampoPersonalizadoRequest, 'id' | 'ordem' | 'mapeamento'> }[] = [
+    { mapeamento: 'IDADE', campo: { label: 'Idade', placeholder: 'Ex.: 24', tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'ESTADO_CIVIL', campo: { label: 'Estado civil', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)'], obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'SEXO', campo: { label: 'Sexo', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Homem', 'Mulher'], obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'ENDERECO', campo: { label: 'Endereço', placeholder: 'Rua, número, bairro, cidade', tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true } },
+  ]
+
+  // Idempotente: clicar de novo só adiciona o que ainda falta do template (comparando pelo
+  // mapeamento, não pelo label — o admin pode ter renomeado). Se os 4 já existem, não faz nada.
   function usarTemplateDadosBasicos() {
     setCampos((atual) => {
+      const mapeamentosExistentes = new Set(atual.map((c) => c.mapeamento).filter(Boolean))
+      const faltando = TEMPLATE_DADOS_BASICOS.filter((t) => !mapeamentosExistentes.has(t.mapeamento))
+      if (faltando.length === 0) return atual
+
       const base = atual.length
-      const novos: CampoPersonalizadoRequest[] = [
-        {
-          id: null, label: 'Idade', placeholder: 'Ex.: 24', tipo: 'TEXTO_CURTO', opcoes: null,
-          obrigatorio: false, visivelAoPublico: true, ordem: base, mapeamento: 'IDADE',
-        },
-        {
-          id: null, label: 'Estado civil', placeholder: null, tipo: 'OPCAO_UNICA',
-          opcoes: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)'],
-          obrigatorio: false, visivelAoPublico: true, ordem: base + 1, mapeamento: 'ESTADO_CIVIL',
-        },
-        {
-          id: null, label: 'Sexo', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Homem', 'Mulher'],
-          obrigatorio: false, visivelAoPublico: true, ordem: base + 2, mapeamento: 'SEXO',
-        },
-        {
-          id: null, label: 'Endereço', placeholder: 'Rua, número, bairro, cidade', tipo: 'TEXTO_CURTO',
-          opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem: base + 3, mapeamento: 'ENDERECO',
-        },
-      ]
+      const novos: CampoPersonalizadoRequest[] = faltando.map((t, i) => ({
+        id: null, ordem: base + i, mapeamento: t.mapeamento, ...t.campo,
+      }))
       return [...atual, ...novos]
     })
   }
@@ -137,7 +120,7 @@ const PainelEditor = forwardRef<
         </button>
         <p className={styles.dicaTemplate}>
           Use quando precisar de idade, estado civil, sexo ou endereço de quem vai. Criar cada
-          um desses campos na mão faz até quem já é cadastrado ter que digitar de novo um dado
+          um desses campos na mão faz com que quem já é cadastrado ter que digitar de novo um dado
           que o sistema já tem.
         </p>
 

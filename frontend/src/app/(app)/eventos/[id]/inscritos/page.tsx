@@ -74,6 +74,15 @@ export default function InscritosPage() {
   // Detalhe do participante: abre o cadastro (mesmo drawer da tela de Pessoas) com um
   // bloco extra de contexto do evento no topo — não existe pra convidado (não tem cadastro).
   const [pessoaDetalhe, setPessoaDetalhe] = useState<{ pessoaId: string; contexto: ContextoExtraDrawer } | null>(null)
+  // Convidado sem cadastro: não tem drawer de pessoa pra abrir, mas ainda merece um jeito
+  // de ver os detalhes (quem convidou, telefone) sem precisar cancelar pra descobrir.
+  const [convidadoDetalhe, setConvidadoDetalhe] = useState<{
+    nome: string; telefone: string | null; convidadoPorNome: string | null; inscritoEm: string
+  } | null>(null)
+
+  function abrirDetalheConvidado(nome: string, telefone: string | null, convidadoPorNome: string | null, inscritoEm: string) {
+    setConvidadoDetalhe({ nome, telefone, convidadoPorNome, inscritoEm })
+  }
 
   function abrirDetalhe(inscrito: InscritoResponse) {
     if (!inscrito.pessoaId || inscrito.pessoaRemovida) return
@@ -317,24 +326,26 @@ export default function InscritosPage() {
                   <span className={styles.colParticipante}>PARTICIPANTE</span>
                   <span className={styles.colData}>DATA</span>
                   <span className={styles.colInscritoPor}>INSCRITO POR</span>
-                  <span className={styles.colConvidados}>CONVIDADOS</span>
                   {mostraPresenca && <span className={styles.colPresenca}>PRESENÇA</span>}
                   <span className={styles.colAcoes}>AÇÕES</span>
                 </div>
 
                 <div className={styles.linhas}>
                   {lista.inscritos.content.map((inscrito) => {
-                    const clicavel = modoSelecao || (!!inscrito.pessoaId && !inscrito.pessoaRemovida)
+                    const ehConvidadoSemCadastro = !inscrito.pessoaId && !inscrito.pessoaRemovida
+                    const clicavel = modoSelecao || !!inscrito.pessoaId || ehConvidadoSemCadastro
+                    const aoClicarLinha = () => {
+                      if (modoSelecao) alternarSelecao({ tipo: 'inscricao', id: inscrito.id })
+                      else if (ehConvidadoSemCadastro) {
+                        abrirDetalheConvidado(inscrito.nome, inscrito.telefoneConvidado, inscrito.convidadoPorNome, inscrito.inscritoEm)
+                      } else abrirDetalhe(inscrito)
+                    }
                     return (
                     <div key={inscrito.id} className={styles.grupo}>
                       <div
                         className={`${styles.linha} ${mostraPresenca ? styles.linhaComPresenca : ''} ${clicavel ? styles.linhaClicavel : ''}`}
-                        onClick={clicavel
-                          ? () => (modoSelecao ? alternarSelecao({ tipo: 'inscricao', id: inscrito.id }) : abrirDetalhe(inscrito))
-                          : undefined}
-                        onKeyDown={clicavel
-                          ? (e) => aoTeclarLinha(e, () => (modoSelecao ? alternarSelecao({ tipo: 'inscricao', id: inscrito.id }) : abrirDetalhe(inscrito)))
-                          : undefined}
+                        onClick={clicavel ? aoClicarLinha : undefined}
+                        onKeyDown={clicavel ? (e) => aoTeclarLinha(e, aoClicarLinha) : undefined}
                         role={clicavel ? 'button' : undefined}
                         tabIndex={clicavel ? 0 : undefined}
                       >
@@ -346,7 +357,15 @@ export default function InscritosPage() {
                               iniciais(inscrito.nome)
                             )}
                           </span>
-                          <span className={styles.nome}>{inscrito.nome}</span>
+                          <span className={styles.colParticipanteTextos}>
+                            <span className={styles.nome}>{inscrito.nome}</span>
+                            {inscrito.convidadoPorNome && (
+                              <span className={styles.subtitulo}>Convidado por {inscrito.convidadoPorNome}</span>
+                            )}
+                          </span>
+                          {!inscrito.pessoaId && !inscrito.pessoaRemovida && (
+                            <span className={styles.pillConvidado}>Convidado</span>
+                          )}
                           {mostrarIgreja && (
                             <span className={styles.pillIgreja}>
                               {inscrito.igrejaDaPessoa.sigla ?? inscrito.igrejaDaPessoa.nome}
@@ -374,9 +393,6 @@ export default function InscritosPage() {
                           ) : (
                             <span className={styles.textoMuted}>Cadastro removido</span>
                           )}
-                        </div>
-                        <div className={styles.colConvidados}>
-                          {inscrito.acompanhantes.length > 0 ? inscrito.acompanhantes.length : '—'}
                         </div>
                         {mostraPresenca && (
                           <div className={styles.colPresenca}>
@@ -428,26 +444,32 @@ export default function InscritosPage() {
                         </div>
                       </div>
 
-                      {inscrito.acompanhantes.map((convidado) => (
+                      {inscrito.acompanhantes.map((convidado) => {
+                        const aoClicarConvidado = () => (
+                          modoSelecao
+                            ? alternarSelecao({ tipo: 'acompanhante', id: convidado.id })
+                            : abrirDetalheConvidado(convidado.nome, convidado.telefone, inscrito.nome, inscrito.inscritoEm)
+                        )
+                        return (
                         <div
                           key={convidado.id}
-                          className={`${styles.linhaConvidado} ${mostraPresenca ? styles.linhaComPresenca : ''} ${modoSelecao ? styles.linhaClicavel : ''}`}
-                          onClick={modoSelecao ? () => alternarSelecao({ tipo: 'acompanhante', id: convidado.id }) : undefined}
-                          onKeyDown={modoSelecao
-                            ? (e) => aoTeclarLinha(e, () => alternarSelecao({ tipo: 'acompanhante', id: convidado.id }))
-                            : undefined}
-                          role={modoSelecao ? 'button' : undefined}
-                          tabIndex={modoSelecao ? 0 : undefined}
+                          className={`${styles.linhaConvidado} ${mostraPresenca ? styles.linhaComPresenca : ''} ${styles.linhaClicavel}`}
+                          onClick={aoClicarConvidado}
+                          onKeyDown={(e) => aoTeclarLinha(e, aoClicarConvidado)}
+                          role="button"
+                          tabIndex={0}
                         >
                           <span className={styles.conector} aria-hidden="true" />
                           <div className={styles.colParticipante}>
                             <span className={styles.avatarConvidado}>{iniciais(convidado.nome)}</span>
-                            <span className={styles.nome}>{convidado.nome}</span>
+                            <span className={styles.colParticipanteTextos}>
+                              <span className={styles.nome}>{convidado.nome}</span>
+                              <span className={styles.subtitulo}>Convidado por {inscrito.nome}</span>
+                            </span>
                             <span className={styles.pillConvidado}>Convidado</span>
                           </div>
                           <div className={styles.colData} />
                           <div className={styles.colInscritoPor} />
-                          <div className={styles.colConvidados} />
                           {mostraPresenca && (
                             <div className={styles.colPresenca}>
                               {modoSelecao ? (
@@ -497,7 +519,8 @@ export default function InscritosPage() {
                             )}
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )})}
                 </div>
@@ -639,6 +662,30 @@ export default function InscritosPage() {
           contextoExtra={pessoaDetalhe.contexto}
           onClose={() => setPessoaDetalhe(null)}
         />
+      )}
+
+      {/* Convidado sem cadastro não tem drawer de pessoa (não existe Pessoa pra abrir) —
+          um resumo simples, só leitura, é o suficiente aqui. */}
+      {convidadoDetalhe && (
+        <div className={styles.confirmInlineOverlay} onMouseDown={() => setConvidadoDetalhe(null)}>
+          <div className={styles.confirmInline} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className={styles.detalheConvidadoHeader}>
+              <span className={styles.avatarConvidado}>{iniciais(convidadoDetalhe.nome)}</span>
+              <div>
+                <p className={styles.detalheConvidadoNome}>{convidadoDetalhe.nome}</p>
+                <span className={styles.pillConvidado}>Convidado</span>
+              </div>
+            </div>
+            <ul className={styles.detalheConvidadoLista}>
+              <li>Inscrito em {formatarData(convidadoDetalhe.inscritoEm)}</li>
+              <li>{convidadoDetalhe.telefone ? `Telefone: ${convidadoDetalhe.telefone}` : 'Sem telefone informado'}</li>
+              {convidadoDetalhe.convidadoPorNome && <li>Convidado por {convidadoDetalhe.convidadoPorNome}</li>}
+            </ul>
+            <button type="button" className={styles.btnCancelar} onClick={() => setConvidadoDetalhe(null)}>
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

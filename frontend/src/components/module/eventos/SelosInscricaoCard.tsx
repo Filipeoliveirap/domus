@@ -20,6 +20,7 @@ export function SelosInscricaoCard({
 
   if (!minha?.inscrito) return null
 
+  const encerrado = evento.situacao === 'ENCERRADO'
   const obrigatorios = (campos ?? []).filter((c) => c.obrigatorio)
   const respondidos = new Set((respostas ?? []).filter((r) => r.valor?.trim()).map((r) => r.campoId))
   const pendentes = obrigatorios.filter((c) => !respondidos.has(c.id))
@@ -28,9 +29,9 @@ export function SelosInscricaoCard({
     <span className={styles.wrap} onClick={(e) => e.stopPropagation()}>
       <span className={styles.seloInscrito}>
         <CheckCircle2 size={12} aria-hidden="true" />
-        Você está inscrito
+        {encerrado ? 'Você participou desse evento' : 'Você está inscrito'}
       </span>
-      {pendentes.length > 0 && (
+      {!encerrado && pendentes.length > 0 && (
         <button
           type="button"
           className={styles.seloPendencia}

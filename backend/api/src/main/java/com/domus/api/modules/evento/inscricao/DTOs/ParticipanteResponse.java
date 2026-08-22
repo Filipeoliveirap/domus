@@ -17,6 +17,10 @@ public record ParticipanteResponse(
         UUID fotoId,
         String convidadoPorNome,
         List<String> convidados,
+        /** Preenchido só quando o convidado veio de um Visitante cadastrado (ver
+         *  {@link InscricaoEvento#getVisitante()}) — usado pra bloquear, na busca de
+         *  visitantes do modal "Inscrever alguém", quem já está inscrito neste evento. */
+        UUID visitanteId,
         EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
     private static final String NOME_PESSOA_REMOVIDA = "Pessoa removida do sistema";
@@ -35,6 +39,7 @@ public record ParticipanteResponse(
                 pessoaResolvida != null && pessoaResolvida.getFoto() != null ? pessoaResolvida.getFoto().getId() : null,
                 convidadoPorResolvida == null ? null : convidadoPorResolvida.getNome(),
                 i.getAcompanhantes().stream().map(a -> a.getNome()).toList(),
+                i.getVisitante() == null ? null : i.getVisitante().getId(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );
     }

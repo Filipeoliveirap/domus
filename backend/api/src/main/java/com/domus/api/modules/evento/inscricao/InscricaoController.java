@@ -62,7 +62,7 @@ public class InscricaoController {
         var usuario = usuarioAutenticado.get();
         var inscricao = inscricaoService.inscreverConvidado(
                 eventoId, usuario.getIgreja().getId(), data.nome(), data.telefone(),
-                usuario.getPessoa().getId());
+                usuario.getPessoa().getId(), usuario.getId(), data.visitanteId());
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responder(inscricao.getId(), null, data.respostas(),
                     usuario.getIgreja().getId(), usuario.getPessoa().getId(), usuario.getRole().getNome());

@@ -113,8 +113,11 @@ public class ConviteController {
         ConviteResolvido resolvido = conviteService.resolver(token);
         var evento = resolvido.evento();
 
+        // inscritoPorUsuarioId = null: quem preencheu este formulário não tem usuário logado
+        // (fluxo público/anônimo) — "inscrito por" dele é sempre "ele mesmo".
         var inscricao = inscricaoService.inscreverConvidado(
-                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), resolvido.convidante().getId());
+                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(),
+                resolvido.convidante().getId(), null, null);
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responderComoConvidado(

@@ -116,10 +116,11 @@ public class CampoPersonalizadoService {
             if (r.obrigatorio() && !eraObrigatorioAntes) {
                 surgiuCampoObrigatorioNovo = true;
             }
-            boolean mapeamentoAnterior = campo.getMapeamento() != null;
-            boolean estruturaMudou = mapeamentoAnterior
-                    && (campo.getTipo() != r.tipo() || !campo.getOpcoesComoLista().equals(r.opcoes() == null ? List.of() : r.opcoes()));
-
+            // Mapeamento não depende de tipo/opções: valorJaConhecido() lê sempre o dado bruto
+            // da Pessoa (pessoa.getEstadoCivil(), pessoa.getSexo()…), nunca o texto das opções
+            // do campo — então mudar o tipo ou reescrever as opções não invalida o "pula
+            // pergunta pra quem já tem esse dado". Editar/remover o mapeamento é escolha
+            // explícita do admin no seletor, refletida direto em r.mapeamento().
             campo.setLabel(r.label());
             campo.setPlaceholder(r.placeholder());
             campo.setTipo(r.tipo());
@@ -127,7 +128,7 @@ public class CampoPersonalizadoService {
             campo.setObrigatorio(r.obrigatorio());
             campo.setVisivelAoPublico(r.visivelAoPublico());
             campo.setOrdem(r.ordem());
-            campo.setMapeamento(estruturaMudou ? null : r.mapeamento());
+            campo.setMapeamento(r.mapeamento());
             resultado.add(campoRepository.save(campo));
         }
 

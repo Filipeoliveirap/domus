@@ -103,7 +103,7 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
           {convite.descricao && <p className={styles.descricao}>{convite.descricao}</p>}
         </div>
 
-        {convite.convidadoPorNome && (
+        {convite.convidadoPorNome && !sessao && (
           <div className={styles.convidantePor}>
             {convidanteFotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

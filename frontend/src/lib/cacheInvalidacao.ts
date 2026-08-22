@@ -58,6 +58,10 @@ const AFETADAS: Record<Entidade, string[][]> = {
     // `['elegibilidade', eventoId]` não é prefixo de `['inscricoes']` — sem esta
     // linha o botão de inscrição mostrava impedimento velho após cancelar/inscrever.
     ['elegibilidade'],
+    // Idem pra respostas de campo personalizado: a inscrição é cancelada e reaproveitada
+    // numa reinscrição (mesmo id), então sem isso a tela continuava mostrando resposta
+    // velha em cache até um reload manual.
+    ['respostas-campos'],
   ],
   localEvento: [
     ['eventos'],

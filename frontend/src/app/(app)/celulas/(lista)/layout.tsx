@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './celulas.module.css'
 
 const ABAS = [
@@ -12,13 +13,14 @@ const ABAS = [
 
 export default function CelulasLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { celula } = useRotulos()
 
   return (
     <div className={styles.moduloWrapper}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
         <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Células</span>
+        <span className={styles.breadcrumbAtual}>{celula.plural}</span>
       </nav>
 
       <div className={styles.abas}>

@@ -23,18 +23,28 @@ public record SessaoDTO(
         /** true = precisa (re)aceitar Termos/Política (conta nova ou versão desatualizada). */
         boolean precisaAceitarTermos,
         /** Data do último aceite (independente da versão) — exibida no perfil. */
-        java.time.LocalDateTime termosAceitosEm
+        java.time.LocalDateTime termosAceitosEm,
+        /** Rótulos customizados pela igreja (Ministério/Congregação/Célula). Null = padrão. */
+        com.domus.api.modules.igreja.DTO.RotulosDTO rotulos
 ) {
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
         this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                List.of(), false, null);
+                List.of(), false, null, null);
     }
 
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
                       List<String> capacidadesExtras) {
         this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                capacidadesExtras, false, null);
+                capacidadesExtras, false, null, null);
+    }
+
+    /** Usado pela projeção JPQL de {@code findSessaoById} — carrega só o essencial + rótulos. */
+    public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
+                      com.domus.api.modules.igreja.DTO.RotulosDTO rotulos) {
+        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                List.of(), false, null, rotulos);
     }
 }

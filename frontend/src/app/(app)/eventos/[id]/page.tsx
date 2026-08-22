@@ -72,7 +72,7 @@ export default function EditarEventoPage() {
         <h1 className={styles.titulo}>Editar evento</h1>
       </header>
 
-      <EventoForm {...form} />
+      <EventoForm {...form} eventoId={id} />
     </div>
   )
 }

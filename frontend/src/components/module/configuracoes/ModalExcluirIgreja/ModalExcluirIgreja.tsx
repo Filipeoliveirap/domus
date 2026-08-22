@@ -6,6 +6,7 @@ import { AlertTriangle, X, CheckCircle2 } from 'lucide-react'
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { ApiError } from '@/types/api.types'
 import type { ResumoExclusao } from '@/types/exclusaoIgreja.types'
 import styles from './ModalExcluirIgreja.module.css'
@@ -36,6 +37,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string
+  const { celula, ministerio, congregacao, concordar } = useRotulos()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -131,8 +133,8 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
                 {' '}<strong>{resumo.pessoas} pessoas</strong>,{' '}
                 <strong>{resumo.eventos} eventos</strong>,{' '}
                 <strong>{resumo.movimentacoesFinanceiras} movimentações financeiras</strong>,{' '}
-                <strong>{resumo.celulas} células</strong>,{' '}
-                <strong>{resumo.ministerios} ministérios</strong> e{' '}
+                <strong>{resumo.celulas} {celula.plural.toLowerCase()}</strong>,{' '}
+                <strong>{resumo.ministerios} {ministerio.plural.toLowerCase()}</strong> e{' '}
                 <strong>{resumo.usuarios} usuários</strong>.
               </>
             ) : ' …'}
@@ -140,8 +142,8 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
 
           {resumo && resumo.igrejasVinculadas.length > 0 && (
             <p className={styles.avisoRede}>
-              As {resumo.igrejasVinculadas.length} igrejas vinculadas ({resumo.igrejasVinculadas.join(', ')}) vão
-              sair da rede — cada uma continua funcionando normalmente, com todos os dados intactos, só deixam de
+              {concordar(congregacao.genero, 'os')} {resumo.igrejasVinculadas.length} {congregacao.plural.toLowerCase()} {concordar(congregacao.genero, 'vinculados')} ({resumo.igrejasVinculadas.join(', ')}) vão
+              se desvincular — cada uma continua funcionando normalmente, com todos os dados intactos, só deixam de
               estar ligadas a esta.
             </p>
           )}

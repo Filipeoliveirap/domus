@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
@@ -16,6 +17,7 @@ import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
+import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -27,6 +29,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
+  eventoId?: string
   responsavelNomeInicial?: string
   onSubmit: (data: EventoFormData) => void
   impactoAfetados: InscritoImpactado[] | null
@@ -53,11 +56,12 @@ export function EventoForm(props: EventoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, responsavelNomeInicial,
+    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
+  const { congregacao, concordar } = useRotulos()
   const repetir = watch('repetir')
   const recorrenciaFrequencia = watch('recorrenciaFrequencia')
   const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
@@ -386,7 +390,7 @@ export function EventoForm(props: EventoFormProps) {
                     Apenas minha igreja
                   </span>
                   <span className={styles.toggleDescricao}>
-                    Ative para este evento não aparecer para as demais unidades da Rede.
+                    Ative para este evento não aparecer para {concordar(congregacao.genero, 'os_min')} demais {congregacao.plural.toLowerCase()}.
                   </span>
                 </span>
                 <span className={styles.switch}>
@@ -518,6 +522,13 @@ export function EventoForm(props: EventoFormProps) {
                       Informativo. O pagamento é combinado com a igreja — informe o PIX ou um
                       contato na descrição do evento.
                     </span>
+                  </div>
+                )}
+
+                {ehEdicao && eventoId && (
+                  <div>
+                    <span className={styles.labelData}>CAMPOS PERSONALIZADOS</span>
+                    <CamposPersonalizadosPainel eventoId={eventoId} />
                   </div>
                 )}
               </div>

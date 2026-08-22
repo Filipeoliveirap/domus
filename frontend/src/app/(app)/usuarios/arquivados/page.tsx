@@ -14,6 +14,7 @@ import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrit
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarUsuarios } from '@/lib/permissoes'
 import { rotuloRole } from '@/lib/formats/usuarioFormat'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { UsuarioArquivadoResponse } from '@/types/usuario.types'
 import styles from './arquivados.module.css'
 
@@ -86,6 +87,7 @@ export default function UsuariosArquivadosPage() {
 
 function ModalExcluirDefinitivo({ usuario, onClose }: { usuario: UsuarioArquivadoResponse; onClose: () => void }) {
   const { confirmar, isLoading } = useExcluirUsuarioDefinitivamente(usuario, onClose)
+  const { celula, ministerio } = useRotulos()
 
   return (
     <ModalConfirmacao
@@ -93,7 +95,7 @@ function ModalExcluirDefinitivo({ usuario, onClose }: { usuario: UsuarioArquivad
       mensagem={
         <>
           Isso vai apagar o login de <strong>{usuario.nome}</strong> de vez. Não tem como
-          desfazer. A pessoa e todo o histórico dela (célula, ministério, movimentações,
+          desfazer. A pessoa e todo o histórico dela ({celula.singular.toLowerCase()}, {ministerio.singular.toLowerCase()}, movimentações,
           eventos…) continuam intactos — só o acesso ao sistema some.
         </>
       }

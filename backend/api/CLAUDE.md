@@ -113,6 +113,17 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
   formulário **colapsam** para 1 coluna; modais/drawers reduzem padding; `min-width: 0`
   na cadeia flex/grid e larguras fixas (ex.: botão Google) revistas para evitar overflow
   horizontal. Validar no viewport de celular antes de considerar pronto.
+- **UX é prioridade em toda feature/fluxo novo, não só a função funcionando.** Rótulo de
+  campo sempre carrega um exemplo concreto (via `placeholder` do próprio campo — nunca só o
+  nome técnico do dado, tipo "Rótulo" ou "Valor"). Quando o tipo/formato de algo muda como a
+  pessoa interage (ex.: lista de escolher uma vs. marcar várias), a UI explica a diferença
+  visivelmente, não só pelo nome da opção. Prévia de qualquer builder (formulário, campo,
+  template) é **interativa de verdade** sempre que der (inputs reais com estado local, nunca
+  `disabled`) — além de UX melhor, prévia estática esconde bug de estado que só aparece
+  quando alguém realmente interage (ex.: textarea que filtrava linha vazia a cada tecla e
+  "não deixava" digitar Enter — só apareceu quando a prévia virou interativa de verdade).
+  Antes de dar uma tela como pronta, perguntar "uma pessoa leiga entenderia isso sem
+  explicação?", não só "os testes passam?".
 
 ---
 

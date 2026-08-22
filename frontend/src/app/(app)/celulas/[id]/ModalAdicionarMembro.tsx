@@ -11,6 +11,7 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { iniciaisVisitante } from '@/lib/formats/visitanteFormat'
 import { formatarTelefoneExibicao } from '@/lib/formats/visitanteFormat'
 import { iniciais as iniciaisPessoa } from '@/lib/formats/pessoaFormat'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './ModalAdicionarMembro.module.css'
 
 interface ModalAdicionarMembroProps {
@@ -27,6 +28,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
   const [tab, setTab] = useState<Tab>('pessoas')
   const [busca, setBusca] = useState('')
   const queryClient = useQueryClient()
+  const { celula } = useRotulos()
 
   const { data: pessoasData } = usePessoas({ q: tab === 'pessoas' ? busca : '', page: 0, size: 50 })
   const { data: visitantesData } = useVisitantes({
@@ -42,7 +44,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
     try {
       await celulaService.adicionarMembro(celulaId, { pessoaId })
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso('Pessoa adicionada à célula.')
+      notificar.sucesso(`Pessoa adicionada à ${celula.singular.toLowerCase()}.`)
     } catch { notificar.erro('Erro ao adicionar.') }
   }
 
@@ -51,7 +53,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
       await celulaService.adicionarMembro(celulaId, { visitanteId })
       invalidarCache(queryClient, 'celula')
       queryClient.invalidateQueries({ queryKey: ['visitantes'] })
-      notificar.sucesso('Visitante adicionado à célula.')
+      notificar.sucesso(`Visitante adicionado à ${celula.singular.toLowerCase()}.`)
     } catch { notificar.erro('Erro ao adicionar.') }
   }
 
@@ -59,7 +61,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
     <div className={styles.overlay} onMouseDown={onClose}>
       <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
         <button className={styles.close} onClick={onClose}><X size={18} /></button>
-        <h2 className={styles.titulo}>Adicionar à Célula</h2>
+        <h2 className={styles.titulo}>Adicionar à {celula.singular}</h2>
 
         <div className={styles.tabs}>
           <button className={`${styles.tab} ${tab === 'pessoas' ? styles.tabAtiva : ''}`}
@@ -84,7 +86,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
               <div key={p.id} className={styles.item} role="button" tabIndex={0}
                 onClick={() => handleAdicionarPessoa(p.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAdicionarPessoa(p.id) }}
-                title="Adicionar à célula">
+                title={`Adicionar à ${celula.singular.toLowerCase()}`}>
                 <div className={styles.itemInfo}>
                   <span className={styles.avatar}>{iniciaisPessoa(p.nome)}</span>
                   <div>
@@ -102,7 +104,7 @@ export function ModalAdicionarMembro({ celulaId, membrosPessoaIds, membrosVisita
               <div key={v.id} className={styles.item} role="button" tabIndex={0}
                 onClick={() => handleAdicionarVisitante(v.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAdicionarVisitante(v.id) }}
-                title="Adicionar à célula">
+                title={`Adicionar à ${celula.singular.toLowerCase()}`}>
                 <div className={styles.itemInfo}>
                   <span className={styles.avatar}>{iniciaisVisitante(v.nome)}</span>
                   <div>

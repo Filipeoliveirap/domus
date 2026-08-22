@@ -13,7 +13,7 @@ import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { ModalMinisterioForm } from './ModalMinisterioForm'
-import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { ministerioService } from '@/services/ministerio.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
@@ -36,6 +36,7 @@ export default function MinisteriosPage() {
   const podeGerenciar = podeGerenciarCadastroMinisterios(role)
 
   const { data: ministerios = [], isLoading } = useMinisterios()
+  const { ministerio: rotuloMinisterio } = useRotulos()
   const queryClient = useQueryClient()
   // `null` = fechado; `'novo'` = criar; objeto = editar (mesma convenção de /eventos/locais).
   const [formAberto, setFormAberto] = useState<'novo' | MinisterioResponse | null>(null)
@@ -53,7 +54,7 @@ export default function MinisteriosPage() {
       invalidarCache(queryClient, 'ministerio')
       notificar.sucesso(`${ministerio.nome} foi arquivada.`)
     } catch {
-      notificar.erro(`Erro ao arquivar ${ROTULO_MINISTERIO.toLowerCase()}.`)
+      notificar.erro(`Erro ao arquivar ${rotuloMinisterio.singular.toLowerCase()}.`)
     } finally {
       setArquivandoId(null)
     }
@@ -83,14 +84,14 @@ export default function MinisteriosPage() {
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>
-            <h1 className={styles.titulo}>{ROTULO_MINISTERIO_PLURAL}</h1>
+            <h1 className={styles.titulo}>{rotuloMinisterio.plural}</h1>
             {ministerios.length > 0 && <span className={styles.contador}>{ministerios.length}</span>}
           </div>
-          <p className={styles.subtitulo}>{ROTULO_MINISTERIO_PLURAL} da igreja e quem participa de cada uma</p>
+          <p className={styles.subtitulo}>{rotuloMinisterio.plural} da igreja e quem participa de cada uma</p>
         </div>
         {podeGerenciar && (
           <button type="button" className={styles.botaoPrimario} onClick={() => setFormAberto('novo')}>
-            Nova {ROTULO_MINISTERIO.toLowerCase()}
+            Nova {rotuloMinisterio.singular.toLowerCase()}
           </button>
         )}
       </header>
@@ -98,11 +99,11 @@ export default function MinisteriosPage() {
       {ministerios.length === 0 ? (
         <EstadoVazio
           icone={Users}
-          titulo={`Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} cadastrada`}
+          titulo={`Nenhuma ${rotuloMinisterio.singular.toLowerCase()} cadastrada`}
           mensagem={podeGerenciar
-            ? `Cadastre a primeira ${ROTULO_MINISTERIO.toLowerCase()} da igreja.`
-            : `Nenhuma ${ROTULO_MINISTERIO.toLowerCase()} foi cadastrada ainda.`}
-          acaoPrimaria={podeGerenciar ? { label: `Nova ${ROTULO_MINISTERIO.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined}
+            ? `Cadastre a primeira ${rotuloMinisterio.singular.toLowerCase()} da igreja.`
+            : `Nenhuma ${rotuloMinisterio.singular.toLowerCase()} foi cadastrada ainda.`}
+          acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloMinisterio.singular.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined}
         />
       ) : (
         <div className={styles.grade}>
@@ -180,9 +181,10 @@ function ModalExcluirDefinitivo({ ministerio, onClose }: { ministerio: Ministeri
   // Esse botão só aparece quando não tem ninguém vinculado (senão o menu mostra
   // "Arquivar") — confirmação simples basta, sem precisar digitar o nome.
   const { confirmar, isLoading } = useExcluirMinisterioDefinitivamente(ministerio, onClose)
+  const { ministerio: rotuloMinisterio } = useRotulos()
   return (
     <ModalConfirmacao
-      titulo={`Excluir ${ROTULO_MINISTERIO.toLowerCase()} definitivamente?`}
+      titulo={`Excluir ${rotuloMinisterio.singular.toLowerCase()} definitivamente?`}
       mensagem={<>Isso vai apagar <strong>{ministerio.nome}</strong> de vez. Não tem como desfazer.</>}
       textoConfirmar="Excluir"
       perigo

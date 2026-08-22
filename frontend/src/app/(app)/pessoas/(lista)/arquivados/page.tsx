@@ -13,6 +13,7 @@ import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarPessoas } from '@/lib/permissoes'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { PessoaArquivadaResponse } from '@/types/pessoa.type'
 import styles from './arquivados.module.css'
 
@@ -86,6 +87,7 @@ export default function PessoasArquivadasPage() {
 
 function ModalExcluirDefinitivo({ pessoa, onClose }: { pessoa: PessoaArquivadaResponse; onClose: () => void }) {
   const { confirmar, isLoading, erroGeral } = useExcluirPessoaDefinitivamente(pessoa, onClose)
+  const { celula, ministerio } = useRotulos()
 
   // Sem nenhum vínculo: confirmação simples. Com vínculo, exige digitar o nome e mostra
   // exatamente o que sai (login, célula/rede) e o que fica anonimizado (relatórios).
@@ -108,10 +110,10 @@ function ModalExcluirDefinitivo({ pessoa, onClose }: { pessoa: PessoaArquivadaRe
     consequencias.push({ tipo: 'perde', texto: 'O login (usuário) desta pessoa é apagado de vez' })
   }
   if (pessoa.temCelula) {
-    consequencias.push({ tipo: 'perde', texto: 'Sai da célula que participa' })
+    consequencias.push({ tipo: 'perde', texto: `Sai da ${celula.singular.toLowerCase()} que participa` })
   }
   if (pessoa.temMinisterio) {
-    consequencias.push({ tipo: 'perde', texto: 'Sai de todos os ministérios/redes que participa' })
+    consequencias.push({ tipo: 'perde', texto: `Sai de todos os ${ministerio.plural.toLowerCase()} que participa` })
   }
   if (pessoa.temContribuicao) {
     consequencias.push({

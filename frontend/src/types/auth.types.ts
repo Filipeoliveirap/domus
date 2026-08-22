@@ -1,4 +1,5 @@
 import { Role } from "./usuario.types";
+import type { RotulosCustomizados } from "./igreja/igreja.type";
 export interface LoginRequest {
     email: string;
     senha: string;
@@ -33,6 +34,8 @@ export interface Sessao {
     precisaAceitarTermos: boolean;
     /** Data do aceite mais recente, ou null se nunca aceitou. */
     termosAceitosEm: string | null;
+    /** Rótulos customizados pela igreja (Ministério/Congregação/Célula). null = padrão. */
+    rotulos: RotulosCustomizados | null;
 }
 
 export interface ForgotPasswordRequest {

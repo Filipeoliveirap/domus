@@ -29,7 +29,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
         u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome,
-        u.pessoa.foto.id, u.pessoa.cargo, u.igreja.sigla, u.igreja.logoFoto.id)
+        u.pessoa.foto.id, u.pessoa.cargo, u.igreja.sigla, u.igreja.logoFoto.id,
+        new com.domus.api.modules.igreja.DTO.RotulosDTO(
+            u.igreja.ministerioNomeSingular, u.igreja.ministerioNomePlural, u.igreja.ministerioGenero,
+            u.igreja.congregacaoNomeSingular, u.igreja.congregacaoNomePlural, u.igreja.congregacaoGenero,
+            u.igreja.celulaNomeSingular, u.igreja.celulaNomePlural, u.igreja.celulaGenero))
     FROM Usuario u
     WHERE u.id = :id
     """)

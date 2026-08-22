@@ -22,7 +22,8 @@ public record IgrejaDetalheDTO(
         LocalDateTime atualizadoEm,
         String atualizadoPorNome,
         LocalDateTime exclusaoAgendadaEm,
-        Integer diasRestantes) {
+        Integer diasRestantes,
+        RotulosDTO rotulos) {
 
     public static IgrejaDetalheDTO from(Igreja igreja, String atualizadoPorNome) {
         var e = igreja.getEndereco();
@@ -50,6 +51,7 @@ public record IgrejaDetalheDTO(
                 igreja.getUpdatedAt(),
                 atualizadoPorNome,
                 igreja.getExclusaoAgendadaEm(),
-                diasRestantes);
+                diasRestantes,
+                RotulosDTO.from(igreja));
     }
 }

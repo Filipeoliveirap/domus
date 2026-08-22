@@ -66,6 +66,7 @@ export const Endpoints = {
     ARQUIVADOS: '/eventos/arquivados',
     RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
+    CAMPOS_PERSONALIZADOS: (id: string) => `/eventos/${id}/campos-personalizados`,
   },
 
   locaisEvento: {
@@ -102,6 +103,7 @@ export const Endpoints = {
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
     REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
+    RESPOSTAS: (inscricaoId: string) => `/inscricoes/${inscricaoId}/respostas`,
   },
 
   presenca: {
@@ -145,6 +147,7 @@ export const Endpoints = {
 
   igreja: {
     MINHA: '/igrejas/minha',
+    ROTULOS: '/igrejas/minha/rotulos',
     exclusao: {
       RESUMO: '/igrejas/exclusao/resumo',
       AGENDAR: '/igrejas/exclusao/agendar',

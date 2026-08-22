@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCelulas } from '@/lib/permissoes'
 import { rotuloDiaSemana, formatarHorario } from '@/lib/formats/celulaFormat'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
 import { Button } from '@/components/common/button/Button'
@@ -53,6 +54,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
   const isAdmin = podeGerenciarCelulas(role)
   const podeGerenciarCelula = isAdmin || !!celula?.souLiderDestaCelula
+  const { celula: rotuloCelula, concordar } = useRotulos()
   const [filtro, setFiltro] = useState<'TODOS' | 'PESSOA' | 'VISITANTE'>('TODOS')
   const [editando, setEditando] = useState(false)
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false)
@@ -128,7 +130,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       await celulaService.adicionarMembro(id, { visitanteId: visitante.id })
       invalidarCache(queryClient, 'celula')
       queryClient.invalidateQueries({ queryKey: ['visitantes'] })
-      notificar.sucesso('Visitante cadastrado e adicionado à célula.')
+      notificar.sucesso(`Visitante cadastrado e adicionado à ${rotuloCelula.singular.toLowerCase()}.`)
       setCadastrarExterno(false)
       formExterno.reset()
     } catch { notificar.erro('Erro ao cadastrar.') }
@@ -144,7 +146,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         fotoId: fotoId ?? undefined,
       })
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso('Célula atualizada.')
+      notificar.sucesso(`${rotuloCelula.singular} atualizada.`)
       setEditando(false)
     } catch {
       notificar.erro('Erro ao atualizar.')
@@ -167,7 +169,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       <nav className={styles.breadcrumb}>
         <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <Link href="/celulas" className={styles.breadcrumbLink}>Células</Link>
+        <Link href="/celulas" className={styles.breadcrumbLink}>{rotuloCelula.plural}</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>{celula?.nome ?? '…'}</span>
       </nav>
@@ -176,7 +178,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         <Link href="/celulas/arquivados" className={styles.avisoArquivada}>
           <ArrowLeft size={16} className={styles.avisoSeta} />
           <Archive size={16} />
-          <span>Esta célula está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+          <span>{concordar(rotuloCelula.genero, 'este')} {rotuloCelula.singular.toLowerCase()} está {concordar(rotuloCelula.genero, 'arquivado')}. Toque para restaurá-{concordar(rotuloCelula.genero, 'lo')} na lista de {concordar(rotuloCelula.genero, 'arquivados')}.</span>
         </Link>
       )}
 
@@ -210,7 +212,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                   })
                   setFotoId(celula?.fotoId ?? null)
                   setEditando(true)
-                }} title="Editar célula">
+                }} title={`Editar ${rotuloCelula.singular.toLowerCase()}`}>
                   <Pencil size={16} />
                 </button>
                 )}
@@ -327,7 +329,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         <div className={styles.modalOverlay} onMouseDown={() => setEditando(false)}>
           <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
             <button className={styles.modalClose} onClick={() => setEditando(false)}>✕</button>
-            <h2 className={styles.modalTitulo}>Editar Célula</h2>
+            <h2 className={styles.modalTitulo}>Editar {rotuloCelula.singular}</h2>
             <form onSubmit={handleSubmit(onSalvarEdicao)} className={styles.modalForm}>
               <div className={styles.fotoWrap}>
                 <UploadFoto
@@ -337,7 +339,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                   nomeFallback={form.getValues('nome') as string}
                 />
               </div>
-              <Input id="nome-edit" label="NOME*" placeholder="Nome da célula"
+              <Input id="nome-edit" label="NOME*" placeholder={`Nome da ${rotuloCelula.singular.toLowerCase()}`}
                 error={errors.nome?.message} {...register('nome')} />
               <Select id="diaSemana-edit" label="DIA QUE A CÉLULA OCORRE" placeholder="Selecione"
                 options={DIA_OPTIONS} error={errors.diaSemana?.message} {...register('diaSemana')} />

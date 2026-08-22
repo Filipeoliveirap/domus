@@ -3,6 +3,9 @@ package com.domus.api.modules.igreja;
 import com.domus.api.config.TokenService;
 import com.domus.api.shared.security.RefreshTokenService;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
+import com.domus.api.modules.igreja.DTO.RotulosDTO;
+import com.domus.api.modules.igreja.DTO.RotulosRequest;
+import com.domus.api.modules.igreja.GeneroGramatical;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.termos.TermoAceiteService;
@@ -125,5 +128,57 @@ class IgrejaServiceTest {
                 true, "203.0.113.9");
 
         verify(termoAceiteService).registrarAceite(any(UUID.class), eq("203.0.113.9"));
+    }
+
+    @Test
+    void atualizarRotulosSalvaTrioCompletoDeUmModulo() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Teste").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(cacheManager.getCache("igreja")).thenReturn(mock(org.springframework.cache.Cache.class));
+
+        RotulosRequest request = new RotulosRequest(
+                new RotulosRequest.Bloco("Departamento", "Departamentos", GeneroGramatical.MASCULINO),
+                null, null);
+
+        RotulosDTO resultado = igrejaService.atualizarRotulos(igrejaId, request);
+
+        assertThat(resultado.ministerioSingular()).isEqualTo("Departamento");
+        assertThat(resultado.ministerioPlural()).isEqualTo("Departamentos");
+        assertThat(resultado.ministerioGenero()).isEqualTo(GeneroGramatical.MASCULINO);
+        verify(igrejaRepository).save(igreja);
+    }
+
+    @Test
+    void atualizarRotulosRecusaTrioParcial() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Teste").build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+
+        RotulosRequest request = new RotulosRequest(
+                new RotulosRequest.Bloco("Departamento", null, null), null, null);
+
+        assertThatThrownBy(() -> igrejaService.atualizarRotulos(igrejaId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Preencha singular, plural e gênero");
+
+        verify(igrejaRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarRotulosComBlocoTotalmenteVazioRestauraPadrao() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Teste")
+                .celulaNomeSingular("Pequeno Grupo").celulaNomePlural("Pequenos Grupos")
+                .celulaGenero(GeneroGramatical.MASCULINO)
+                .build();
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(cacheManager.getCache("igreja")).thenReturn(mock(org.springframework.cache.Cache.class));
+
+        RotulosRequest request = new RotulosRequest(
+                null, null, new RotulosRequest.Bloco(null, null, null));
+
+        RotulosDTO resultado = igrejaService.atualizarRotulos(igrejaId, request);
+
+        assertThat(resultado.celulaSingular()).isNull();
+        assertThat(resultado.celulaPlural()).isNull();
+        assertThat(resultado.celulaGenero()).isNull();
     }
 }

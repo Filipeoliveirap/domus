@@ -13,15 +13,19 @@ import {
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
 import { urlFoto } from '@/lib/urlFoto'
+import { SelosInscricaoCard } from './SelosInscricaoCard'
 import styles from './EventoCard.module.css'
 
 interface EventoCardProps {
   evento: EventoResponse
   onAbrirDetalhe: (evento: EventoResponse) => void
   onArquivar: (evento: EventoResponse) => void
+  /** Clique no selo de pendência: abre o mesmo detalhe, mas já com o modal de resposta
+   *  aberto — se não vier, o selo cai pro comportamento padrão de abrir o detalhe. */
+  onAbrirPendencia?: (evento: EventoResponse) => void
 }
 
-export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardProps) {
+export function EventoCard({ evento, onAbrirDetalhe, onArquivar, onAbrirPendencia }: EventoCardProps) {
   const router = useRouter()
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
 
@@ -108,6 +112,10 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar }: EventoCardPro
           {evento.preco != null && (
             <span className={styles.preco}>{formatarMoeda(evento.preco)}</span>
           )}
+          <SelosInscricaoCard
+            evento={evento}
+            onAbrirPendencia={() => (onAbrirPendencia ? onAbrirPendencia(evento) : onAbrirDetalhe(evento))}
+          />
         </div>
       </div>
     </article>

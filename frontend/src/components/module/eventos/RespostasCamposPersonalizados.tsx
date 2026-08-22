@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
+import { useCamposPersonalizadosMinha } from '@/hooks/evento/useCamposPersonalizadosMinha'
 import { useRespostasCampos } from '@/hooks/inscricao/useRespostasCampos'
 import { ModalResponderCamposPersonalizados } from './ModalResponderCamposPersonalizados'
 import type { CampoPersonalizadoResponse, RespostaResponse } from '@/types/campoPersonalizado.type'
@@ -10,7 +11,12 @@ import styles from './RespostasCamposPersonalizados.module.css'
 export function RespostasCamposPersonalizados({
   eventoId, inscricaoId, acompanhanteId, abrirAutomaticamente = false,
 }: { eventoId: string; inscricaoId: string; acompanhanteId?: string; abrirAutomaticamente?: boolean }) {
-  const { data: campos } = useCamposPersonalizados(eventoId)
+  // Acompanhante nunca tem mapeamento aplicado (não existe Pessoa pra checar) — usa a lista
+  // completa. Titular (sem acompanhanteId) usa a filtrada, que já pula o que a Pessoa dele
+  // já tem cadastrado. Os dois hooks sempre rodam (regra de hooks), só um dos dados é usado.
+  const { data: camposCompletos } = useCamposPersonalizados(eventoId)
+  const { data: camposMinha } = useCamposPersonalizadosMinha(eventoId)
+  const campos = acompanhanteId ? camposCompletos : camposMinha
   const { data: respostas } = useRespostasCampos(inscricaoId, acompanhanteId)
 
   if (!campos || campos.length === 0 || !respostas) return null

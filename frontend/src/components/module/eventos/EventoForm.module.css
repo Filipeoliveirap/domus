@@ -19,6 +19,15 @@
   top: 24px;
 }
 
+/* Campos personalizados + ações do formulário, fora do grid de 2 colunas — usa a largura
+   inteira, ver comentário no EventoForm.tsx. */
+.blocoFinal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 24px;
+}
+
 /* ─── Seções ─── */
 .secao {
   display: flex;

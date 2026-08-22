@@ -29,6 +29,7 @@ class CampoPersonalizadoServiceTest {
     com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
     com.domus.api.modules.usuario.UsuarioRepository usuarioRepository;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    com.domus.api.modules.pessoa.PessoaRepository pessoaRepository;
     CampoPersonalizadoService service;
 
     UUID igrejaId;
@@ -43,9 +44,10 @@ class CampoPersonalizadoServiceTest {
         inscricaoRepository = mock(com.domus.api.modules.evento.inscricao.InscricaoRepository.class);
         usuarioRepository = mock(com.domus.api.modules.usuario.UsuarioRepository.class);
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        pessoaRepository = mock(com.domus.api.modules.pessoa.PessoaRepository.class);
         service = new CampoPersonalizadoService(
                 campoRepository, respostaRepository, eventoRepository, inscricaoRepository,
-                usuarioRepository, notificacaoService);
+                usuarioRepository, notificacaoService, pessoaRepository);
 
         igrejaId = UUID.randomUUID();
         eventoId = UUID.randomUUID();
@@ -391,6 +393,41 @@ class CampoPersonalizadoServiceTest {
         Pessoa qualquerPessoa = Pessoa.builder().id(UUID.randomUUID()).build();
 
         var resultado = service.listarParaResponder(eventoId, igrejaId, qualquerPessoa);
+
+        assertThat(resultado).hasSize(1);
+    }
+
+    @Test
+    void listarParaResponderComoTitularPulaCampoMapeadoQuandoPessoaJaTemODado() {
+        UUID pessoaId = UUID.randomUUID();
+        var campoIdade = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Idade").tipo(TipoCampoPersonalizado.TEXTO_CURTO)
+                .mapeamento(MapeamentoCampoPersonalizado.IDADE).build();
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(List.of(campoIdade));
+
+        Pessoa pessoaComData = Pessoa.builder().id(pessoaId)
+                .dataNascimento(java.time.LocalDate.of(2000, 1, 1)).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(pessoaComData));
+
+        var resultado = service.listarParaResponderComoTitular(eventoId, igrejaId, pessoaId);
+
+        assertThat(resultado).isEmpty();
+    }
+
+    @Test
+    void listarParaResponderComoTitularMostraCampoQuandoPessoaNaoEncontrada() {
+        UUID pessoaId = UUID.randomUUID();
+        var campoIdade = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Idade").tipo(TipoCampoPersonalizado.TEXTO_CURTO)
+                .mapeamento(MapeamentoCampoPersonalizado.IDADE).build();
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(List.of(campoIdade));
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.empty());
+
+        var resultado = service.listarParaResponderComoTitular(eventoId, igrejaId, pessoaId);
 
         assertThat(resultado).hasSize(1);
     }

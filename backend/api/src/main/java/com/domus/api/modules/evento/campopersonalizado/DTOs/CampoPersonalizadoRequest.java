@@ -1,5 +1,6 @@
 package com.domus.api.modules.evento.campopersonalizado.DTOs;
 
+import com.domus.api.modules.evento.campopersonalizado.MapeamentoCampoPersonalizado;
 import com.domus.api.modules.evento.campopersonalizado.TipoCampoPersonalizado;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
@@ -22,7 +23,8 @@ public record CampoPersonalizadoRequest(
         List<String> opcoes,
         boolean obrigatorio,
         boolean visivelAoPublico,
-        int ordem
+        int ordem,
+        MapeamentoCampoPersonalizado mapeamento
 ) {
     @AssertTrue(message = "Informe pelo menos uma opção.")
     public boolean isOpcoesValidas() {

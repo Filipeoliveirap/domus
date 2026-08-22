@@ -55,6 +55,21 @@ public class InscricaoController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @PostMapping("/eventos/{eventoId}/inscricoes/convidados")
+    public ResponseEntity<ConvidadoResponse> criarConvidado(
+            @PathVariable UUID eventoId,
+            @Valid @RequestBody CriarConvidadoRequest data) {
+        var usuario = usuarioAutenticado.get();
+        var inscricao = inscricaoService.inscreverConvidado(
+                eventoId, usuario.getIgreja().getId(), data.nome(), data.telefone(),
+                usuario.getPessoa().getId(), usuario.getId(), data.visitanteId());
+        if (data.respostas() != null && !data.respostas().isEmpty()) {
+            campoPersonalizadoService.responder(inscricao.getId(), null, data.respostas(),
+                    usuario.getIgreja().getId(), usuario.getPessoa().getId(), usuario.getRole().getNome());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(ConvidadoResponse.from(inscricao));
+    }
+
     @PostMapping("/eventos/{eventoId}/inscricoes/{inscricaoId}/acompanhantes")
     public ResponseEntity<AcompanhanteResponse> adicionarAcompanhante(
             @PathVariable UUID eventoId,

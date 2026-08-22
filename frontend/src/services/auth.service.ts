@@ -34,9 +34,12 @@ export const authService = {
         await garantirCsrfCookie();
         return api.post<Sessao>(Endpoints.auth.GOOGLE_REGISTRAR, data).then(res => res.data);
     },
-    /** Quem sou eu? O servidor é o dono da verdade — o JS não lê o cookie httpOnly. */
-    me: () : Promise<Sessao> =>
-        api.get<Sessao>(Endpoints.auth.ME).then(res => res.data),
+    /** Quem sou eu? O servidor é o dono da verdade — o JS não lê o cookie httpOnly.
+     *  `opcoes.semRedirect`: usado por página pública (ex.: /convite/[token]) que só quer
+     *  saber se há sessão, sem que um 401 (visitante anônimo, resposta legítima aqui) acione
+     *  o redirect global pra /login. */
+    me: (opcoes?: { semRedirect?: boolean }) : Promise<Sessao> =>
+        api.get<Sessao>(Endpoints.auth.ME, { skipAuthRedirect: opcoes?.semRedirect }).then(res => res.data),
     /** Sem argumento: o refresh vai no cookie. O servidor é quem expira os dois cookies. */
     logout: () : Promise<void> =>
         api.post(Endpoints.auth.LOGOUT).then(() => undefined),

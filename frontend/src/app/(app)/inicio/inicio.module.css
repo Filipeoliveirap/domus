@@ -247,6 +247,20 @@
   min-width: 0;
 }
 
+.eventoInscrito {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-success-bg, #ecfdf5);
+  color: var(--color-success, #059669);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  width: fit-content;
+}
+
 .eventoIgreja {
   display: inline-flex;
   align-items: center;

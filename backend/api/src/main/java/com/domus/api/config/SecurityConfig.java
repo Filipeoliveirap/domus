@@ -49,7 +49,11 @@ public class SecurityConfig {
         return httpSecurity
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
-                        .csrfTokenRequestHandler(csrfTokenRequestHandler()))
+                        .csrfTokenRequestHandler(csrfTokenRequestHandler())
+                        // Convite público: quem abre o link nunca teve sessão nenhuma (não faz
+                        // sentido exigir cookie XSRF-TOKEN de um estranho vindo do WhatsApp) —
+                        // CSRF protege sessão autenticada de forjadura, e aqui não existe sessão.
+                        .ignoringRequestMatchers("/convites/**"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -64,6 +68,7 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
                         ).permitAll()
+                        .requestMatchers("/convites/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 
@@ -88,6 +93,8 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.PATCH, "/eventos/*/presenca/**")
                         .hasAnyRole(ADMIN, LIDER)
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes/minha/convite")
+                        .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes")
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/eventos/*/inscricoes/**")

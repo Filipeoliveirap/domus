@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
-import { Button } from '@/components/common/button/Button'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useSalvarCamposPersonalizados } from '@/hooks/evento/useSalvarCamposPersonalizados'
 import type { CampoPersonalizadoRequest, CampoPersonalizadoResponse, TipoCampoPersonalizado } from '@/types/campoPersonalizado.type'
@@ -21,38 +20,53 @@ function ajudaDoTipo(tipo: TipoCampoPersonalizado): string {
   return TIPOS.find((t) => t.value === tipo)?.ajuda ?? ''
 }
 
-/** Trim + remove linha vazia — só na hora de usar (salvar ou renderizar opção), nunca
- *  enquanto a pessoa ainda está digitando (ver comentário no onChange da textarea). */
 function limparOpcoes(opcoes: string[] | null): string[] {
   return (opcoes ?? []).map((o) => o.trim()).filter(Boolean)
 }
 
 function campoVazio(ordem: number): CampoPersonalizadoRequest {
-  return { id: null, label: '', placeholder: null, tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem }
+  return { id: null, label: '', placeholder: null, tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem, mapeamento: null }
 }
 
 function paraRequest(c: CampoPersonalizadoResponse): CampoPersonalizadoRequest {
   return {
     id: c.id, label: c.label, placeholder: c.placeholder, tipo: c.tipo,
     opcoes: c.opcoes.length ? c.opcoes : null, obrigatorio: c.obrigatorio,
-    visivelAoPublico: c.visivelAoPublico, ordem: c.ordem,
+    visivelAoPublico: c.visivelAoPublico, ordem: c.ordem, mapeamento: c.mapeamento,
   }
 }
 
-export function CamposPersonalizadosPainel({ eventoId }: { eventoId: string }) {
-  const { data, isLoading } = useCamposPersonalizados(eventoId)
-
-  if (isLoading || !data) return null
-
-  // key={eventoId} garante que o estado local reinicia dos dados do servidor sempre que o
-  // evento muda — sem precisar de useEffect pra sincronizar query -> estado editável.
-  return <PainelEditor key={eventoId} eventoId={eventoId} dadosIniciais={data} />
+export interface CamposPersonalizadosHandle {
+  salvar: () => Promise<void>
 }
 
-function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosIniciais: CampoPersonalizadoResponse[] }) {
-  const { salvar, isLoading: salvando } = useSalvarCamposPersonalizados()
+export const CamposPersonalizadosPainel = forwardRef<CamposPersonalizadosHandle, { eventoId: string }>(
+  function CamposPersonalizadosPainel({ eventoId }, ref) {
+    const { data, isLoading } = useCamposPersonalizados(eventoId)
+
+    if (isLoading || !data) return null
+    return <PainelEditor key={eventoId} ref={ref} eventoId={eventoId} dadosIniciais={data} />
+  },
+)
+
+const PainelEditor = forwardRef<
+  CamposPersonalizadosHandle,
+  { eventoId: string; dadosIniciais: CampoPersonalizadoResponse[] }
+>(function PainelEditor({ eventoId, dadosIniciais }, ref) {
+  const { salvar } = useSalvarCamposPersonalizados()
   const [campos, setCampos] = useState<CampoPersonalizadoRequest[]>(() => dadosIniciais.map(paraRequest))
 
+  useImperativeHandle(ref, () => ({
+    salvar: async () => {
+      const camposLimpos = campos.map((c) => ({ ...c, opcoes: c.opcoes ? limparOpcoes(c.opcoes) : null }))
+      await salvar(eventoId, camposLimpos)
+    },
+  }), [campos, eventoId, salvar])
+
+  // O mapeamento não depende mais de tipo/opções: o valor auto-preenchido/pulado vem sempre
+  // do cadastro da Pessoa (pessoa.estadoCivil, pessoa.sexo…), nunca do texto das opções do
+  // campo — então mudar tipo ou reescrever as opções não invalida o "pula pergunta pra quem
+  // já tem esse dado". A única forma de tirar o mapeamento é escolher outro no seletor.
   function atualizarCampo(indice: number, patch: Partial<CampoPersonalizadoRequest>) {
     setCampos((atual) => atual.map((c, i) => (i === indice ? { ...c, ...patch } : c)))
   }
@@ -61,13 +75,31 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
     setCampos((atual) => [...atual, campoVazio(atual.length)])
   }
 
-  function removerCampo(indice: number) {
-    setCampos((atual) => atual.filter((_, i) => i !== indice).map((c, i) => ({ ...c, ordem: i })))
+  const TEMPLATE_DADOS_BASICOS: { mapeamento: NonNullable<CampoPersonalizadoRequest['mapeamento']>; campo: Omit<CampoPersonalizadoRequest, 'id' | 'ordem' | 'mapeamento'> }[] = [
+    { mapeamento: 'IDADE', campo: { label: 'Idade', placeholder: 'Ex.: 24', tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'ESTADO_CIVIL', campo: { label: 'Estado civil', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)'], obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'SEXO', campo: { label: 'Sexo', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Homem', 'Mulher'], obrigatorio: false, visivelAoPublico: true } },
+    { mapeamento: 'ENDERECO', campo: { label: 'Endereço', placeholder: 'Rua, número, bairro, cidade', tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true } },
+  ]
+
+  // Idempotente: clicar de novo só adiciona o que ainda falta do template (comparando pelo
+  // mapeamento, não pelo label — o admin pode ter renomeado). Se os 4 já existem, não faz nada.
+  function usarTemplateDadosBasicos() {
+    setCampos((atual) => {
+      const mapeamentosExistentes = new Set(atual.map((c) => c.mapeamento).filter(Boolean))
+      const faltando = TEMPLATE_DADOS_BASICOS.filter((t) => !mapeamentosExistentes.has(t.mapeamento))
+      if (faltando.length === 0) return atual
+
+      const base = atual.length
+      const novos: CampoPersonalizadoRequest[] = faltando.map((t, i) => ({
+        id: null, ordem: base + i, mapeamento: t.mapeamento, ...t.campo,
+      }))
+      return [...atual, ...novos]
+    })
   }
 
-  async function aoSalvar() {
-    const camposLimpos = campos.map((c) => ({ ...c, opcoes: c.opcoes ? limparOpcoes(c.opcoes) : null }))
-    await salvar(eventoId, camposLimpos)
+  function removerCampo(indice: number) {
+    setCampos((atual) => atual.filter((_, i) => i !== indice).map((c, i) => ({ ...c, ordem: i })))
   }
 
   return (
@@ -78,12 +110,31 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
           restrição alimentar, o que quiser. Cada pergunta vira um campo do formulário.
         </p>
 
+        <p className={styles.avisoConvidados}>
+          Estes campos também aparecem pra quem se inscreve sem cadastro no sistema
+          (convidados) — pense no que você gostaria de saber dessas pessoas.
+        </p>
+
+        <button type="button" className={styles.botaoTemplate} onClick={usarTemplateDadosBasicos}>
+          Usar template de dados básicos
+        </button>
+        <p className={styles.dicaTemplate}>
+          Use quando precisar de idade, estado civil, sexo ou endereço de quem vai. Criar cada
+          um desses campos na mão faz com que quem já é cadastrado ter que digitar de novo um dado
+          que o sistema já tem.
+        </p>
+
         {campos.map((campo, indice) => (
           <div key={campo.id ?? `novo-${indice}`} className={styles.cartaoCampo}>
             <div className={styles.cabecalhoCartao}>
               <span className={styles.numeroCampo}>
                 <GripVertical size={14} className={styles.iconeArraste} aria-hidden="true" />
                 Pergunta {indice + 1}
+                {campo.mapeamento && (
+                  <span className={styles.seloMapeado} title="Pula a pergunta pra quem já tem esse dado no cadastro">
+                    do template
+                  </span>
+                )}
               </span>
               <button type="button" className={styles.botaoRemover} onClick={() => removerCampo(indice)} title="Remover esta pergunta">
                 <Trash2 size={14} />
@@ -153,14 +204,6 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
               </span>
             </label>
 
-            {/* Sem efeito ainda — groundwork pro formulário público (spec futura). */}
-            <label className={styles.toggleLinha} title="Ainda sem efeito — chega com o formulário público, pra inscrição de gente sem cadastro">
-              <input type="checkbox" checked={campo.visivelAoPublico} disabled />
-              <span>
-                Visível ao público
-                <span className={styles.dicaInline}> — em breve, pra quando existir link público de inscrição</span>
-              </span>
-            </label>
           </div>
         ))}
 
@@ -168,15 +211,16 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
           <Plus size={16} /> Adicionar pergunta
         </button>
 
-        <Button type="button" onClick={aoSalvar} disabled={salvando}>
-          {salvando ? 'Salvando…' : 'Salvar campos personalizados'}
-        </Button>
+        <p className={styles.dicaSalvar}>
+          As perguntas são salvas junto com o resto do evento, no botão &ldquo;Salvar
+          alterações&rdquo; no final da página.
+        </p>
       </div>
 
       <PreviaInterativa campos={campos} />
     </div>
   )
-}
+})
 
 /** Prévia de verdade, não só ilustrativa: os campos respondem a clique/digitação, com estado
  *  próprio (nunca é enviado a lugar nenhum) — deixa o admin realmente sentir como vai ficar. */
@@ -200,6 +244,29 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
         <button type="button" className={styles.botaoLimparPreview} onClick={() => setValores({})}>
           <RotateCcw size={12} /> Limpar
         </button>
+      </div>
+
+      {/* Interativos igual aos outros campos (prévia de verdade, nunca disabled — ver
+          CLAUDE.md), mas nunca viram CampoPersonalizadoRequest de verdade: nome/telefone já
+          são sempre coletados automaticamente (titular/convidado). Só pra quem está montando
+          o formulário sentir como fica completo, digitando algo real se quiser. */}
+      <div className={styles.previewCampo}>
+        <label className={styles.previewLabel}>Nome</label>
+        <input
+          placeholder="Ex.: Maria Souza"
+          value={valorTexto('__nome')}
+          onChange={(e) => setValores((v) => ({ ...v, __nome: e.target.value }))}
+        />
+        <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
+      </div>
+      <div className={styles.previewCampo}>
+        <label className={styles.previewLabel}>Telefone</label>
+        <input
+          placeholder="(00) 00000-0000"
+          value={valorTexto('__telefone')}
+          onChange={(e) => setValores((v) => ({ ...v, __telefone: e.target.value }))}
+        />
+        <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
       </div>
 
       {campos.length === 0 && (

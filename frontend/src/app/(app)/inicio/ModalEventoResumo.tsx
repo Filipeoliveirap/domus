@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { X, CalendarDays, MapPin, Users, UserPlus, Ticket, Flame, Pencil, XCircle, Building2 } from 'lucide-react'
+import { X, CalendarDays, MapPin, Users, Share2, Ticket, Flame, Pencil, Building2, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuthStore } from '@/store/authStore'
-import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
@@ -14,10 +13,12 @@ import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
-import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
-import { ModalConvidado } from '@/components/module/eventos/ModalConvidado'
+import { RespostasCamposPersonalizados } from '@/components/module/eventos/RespostasCamposPersonalizados'
+import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscreverAlguem'
+import { ModalCompartilharConvite } from '@/components/module/eventos/ModalCompartilharConvite'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
 import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
+import { podeVerListaCompletaDeInscritos } from '@/lib/permissoes'
 import type { EventoLocalInfo } from '@/types/evento.type'
 import {
   vagasRestantesCalc,
@@ -45,15 +46,18 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const { data: evento, isLoading, isError } = useEvento(eventoId)
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
+  const role = useAuthStore((s) => s.role)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
   const podeGerenciar = !!evento?.podeGerenciarEsteEvento
+  const podeVerInscritos = podeVerListaCompletaDeInscritos(role) && podeGerenciar
   const ehOutraIgreja = !!evento && evento.igrejaOrganizadora.id !== minhaIgrejaId
 
-  const [modalAberto, setModalAberto] = useState<'membros' | 'convidado' | 'lista' | null>(null)
-  const [removendoId, setRemovendoId] = useState<string | null>(null)
+  const [modalAberto, setModalAberto] = useState<'inscrever-alguem' | 'compartilhar' | 'lista' | null>(null)
+  // Vira true no exato momento em que a auto-inscrição dá certo — usado só pra decidir se o
+  // modal de campos personalizados abre sozinho na hora (ver RespostasCamposPersonalizados).
+  const [acabouDeInscrever, setAcabouDeInscrever] = useState(false)
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
-  const removerConvidado = useRemoverConvidado()
 
   // Vagas contam PESSOAS: cada inscrito mais os convidados que ele trouxe. Contar só os
   // inscritos daria um "restam N" otimista, e a pessoa levaria "esgotado" na cara ao clicar.
@@ -166,6 +170,13 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   )
                 )}
               </div>
+
+              {minha?.inscrito && (
+                <span className={styles.seloInscrito}>
+                  <CheckCircle2 size={12} aria-hidden="true" />
+                  {evento.situacao === 'ENCERRADO' ? 'Você participou desse evento' : 'Você está inscrito'}
+                </span>
+              )}
             </header>
 
             <p className={`${styles.descricao} ${!evento.descricao ? styles.semDescricao : ''}`}>
@@ -243,48 +254,6 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
               )}
             </section>
 
-            {/* F5: remover o próprio convidado — ação leve (confirmação inline), não a crítica. */}
-            {!!minha?.acompanhantes?.length && (
-              <section className={styles.convidados}>
-                <p className={styles.convidadosTitulo}>Seus convidados</p>
-                {minha.acompanhantes.map((c) => (
-                  <div key={c.id} className={styles.convidadoLinha}>
-                    <span className={styles.avatarPresenca} aria-hidden="true">{iniciais(c.nome)}</span>
-                    <span className={styles.convidadoNome}>{c.nome}</span>
-                    {removendoId === c.id ? (
-                      <span className={styles.convidadoConfirmacao}>
-                        <span>Remover?</span>
-                        <button
-                          type="button"
-                          onClick={() => setRemovendoId(null)}
-                          disabled={removerConvidado.isPending}
-                        >
-                          Não
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.convidadoConfirmar}
-                          onClick={() => removerConvidado.mutate(c.id, { onSuccess: () => setRemovendoId(null) })}
-                          disabled={removerConvidado.isPending}
-                        >
-                          {removerConvidado.isPending ? 'Removendo…' : 'Sim'}
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.convidadoRemover}
-                        onClick={() => setRemovendoId(c.id)}
-                        aria-label={`Remover ${c.nome}`}
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </section>
-            )}
-
             <div className={styles.acoesInscricao}>
               <BotaoConfirmarPresenca
                 eventoId={eventoId}
@@ -293,45 +262,54 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                 requerInscricao={evento.requerInscricao}
                 situacao={evento.situacao}
                 preco={evento.preco}
+                onInscritoComSucesso={() => setAcabouDeInscrever(true)}
               />
 
-              {/*
-                Inscrever outros e levar convidado só existem no fluxo formal: o backend
-                recusa os dois quando o evento não organiza inscrição. Mostrar o botão
-                aqui seria oferecer uma ação que só falha. F15: fora de AGENDADO nem aparecem.
-              */}
+              {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
               {evento.requerInscricao && !inscricaoBloqueadaPelaSituacao && (
                 <>
                   <button
                     type="button"
                     className={styles.acaoSecundaria}
-                    onClick={() => setModalAberto('membros')}
+                    onClick={() => setModalAberto('inscrever-alguem')}
                     disabled={esgotado}
                   >
                     <Users size={16} aria-hidden="true" />
-                    {esgotado ? 'Vagas esgotadas' : 'Inscrever membros'}
+                    {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
                   </button>
 
-                  {!evento.exclusivoMembros && minha?.inscrito && (
-                    <button
-                      type="button"
-                      className={styles.acaoSecundaria}
-                      onClick={() => setModalAberto('convidado')}
-                      disabled={esgotado}
-                    >
-                      <UserPlus size={16} aria-hidden="true" />
-                      {esgotado ? 'Vagas esgotadas' : 'Vou levar alguém de fora'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setModalAberto('compartilhar')}
+                  >
+                    <Share2 size={16} aria-hidden="true" />
+                    Compartilhar
+                  </button>
                 </>
               )}
             </div>
+
+            {evento.requerInscricao && minha?.inscrito && minha.id && (
+              <RespostasCamposPersonalizados
+                eventoId={evento.id}
+                inscricaoId={minha.id}
+                abrirAutomaticamente={acabouDeInscrever}
+              />
+            )}
+
+            {podeVerInscritos && evento.requerInscricao && (
+              <Link href={`/eventos/${evento.id}/inscritos`} className={styles.acaoInscritos}>
+                <Users size={18} />
+                Ver inscritos
+              </Link>
+            )}
           </div>
         )}
       </div>
 
-      {modalAberto === 'membros' && (
-        <ModalInscreverPessoas
+      {modalAberto === 'inscrever-alguem' && (
+        <ModalInscreverAlguem
           eventoId={eventoId}
           tituloEvento={evento?.titulo ?? ''}
           exclusivoMembros={evento?.exclusivoMembros ?? false}
@@ -339,10 +317,9 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         />
       )}
 
-      {modalAberto === 'convidado' && minha?.id && (
-        <ModalConvidado
+      {modalAberto === 'compartilhar' && (
+        <ModalCompartilharConvite
           eventoId={eventoId}
-          inscricaoId={minha.id}
           onClose={() => setModalAberto(null)}
         />
       )}

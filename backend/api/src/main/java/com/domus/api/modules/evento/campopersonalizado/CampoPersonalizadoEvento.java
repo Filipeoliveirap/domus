@@ -59,6 +59,12 @@ public class CampoPersonalizadoEvento {
     @Builder.Default
     private int ordem = 0;
 
+    /** Groundwork/atalho pra Spec 2: campo vindo do template de dados básicos. NULL = campo
+     *  manual, nunca pula pergunta pra quem já tem o dado em Pessoa. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MapeamentoCampoPersonalizado mapeamento;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

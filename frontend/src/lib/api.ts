@@ -1,4 +1,12 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+
+// Extensão de tipo: `skipAuthRedirect` viaja no config da requisição (axios repassa pro
+// `error.config` do interceptor) — ver uso logo abaixo e em auth.service.ts#me.
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean
+  }
+}
 import * as Sentry from '@sentry/nextjs'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
@@ -66,7 +74,11 @@ async function renovarTokenCsrf(): Promise<void> {
   await api.get(Endpoints.auth.ME).catch(() => undefined)
 }
 
-type RequestComRetry = InternalAxiosRequestConfig & { _retry?: boolean; _retryCsrf?: boolean }
+// `skipAuthRedirect`: rota pública (ex.: /convite/[token]) que checa "estou logado?" sem
+// exigir sessão — um 401 aqui é uma resposta legítima (visitante anônimo), não uma sessão
+// caída. Sem essa flag, o 401 do próprio /auth/me acionava o mesmo redirect pra /login que
+// uma sessão expirada dispararia, expulsando visitante anônimo de página que é pública.
+type RequestComRetry = InternalAxiosRequestConfig & { _retry?: boolean; _retryCsrf?: boolean; skipAuthRedirect?: boolean }
 
 // Interceptor de response:
 // - 401: tenta renovar o access token uma vez e reenvia a requisição original. Se o
@@ -101,7 +113,7 @@ api.interceptors.response.use(
     }
 
     if (original._retry) {
-      encerrarSessao('refresh_falhou', url)
+      if (!original.skipAuthRedirect) encerrarSessao('refresh_falhou', url)
       return Promise.reject(error)
     }
     original._retry = true
@@ -117,7 +129,7 @@ api.interceptors.response.use(
     } catch {
       // Sem sessão renovável: limpa o estado. Não chamamos /auth/logout aqui — o refresh
       // já está morto, e o cookie de access expira sozinho em 10 min.
-      encerrarSessao('refresh_falhou', url)
+      if (!original.skipAuthRedirect) encerrarSessao('refresh_falhou', url)
       return Promise.reject(error)
     }
   }

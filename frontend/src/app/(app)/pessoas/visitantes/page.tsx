@@ -23,6 +23,7 @@ import { ExcluirVisitante } from './(excluir)/ExcluirVisitante'
 import { iniciaisVisitante, formatarTelefoneExibicao } from '@/lib/formats/visitanteFormat'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { celulaService } from '@/services/celula.service'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { VisitanteResponse } from '@/types/visitante.type'
 import { SearchX, Users } from 'lucide-react'
 import styles from './page.module.css'
@@ -65,6 +66,7 @@ function VisitantesConteudo() {
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
   const podeGerenciar = podeGerenciarVisitantes(role, capacidadesExtras)
   const queryClient = useQueryClient()
+  const { celula } = useRotulos()
 
   const [visitanteExcluindo, setVisitanteExcluindo] = useState<VisitanteResponse | null>(null)
   const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(null)
@@ -85,9 +87,9 @@ function VisitantesConteudo() {
       await visitanteService.moverParaCelula(visitanteMoverCelula.id, celulaId)
       queryClient.invalidateQueries({ queryKey: ['visitantes'] })
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso(`${visitanteMoverCelula.nome} movido para célula.`)
+      notificar.sucesso(`${visitanteMoverCelula.nome} movido para ${celula.singular.toLowerCase()}.`)
       setVisitanteMoverCelula(null)
-    } catch { notificar.erro('Erro ao mover para célula.') }
+    } catch { notificar.erro(`Erro ao mover para ${celula.singular.toLowerCase()}.`) }
   }
 
   function limparBuscaEFiltros() {
@@ -237,7 +239,7 @@ function VisitantesConteudo() {
               visitantes.map((v) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => window.location.href = `/pessoas/visitantes/${v.id}` },
-                  { label: 'Mover para célula', icone: Grid3x3, onClick: () => setVisitanteMoverCelula(v) },
+                  { label: `Mover para ${celula.singular.toLowerCase()}`, icone: Grid3x3, onClick: () => setVisitanteMoverCelula(v) },
                   { label: 'Apagar', icone: Trash2, onClick: () => setVisitanteExcluindo(v), perigo: true, separadorAntes: true },
                 ]
 
@@ -344,7 +346,7 @@ function VisitantesConteudo() {
         <div className={styles.modalOverlay} onMouseDown={() => setVisitanteMoverCelula(null)}>
           <div className={styles.modalCelula} onMouseDown={e => e.stopPropagation()}>
             <button className={styles.modalClose} onClick={() => setVisitanteMoverCelula(null)}>✕</button>
-            <h3 className={styles.modalTitulo}>Mover para célula</h3>
+            <h3 className={styles.modalTitulo}>Mover para {celula.singular.toLowerCase()}</h3>
             <p className={styles.modalSub}>{visitanteMoverCelula.nome}</p>
             <div className={styles.modalLista}>
               {celulas?.map(c => (

@@ -24,10 +24,10 @@ export default function MinisteriosArquivadosPage() {
   const podeGerenciar = podeGerenciarCadastroMinisterios(role)
   const { restaurar, isLoading: restaurando } = useRestaurarMinisterio()
   const [excluindo, setExcluindo] = useState<MinisterioResponse | null>(null)
-  const { ministerio: rotuloMinisterio } = useRotulos()
+  const { ministerio: rotuloMinisterio, concordar } = useRotulos()
 
   if (!podeGerenciar) {
-    return <EstadoErro titulo="Sem acesso" mensagem={`Só administradores veem ${rotuloMinisterio.plural.toLowerCase()} arquivadas.`} />
+    return <EstadoErro titulo="Sem acesso" mensagem={`Só administradores veem ${rotuloMinisterio.plural.toLowerCase()} ${concordar(rotuloMinisterio.genero, 'arquivados')}.`} />
   }
 
   if (isLoading) {
@@ -43,7 +43,9 @@ export default function MinisteriosArquivadosPage() {
   }
 
   if (!ministerios || ministerios.length === 0) {
-    return <EstadoVazio icone={Archive} titulo={`Nenhuma ${rotuloMinisterio.singular.toLowerCase()} arquivada`} mensagem={`${rotuloMinisterio.plural} arquivadas aparecem aqui.`} />
+    return <EstadoVazio icone={Archive}
+      titulo={`${concordar(rotuloMinisterio.genero, 'nenhum')} ${rotuloMinisterio.singular.toLowerCase()} ${concordar(rotuloMinisterio.genero, 'arquivado')}`}
+      mensagem={`${rotuloMinisterio.plural} ${concordar(rotuloMinisterio.genero, 'arquivados')} aparecem aqui.`} />
   }
 
   return (

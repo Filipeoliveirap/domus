@@ -29,7 +29,7 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
   // página precisa funcionar pra quem nunca abriu o Domus antes.
   const { data: sessao, isFetched: sessaoVerificada } = useQuery({
     queryKey: ['convite-sessao-atual'],
-    queryFn: () => authService.me().catch((erro: unknown) => {
+    queryFn: () => authService.me({ semRedirect: true }).catch((erro: unknown) => {
       if (axios.isAxiosError(erro) && erro.response?.status === 401) return null
       throw erro
     }),

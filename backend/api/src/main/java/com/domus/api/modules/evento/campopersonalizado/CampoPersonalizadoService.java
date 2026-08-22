@@ -8,6 +8,7 @@ import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class CampoPersonalizadoService {
     private final InscricaoRepository inscricaoRepository;
     private final UsuarioRepository usuarioRepository;
     private final NotificacaoService notificacaoService;
+    private final PessoaRepository pessoaRepository;
 
     public List<CampoPersonalizadoResponse> listar(UUID eventoId, UUID igrejaId) {
         return campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId).stream()
@@ -43,6 +45,15 @@ public class CampoPersonalizadoService {
                 .filter(c -> valorJaConhecido(c.getMapeamento(), pessoaOuNull).isEmpty())
                 .map(CampoPersonalizadoResponse::from)
                 .toList();
+    }
+
+    /** Mesma coisa que {@link #listarParaResponder}, mas carrega a Pessoa a partir do id —
+     *  usado pelo endpoint autenticado "meus campos pendentes" (auto-inscrição normal e
+     *  convite público já logado). Nunca receber a Pessoa do principal autenticado direto
+     *  (é um objeto desanexado — ler campo LAZY dele estoura); sempre buscar de novo aqui. */
+    public List<CampoPersonalizadoResponse> listarParaResponderComoTitular(UUID eventoId, UUID igrejaId, UUID pessoaId) {
+        var pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId).orElse(null);
+        return listarParaResponder(eventoId, igrejaId, pessoa);
     }
 
     private java.util.Optional<String> valorJaConhecido(MapeamentoCampoPersonalizado mapeamento,

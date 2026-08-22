@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Share2 } from 'lucide-react'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
 import { ModalCompartilharConvite } from './ModalCompartilharConvite'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
@@ -278,7 +278,8 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
             {aba === 'fora' && (
               <button type="button" className={styles.btnLinkCompartilhar} onClick={() => setCompartilharAberto(true)}>
-                Ou compartilhar um link pra essa pessoa se inscrever sozinha
+                <Share2 size={14} aria-hidden="true" />
+                Ou compartilhe com quem você quer levar
               </button>
             )}
 

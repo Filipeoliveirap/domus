@@ -129,12 +129,15 @@
 }
 
 .btnLinkCompartilhar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   align-self: flex-start;
+  margin: 0 24px 4px;
+  padding: 4px 0;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
   font-weight: var(--font-weight-medium);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .btnLinkCompartilhar:hover {
@@ -194,6 +197,11 @@
   .conteudoAba {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .btnLinkCompartilhar {
+    margin-left: 16px;
+    margin-right: 16px;
   }
 
   .footer {

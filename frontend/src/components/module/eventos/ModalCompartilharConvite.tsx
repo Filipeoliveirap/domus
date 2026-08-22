@@ -1,11 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Copy, Check } from 'lucide-react'
 import { useGerarConvite } from '@/hooks/inscricao/useGerarConvite'
-import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
-import { useInscrever } from '@/hooks/inscricao/useInscrever'
-import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import painelStyles from './ModalInscreverPessoas.module.css'
 import styles from './ModalCompartilharConvite.module.css'
 
@@ -15,28 +12,11 @@ interface Props {
 }
 
 export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
-  const { data: minha } = useMinhaInscricao(eventoId)
-  const inscrever = useInscrever(eventoId, true)
-  const gerarConvite = useGerarConvite(eventoId)
-  // Marca que a pergunta "você também vai participar?" já foi respondida (sim ou não) —
-  // precisa ser um estado PRÓPRIO, não derivado de `minha.inscrito`: a resposta da API só
-  // chega depois (assíncrono), então usar só `minha.inscrito` deixava a pergunta reaparecendo
-  // (ou travada) entre o clique em "sim" e o refetch confirmar a inscrição.
-  const [jaRespondeu, setJaRespondeu] = useState(false)
   const [copiado, setCopiado] = useState(false)
-  const jaTentouGerar = useRef(false)
 
-  // Já inscrito (sem precisar perguntar) OU já respondeu a pergunta: gera o convite sozinho.
-  // Só chama mutate() aqui — nunca setState direto no corpo do efeito.
-  const podeGerarDireto = (minha !== undefined && minha.inscrito) || jaRespondeu
-  useEffect(() => {
-    if (!podeGerarDireto || jaTentouGerar.current) return
-    jaTentouGerar.current = true
-    gerarConvite.mutate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [podeGerarDireto])
-
-  const perguntaParticipar = minha !== undefined && !minha.inscrito && !jaRespondeu
+  // Compartilhar não exige estar inscrito — o link funciona pra quem vai usá-lo, não pra
+  // quem compartilha (ver useGerarConvite: query habilitada direto, sem pergunta antes).
+  const gerarConvite = useGerarConvite(eventoId, true)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -45,14 +25,6 @@ export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [onClose])
-
-  function aoResponderParticipar(sim: boolean) {
-    setJaRespondeu(true)
-    if (sim) {
-      jaTentouGerar.current = true
-      inscrever.mutate(undefined, { onSuccess: () => gerarConvite.mutate(), onError: () => gerarConvite.mutate() })
-    }
-  }
 
   function copiarLink() {
     if (!gerarConvite.data) return
@@ -65,19 +37,6 @@ export function ModalCompartilharConvite({ eventoId, onClose }: Props) {
     if (!gerarConvite.data) return
     const texto = encodeURIComponent(`Você foi convidado! ${gerarConvite.data.link}`)
     window.open(`https://wa.me/?text=${texto}`, '_blank')
-  }
-
-  if (perguntaParticipar) {
-    return (
-      <ModalConfirmacao
-        titulo="Você também vai participar?"
-        textoConfirmar="Sim, também vou"
-        textoCancelar="Não, só estou compartilhando"
-        onConfirmar={() => aoResponderParticipar(true)}
-        onClose={() => aoResponderParticipar(false)}
-        mensagem={<p>Quer se inscrever nesse evento também, antes de compartilhar o link?</p>}
-      />
-    )
   }
 
   return (

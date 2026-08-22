@@ -21,7 +21,11 @@ public record InscritoResponse(
         UUID inscritoPorFotoId,
         /** Preenchido só pra convidado sem cadastro (ver {@link InscricaoEvento#isConvidadoSemCadastro}). */
         String convidadoPorNome,
+        /** Preenchido só pra convidado sem cadastro — telefone que ele mesmo (ou quem o
+         *  cadastrou) informou; NULL pra pessoa com cadastro (usa o telefone do cadastro). */
+        String telefoneConvidado,
         LocalDateTime inscritoEm,
+        boolean compareceu,
         List<AcompanhanteResponse> acompanhantes,
         EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
@@ -54,7 +58,9 @@ public record InscritoResponse(
                 registrante == null ? null : registrante.nome(),
                 registrante == null ? null : registrante.fotoId(),
                 convidadoPorResolvida == null ? null : convidadoPorResolvida.getNome(),
+                i.getTelefoneConvidado(),
                 i.getCreatedAt(),
+                i.isCompareceu(),
                 i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );

@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import axios from 'axios'
+import Link from 'next/link'
 import { useEntrarComoConvidado } from '@/hooks/convite/useEntrarComoConvidado'
 import { CamposExtrasForm } from '@/components/module/eventos/CamposExtrasForm'
 import { formatarTelefone } from '@/lib/masks'
 import type { CampoPersonalizadoResponse } from '@/types/campoPersonalizado.type'
+import type { ApiError } from '@/types/api.types'
 import styles from './ConvitePublico.module.css'
 
 interface Props {
@@ -24,13 +27,18 @@ export function FormularioConvidado({ token, campos, onSucesso }: Props) {
     return campos.some((c) => c.obrigatorio && !(camposValores[c.id]?.trim()))
   }
 
+  function telefoneValido(): boolean {
+    const digitos = telefone.replace(/\D/g, '')
+    return digitos.length === 10 || digitos.length === 11
+  }
+
   function aoConfirmar() {
     setTentouEnviar(true)
-    if (!nome.trim() || camposObrigatoriosPendentes()) return
+    if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
 
     const respostas = campos.map((c) => ({ campoId: c.id, valor: camposValores[c.id] ?? '' }))
     entrar.mutate(
-      { nome: nome.trim(), telefone: telefone || undefined, respostas },
+      { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), respostas },
       { onSuccess: onSucesso },
     )
   }
@@ -49,7 +57,7 @@ export function FormularioConvidado({ token, campos, onSucesso }: Props) {
       </label>
 
       <label className={styles.campo}>
-        <span className={styles.label}>Telefone (opcional)</span>
+        <span className={styles.label}>Telefone*</span>
         <input
           type="text"
           placeholder="(00) 00000-0000"
@@ -57,17 +65,29 @@ export function FormularioConvidado({ token, campos, onSucesso }: Props) {
           value={telefone}
           onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
         />
+        {tentouEnviar && !telefone.trim() && <span className={styles.erroTexto}>O telefone é obrigatório.</span>}
+        {tentouEnviar && telefone.trim() && !telefoneValido() && (
+          <span className={styles.erroTexto}>Telefone inválido. Digite um número válido com DDD.</span>
+        )}
       </label>
 
       <CamposExtrasForm campos={campos} valores={camposValores} onChange={(id, valor) => setCamposValores((v) => ({ ...v, [id]: valor }))} tentouEnviar={tentouEnviar} />
 
       {entrar.isError && (
-        <p className={styles.erroTexto}>Não foi possível confirmar sua inscrição. Tente novamente.</p>
+        <p className={styles.erroTexto}>
+          {axios.isAxiosError<ApiError>(entrar.error) && entrar.error.response?.data?.message
+            ? entrar.error.response.data.message
+            : 'Não foi possível confirmar sua inscrição. Tente novamente.'}
+        </p>
       )}
 
       <button type="button" className={styles.btnConfirmar} onClick={aoConfirmar} disabled={entrar.isPending}>
         {entrar.isPending ? 'Confirmando…' : 'Confirmar inscrição'}
       </button>
+
+      <Link href={`/login?next=${encodeURIComponent(`/convite/${token}?entrar=1`)}`} className={styles.linkJaTenhoConta}>
+        Já tenho conta — Fazer login
+      </Link>
     </div>
   )
 }

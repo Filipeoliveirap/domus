@@ -15,6 +15,7 @@ import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class InscricaoElegibilidadeTest {
     AcompanhanteRepository acompanhanteRepository;
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
+    VisitanteRepository visitanteRepository;
     ElegibilidadeService elegibilidadeService;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
@@ -56,6 +58,7 @@ class InscricaoElegibilidadeTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        visitanteRepository = mock(VisitanteRepository.class);
         // Real, não mock: o que este teste prova é justamente que o InscricaoService chama
         // a avaliação DE VERDADE, não um duplo que sempre aprova.
         elegibilidadeService = new ElegibilidadeService(List.of(
@@ -67,8 +70,9 @@ class InscricaoElegibilidadeTest {
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService, notificacaoService, campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
+                elegibilidadeService, familiaIgrejaService, notificacaoService,
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
     }
 
     private Igreja igreja() {

@@ -274,7 +274,11 @@ class CampoPersonalizadoServiceTest {
     }
 
     @Test
-    void salvarZeraMapeamentoQuandoTipoMuda() {
+    void salvarMantemMapeamentoQuandoTipoMuda() {
+        // valorJaConhecido() lê sempre o dado bruto da Pessoa (pessoa.getDataNascimento(),
+        // por exemplo pra IDADE), nunca o tipo/opções do campo — então mudar o tipo não
+        // invalida o "pula pergunta pra quem já tem esse dado". Só o admin trocando o
+        // mapeamento explicitamente (ou removendo) tira o mapeamento.
         var existenteId = UUID.randomUUID();
         var existente = CampoPersonalizadoEvento.builder()
                 .id(existenteId).igreja(new Igreja() {{ setId(igrejaId); }})
@@ -292,7 +296,7 @@ class CampoPersonalizadoServiceTest {
 
         var resultado = service.salvar(eventoId, igrejaId, List.of(requestComTipoDiferente), UUID.randomUUID());
 
-        assertThat(resultado.get(0).mapeamento()).isNull();
+        assertThat(resultado.get(0).mapeamento()).isEqualTo(MapeamentoCampoPersonalizado.IDADE);
     }
 
     @Test

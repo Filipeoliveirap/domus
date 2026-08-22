@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { celulaService } from '@/services/celula.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { Vinculo } from '@/types/celula.type'
 import styles from './ModalConverterVisitante.module.css'
 
@@ -22,6 +23,7 @@ export function ModalConverterVisitante({ celulaId, visitanteId, visitanteNome, 
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
   const router = useRouter()
+  const { celula } = useRotulos()
 
   async function handleConfirmar() {
     setLoading(true)
@@ -62,7 +64,7 @@ export function ModalConverterVisitante({ celulaId, visitanteId, visitanteNome, 
               onChange={() => setVinculo('CONGREGANTE')} className={styles.radio} />
             <Users size={24} />
             <h4>Congregante</h4>
-            <p>Frequentador regular que participa de células e eventos, sem vínculo formal completo.</p>
+            <p>Frequentador regular que participa de {celula.plural.toLowerCase()} e eventos, sem vínculo formal completo.</p>
           </label>
         </div>
 

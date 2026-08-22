@@ -21,6 +21,7 @@ import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { celulaService } from '@/services/celula.service'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import type { CelulaResponse } from '@/types/celula.type'
 import styles from './page.module.css'
@@ -48,6 +49,7 @@ export default function CelulasPage() {
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
   const [excluindoDefinitivo, setExcluindoDefinitivo] = useState<CelulaResponse | null>(null)
   const queryClient = useQueryClient()
+  const { celula: rotuloCelula } = useRotulos()
 
   const form = useCelulaForm()
   const { register, handleSubmit, setValue, watch, formState: { errors }, isFormIncomplete, isLoading: salvando, erroGeral } = form
@@ -68,13 +70,13 @@ export default function CelulasPage() {
         await celulaService.criar(payload)
       }
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso(editando ? 'Célula atualizada!' : 'Célula criada!')
+      notificar.sucesso(editando ? `${rotuloCelula.singular} atualizada!` : `${rotuloCelula.singular} criada!`)
       form.reset()
       setFotoId(null)
       setEditando(null)
       setModalAberto(false)
     } catch {
-      notificar.erro('Erro ao salvar célula.')
+      notificar.erro(`Erro ao salvar ${rotuloCelula.singular.toLowerCase()}.`)
     }
   }
 
@@ -88,7 +90,7 @@ export default function CelulasPage() {
       invalidarCache(queryClient, 'celula')
       notificar.sucesso(`${celula.nome} foi removida.`)
     } catch {
-      notificar.erro('Erro ao remover célula.')
+      notificar.erro(`Erro ao remover ${rotuloCelula.singular.toLowerCase()}.`)
     } finally {
       setArquivando(null)
     }
@@ -101,14 +103,14 @@ export default function CelulasPage() {
       <header className={styles.cabecalho}>
         <div>
           <div className={styles.tituloLinha}>
-            <h1 className={styles.titulo}>Células</h1>
+            <h1 className={styles.titulo}>{rotuloCelula.plural}</h1>
             {celulas && celulas.length > 0 && <span className={styles.contador}>{celulas.length}</span>}
           </div>
           <p className={styles.subtitulo}>Pequenos grupos de estudo bíblico.</p>
         </div>
         {podeGerenciar && (
           <button className={styles.botaoPrimario} onClick={() => { setFotoId(null); setEditando(null); setModalAberto(true) }}>
-            Nova célula
+            Nova {rotuloCelula.singular.toLowerCase()}
           </button>
         )}
       </header>
@@ -133,9 +135,9 @@ export default function CelulasPage() {
         <EstadoErro titulo="Erro ao carregar" mensagem="Verifique sua conexão."
           aoTentarNovamente={() => refetch()} />
       ) : celulas && celulas.length === 0 ? (
-        <EstadoVazio icone={Grid3X3} titulo="Nenhuma célula"
-          mensagem="Comece cadastrando a primeira célula da sua igreja."
-          acaoPrimaria={podeGerenciar ? { label: 'Nova célula', onClick: () => setModalAberto(true) } : undefined} />
+        <EstadoVazio icone={Grid3X3} titulo={`Nenhuma ${rotuloCelula.singular.toLowerCase()}`}
+          mensagem={`Comece cadastrando a primeira ${rotuloCelula.singular.toLowerCase()} da sua igreja.`}
+          acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloCelula.singular.toLowerCase()}`, onClick: () => setModalAberto(true) } : undefined} />
       ) : (
         <div className={styles.grid}>
           {celulas?.map(c => {
@@ -197,7 +199,7 @@ export default function CelulasPage() {
         <div className={styles.modalOverlay} onMouseDown={() => { setModalAberto(false); setEditando(null) }}>
           <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
             <button className={styles.modalClose} onClick={() => { setModalAberto(false); setEditando(null) }}>✕</button>
-            <h2 className={styles.modalTitulo}>{editando ? 'Editar Célula' : 'Nova Célula'}</h2>
+            <h2 className={styles.modalTitulo}>{editando ? `Editar ${rotuloCelula.singular}` : `Nova ${rotuloCelula.singular}`}</h2>
             <form onSubmit={handleSubmit(onSalvar)} className={styles.modalForm}>
               <div className={styles.fotoWrap}>
                 <UploadFoto
@@ -207,9 +209,9 @@ export default function CelulasPage() {
                   nomeFallback={form.getValues('nome') as string}
                 />
               </div>
-              <Input id="nome-modal" label="NOME*" placeholder="Nome da célula"
+              <Input id="nome-modal" label="NOME*" placeholder={`Nome da ${rotuloCelula.singular.toLowerCase()}`}
                 error={errors.nome?.message} {...register('nome')} />
-              <Select id="diaSemana-modal" label="DIA QUE A CÉLULA OCORRE" placeholder="Selecione"
+              <Select id="diaSemana-modal" label={`DIA QUE A ${rotuloCelula.singular.toUpperCase()} OCORRE`} placeholder="Selecione"
                 options={DIA_OPTIONS} error={errors.diaSemana?.message} {...register('diaSemana')} />
               <Input id="horario-modal" label="HORÁRIO DE INÍCIO" placeholder="hh:mm" inputMode="numeric" maxLength={5}
                 value={horarioValue} onChange={e => {
@@ -221,7 +223,7 @@ export default function CelulasPage() {
               <div className={styles.modalAcoes}>
                 <Button type="submit" variant="primary" isLoading={salvando}
                   disabled={isFormIncomplete || salvando}>
-                  {editando ? 'Salvar' : 'Criar célula'}
+                  {editando ? 'Salvar' : `Criar ${rotuloCelula.singular.toLowerCase()}`}
                 </Button>
               </div>
             </form>
@@ -251,9 +253,10 @@ function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; o
   // Esse botão só aparece quando a célula não tem ninguém vinculado (senão o menu
   // mostra "Arquivar") — confirmação simples basta, sem precisar digitar o nome.
   const { confirmar, isLoading } = useExcluirCelulaDefinitivamente(celula, onClose)
+  const { celula: rotuloCelula } = useRotulos()
   return (
     <ModalConfirmacao
-      titulo="Excluir célula definitivamente?"
+      titulo={`Excluir ${rotuloCelula.singular.toLowerCase()} definitivamente?`}
       mensagem={<>Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.</>}
       textoConfirmar="Excluir"
       perigo

@@ -1,6 +1,7 @@
 'use client'
 
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { Consolidado, TotaisConsolidado } from '@/types/igreja/vinculo.type'
 import styles from './congregacoes.module.css'
 
@@ -60,6 +61,8 @@ export function VisaoGeralCongregacoes({
   aoTentarNovamente,
   aoEscolherIgreja,
 }: Props) {
+  const { congregacao } = useRotulos()
+
   if (isLoading) {
     return <div className={styles.skeleton} aria-label="Carregando consolidado" />
   }
@@ -67,7 +70,7 @@ export function VisaoGeralCongregacoes({
   if (isError || !data) {
     return (
       <div className={styles.erro}>
-        <p>Não foi possível carregar os números das unidades.</p>
+        <p>Não foi possível carregar os números das {congregacao.plural.toLowerCase()}.</p>
         <button className={styles.botaoTentar} onClick={aoTentarNovamente}>
           Tentar novamente
         </button>

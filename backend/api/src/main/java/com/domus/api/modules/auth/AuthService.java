@@ -145,7 +145,8 @@ public class AuthService {
                 capacidadeRepository.findByUsuarioId(usuarioId).stream()
                         .map(UsuarioCapacidade::getCapacidade).toList(),
                 termoAceiteService.precisaAceitar(usuarioId),
-                termoAceiteService.dataUltimoAceite(usuarioId));
+                termoAceiteService.dataUltimoAceite(usuarioId),
+                sessao.rotulos());
     }
 
     /** Troca a própria senha e revoga as demais sessões, preservando a atual. */

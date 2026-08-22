@@ -2,6 +2,7 @@ package com.domus.api.modules.ministerio;
 
 import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.igreja.GeneroGramatical;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.outbox.OutboxRegistrador;
@@ -33,18 +34,36 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MinisterioService {
 
-    /** Rótulo hardcoded pro texto de notificação (piloto de 1 igreja, que chama o módulo de
-     *  "rede", não "ministério") — ver memória rotulo-ministerio-self-service-fase5. Domínio,
+    /** Rótulo padrão pro texto de notificação — usado quando a igreja não customizou
+     *  "Ministério" nas configurações (item 8 do backlog, self-service por igreja). Domínio,
      *  rotas e nomes de classe continuam "ministerio"; só a cópia visível troca. */
-    private static final String ROTULO_MINISTERIO = "Rede";
+    private static final String ROTULO_MINISTERIO_PADRAO = "Rede";
+    private static final GeneroGramatical GENERO_MINISTERIO_PADRAO = GeneroGramatical.FEMININO;
 
-    /** "Rede " + nome, sem duplicar quando quem cadastrou já incluiu o rótulo no próprio nome
+    private static String rotuloMinisterio(Igreja igreja) {
+        String custom = igreja.getMinisterioNomeSingular();
+        return custom != null ? custom : ROTULO_MINISTERIO_PADRAO;
+    }
+
+    private static GeneroGramatical generoMinisterio(Igreja igreja) {
+        GeneroGramatical custom = igreja.getMinisterioGenero();
+        return custom != null ? custom : GENERO_MINISTERIO_PADRAO;
+    }
+
+    /** {@code feminina}/{@code masculina} escolhidos conforme o gênero customizado do
+     *  rótulo de Ministério na igreja (ex.: preposição "à"/"ao", "da"/"do", "na"/"no"). */
+    private static String prep(Igreja igreja, String feminina, String masculina) {
+        return generoMinisterio(igreja) == GeneroGramatical.FEMININO ? feminina : masculina;
+    }
+
+    /** Rótulo + nome, sem duplicar quando quem cadastrou já incluiu o rótulo no próprio nome
      *  (ex.: nome = "Rede de Louvor" viraria "Rede Rede de Louvor" sem esta checagem). */
-    private static String comRotulo(String nomeMinisterio) {
-        String normalizado = nomeMinisterio.trim();
-        boolean jaTemRotulo = normalizado.equalsIgnoreCase(ROTULO_MINISTERIO)
-                || normalizado.toLowerCase().startsWith(ROTULO_MINISTERIO.toLowerCase() + " ");
-        return jaTemRotulo ? normalizado : ROTULO_MINISTERIO + " " + normalizado;
+    private static String comRotulo(Ministerio ministerio) {
+        String rotulo = rotuloMinisterio(ministerio.getIgreja());
+        String normalizado = ministerio.getNome().trim();
+        boolean jaTemRotulo = normalizado.equalsIgnoreCase(rotulo)
+                || normalizado.toLowerCase().startsWith(rotulo.toLowerCase() + " ");
+        return jaTemRotulo ? normalizado : rotulo + " " + normalizado;
     }
 
     private final MinisterioRepository ministerioRepository;
@@ -243,7 +262,7 @@ public class MinisterioService {
 
         notificarMembroDoMinisterio(ministerio, igrejaId, data.pessoaId(), atorPessoaId,
                 com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO,
-                "Você foi adicionado à " + comRotulo(ministerio.getNome()) + ".");
+                "Você foi adicionado " + prep(ministerio.getIgreja(), "à", "ao") + " " + comRotulo(ministerio) + ".");
     }
 
     @Transactional
@@ -257,7 +276,7 @@ public class MinisterioService {
 
         notificarMembroDoMinisterio(ministerio, igrejaId, pessoaId, atorPessoaId,
                 com.domus.api.modules.notificacao.TipoNotificacao.REMOVIDO_MINISTERIO,
-                "Você foi removido da " + comRotulo(ministerio.getNome()) + ".");
+                "Você foi removido " + prep(ministerio.getIgreja(), "da", "do") + " " + comRotulo(ministerio) + ".");
     }
 
     /** Notifica a própria pessoa afetada (adicionada/removida/aceita) — nunca quando ela mesma agiu. */
@@ -312,7 +331,7 @@ public class MinisterioService {
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_MINISTERIO,
                             igrejaId, usuario.getId(),
-                            pessoa.getNome() + " pediu pra entrar na " + comRotulo(ministerio.getNome()) + ".",
+                            pessoa.getNome() + " pediu pra entrar " + prep(ministerio.getIgreja(), "na", "no") + " " + comRotulo(ministerio) + ".",
                             "/ministerios/" + ministerioId));
         }
     }
@@ -333,7 +352,7 @@ public class MinisterioService {
 
         notificarMembroDoMinisterio(ministerio, igrejaId, pessoaId, atorPessoaId,
                 com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_MINISTERIO,
-                "Seu pedido para entrar na " + comRotulo(ministerio.getNome()) + " foi aceito.");
+                "Seu pedido para entrar " + prep(ministerio.getIgreja(), "na", "no") + " " + comRotulo(ministerio) + " foi aceito.");
     }
 
     @Transactional

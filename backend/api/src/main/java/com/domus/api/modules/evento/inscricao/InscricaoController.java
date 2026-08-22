@@ -23,6 +23,7 @@ public class InscricaoController {
 
     private final InscricaoService inscricaoService;
     private final UsuarioAutenticado usuarioAutenticado;
+    private final com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoService campoPersonalizadoService;
 
     @PostMapping("/eventos/{eventoId}/inscricoes")
     public ResponseEntity<MinhaInscricaoResponse> inscrever(
@@ -97,6 +98,25 @@ public class InscricaoController {
         var usuario = usuarioAutenticado.get();
         inscricaoService.removerAcompanhante(id, usuario.getPessoa().getId(),
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/inscricoes/{inscricaoId}/respostas")
+    public ResponseEntity<List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse>> respostas(
+            @PathVariable UUID inscricaoId,
+            @RequestParam(required = false) UUID acompanhanteId) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(campoPersonalizadoService.respostasPorInscricao(inscricaoId, acompanhanteId, igrejaId));
+    }
+
+    @PutMapping("/inscricoes/{inscricaoId}/respostas")
+    public ResponseEntity<Void> responder(
+            @PathVariable UUID inscricaoId,
+            @RequestParam(required = false) UUID acompanhanteId,
+            @jakarta.validation.Valid @RequestBody
+            List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> dados) {
+        campoPersonalizadoService.responder(inscricaoId, acompanhanteId, dados,
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getPessoaId(), usuarioAutenticado.getRole());
         return ResponseEntity.noContent().build();
     }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useCriarMinisterio, useAtualizarMinisterio } from '@/hooks/ministerio/useMinisterioForm'
-import { ROTULO_MINISTERIO } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
@@ -17,6 +17,7 @@ interface Props {
 // As mutations (useCriarMinisterio/useAtualizarMinisterio) já disparam notificar.sucesso/erro
 // sozinhas (ver Task 9) — este componente só decide fechar o modal em caso de sucesso.
 export function ModalMinisterioForm({ ministerio, onClose }: Props) {
+  const { ministerio: rotuloMinisterio } = useRotulos()
   const [nome, setNome] = useState(ministerio?.nome ?? '')
   const [fotoId, setFotoId] = useState<string | null>(ministerio?.fotoId ?? null)
   const [erro, setErro] = useState<string | undefined>(undefined)
@@ -41,7 +42,7 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
     <div className={styles.overlay} onMouseDown={onClose}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <h2 className={styles.titulo}>
-          {ministerio ? `Editar ${ROTULO_MINISTERIO.toLowerCase()}` : `Nova ${ROTULO_MINISTERIO.toLowerCase()}`}
+          {ministerio ? `Editar ${rotuloMinisterio.singular.toLowerCase()}` : `Nova ${rotuloMinisterio.singular.toLowerCase()}`}
         </h2>
         <div className={styles.fotoWrap}>
           <UploadFoto

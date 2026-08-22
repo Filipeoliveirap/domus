@@ -11,6 +11,7 @@ import { PessoaFormInput, pessoaSchema, type PessoaFormData } from '@/lib/valida
 import { pessoasService } from '@/services/pessoa.service'
 import { ministerioService } from '@/services/ministerio.service'
 import { usePessoaMinisterios } from './usePessoaMinisterios'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { formatarTelefone } from '@/lib/masks'
 import type { PessoaRequest, PessoaResponse } from '@/types/pessoa.type'
 import type { ApiError } from '@/types/api.types'
@@ -25,6 +26,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
+  const { ministerio } = useRotulos()
   const ehEdicao = !!pessoaId
 
   const form = useAppForm<PessoaFormInput, PessoaFormData>({
@@ -110,7 +112,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         await sincronizarRedes(pessoaSalvaId, redesAtuais?.map((r) => r.id) ?? [], [...redesSelecionadas])
         invalidarCache(queryClient, 'ministerio')
       } catch {
-        notificar.erro('Pessoa salva, mas não foi possível atualizar as redes dela.')
+        notificar.erro(`Pessoa salva, mas não foi possível atualizar as ${ministerio.plural.toLowerCase()} dela.`)
       }
 
       router.back()

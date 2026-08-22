@@ -459,7 +459,8 @@ public class InscricaoService {
         List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
                 .map(i -> InscritoResponse.from(i,
                         resolverPessoa(i, pessoas),
-                        registrantes.get(i.getInscritoPorUsuarioId())))
+                        registrantes.get(i.getInscritoPorUsuarioId()),
+                        resolverConvidadoPor(i, pessoas)))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
@@ -485,7 +486,7 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
         return inscricoes.stream()
-                .map(i -> ParticipanteResponse.from(i, resolverPessoa(i, pessoas)))
+                .map(i -> ParticipanteResponse.from(i, resolverPessoa(i, pessoas), resolverConvidadoPor(i, pessoas)))
                 .toList();
     }
 
@@ -495,16 +496,16 @@ public class InscricaoService {
      * do mapa só quando foi excluída de vez (pessoa_id já é NULL nesse caso, nem entra na busca).
      */
     private Map<UUID, Pessoa> resolverPessoasEmLote(List<InscricaoEvento> inscricoes) {
-        List<UUID> ids = inscricoes.stream()
-                .map(InscricaoEvento::getPessoa)
-                .filter(p -> p != null)
-                .map(Pessoa::getId)
-                .distinct()
-                .toList();
-        if (ids.isEmpty()) {
+        List<UUID> ids = new ArrayList<>();
+        for (InscricaoEvento i : inscricoes) {
+            if (i.getPessoa() != null) ids.add(i.getPessoa().getId());
+            if (i.getConvidadoPor() != null) ids.add(i.getConvidadoPor().getId());
+        }
+        List<UUID> idsUnicos = ids.stream().distinct().toList();
+        if (idsUnicos.isEmpty()) {
             return Map.of();
         }
-        return membroRepository.findByIdInIncluindoArquivadas(ids).stream()
+        return membroRepository.findByIdInIncluindoArquivadas(idsUnicos).stream()
                 .collect(java.util.stream.Collectors.toMap(Pessoa::getId, p -> p));
     }
 
@@ -517,6 +518,13 @@ public class InscricaoService {
      */
     private Pessoa resolverPessoa(InscricaoEvento i, Map<UUID, Pessoa> pessoasResolvidas) {
         Pessoa p = i.getPessoa();
+        if (p == null) return null;
+        if (!(p instanceof org.hibernate.proxy.HibernateProxy)) return p;
+        return pessoasResolvidas.get(p.getId());
+    }
+
+    private Pessoa resolverConvidadoPor(InscricaoEvento i, Map<UUID, Pessoa> pessoasResolvidas) {
+        Pessoa p = i.getConvidadoPor();
         if (p == null) return null;
         if (!(p instanceof org.hibernate.proxy.HibernateProxy)) return p;
         return pessoasResolvidas.get(p.getId());

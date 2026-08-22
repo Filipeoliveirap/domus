@@ -152,27 +152,33 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
             <div className={styles.conteudoAba}>
               {aba === 'visitantes' && (
                 <>
-                  <input
-                    type="text"
-                    className={styles.buscaInput}
-                    placeholder="Buscar visitante por nome…"
-                    value={buscaVisitante}
-                    onChange={(e) => setBuscaVisitante(e.target.value)}
-                  />
-                  {visitantes.length > 0 && (
-                    <div className={styles.listaVisitantes}>
-                      {visitantes.map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          className={`${styles.linhaVisitante} ${visitanteSelecionadoId === v.id ? styles.linhaVisitanteSelecionada : ''}`}
-                          onClick={() => selecionarVisitante(v.id)}
-                        >
-                          {v.nome}{v.telefone ? ` — ${v.telefone}` : ''}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <p className={styles.avisoCamposExtra}>
+                    Busque alguém que já visitou a igreja antes — inclusive quem está numa célula
+                    como visitante, mesmo sem cadastro completo.
+                  </p>
+                  <div className={styles.buscaContainer}>
+                    <input
+                      type="text"
+                      className={styles.buscaInput}
+                      placeholder="Nome de um visitante já conhecido pela igreja…"
+                      value={buscaVisitante}
+                      onChange={(e) => { setBuscaVisitante(e.target.value); setVisitanteSelecionadoId(null) }}
+                    />
+                    {visitantes.length > 0 && !visitanteSelecionadoId && (
+                      <div className={styles.listaVisitantes}>
+                        {visitantes.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            className={styles.linhaVisitante}
+                            onClick={() => selecionarVisitante(v.id)}
+                          >
+                            {v.nome}{v.telefone ? ` — ${v.telefone}` : ''}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {visitanteSelecionadoId && (
                     <p className={styles.selecionado}>Selecionado: {nome}</p>
                   )}

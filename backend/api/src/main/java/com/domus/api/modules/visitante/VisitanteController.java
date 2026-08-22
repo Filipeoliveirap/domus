@@ -2,6 +2,7 @@ package com.domus.api.modules.visitante;
 
 import com.domus.api.modules.visitante.DTOs.MoverParaCelulaRequest;
 import com.domus.api.modules.visitante.DTOs.ToggleRequest;
+import com.domus.api.modules.visitante.DTOs.VisitanteBuscaLeveResponse;
 import com.domus.api.modules.visitante.DTOs.VisitanteRequest;
 import com.domus.api.modules.visitante.DTOs.VisitanteResponse;
 import com.domus.api.shared.DTO.PagedResponse;
@@ -27,7 +28,20 @@ import java.util.UUID;
 public class VisitanteController {
 
     private final VisitanteService visitanteService;
+    private final VisitanteRepository visitanteRepository;
     private final UsuarioAutenticado usuarioAutenticado;
+
+    /** Sem exigirGestao() de propósito: usado pelo modal de inscrever evento por qualquer
+     *  perfil, não só quem gerencia visitantes/célula. Payload enxuto (não usa VisitanteResponse
+     *  completo) pra não vazar dado de acompanhamento de célula pra quem só gerencia evento. */
+    @GetMapping("/busca-leve")
+    public ResponseEntity<java.util.List<VisitanteBuscaLeveResponse>> buscaLeve(
+            @RequestParam(required = false) @Size(max = 200, message = "Termo de busca muito longo.") String q,
+            @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
+        String filtro = (q == null || q.isBlank()) ? null : q.trim();
+        var visitantes = visitanteRepository.buscaLeve(usuarioAutenticado.getIgrejaId(), filtro, pageable);
+        return ResponseEntity.ok(visitantes.stream().map(VisitanteBuscaLeveResponse::from).toList());
+    }
 
     @GetMapping
     public ResponseEntity<PagedResponse<VisitanteResponse>> listar(

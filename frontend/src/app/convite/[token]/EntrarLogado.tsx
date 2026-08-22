@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
@@ -18,6 +19,7 @@ interface Props {
  *  ocupa vaga como qualquer inscrito) — nunca vira convidado sem cadastro, mesmo vindo por
  *  link (ver spec). Não guarda "veio de convite" pra Pessoa cadastrada, por decisão. */
 export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
+  const router = useRouter()
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId, true)
   const { data: campos = [] } = useCamposPersonalizados(eventoId)
@@ -29,11 +31,15 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
 
   if (isLoading) return <p className={styles.estado}>Carregando…</p>
 
-  if (minha?.inscrito) {
+  // Já estava inscrita ANTES de abrir o link (não é o caso de "acabei de confirmar aqui" —
+  // esse caso tem `inscricaoId` preenchido e cai no fluxo normal abaixo, mesmo depois do
+  // refetch marcar `minha.inscrito = true`; sem o `!inscricaoId` aqui, o formulário de
+  // perguntas extras sumia sozinho assim que a inscrição recém-criada era confirmada).
+  if (minha?.inscrito && !inscricaoId) {
     return (
       <div className={styles.formulario}>
         <p className={styles.aviso}>{nomeUsuario}, você já está inscrito(a) nesse evento.</p>
-        <button type="button" className={styles.btnConfirmar} onClick={onSucesso}>
+        <button type="button" className={styles.btnConfirmar} onClick={() => router.push('/inicio')}>
           Continuar
         </button>
       </div>

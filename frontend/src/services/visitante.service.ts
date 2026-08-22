@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type { VisitanteResponse, VisitanteRequest, ToggleRequest } from '@/types/visitante.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
+import type { VisitanteBuscaLeve } from '@/types/visitanteBuscaLeve.type'
 
 interface ListarVisitantesParams {
   q?: string
@@ -48,4 +49,7 @@ export const visitanteService = {
 
   moverParaCelula: (id: string, celulaId: string): Promise<VisitanteResponse> =>
     api.put<VisitanteResponse>(Endpoints.visitantes.TOGGLE_CELULA(id), { celulaId }).then(res => res.data),
+
+  buscaLeve: (q: string): Promise<VisitanteBuscaLeve[]> =>
+    api.get<VisitanteBuscaLeve[]>(Endpoints.visitantes.BUSCA_LEVE, { params: { q } }).then(res => res.data),
 }

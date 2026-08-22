@@ -8,6 +8,8 @@ import type {
   AcompanhanteRequest,
   AcompanhanteResponse,
   ElegibilidadeResponse,
+  CriarConvidadoRequest,
+  ConvidadoResponse,
 } from '@/types/inscricao.type'
 import type { RespostaRequest, RespostaResponse } from '@/types/campoPersonalizado.type'
 
@@ -32,6 +34,9 @@ export const inscricoesService = {
   inscreverPessoas: (eventoId: string, data: InscreverPessoasRequest, confirmado = false): Promise<void> =>
     api.post(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data, { params: { confirmado } })
       .then(() => undefined),
+
+  criarConvidado: (eventoId: string, data: CriarConvidadoRequest): Promise<ConvidadoResponse> =>
+    api.post<ConvidadoResponse>(Endpoints.inscricoes.CONVIDADOS(eventoId), data).then(res => res.data),
 
   adicionarAcompanhante: (
     eventoId: string,

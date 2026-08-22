@@ -73,7 +73,10 @@
   padding: 10px; color: var(--color-primary); cursor: pointer; justify-content: center;
 }
 
-@media (max-width: 768px) {
+/* 1024px, não 768px: com editor (2fr) + prévia (1fr) lado a lado, telas intermediárias
+   (tablet, janela desktop mais estreita) espremiam as duas colunas antes de empilhar —
+   ficava ilegível bem antes do breakpoint de mobile "de verdade" bater. */
+@media (max-width: 1024px) {
   .wrap { grid-template-columns: 1fr; }
   .colunaPreview { position: static; }
 }

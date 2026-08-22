@@ -54,11 +54,47 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
   const [campos, setCampos] = useState<CampoPersonalizadoRequest[]>(() => dadosIniciais.map(paraRequest))
 
   function atualizarCampo(indice: number, patch: Partial<CampoPersonalizadoRequest>) {
-    setCampos((atual) => atual.map((c, i) => (i === indice ? { ...c, ...patch } : c)))
+    setCampos((atual) => atual.map((c, i) => {
+      if (i !== indice) return c
+      // Mexeu em tipo ou opções de um campo vindo do template: perde o mapeamento — ele só
+      // garante "pular pergunta pra quem já tem o dado" enquanto a estrutura for a do
+      // template original. Editar só o rótulo não conta como mudar estrutura.
+      const mexeuNaEstrutura = 'tipo' in patch || 'opcoes' in patch
+      return { ...c, ...patch, mapeamento: mexeuNaEstrutura && c.mapeamento ? null : c.mapeamento }
+    }))
   }
 
   function adicionarCampo() {
     setCampos((atual) => [...atual, campoVazio(atual.length)])
+  }
+
+  /** Adiciona de uma vez os 4 campos que o Domus já trata como dado estruturado de Pessoa —
+   *  cada um marcado com `mapeamento`, que faz o backend pular a pergunta pra quem já tem o
+   *  dado no cadastro (ver CampoPersonalizadoService.listarParaResponder). */
+  function usarTemplateDadosBasicos() {
+    setCampos((atual) => {
+      const base = atual.length
+      const novos: CampoPersonalizadoRequest[] = [
+        {
+          id: null, label: 'Idade', placeholder: 'Ex.: 24', tipo: 'TEXTO_CURTO', opcoes: null,
+          obrigatorio: false, visivelAoPublico: true, ordem: base, mapeamento: 'IDADE',
+        },
+        {
+          id: null, label: 'Estado civil', placeholder: null, tipo: 'OPCAO_UNICA',
+          opcoes: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)'],
+          obrigatorio: false, visivelAoPublico: true, ordem: base + 1, mapeamento: 'ESTADO_CIVIL',
+        },
+        {
+          id: null, label: 'Sexo', placeholder: null, tipo: 'OPCAO_UNICA', opcoes: ['Homem', 'Mulher'],
+          obrigatorio: false, visivelAoPublico: true, ordem: base + 2, mapeamento: 'SEXO',
+        },
+        {
+          id: null, label: 'Endereço', placeholder: 'Rua, número, bairro, cidade', tipo: 'TEXTO_CURTO',
+          opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem: base + 3, mapeamento: 'ENDERECO',
+        },
+      ]
+      return [...atual, ...novos]
+    })
   }
 
   function removerCampo(indice: number) {
@@ -78,12 +114,26 @@ function PainelEditor({ eventoId, dadosIniciais }: { eventoId: string; dadosInic
           restrição alimentar, o que quiser. Cada pergunta vira um campo do formulário.
         </p>
 
+        <p className={styles.avisoConvidados}>
+          Estes campos também aparecem pra quem se inscreve sem cadastro no sistema
+          (convidados) — pense no que você gostaria de saber dessas pessoas.
+        </p>
+
+        <button type="button" className={styles.botaoTemplate} onClick={usarTemplateDadosBasicos}>
+          Usar template de dados básicos
+        </button>
+
         {campos.map((campo, indice) => (
           <div key={campo.id ?? `novo-${indice}`} className={styles.cartaoCampo}>
             <div className={styles.cabecalhoCartao}>
               <span className={styles.numeroCampo}>
                 <GripVertical size={14} className={styles.iconeArraste} aria-hidden="true" />
                 Pergunta {indice + 1}
+                {campo.mapeamento && (
+                  <span className={styles.seloMapeado} title="Pula a pergunta pra quem já tem esse dado no cadastro">
+                    do template
+                  </span>
+                )}
               </span>
               <button type="button" className={styles.botaoRemover} onClick={() => removerCampo(indice)} title="Remover esta pergunta">
                 <Trash2 size={14} />
@@ -200,6 +250,18 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
         <button type="button" className={styles.botaoLimparPreview} onClick={() => setValores({})}>
           <RotateCcw size={12} /> Limpar
         </button>
+      </div>
+
+      {/* Nunca campo de verdade — nome/telefone são sempre coletados automaticamente
+          (titular/convidado), não fazem parte da lista de CampoPersonalizadoRequest. Só pra
+          quem está montando o formulário ver como fica completo. */}
+      <div className={styles.previewCampo}>
+        <label className={styles.previewLabel}>Nome</label>
+        <input disabled placeholder="Sempre coletado automaticamente" />
+      </div>
+      <div className={styles.previewCampo}>
+        <label className={styles.previewLabel}>Telefone</label>
+        <input disabled placeholder="Sempre coletado automaticamente" />
       </div>
 
       {campos.length === 0 && (

@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCelulas } from '@/lib/permissoes'
 import { rotuloDiaSemana, formatarHorario } from '@/lib/formats/celulaFormat'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { CelulaResponse } from '@/types/celula.type'
 import styles from './arquivados.module.css'
 
@@ -24,9 +25,10 @@ export default function CelulasArquivadasPage() {
   const podeGerenciar = podeGerenciarCelulas(role)
   const { restaurar, isLoading: restaurando } = useRestaurarCelula()
   const [excluindo, setExcluindo] = useState<CelulaResponse | null>(null)
+  const { celula: rotuloCelula, concordar } = useRotulos()
 
   if (!podeGerenciar) {
-    return <EstadoErro titulo="Sem acesso" mensagem="Só administradores veem células arquivadas." />
+    return <EstadoErro titulo="Sem acesso" mensagem={`Só administradores veem ${rotuloCelula.plural.toLowerCase()} ${concordar(rotuloCelula.genero, 'arquivados')}.`} />
   }
 
   if (isLoading) {
@@ -42,7 +44,9 @@ export default function CelulasArquivadasPage() {
   }
 
   if (!celulas || celulas.length === 0) {
-    return <EstadoVazio icone={Archive} titulo="Nenhuma célula arquivada" mensagem="Células arquivadas aparecem aqui." />
+    return <EstadoVazio icone={Archive}
+      titulo={`${concordar(rotuloCelula.genero, 'nenhum')} ${rotuloCelula.singular.toLowerCase()} ${concordar(rotuloCelula.genero, 'arquivado')}`}
+      mensagem={`${rotuloCelula.plural} ${concordar(rotuloCelula.genero, 'arquivados')} aparecem aqui.`} />
   }
 
   return (
@@ -89,13 +93,14 @@ export default function CelulasArquivadasPage() {
 
 function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; onClose: () => void }) {
   const { confirmar, isLoading, erroGeral } = useExcluirCelulaDefinitivamente(celula, onClose)
+  const { celula: rotuloCelula } = useRotulos()
 
   // Sem ninguém vinculado: confirmação simples basta. Com gente vinculada, a pessoa
   // precisa ler antes de confirmar — daí o "digite o nome" (ModalConfirmacaoCritica).
   if (!celula.temVinculo) {
     return (
       <ModalConfirmacao
-        titulo="Excluir célula definitivamente?"
+        titulo={`Excluir ${rotuloCelula.singular.toLowerCase()} definitivamente?`}
         mensagem={<>Isso vai apagar <strong>{celula.nome}</strong> de vez. Não tem como desfazer.</>}
         textoConfirmar="Excluir"
         perigo
@@ -108,17 +113,17 @@ function ModalExcluirDefinitivo({ celula, onClose }: { celula: CelulaResponse; o
 
   return (
     <ModalConfirmacaoCritica
-      titulo="Excluir célula definitivamente?"
+      titulo={`Excluir ${rotuloCelula.singular.toLowerCase()} definitivamente?`}
       mensagem={
         <>
           <strong>{celula.nome}</strong> tem {celula.totalMembros} {celula.totalMembros === 1 ? 'pessoa vinculada' : 'pessoas vinculadas'}.
           Isso não vai apagar essas pessoas nem o histórico delas em outros lugares do
-          sistema — só remove o vínculo delas com esta célula específica. A célula em si
+          sistema — só remove o vínculo delas com esta {rotuloCelula.singular.toLowerCase()} específica. A {rotuloCelula.singular.toLowerCase()} em si
           some de vez. Não tem como desfazer.
         </>
       }
       consequencias={[
-        { tipo: 'perde', texto: `Todos os ${celula.totalMembros} vínculos com esta célula são removidos` },
+        { tipo: 'perde', texto: `Todos os ${celula.totalMembros} vínculos com esta ${rotuloCelula.singular.toLowerCase()} são removidos` },
         { tipo: 'mantem', texto: 'As pessoas e visitantes continuam existindo normalmente no sistema' },
       ]}
       palavraConfirmacao={celula.nome}

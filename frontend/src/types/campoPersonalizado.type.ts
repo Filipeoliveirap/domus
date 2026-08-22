@@ -1,5 +1,7 @@
 export type TipoCampoPersonalizado = 'TEXTO_CURTO' | 'OPCAO_UNICA' | 'MULTIPLA_ESCOLHA' | 'SIM_NAO'
 
+export type MapeamentoCampoPersonalizado = 'IDADE' | 'ESTADO_CIVIL' | 'SEXO' | 'ENDERECO'
+
 export interface CampoPersonalizadoResponse {
   id: string
   label: string
@@ -9,6 +11,7 @@ export interface CampoPersonalizadoResponse {
   obrigatorio: boolean
   visivelAoPublico: boolean
   ordem: number
+  mapeamento: MapeamentoCampoPersonalizado | null
 }
 
 export interface CampoPersonalizadoRequest {
@@ -20,6 +23,7 @@ export interface CampoPersonalizadoRequest {
   obrigatorio: boolean
   visivelAoPublico: boolean
   ordem: number
+  mapeamento: MapeamentoCampoPersonalizado | null
 }
 
 export interface RespostaRequest {

@@ -19,6 +19,8 @@ import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.visitante.Visitante;
+import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.DTO.PagedResponse;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ConflitoNegocioException;
@@ -49,6 +51,7 @@ public class InscricaoService {
     private final AcompanhanteRepository acompanhanteRepository;
     private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
+    private final VisitanteRepository visitanteRepository;
     private final ElegibilidadeService elegibilidadeService;
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
@@ -201,16 +204,51 @@ public class InscricaoService {
         String nomeNovo = TextoUtil.normalizarParaComparacao(data.nome());
 
         for (AcompanhanteInscricao existente : acompanhanteRepository.listarPorEvento(eventoId)) {
-            String telefoneExistente = TextoUtil.somenteDigitos(existente.getTelefone());
-            boolean duplicado = telefoneNovo != null && telefoneExistente != null
-                    ? telefoneNovo.equals(telefoneExistente)
-                    : nomeNovo != null && nomeNovo.equals(TextoUtil.normalizarParaComparacao(existente.getNome()));
-
-            if (duplicado) {
+            if (mesmoConvidado(telefoneNovo, nomeNovo, existente.getTelefone(), existente.getNome())) {
                 throw new BusinessException("CONVIDADO_DUPLICADO",
                         "Este convidado já está inscrito neste evento.");
             }
         }
+    }
+
+    /** Mesma checagem de {@link #validarConvidadoNaoDuplicado}, mas para o convidado de topo
+     *  (sem Pessoa, sem acompanhante-pai) — antes disto, buscar o mesmo visitante/pessoa de
+     *  fora duas vezes no modal "Inscrever alguém" (ou no convite público) criava duas
+     *  inscrições separadas, ocupando duas vagas pra mesma pessoa. Checa tanto contra outros
+     *  convidados de topo quanto contra acompanhantes já cadastrados no evento. */
+    /** Mesma mensagem dupla de {@link #inscrever} (JA_INSCRITO): quem preenche o próprio
+     *  formulário pelo link ({@code inscritoPorUsuarioId == null}) vê "você"; quem é
+     *  cadastrado por outra pessoa pelo sistema vê "essa pessoa". */
+    private void validarConvidadoTopoNaoDuplicado(UUID eventoId, String nome, String telefone,
+                                                   UUID visitanteId, UUID inscritoPorUsuarioId) {
+        List<InscricaoEvento> convidadosNoTopo = inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId);
+
+        // Com visitanteId, a checagem é exata (o mesmo Visitante já está inscrito) — não
+        // depende de nome/telefone baterem, que é frágil (apelido, telefone desatualizado…).
+        boolean duplicadoPorVisitante = visitanteId != null && convidadosNoTopo.stream()
+                .anyMatch(i -> i.getVisitante() != null && i.getVisitante().getId().equals(visitanteId));
+
+        String telefoneNovo = TextoUtil.somenteDigitos(telefone);
+        String nomeNovo = TextoUtil.normalizarParaComparacao(nome);
+
+        boolean duplicadoNoTopo = convidadosNoTopo.stream()
+                .anyMatch(i -> mesmoConvidado(telefoneNovo, nomeNovo, i.getTelefoneConvidado(), i.getNomeConvidado()));
+        boolean duplicadoComoAcompanhante = acompanhanteRepository.listarPorEvento(eventoId).stream()
+                .anyMatch(a -> mesmoConvidado(telefoneNovo, nomeNovo, a.getTelefone(), a.getNome()));
+
+        if (duplicadoPorVisitante || duplicadoNoTopo || duplicadoComoAcompanhante) {
+            String mensagem = inscritoPorUsuarioId == null
+                    ? "Você já está inscrito neste evento."
+                    : "Essa pessoa já está inscrita neste evento.";
+            throw new BusinessException("CONVIDADO_DUPLICADO", mensagem);
+        }
+    }
+
+    private boolean mesmoConvidado(String telefoneNovo, String nomeNovo, String telefoneExistente, String nomeExistente) {
+        String telefoneExistenteNorm = TextoUtil.somenteDigitos(telefoneExistente);
+        return telefoneNovo != null && telefoneExistenteNorm != null
+                ? telefoneNovo.equals(telefoneExistenteNorm)
+                : nomeNovo != null && nomeNovo.equals(TextoUtil.normalizarParaComparacao(nomeExistente));
     }
 
     /**
@@ -250,6 +288,60 @@ public class InscricaoService {
             throw new BusinessException("VAGAS_ESGOTADAS",
                     "As vagas deste evento estão esgotadas.");
         }
+    }
+
+    /** Convidado sem cadastro ganha inscrição própria (não acompanhante aninhado) — sem
+     *  elegibilidade checada (não existe Pessoa pra avaliar), mas ainda bloqueado em evento
+     *  exclusivo pra membros. Usado tanto pelo modal presencial (convidadoPorPessoaId = quem
+     *  está logado) quanto pelo convite público (convidadoPorPessoaId = dono do token).
+     *  {@code convidadoPor} (quem trouxe) e {@code inscritoPorUsuarioId} (quem apertou o botão)
+     *  são coisas diferentes: no modal presencial os dois são a mesma pessoa (o admin); no
+     *  convite público só o primeiro existe — quem preencheu o formulário não tem usuário
+     *  logado nenhum, por isso {@code inscritoPorUsuarioId} vem {@code null} desse fluxo.
+     *  {@code visitanteId} só vem preenchido quando o convidado veio da busca de Visitante
+     *  já cadastrado (aba "Visitantes" do modal) — habilita checar duplicidade por id, exata,
+     *  em vez de comparar nome/telefone. */
+    @Transactional
+    public InscricaoEvento inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
+                                               String telefone, UUID convidadoPorPessoaId,
+                                               UUID inscritoPorUsuarioId, UUID visitanteId) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        validarOrganizaInscricao(evento, "Este evento não permite convidados.");
+        if (evento.isExclusivoMembros()) {
+            throw new BusinessException("EXCLUSIVO_MEMBROS",
+                    "Este evento é exclusivo para membros — não é possível levar convidados.");
+        }
+        validarEventoAberto(evento);
+        validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
+        validarVaga(evento, 1);
+
+        Pessoa convidadoPor = convidadoPorPessoaId == null ? null
+                : membroRepository.findByIdAndIgrejaId(convidadoPorPessoaId, igrejaId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
+
+        Visitante visitante = visitanteId == null ? null
+                : visitanteRepository.findByIdAndIgrejaId(visitanteId, igrejaId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Visitante não encontrado."));
+
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .igreja(evento.getIgreja())
+                .evento(evento)
+                .pessoa(null)
+                .nomeConvidado(TextoUtil.capitalizar(nome))
+                .telefoneConvidado(telefone)
+                .convidadoPor(convidadoPor)
+                .visitante(visitante)
+                .inscritoPorUsuarioId(inscritoPorUsuarioId)
+                .status(StatusInscricao.CONFIRMADA)
+                .build();
+
+        InscricaoEvento salva = inscricaoRepository.save(inscricao);
+        log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, inscrito_por_usuario_id={}, igreja_id={}",
+                eventoId, convidadoPorPessoaId, inscritoPorUsuarioId, igrejaId);
+        return salva;
     }
 
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
@@ -459,7 +551,8 @@ public class InscricaoService {
         List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
                 .map(i -> InscritoResponse.from(i,
                         resolverPessoa(i, pessoas),
-                        registrantes.get(i.getInscritoPorUsuarioId())))
+                        registrantes.get(i.getInscritoPorUsuarioId()),
+                        resolverConvidadoPor(i, pessoas)))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
@@ -485,7 +578,7 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
         return inscricoes.stream()
-                .map(i -> ParticipanteResponse.from(i, resolverPessoa(i, pessoas)))
+                .map(i -> ParticipanteResponse.from(i, resolverPessoa(i, pessoas), resolverConvidadoPor(i, pessoas)))
                 .toList();
     }
 
@@ -495,16 +588,16 @@ public class InscricaoService {
      * do mapa só quando foi excluída de vez (pessoa_id já é NULL nesse caso, nem entra na busca).
      */
     private Map<UUID, Pessoa> resolverPessoasEmLote(List<InscricaoEvento> inscricoes) {
-        List<UUID> ids = inscricoes.stream()
-                .map(InscricaoEvento::getPessoa)
-                .filter(p -> p != null)
-                .map(Pessoa::getId)
-                .distinct()
-                .toList();
-        if (ids.isEmpty()) {
+        List<UUID> ids = new ArrayList<>();
+        for (InscricaoEvento i : inscricoes) {
+            if (i.getPessoa() != null) ids.add(i.getPessoa().getId());
+            if (i.getConvidadoPor() != null) ids.add(i.getConvidadoPor().getId());
+        }
+        List<UUID> idsUnicos = ids.stream().distinct().toList();
+        if (idsUnicos.isEmpty()) {
             return Map.of();
         }
-        return membroRepository.findByIdInIncluindoArquivadas(ids).stream()
+        return membroRepository.findByIdInIncluindoArquivadas(idsUnicos).stream()
                 .collect(java.util.stream.Collectors.toMap(Pessoa::getId, p -> p));
     }
 
@@ -517,6 +610,13 @@ public class InscricaoService {
      */
     private Pessoa resolverPessoa(InscricaoEvento i, Map<UUID, Pessoa> pessoasResolvidas) {
         Pessoa p = i.getPessoa();
+        if (p == null) return null;
+        if (!(p instanceof org.hibernate.proxy.HibernateProxy)) return p;
+        return pessoasResolvidas.get(p.getId());
+    }
+
+    private Pessoa resolverConvidadoPor(InscricaoEvento i, Map<UUID, Pessoa> pessoasResolvidas) {
+        Pessoa p = i.getConvidadoPor();
         if (p == null) return null;
         if (!(p instanceof org.hibernate.proxy.HibernateProxy)) return p;
         return pessoasResolvidas.get(p.getId());

@@ -1,0 +1,316 @@
+.pagina {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 48px;
+}
+
+.topo {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.topoLogo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.topoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.conteudo {
+  width: 100%;
+  max-width: 640px;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-white);
+}
+
+.banner {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.bannerPlaceholder {
+  width: 100%;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.titulo {
+  padding: 20px 20px 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.descricao {
+  padding: 8px 20px 20px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+}
+
+.convidantePor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+}
+
+.convidanteFoto {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.convidanteIconePlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.convidantePorLabel {
+  font-size: var(--font-size-xs, 12px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.convidantePorNome {
+  font-size: var(--font-size-md, 15px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.infoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+}
+
+.infoLinha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.infoLinha svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.btnInscrever {
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md, 15px);
+  text-align: center;
+  transition: opacity var(--transition-fast);
+}
+
+.btnInscrever:hover {
+  opacity: 0.9;
+}
+
+.escolha {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+}
+
+.btnLogin {
+  display: block;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  transition: opacity var(--transition-fast);
+}
+
+.btnLogin:hover {
+  opacity: 0.9;
+}
+
+.btnSemConta {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dark);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  transition: background-color var(--transition-fast);
+}
+
+.btnSemConta:hover {
+  background: var(--color-bg-page);
+}
+
+.linkJaTenhoConta {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.linkJaTenhoConta:hover {
+  text-decoration: underline;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+}
+
+.campo input {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+}
+
+.campo input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.erroTexto {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-error, #dc2626);
+}
+
+.aviso {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.estado {
+  padding: 24px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.btnConfirmar {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.btnConfirmar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btnConfirmar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.erroCard {
+  max-width: 420px;
+  margin: 15vh auto 0;
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+}
+
+.erroCard h1 {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-bottom: 8px;
+}
+
+.erroCard p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+  .banner {
+    height: 160px;
+  }
+
+  .titulo {
+    font-size: var(--font-size-lg, 18px);
+  }
+}

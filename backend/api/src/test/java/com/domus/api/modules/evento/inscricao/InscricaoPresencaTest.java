@@ -8,6 +8,7 @@ import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
+import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ class InscricaoPresencaTest {
     AcompanhanteRepository acompanhanteRepository;
     PessoaRepository pessoaRepository;
     UsuarioRepository usuarioRepository;
+    VisitanteRepository visitanteRepository;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
@@ -47,6 +49,7 @@ class InscricaoPresencaTest {
         acompanhanteRepository = mock(AcompanhanteRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
+        visitanteRepository = mock(VisitanteRepository.class);
         familiaIgrejaService = mock(FamiliaIgrejaService.class);
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(java.util.Set.of(igrejaId));
         ElegibilidadeService elegibilidadeService = new ElegibilidadeService(List.of());
@@ -54,8 +57,9 @@ class InscricaoPresencaTest {
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, pessoaRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService, notificacaoService, campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                acompanhanteRepository, pessoaRepository, usuarioRepository, visitanteRepository,
+                elegibilidadeService, familiaIgrejaService, notificacaoService,
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
     }
 
     private Igreja igreja() {

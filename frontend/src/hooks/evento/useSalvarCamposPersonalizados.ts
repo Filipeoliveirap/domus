@@ -15,7 +15,9 @@ export function useSalvarCamposPersonalizados() {
     try {
       await camposPersonalizadosService.salvar(eventoId, dados)
       queryClient.invalidateQueries({ queryKey: ['campos-personalizados', eventoId] })
-      notificar.sucesso('Campos personalizados salvos.')
+      // Sem toast de sucesso aqui: sempre disparado junto com o salvar do evento (botão
+      // único "Salvar alterações"), que já mostra o seu próprio toast — dois toasts pro
+      // mesmo clique confundia.
     } catch (error: unknown) {
       const mensagem = axios.isAxiosError<ApiError>(error)
         ? error.response?.data?.message ?? 'Erro ao salvar. Tente novamente.'

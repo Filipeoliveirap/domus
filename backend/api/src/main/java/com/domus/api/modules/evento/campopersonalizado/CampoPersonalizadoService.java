@@ -8,6 +8,7 @@ import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +30,59 @@ public class CampoPersonalizadoService {
     private final InscricaoRepository inscricaoRepository;
     private final UsuarioRepository usuarioRepository;
     private final NotificacaoService notificacaoService;
+    private final PessoaRepository pessoaRepository;
 
     public List<CampoPersonalizadoResponse> listar(UUID eventoId, UUID igrejaId) {
         return campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId).stream()
                 .map(CampoPersonalizadoResponse::from)
                 .toList();
+    }
+
+    /** Só os campos que ainda precisam de resposta — pula os mapeados que a Pessoa já tem.
+     *  {@code pessoaOuNull} nulo (convidado sem cadastro) nunca pula nenhum. */
+    public List<CampoPersonalizadoResponse> listarParaResponder(UUID eventoId, UUID igrejaId, com.domus.api.modules.pessoa.Pessoa pessoaOuNull) {
+        return campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId).stream()
+                .filter(c -> valorJaConhecido(c.getMapeamento(), pessoaOuNull).isEmpty())
+                .map(CampoPersonalizadoResponse::from)
+                .toList();
+    }
+
+    /** Mesma coisa que {@link #listarParaResponder}, mas carrega a Pessoa a partir do id —
+     *  usado pelo endpoint autenticado "meus campos pendentes" (auto-inscrição normal e
+     *  convite público já logado). Nunca receber a Pessoa do principal autenticado direto
+     *  (é um objeto desanexado — ler campo LAZY dele estoura); sempre buscar de novo aqui. */
+    public List<CampoPersonalizadoResponse> listarParaResponderComoTitular(UUID eventoId, UUID igrejaId, UUID pessoaId) {
+        var pessoa = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId).orElse(null);
+        return listarParaResponder(eventoId, igrejaId, pessoa);
+    }
+
+    private java.util.Optional<String> valorJaConhecido(MapeamentoCampoPersonalizado mapeamento,
+                                                          com.domus.api.modules.pessoa.Pessoa pessoa) {
+        if (pessoa == null || mapeamento == null) return java.util.Optional.empty();
+        return switch (mapeamento) {
+            case IDADE -> java.util.Optional.ofNullable(pessoa.getDataNascimento())
+                    .map(d -> String.valueOf(java.time.Period.between(d, java.time.LocalDate.now()).getYears()));
+            case ESTADO_CIVIL -> java.util.Optional.ofNullable(pessoa.getEstadoCivil()).map(Enum::name);
+            case SEXO -> java.util.Optional.ofNullable(pessoa.getSexo()).map(Enum::name);
+            case ENDERECO -> temAlgumDadoDeEndereco(pessoa.getEndereco())
+                    ? java.util.Optional.of(formatarEndereco(pessoa.getEndereco())) : java.util.Optional.empty();
+        };
+    }
+
+    private boolean temAlgumDadoDeEndereco(com.domus.api.shared.dominio.Endereco e) {
+        if (e == null) return false;
+        return e.getCep() != null || e.getLogradouro() != null || e.getNumero() != null
+                || e.getComplemento() != null || e.getBairro() != null || e.getCidade() != null || e.getUf() != null;
+    }
+
+    private String formatarEndereco(com.domus.api.shared.dominio.Endereco e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.getLogradouro() != null) sb.append(e.getLogradouro());
+        if (e.getNumero() != null) sb.append(", ").append(e.getNumero());
+        if (e.getBairro() != null) sb.append(" - ").append(e.getBairro());
+        if (e.getCidade() != null) sb.append(", ").append(e.getCidade());
+        if (e.getUf() != null) sb.append("/").append(e.getUf());
+        return sb.toString();
     }
 
     /** Substitui a lista inteira: cria o que não tem id, atualiza o que tem, arquiva
@@ -67,6 +116,11 @@ public class CampoPersonalizadoService {
             if (r.obrigatorio() && !eraObrigatorioAntes) {
                 surgiuCampoObrigatorioNovo = true;
             }
+            // Mapeamento não depende de tipo/opções: valorJaConhecido() lê sempre o dado bruto
+            // da Pessoa (pessoa.getEstadoCivil(), pessoa.getSexo()…), nunca o texto das opções
+            // do campo — então mudar o tipo ou reescrever as opções não invalida o "pula
+            // pergunta pra quem já tem esse dado". Editar/remover o mapeamento é escolha
+            // explícita do admin no seletor, refletida direto em r.mapeamento().
             campo.setLabel(r.label());
             campo.setPlaceholder(r.placeholder());
             campo.setTipo(r.tipo());
@@ -74,6 +128,7 @@ public class CampoPersonalizadoService {
             campo.setObrigatorio(r.obrigatorio());
             campo.setVisivelAoPublico(r.visivelAoPublico());
             campo.setOrdem(r.ordem());
+            campo.setMapeamento(r.mapeamento());
             resultado.add(campoRepository.save(campo));
         }
 
@@ -115,25 +170,54 @@ public class CampoPersonalizadoService {
         var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
-        boolean ehDono = inscricao.getPessoa() != null
-                && java.util.Objects.equals(inscricao.getPessoa().getId(), pessoaLogadaId);
+        boolean ehDono = (inscricao.getPessoa() != null
+                        && java.util.Objects.equals(inscricao.getPessoa().getId(), pessoaLogadaId))
+                || (inscricao.getConvidadoPor() != null
+                        && java.util.Objects.equals(inscricao.getConvidadoPor().getId(), pessoaLogadaId));
         if (!ehDono && !com.domus.api.shared.security.Permissoes.podeGerenciarEventos(role)) {
             throw new com.domus.api.shared.exception.BusinessException(
                     "SEM_PERMISSAO", "Você não pode responder por essa inscrição.");
         }
 
+        validarEResponder(inscricao, acompanhanteId, respostas, igrejaId);
+    }
+
+    /** Variante sem autor logado, usada só pelo fluxo de convite público (entrar sem conta): a
+     *  posse do token — já validado antes de chegar aqui — É a autorização. Responde sempre
+     *  como titular da inscrição recém-criada ({@code acompanhanteId} sempre null). */
+    @Transactional
+    public void responderComoConvidado(UUID inscricaoId,
+                                        List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> respostas,
+                                        UUID igrejaId) {
+        var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+        validarEResponder(inscricao, null, respostas, igrejaId);
+    }
+
+    private void validarEResponder(com.domus.api.modules.evento.inscricao.InscricaoEvento inscricao,
+                                    UUID acompanhanteId,
+                                    List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> respostas,
+                                    UUID igrejaId) {
         List<CampoPersonalizadoEvento> campos = campoRepository
                 .findByEventoIdAndIgrejaIdOrderByOrdemAsc(inscricao.getEvento().getId(), igrejaId);
 
         Map<UUID, String> valoresEnviados = new HashMap<>();
         for (var r : respostas) valoresEnviados.put(r.campoId(), r.valor());
 
+        if (acompanhanteId == null && inscricao.getPessoa() != null) {
+            for (CampoPersonalizadoEvento campo : campos) {
+                if (campo.getMapeamento() == null || valoresEnviados.containsKey(campo.getId())) continue;
+                valorJaConhecido(campo.getMapeamento(), inscricao.getPessoa())
+                        .ifPresent(valor -> valoresEnviados.put(campo.getId(), valor));
+            }
+        }
+
         for (CampoPersonalizadoEvento campo : campos) {
             if (!campo.isObrigatorio()) continue;
             String valor = valoresEnviados.get(campo.getId());
             boolean respondidoAgora = valor != null && !valor.isBlank();
             boolean jaRespondidoAntes = !respondidoAgora && respostaRepository
-                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(campo.getId(), inscricaoId, acompanhanteId)
+                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(campo.getId(), inscricao.getId(), acompanhanteId)
                     .map(r -> r.getValor() != null && !r.getValor().isBlank())
                     .orElse(false);
             if (!respondidoAgora && !jaRespondidoAntes) {
@@ -142,13 +226,13 @@ public class CampoPersonalizadoService {
             }
         }
 
-        for (var r : respostas) {
+        for (var entry : valoresEnviados.entrySet()) {
             CampoPersonalizadoEvento campo = campos.stream()
-                    .filter(c -> c.getId().equals(r.campoId())).findFirst()
+                    .filter(c -> c.getId().equals(entry.getKey())).findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException("Campo não encontrado."));
 
             var existente = respostaRepository
-                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(r.campoId(), inscricaoId, acompanhanteId);
+                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(entry.getKey(), inscricao.getId(), acompanhanteId);
 
             RespostaCampoPersonalizado resposta = existente.orElseGet(() -> {
                 var nova = RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).build();
@@ -160,7 +244,7 @@ public class CampoPersonalizadoService {
                 }
                 return nova;
             });
-            resposta.setValor(r.valor());
+            resposta.setValor(entry.getValue());
             respostaRepository.save(resposta);
         }
     }

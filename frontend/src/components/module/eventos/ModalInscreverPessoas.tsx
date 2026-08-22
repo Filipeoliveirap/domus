@@ -22,6 +22,9 @@ interface Props {
   /** Evento exclusivo para membros: só quem tem vínculo MEMBRO pode ser inscrito. */
   exclusivoMembros: boolean
   onClose: () => void
+  /** Usado dentro de ModalInscreverAlguem (aba "Pessoas da igreja") — sem overlay nem
+   *  cabeçalho próprios, porque o modal pai já mostra os dois. */
+  embutido?: boolean
 }
 
 function jaInscrita(p: PessoaResponse, jaInscritos: Set<string>): boolean {
@@ -38,7 +41,7 @@ function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): strin
 
 // Sem "selecionar todos" de propósito: evita inscrição em massa por engano.
 export function ModalInscreverPessoas({
-  eventoId, tituloEvento, exclusivoMembros, onClose,
+  eventoId, tituloEvento, exclusivoMembros, onClose, embutido = false,
 }: Props) {
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
@@ -111,31 +114,25 @@ export function ModalInscreverPessoas({
     })
   }
 
-  return (
+  const conteudo = (
     <>
-    <div className={styles.overlay} onMouseDown={() => !inscreverPessoas.isPending && onClose()}>
-      <div
-        className={styles.modal}
-        onMouseDown={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titulo-inscrever-pessoas"
-      >
-        <div className={styles.header}>
-          <div>
-            <h2 className={styles.titulo} id="titulo-inscrever-pessoas">Inscrever pessoas</h2>
-            <p className={styles.subtitulo}>{tituloEvento}</p>
+        {!embutido && (
+          <div className={styles.header}>
+            <div>
+              <h2 className={styles.titulo} id="titulo-inscrever-pessoas">Inscrever pessoas</h2>
+              <p className={styles.subtitulo}>{tituloEvento}</p>
+            </div>
+            <button
+              type="button"
+              className={styles.btnFechar}
+              onClick={onClose}
+              aria-label="Fechar"
+              disabled={inscreverPessoas.isPending}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            type="button"
-            className={styles.btnFechar}
-            onClick={onClose}
-            aria-label="Fechar"
-            disabled={inscreverPessoas.isPending}
-          >
-            <X size={20} />
-          </button>
-        </div>
+        )}
 
         <div className={styles.buscaWrap}>
           <Search size={16} className={styles.buscaIcone} />
@@ -227,8 +224,24 @@ export function ModalInscreverPessoas({
             </button>
           </div>
         </div>
+    </>
+  )
+
+  return (
+    <>
+    {embutido ? conteudo : (
+      <div className={styles.overlay} onMouseDown={() => !inscreverPessoas.isPending && onClose()}>
+        <div
+          className={styles.modal}
+          onMouseDown={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="titulo-inscrever-pessoas"
+        >
+          {conteudo}
+        </div>
       </div>
-    </div>
+    )}
 
     {impedimentosParaConfirmar && (
       <ModalConfirmacao

@@ -300,10 +300,17 @@
   }
 
   .header,
-  .buscaWrap,
   .lista {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  /* .buscaWrap usa margin (não padding) pro espaçamento horizontal — sobrescrever a
+     margin aqui, não somar padding em cima dela (senão o input fica espremido: 24px de
+     margin desktop + 16px de padding mobile = 40px de cada lado). */
+  .buscaWrap {
+    margin-left: 16px;
+    margin-right: 16px;
   }
 
   .footer {

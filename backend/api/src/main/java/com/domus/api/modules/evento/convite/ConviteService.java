@@ -3,9 +3,8 @@ package com.domus.api.modules.evento.convite;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.SituacaoEvento;
-import com.domus.api.modules.evento.inscricao.InscricaoEvento;
-import com.domus.api.modules.evento.inscricao.InscricaoRepository;
-import com.domus.api.modules.evento.inscricao.StatusInscricao;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +22,8 @@ import java.util.UUID;
 public class ConviteService {
 
     private static final String PREFIXO = "convite:";
+    /** Separador entre eventoId e pessoaId dentro do valor guardado no Redis. */
+    private static final String SEPARADOR = ":";
     /** Margem quando o evento não tem fim declarado (usa início + margem como referência de encerramento/TTL). */
     private static final Duration MARGEM_SEM_FIM = Duration.ofHours(6);
     private static final Duration TTL_MINIMO = Duration.ofHours(1);
@@ -30,40 +31,45 @@ public class ConviteService {
 
     private final StringRedisTemplate redisTemplate;
     private final EventoRepository eventoRepository;
-    private final InscricaoRepository inscricaoRepository;
+    private final PessoaRepository pessoaRepository;
 
-    /** Gera um token novo (não idempotente) pra inscrição de {@code pessoaId} no evento. */
+    /** Convidante (quem clicou "Compartilhar") NÃO precisa estar inscrito no evento — decisão
+     *  do brainstorm: mesmo respondendo "não vou participar", ela consegue gerar e compartilhar
+     *  o link. O convite mapeia (evento, pessoa) diretamente, nunca uma InscricaoEvento. */
     public String gerarToken(UUID eventoId, UUID pessoaId, UUID igrejaId) {
-        InscricaoEvento inscricao = inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)
-                .filter(i -> i.getIgreja().getId().equals(igrejaId))
-                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Pessoa convidante = pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
 
         String token = gerarTokenAleatorio();
-        Duration ttl = calcularTtl(inscricao.getEvento());
-        redisTemplate.opsForValue().set(chave(token), inscricao.getId().toString(), ttl);
+        Duration ttl = calcularTtl(evento);
+        redisTemplate.opsForValue().set(chave(token), evento.getId() + SEPARADOR + convidante.getId(), ttl);
         return token;
     }
 
-    /** Resolve o token e devolve a inscrição de quem convidou — valida existência/expiração
-     *  (CONVITE_INVALIDO), inscrição cancelada (CONVITE_INVALIDO) e evento já encerrado
-     *  (EVENTO_ENCERRADO). */
-    public InscricaoEvento resolverInscricaoConvidante(String token) {
-        String inscricaoIdTexto = redisTemplate.opsForValue().get(chave(token));
-        if (inscricaoIdTexto == null) {
+    /** Resolve o token pro evento e a pessoa que convidou — valida existência/expiração
+     *  (404, "convite inválido") e evento já encerrado (EVENTO_ENCERRADO). */
+    public ConviteResolvido resolver(String token) {
+        String valor = redisTemplate.opsForValue().get(chave(token));
+        if (valor == null) {
             throw new ResourceNotFoundException("Este convite não é mais válido.");
         }
 
-        InscricaoEvento inscricao = inscricaoRepository.findById(UUID.fromString(inscricaoIdTexto))
+        String[] partes = valor.split(SEPARADOR, 2);
+        UUID eventoId = UUID.fromString(partes[0]);
+        UUID pessoaId = UUID.fromString(partes[1]);
+
+        Evento evento = eventoRepository.findById(eventoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Este convite não é mais válido."));
+        Pessoa convidante = pessoaRepository.findById(pessoaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Este convite não é mais válido."));
 
-        if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
-            throw new ResourceNotFoundException("Este convite não é mais válido.");
-        }
-        if (inscricao.getEvento().getSituacao() == SituacaoEvento.ENCERRADO) {
+        if (evento.getSituacao() == SituacaoEvento.ENCERRADO) {
             throw new BusinessException("EVENTO_ENCERRADO", "Este evento já aconteceu.");
         }
 
-        return inscricao;
+        return new ConviteResolvido(evento, convidante);
     }
 
     private Duration calcularTtl(Evento evento) {
@@ -83,4 +89,6 @@ public class ConviteService {
     private String chave(String token) {
         return PREFIXO + token;
     }
+
+    public record ConviteResolvido(Evento evento, Pessoa convidante) {}
 }

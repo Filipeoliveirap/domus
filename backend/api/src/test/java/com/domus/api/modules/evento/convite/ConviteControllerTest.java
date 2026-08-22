@@ -2,9 +2,6 @@ package com.domus.api.modules.evento.convite;
 
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
-import com.domus.api.modules.evento.inscricao.InscricaoEvento;
-import com.domus.api.modules.evento.inscricao.InscricaoRepository;
-import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.pessoa.Pessoa;
@@ -40,14 +37,12 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
     @Autowired IgrejaRepository igrejaRepository;
     @Autowired PessoaRepository pessoaRepository;
     @Autowired EventoRepository eventoRepository;
-    @Autowired InscricaoRepository inscricaoRepository;
     @Autowired StringRedisTemplate redisTemplate;
     @Autowired EntityManager entityManager;
 
     Igreja igreja;
     Pessoa convidante;
     Evento evento;
-    InscricaoEvento inscricaoConvidante;
 
     @BeforeEach
     void setup() {
@@ -62,19 +57,19 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
         evento = eventoRepository.save(Evento.builder().igreja(igreja).titulo("Culto de Jovens")
                 .inicioEm(LocalDateTime.now().plusDays(3)).requerInscricao(true).build());
 
-        inscricaoConvidante = inscricaoRepository.save(InscricaoEvento.builder()
-                .igreja(igreja).evento(evento).pessoa(convidante).status(StatusInscricao.CONFIRMADA).build());
-
         entityManager.flush();
 
-        redisTemplate.opsForValue().set("convite:token-teste", inscricaoConvidante.getId().toString());
+        // Convidante SEM inscrição nenhuma no evento — prova o caso real que estava quebrado:
+        // compartilhar o link não exige que quem convida já esteja inscrito.
+        redisTemplate.opsForValue().set("convite:token-teste", evento.getId() + ":" + convidante.getId());
     }
 
     @Test
-    void getConvitePublicoNaoExigeAutenticacao() throws Exception {
+    void getConvitePublicoFuncionaMesmoSemConvidanteInscrito() throws Exception {
         mockMvc.perform(get("/convites/token-teste"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Culto de Jovens")));
+                .andExpect(content().string(containsString("Culto de Jovens")))
+                .andExpect(content().string(containsString("Ana Convidante")));
     }
 
     @Test
@@ -97,7 +92,7 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
-    void entrarComoConvidadoCriaInscricaoEOcupaVaga() throws Exception {
+    void entrarComoConvidadoCriaInscricaoEOcupaVagaMesmoSemConvidanteInscrito() throws Exception {
         mockMvc.perform(post("/convites/token-teste/entrar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nome\":\"Maria de Fora\",\"telefone\":\"11999998888\"}"))

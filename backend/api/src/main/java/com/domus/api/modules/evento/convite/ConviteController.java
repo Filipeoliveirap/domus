@@ -4,8 +4,8 @@ import com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoService
 import com.domus.api.modules.evento.convite.DTOs.ConvitePublicoResponse;
 import com.domus.api.modules.evento.convite.DTOs.EntrarConviteRequest;
 import com.domus.api.modules.evento.convite.DTOs.GerarConviteResponse;
+import com.domus.api.modules.evento.convite.ConviteService.ConviteResolvido;
 import com.domus.api.modules.evento.inscricao.DTOs.ConvidadoResponse;
-import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
@@ -47,9 +47,9 @@ public class ConviteController {
 
     @GetMapping("/convites/{token}")
     public ResponseEntity<ConvitePublicoResponse> consultar(@PathVariable String token) {
-        InscricaoEvento inscricaoConvidante = conviteService.resolverInscricaoConvidante(token);
-        var evento = inscricaoConvidante.getEvento();
-        var convidante = inscricaoConvidante.getPessoa();
+        ConviteResolvido resolvido = conviteService.resolver(token);
+        var evento = resolvido.evento();
+        var convidante = resolvido.convidante();
 
         String localNome = null;
         String localEndereco = null;
@@ -87,15 +87,14 @@ public class ConviteController {
     @GetMapping("/convites/{token}/fotos/{fotoId}")
     public ResponseEntity<byte[]> foto(@PathVariable String token, @PathVariable UUID fotoId,
                                         @RequestParam(defaultValue = "DISPLAY") TamanhoFoto tamanho) {
-        InscricaoEvento inscricaoConvidante = conviteService.resolverInscricaoConvidante(token);
-        var evento = inscricaoConvidante.getEvento();
-        var convidante = inscricaoConvidante.getPessoa();
+        ConviteResolvido resolvido = conviteService.resolver(token);
+        var evento = resolvido.evento();
+        var convidante = resolvido.convidante();
         var igreja = evento.getIgreja();
 
         boolean ehFotoDoEvento = evento.getFoto() != null && evento.getFoto().getId().equals(fotoId);
         boolean ehLogoDaIgreja = igreja.getLogoFoto() != null && igreja.getLogoFoto().getId().equals(fotoId);
-        boolean ehFotoDoConvidante = convidante != null && convidante.getFoto() != null
-                && convidante.getFoto().getId().equals(fotoId);
+        boolean ehFotoDoConvidante = convidante.getFoto() != null && convidante.getFoto().getId().equals(fotoId);
 
         if (!ehFotoDoEvento && !ehLogoDaIgreja && !ehFotoDoConvidante) {
             throw new ResourceNotFoundException("Foto não encontrada.");
@@ -111,13 +110,11 @@ public class ConviteController {
     @PostMapping("/convites/{token}/entrar")
     public ResponseEntity<ConvidadoResponse> entrar(@PathVariable String token,
                                                       @Valid @RequestBody EntrarConviteRequest data) {
-        InscricaoEvento inscricaoConvidante = conviteService.resolverInscricaoConvidante(token);
-        var evento = inscricaoConvidante.getEvento();
-        UUID convidadoPorPessoaId = inscricaoConvidante.getPessoa() != null
-                ? inscricaoConvidante.getPessoa().getId() : null;
+        ConviteResolvido resolvido = conviteService.resolver(token);
+        var evento = resolvido.evento();
 
         var inscricao = inscricaoService.inscreverConvidado(
-                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), convidadoPorPessoaId);
+                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), resolvido.convidante().getId());
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responderComoConvidado(

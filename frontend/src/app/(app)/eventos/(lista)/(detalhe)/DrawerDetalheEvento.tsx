@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -26,6 +26,7 @@ import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { BotaoConfirmarPresenca } from '@/components/module/eventos/BotaoConfirmarPresenca'
 import { RespostasCamposPersonalizados } from '@/components/module/eventos/RespostasCamposPersonalizados'
 import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscreverAlguem'
+import { ModalCompartilharConvite } from '@/components/module/eventos/ModalCompartilharConvite'
 import { ModalQuemVai } from '@/components/module/eventos/ModalQuemVai'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
@@ -51,7 +52,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
 
   const { data: participantes = [] } = useParticipantes(eventoId)
   const { data: minha } = useMinhaInscricao(eventoId)
-  const [modalAberto, setModalAberto] = useState<'inscrever-alguem' | 'lista' | null>(null)
+  const [modalAberto, setModalAberto] = useState<'inscrever-alguem' | 'compartilhar' | 'lista' | null>(null)
   // Vira true no exato momento em que a auto-inscrição dá certo — usado só pra decidir se o
   // modal de campos personalizados abre sozinho na hora (ver RespostasCamposPersonalizados).
   const [acabouDeInscrever, setAcabouDeInscrever] = useState(false)
@@ -325,15 +326,26 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
               {evento.requerInscricao && !inscricaoBloqueadaPelaSituacao && (
-                <button
-                  type="button"
-                  className={styles.acaoSecundaria}
-                  onClick={() => setModalAberto('inscrever-alguem')}
-                  disabled={esgotado}
-                >
-                  <Users size={16} aria-hidden="true" />
-                  {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setModalAberto('inscrever-alguem')}
+                    disabled={esgotado}
+                  >
+                    <Users size={16} aria-hidden="true" />
+                    {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setModalAberto('compartilhar')}
+                  >
+                    <Share2 size={16} aria-hidden="true" />
+                    Compartilhar
+                  </button>
+                </>
               )}
             </div>
 
@@ -357,6 +369,13 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 eventoId={evento.id}
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
+                onClose={() => setModalAberto(null)}
+              />
+            )}
+
+            {modalAberto === 'compartilhar' && (
+              <ModalCompartilharConvite
+                eventoId={evento.id}
                 onClose={() => setModalAberto(null)}
               />
             )}

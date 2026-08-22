@@ -1,0 +1,15 @@
+.wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.seloInscrito {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; background: var(--color-success-bg, #ecfdf5); color: var(--color-success, #059669);
+  border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);
+}
+
+.seloPendencia {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; background: var(--color-warning-bg); color: var(--color-warning);
+  border: none; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+.seloPendencia:hover { filter: brightness(0.95); }

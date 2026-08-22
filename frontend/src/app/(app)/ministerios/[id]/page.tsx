@@ -13,7 +13,7 @@ import { usePedirEntrada, useAceitarPedido, useRecusarPedido } from '@/hooks/min
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
-import { ROTULO_MINISTERIO, ROTULO_MINISTERIO_PLURAL } from '@/lib/rotulosMinisterio'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
@@ -33,6 +33,7 @@ export default function MinisterioDetalhePage() {
   const pedirEntrada = usePedirEntrada(id)
   const aceitarPedido = useAceitarPedido(id)
   const recusarPedido = useRecusarPedido(id)
+  const { ministerio: rotuloMinisterio, concordar } = useRotulos()
 
   const [adicionarAberto, setAdicionarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
@@ -67,7 +68,7 @@ export default function MinisterioDetalhePage() {
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
         <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <Link href="/ministerios" className={styles.breadcrumbLink}>{ROTULO_MINISTERIO_PLURAL}</Link>
+        <Link href="/ministerios" className={styles.breadcrumbLink}>{rotuloMinisterio.plural}</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbAtual}>{ministerio.nome}</span>
       </nav>
@@ -76,7 +77,7 @@ export default function MinisterioDetalhePage() {
         <Link href="/ministerios/arquivados" className={styles.avisoArquivada}>
           <ArrowLeft size={16} />
           <Archive size={16} />
-          <span>Esta {ROTULO_MINISTERIO.toLowerCase()} está arquivada. Toque para restaurá-la na lista de arquivadas.</span>
+          <span>{concordar(rotuloMinisterio.genero, 'este')} {rotuloMinisterio.singular.toLowerCase()} está {concordar(rotuloMinisterio.genero, 'arquivado')}. Toque para restaurá-{concordar(rotuloMinisterio.genero, 'lo')} na lista de {concordar(rotuloMinisterio.genero, 'arquivados')}.</span>
         </Link>
       )}
 
@@ -135,7 +136,7 @@ export default function MinisterioDetalhePage() {
       <section className={styles.secao}>
         <h2 className={styles.subtitulo}>Membros</h2>
         {ministerio.membros.length === 0 ? (
-          <EstadoVazio titulo="Nenhum membro ainda" mensagem={`Adicione pessoas a esta ${ROTULO_MINISTERIO.toLowerCase()}.`} />
+          <EstadoVazio titulo="Nenhum membro ainda" mensagem={`Adicione pessoas a esta ${rotuloMinisterio.singular.toLowerCase()}.`} />
         ) : (
           <ul className={styles.lista}>
             {ministerio.membros.map((membro) => (

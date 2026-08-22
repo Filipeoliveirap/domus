@@ -46,6 +46,8 @@ class InscricaoServiceTest {
     UsuarioRepository usuarioRepository;
     FamiliaIgrejaService familiaIgrejaService;
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
+    com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -69,9 +71,11 @@ class InscricaoServiceTest {
                 new RegraFaixaEtaria(), new RegraVinculo(),
                 new RegraEstadoCivil(), new RegraSexo()));
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
+        campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
+        respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, elegibilidadeService,
-                familiaIgrejaService, notificacaoService);
+                familiaIgrejaService, notificacaoService, campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
     }
 
     private Igreja igreja() {
@@ -192,6 +196,44 @@ class InscricaoServiceTest {
         service.inscrever(eventoId, pessoaId, usuarioIdResponsavel, pessoaId, null, false, igrejaId);
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
+    }
+
+    @Test
+    void inscreverEmLoteNotificaPendenciaQuandoEventoTemCampoObrigatorio() {
+        UUID usuarioIdAdmin = UUID.randomUUID();
+        UUID usuarioIdInscrito = UUID.randomUUID();
+        dado(evento(10), membro(Vinculo.MEMBRO), 3);
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdInscrito).build()));
+        var campoObrigatorio = com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).obrigatorio(true)
+                .tipo(com.domus.api.modules.evento.campopersonalizado.TipoCampoPersonalizado.TEXTO_CURTO).build();
+        when(campoPersonalizadoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(java.util.List.of(campoObrigatorio));
+
+        // Admin (usuarioIdAdmin) inscreve outra pessoa (inscritoPorOuNull != null).
+        service.inscrever(eventoId, pessoaId, usuarioIdAdmin, pessoaId, null, false, igrejaId);
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.CAMPO_PERSONALIZADO_PENDENTE),
+                eq(igrejaId), eq(usuarioIdInscrito), anyString(), anyString());
+    }
+
+    @Test
+    void autoInscricaoNaoNotificaPendenciaMesmoComCampoObrigatorio() {
+        dado(evento(10), membro(Vinculo.MEMBRO), 3);
+        var campoObrigatorio = com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).obrigatorio(true)
+                .tipo(com.domus.api.modules.evento.campopersonalizado.TipoCampoPersonalizado.TEXTO_CURTO).build();
+        when(campoPersonalizadoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
+                .thenReturn(java.util.List.of(campoObrigatorio));
+
+        // Auto-inscrição: inscritoPorOuNull == null — o front já abre o modal na hora.
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        verify(notificacaoService, never()).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.CAMPO_PERSONALIZADO_PENDENTE),
+                any(), any(), anyString(), anyString());
     }
 
     @Test
@@ -641,6 +683,23 @@ class InscricaoServiceTest {
         service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
         assertThat(minha.getAcompanhantes()).isEmpty();
+    }
+
+    @Test
+    void cancelarApagaAsRespostasDeCamposPersonalizados() {
+        // A linha de inscrição é reaproveitada numa reinscrição (UNIQUE evento+pessoa) — sem
+        // apagar a resposta velha, reinscrever pareceria "já respondido" sem a pessoa ter
+        // respondido nada desta vez.
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+
+        service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(respostaCampoPersonalizadoRepository).deleteByInscricaoId(minha.getId());
     }
 
     @Test

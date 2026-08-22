@@ -41,6 +41,8 @@ function EventosConteudo() {
   const { filtros, setFiltros } = useFiltrosUrl({ tipo: '', recorteEtario: '' })
 
   const [eventoArquivando, setEventoArquivando] = useState<EventoResponse | null>(null)
+  // Selo de pendência no card foi clicado: o drawer abre já com o modal de resposta aberto.
+  const [abrirPendenciaAoMontar, setAbrirPendenciaAoMontar] = useState(false)
 
   const { data: tipos = [] } = useTiposEvento()
 
@@ -82,7 +84,12 @@ function EventosConteudo() {
   function abrirDetalhe(evento: EventoResponse) {
     router.push(`/eventos?detalhe=${evento.id}`, { scroll: false })
   }
+  function abrirDetalheComPendencia(evento: EventoResponse) {
+    setAbrirPendenciaAoMontar(true)
+    abrirDetalhe(evento)
+  }
   function fecharDetalhe() {
+    setAbrirPendenciaAoMontar(false)
     router.push('/eventos', { scroll: false })
   }
 
@@ -159,6 +166,7 @@ function EventosConteudo() {
                 key={evento.id}
                 evento={evento}
                 onAbrirDetalhe={abrirDetalhe}
+                onAbrirPendencia={abrirDetalheComPendencia}
                 onArquivar={setEventoArquivando}
               />
             ))}
@@ -188,7 +196,11 @@ function EventosConteudo() {
       )}
 
       {detalheId && (
-        <DrawerDetalheEvento eventoId={detalheId} onClose={fecharDetalhe} />
+        <DrawerDetalheEvento
+          eventoId={detalheId}
+          onClose={fecharDetalhe}
+          abrirPendenciaAoMontar={abrirPendenciaAoMontar}
+        />
       )}
 
       {eventoArquivando && (

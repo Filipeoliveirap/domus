@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import { SkeletonIgrejaConfig } from './SkeletonIgrejaConfig'
+import { SecaoNomenclatura } from './SecaoNomenclatura'
 import styles from '../configuracoes.module.css'
 
 const schema = z.object({
@@ -298,6 +299,8 @@ export default function DadosDaIgrejaPage() {
           </div>
         </form>
       </div>
+
+      <SecaoNomenclatura rotulosAtuais={igreja.rotulos} />
 
       <div className={styles.cardsRodape}>
         <section className={styles.cardRodape}>

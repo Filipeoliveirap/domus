@@ -5,6 +5,8 @@ import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
+import com.domus.api.modules.igreja.DTO.RotulosDTO;
+import com.domus.api.modules.igreja.DTO.RotulosRequest;
 import com.domus.api.shared.security.AuthCookieFactory;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import com.domus.api.shared.web.ClienteIpResolver;
@@ -43,7 +45,7 @@ public class IgrejaController {
                         response.igrejaId(), response.igrejaNome(), null,
                         null, null, null, java.util.List.of(),
                         termoAceiteService.precisaAceitar(response.id()),
-                        termoAceiteService.dataUltimoAceite(response.id())));
+                        termoAceiteService.dataUltimoAceite(response.id()), null));
     }
 
     // GET /igrejas/{id} foi removido: vazava dados de outra igreja sem checar tenant. Use /igrejas/minha (tenant vem do JWT).
@@ -58,5 +60,11 @@ public class IgrejaController {
             @RequestBody @Valid AtualizarIgrejaRequest data) {
         return ResponseEntity.ok(igrejaService.atualizar(
                 usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(), data));
+    }
+
+    @PutMapping("/minha/rotulos")
+    public ResponseEntity<RotulosDTO> atualizarRotulos(
+            @RequestBody @Valid RotulosRequest data) {
+        return ResponseEntity.ok(igrejaService.atualizarRotulos(usuarioAutenticado.getIgrejaId(), data));
     }
 }

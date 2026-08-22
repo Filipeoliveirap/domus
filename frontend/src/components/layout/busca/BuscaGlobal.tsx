@@ -4,24 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Search, X, Users, Calendar, UserCog, Wallet, Tag, Loader2, Home, UserPlus, Network } from 'lucide-react'
 import { useBuscaGlobal, type ResultadoBusca } from '@/hooks/busca/useBuscaGlobal'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './BuscaGlobal.module.css'
-
-const TIPO_CONFIG: Record<ResultadoBusca['tipo'], {
-  label: string
-  icon: typeof Users
-  rota: (r: ResultadoBusca) => string
-}> = {
-  PESSOA:       { label: 'Pessoa',        icon: Users,    rota: (r) => `/pessoas?q=${encodeURIComponent(r.titulo)}` },
-  EVENTO:       { label: 'Eventos',       icon: Calendar, rota: (r) => `/eventos?q=${encodeURIComponent(r.titulo)}` },
-  USUARIO:      { label: 'Usuários',      icon: UserCog,  rota: (r) => `/usuarios?q=${encodeURIComponent(r.titulo)}` },
-  MOVIMENTACAO: { label: 'Movimentações', icon: Wallet,   rota: (r) => `/financeiro/movimentacoes?q=${encodeURIComponent(r.titulo)}` },
-  CATEGORIA:    { label: 'Categorias',    icon: Tag,      rota: (r) => `/financeiro/categorias?q=${encodeURIComponent(r.titulo)}` },
-  CELULA:       { label: 'Células',       icon: Home,     rota: (r) => `/celulas?q=${encodeURIComponent(r.titulo)}` },
-  VISITANTE:    { label: 'Visitantes',    icon: UserPlus, rota: (r) => r.celulaId
-                    ? `/celulas/${r.celulaId}?visitante=${r.id}`
-                    : `/pessoas/visitantes?q=${encodeURIComponent(r.titulo)}` },
-  MINISTERIO:   { label: 'Redes',         icon: Network,  rota: (r) => `/ministerios?q=${encodeURIComponent(r.titulo)}` },
-}
 
 const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['PESSOA', 'EVENTO', 'VISITANTE', 'CELULA', 'MINISTERIO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
 
@@ -31,6 +15,24 @@ export function BuscaGlobal() {
   const router = useRouter()
   const pathname = usePathname()
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const { ministerio, celula } = useRotulos()
+
+  const TIPO_CONFIG: Record<ResultadoBusca['tipo'], {
+    label: string
+    icon: typeof Users
+    rota: (r: ResultadoBusca) => string
+  }> = {
+    PESSOA:       { label: 'Pessoa',        icon: Users,    rota: (r) => `/pessoas?q=${encodeURIComponent(r.titulo)}` },
+    EVENTO:       { label: 'Eventos',       icon: Calendar, rota: (r) => `/eventos?q=${encodeURIComponent(r.titulo)}` },
+    USUARIO:      { label: 'Usuários',      icon: UserCog,  rota: (r) => `/usuarios?q=${encodeURIComponent(r.titulo)}` },
+    MOVIMENTACAO: { label: 'Movimentações', icon: Wallet,   rota: (r) => `/financeiro/movimentacoes?q=${encodeURIComponent(r.titulo)}` },
+    CATEGORIA:    { label: 'Categorias',    icon: Tag,      rota: (r) => `/financeiro/categorias?q=${encodeURIComponent(r.titulo)}` },
+    CELULA:       { label: celula.plural,       icon: Home,     rota: (r) => `/celulas?q=${encodeURIComponent(r.titulo)}` },
+    VISITANTE:    { label: 'Visitantes',    icon: UserPlus, rota: (r) => r.celulaId
+                      ? `/celulas/${r.celulaId}?visitante=${r.id}`
+                      : `/pessoas/visitantes?q=${encodeURIComponent(r.titulo)}` },
+    MINISTERIO:   { label: ministerio.plural,   icon: Network,  rota: (r) => `/ministerios?q=${encodeURIComponent(r.titulo)}` },
+  }
 
   const { data: resultados, isFetching } = useBuscaGlobal(termo)
 

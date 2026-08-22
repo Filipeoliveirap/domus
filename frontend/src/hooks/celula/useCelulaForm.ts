@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '@/hooks/forms/useAppForm'
 import { z } from 'zod'
 import { celulaService } from '@/services/celula.service'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { formatarHoraDigitada } from '@/lib/masks'
 import type { CelulaRequest, CelulaResponse } from '@/types/celula.type'
 import type { ApiError } from '@/types/api.types'
@@ -36,6 +37,7 @@ export function useCelulaForm({ celulaId, celulaInicial }: UseCelulaFormParams =
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
+  const { celula } = useRotulos()
   const ehEdicao = !!celulaId
 
   const form = useAppForm<CelulaFormInput, CelulaFormData>({
@@ -69,11 +71,13 @@ export function useCelulaForm({ celulaId, celulaInicial }: UseCelulaFormParams =
       if (ehEdicao) {
         await celulaService.atualizar(celulaId!, payload)
         invalidarCache(queryClient, 'celula')
-        notificar.sucesso('Célula atualizada com sucesso!')
+        // Particípio fixo em feminino de propósito — mesma limitação conhecida e aceita
+        // do toast de Ministério (v1, YAGNI).
+        notificar.sucesso(`${celula.singular} atualizada com sucesso!`)
       } else {
         await celulaService.criar(payload)
         invalidarCache(queryClient, 'celula')
-        notificar.sucesso('Célula criada com sucesso!')
+        notificar.sucesso(`${celula.singular} criada com sucesso!`)
       }
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {

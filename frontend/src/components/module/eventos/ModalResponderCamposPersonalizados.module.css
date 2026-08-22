@@ -1,0 +1,30 @@
+.modalLargo { max-width: 480px; width: 100%; }
+.corpoScroll { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.erroCampo { font-size: var(--font-size-xs); color: var(--color-danger); }
+.comErro { border-color: var(--color-danger) !important; }
+.label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); display: block; margin-bottom: 4px; }
+.asterisco { color: var(--color-danger); }
+
+.campo select {
+  padding: 8px; border-radius: var(--radius-md); border: 1px solid var(--color-border-input);
+  font-size: var(--font-size-sm); background: var(--color-bg-white); width: 100%;
+}
+
+.checkboxLinha { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-sm); }
+.opcoesMultiplas { display: flex; flex-direction: column; gap: 6px; }
+
+.segmentado { display: flex; gap: 6px; }
+.segmentoBtn {
+  flex: 1; padding: 8px; border-radius: var(--radius-md); border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white); font-size: var(--font-size-sm); cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.segmentoAtivo {
+  background: var(--color-primary); border-color: var(--color-primary); color: var(--color-bg-white);
+}
+
+.erro { font-size: var(--font-size-sm); color: var(--color-danger); margin: 0; }
+
+.segmentado.comErro .segmentoBtn { border-color: var(--color-danger); }

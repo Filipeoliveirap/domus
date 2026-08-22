@@ -245,22 +245,24 @@ eventos (template) — cada campo pertence a um evento só.
 
 ---
 
-## 8. Rótulo self-service por igreja
+## 8. ~~Rótulo self-service por igreja~~ RESOLVIDO (2026-08-21)
 
-Já era item conhecido no backlog antigo (`rotulo-ministerio-self-service-fase5` na memória,
-`Rótulo do módulo "Ministério" deveria ser self-service` no `BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`)
-— o autor não lembrou dele no brainstorm de 2026-08-20, mas segue essencial: cada igreja
-cliente vai chamar as coisas diferente.
+Cada igreja pode renomear "Ministério", "Congregação" e "Célula" (singular, plural e
+gênero gramatical) numa nova seção "Nomenclatura" em `/configuracoes/igreja` — troca
+reflete em toda a aplicação sem reload, inclusive no texto de notificação de Ministério
+gerado no backend. Trio nome+gênero vive em 9 colunas nuláveis em `igreja` (`NULL` = usa
+o padrão do sistema: Rede/Unidade/Célula); endpoint dedicado `PUT /igrejas/minha/rotulos`
+valida que o trio vem completo ou totalmente vazio (nunca parcial). Front consome via
+hook central `useRotulos()` (lê de `useAuthStore`, alimentado por `/auth/me`) e um helper
+`concordar()` que resolve artigo/particípio/preposição conforme o gênero escolhido —
+necessário porque um rótulo customizado pra masculino (ex.: "PGM") quebrava frases fixas
+em feminino ("Nenhuma PGM arquivada", "à PGM") espalhadas por telas de célula, ministério,
+congregação, pessoas, usuários e exclusão de igreja. Seletor de gênero na tela de
+configuração é dois botões "O"/"A" com preview ao vivo mostrando a concordância na
+prática (ex.: "Novo Departamento"), não um dropdown com jargão gramatical — trocado depois
+de o próprio autor não entender o dropdown original no teste manual.
 
-- **Ministério** → hoje hardcoded "Rede" no front. Vira config por igreja (`igreja.rotulo_ministerio`
-  + gênero, pro texto concordar certo — "Nova Rede" vs. "Novo Departamento").
-- **Congregação** → hoje hardcoded "Unidade". Mesmo padrão, mesma tabela de config,
-  provavelmente a mesma tela de onboarding pergunta os dois de uma vez ("como sua igreja
-  chama isso: Ministério/Departamento/Rede? E isso: Congregação/Unidade/Campus?").
-- **Célula** também pode entrar no mesmo mecanismo (a spec de células já cogitava isso).
-
-Desenhar a config genérica UMA vez (nome do módulo + gênero, por igreja) e aplicar nos três
-lugares, em vez de três mecanismos separados.
+`rotulosMinisterio.ts` (mecanismo antigo, só Ministério, sem gênero) foi deletado.
 
 ---
 

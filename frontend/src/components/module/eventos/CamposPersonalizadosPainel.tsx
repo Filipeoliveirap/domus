@@ -28,14 +28,14 @@ function limparOpcoes(opcoes: string[] | null): string[] {
 }
 
 function campoVazio(ordem: number): CampoPersonalizadoRequest {
-  return { id: null, label: '', placeholder: null, tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem }
+  return { id: null, label: '', placeholder: null, tipo: 'TEXTO_CURTO', opcoes: null, obrigatorio: false, visivelAoPublico: true, ordem, mapeamento: null }
 }
 
 function paraRequest(c: CampoPersonalizadoResponse): CampoPersonalizadoRequest {
   return {
     id: c.id, label: c.label, placeholder: c.placeholder, tipo: c.tipo,
     opcoes: c.opcoes.length ? c.opcoes : null, obrigatorio: c.obrigatorio,
-    visivelAoPublico: c.visivelAoPublico, ordem: c.ordem,
+    visivelAoPublico: c.visivelAoPublico, ordem: c.ordem, mapeamento: c.mapeamento,
   }
 }
 

@@ -41,7 +41,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/auth/reset-password",
             "/igrejas/registrar",
             // Código de vínculo não expira: tentativa de adivinhação merece limite estrito.
-            "/igrejas-vinculadas/entrar"
+            "/igrejas-vinculadas/entrar",
+            "/convites/"
     );
 
     private final StringRedisTemplate redisTemplate;

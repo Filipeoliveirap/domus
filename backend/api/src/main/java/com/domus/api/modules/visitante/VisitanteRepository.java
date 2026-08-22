@@ -38,6 +38,14 @@ public interface VisitanteRepository extends JpaRepository<Visitante, UUID> {
                                     @Param("acompanhamento") Boolean acompanhamentoFeito,
                                     Pageable pageable);
 
+    @Query("""
+        SELECT v FROM Visitante v
+        WHERE v.igreja.id = :igrejaId
+          AND (CAST(:q AS string) IS NULL OR LOWER(v.nome) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+        ORDER BY v.nome ASC
+        """)
+    java.util.List<Visitante> buscaLeve(@Param("igrejaId") UUID igrejaId, @Param("q") String q, Pageable pageable);
+
     @Query("SELECT COUNT(cm) > 0 FROM CelulaMembro cm WHERE cm.visitante.id = :visitanteId")
     boolean existeCelulaMembroAtivo(@Param("visitanteId") UUID visitanteId);
 

@@ -91,6 +91,12 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    void fotoComIdQueNaoPertenceAoConviteDevolve404() throws Exception {
+        mockMvc.perform(get("/convites/token-teste/fotos/" + java.util.UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void entrarComoConvidadoCriaInscricaoEOcupaVaga() throws Exception {
         mockMvc.perform(post("/convites/token-teste/entrar")
                         .contentType(MediaType.APPLICATION_JSON)

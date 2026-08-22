@@ -9,15 +9,21 @@ import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoService;
 import com.domus.api.modules.evento.local.LocalEvento;
 import com.domus.api.modules.evento.local.DTOs.LocalEventoResponse;
+import com.domus.api.modules.foto.FotoService;
+import com.domus.api.modules.foto.TamanhoFoto;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import com.domus.api.shared.security.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,6 +32,7 @@ public class ConviteController {
     private final ConviteService conviteService;
     private final InscricaoService inscricaoService;
     private final CampoPersonalizadoService campoPersonalizadoService;
+    private final FotoService fotoService;
     private final UsuarioAutenticado usuarioAutenticado;
 
     @Value("${app.frontend-url}")
@@ -71,6 +78,34 @@ public class ConviteController {
                 convidante != null && convidante.getFoto() != null ? convidante.getFoto().getId() : null,
                 vagasRestantes, evento.getPreco(), campos
         ));
+    }
+
+    /** Exceção pontual e controlada à regra "foto nunca é URL pública": só serve exatamente
+     *  as 3 fotos que {@link #consultar} já expõe pra este token (banner do evento, logo da
+     *  igreja, foto de quem convidou) — qualquer outro id, mesmo válido no sistema, é 404
+     *  aqui. A posse do token não vira permissão geral de ver fotos. */
+    @GetMapping("/convites/{token}/fotos/{fotoId}")
+    public ResponseEntity<byte[]> foto(@PathVariable String token, @PathVariable UUID fotoId,
+                                        @RequestParam(defaultValue = "DISPLAY") TamanhoFoto tamanho) {
+        InscricaoEvento inscricaoConvidante = conviteService.resolverInscricaoConvidante(token);
+        var evento = inscricaoConvidante.getEvento();
+        var convidante = inscricaoConvidante.getPessoa();
+        var igreja = evento.getIgreja();
+
+        boolean ehFotoDoEvento = evento.getFoto() != null && evento.getFoto().getId().equals(fotoId);
+        boolean ehLogoDaIgreja = igreja.getLogoFoto() != null && igreja.getLogoFoto().getId().equals(fotoId);
+        boolean ehFotoDoConvidante = convidante != null && convidante.getFoto() != null
+                && convidante.getFoto().getId().equals(fotoId);
+
+        if (!ehFotoDoEvento && !ehLogoDaIgreja && !ehFotoDoConvidante) {
+            throw new ResourceNotFoundException("Foto não encontrada.");
+        }
+
+        byte[] bytes = fotoService.ler(fotoId, tamanho, igreja.getId());
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
+                .body(bytes);
     }
 
     @PostMapping("/convites/{token}/entrar")

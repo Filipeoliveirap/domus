@@ -1,0 +1,85 @@
+.corpo {
+  padding: 8px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aviso {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.estado {
+  padding: 12px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.linkBox {
+  display: flex;
+  gap: 8px;
+}
+
+.linkInput {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  background: var(--color-bg-page);
+}
+
+.btnCopiar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+  transition: background-color var(--transition-fast);
+}
+
+.btnCopiar:hover {
+  background: var(--color-bg-page);
+}
+
+.btnWhatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  background: #25d366;
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.btnWhatsapp:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 767px) {
+  .corpo {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .linkBox {
+    flex-direction: column;
+  }
+
+  .btnCopiar {
+    justify-content: center;
+  }
+}

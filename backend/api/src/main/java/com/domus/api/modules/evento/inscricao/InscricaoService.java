@@ -252,6 +252,45 @@ public class InscricaoService {
         }
     }
 
+    /** Convidado sem cadastro ganha inscrição própria (não acompanhante aninhado) — sem
+     *  elegibilidade checada (não existe Pessoa pra avaliar), mas ainda bloqueado em evento
+     *  exclusivo pra membros. Usado tanto pelo modal presencial (convidadoPorPessoaId = quem
+     *  está logado) quanto pelo convite público (convidadoPorPessoaId = dono do token). */
+    @Transactional
+    public InscricaoEvento inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
+                                               String telefone, UUID convidadoPorPessoaId) {
+        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
+        Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        validarOrganizaInscricao(evento, "Este evento não permite convidados.");
+        if (evento.isExclusivoMembros()) {
+            throw new BusinessException("EXCLUSIVO_MEMBROS",
+                    "Este evento é exclusivo para membros — não é possível levar convidados.");
+        }
+        validarEventoAberto(evento);
+        validarVaga(evento, 1);
+
+        Pessoa convidadoPor = convidadoPorPessoaId == null ? null
+                : membroRepository.findByIdAndIgrejaId(convidadoPorPessoaId, igrejaId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
+
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .igreja(evento.getIgreja())
+                .evento(evento)
+                .pessoa(null)
+                .nomeConvidado(TextoUtil.capitalizar(nome))
+                .telefoneConvidado(telefone)
+                .convidadoPor(convidadoPor)
+                .status(StatusInscricao.CONFIRMADA)
+                .build();
+
+        InscricaoEvento salva = inscricaoRepository.save(inscricao);
+        log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, igreja_id={}",
+                eventoId, convidadoPorPessoaId, igrejaId);
+        return salva;
+    }
+
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
     @Transactional
     public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,

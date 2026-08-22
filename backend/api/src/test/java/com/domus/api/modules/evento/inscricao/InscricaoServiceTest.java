@@ -1273,4 +1273,102 @@ class InscricaoServiceTest {
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
     }
+
+    @Test
+    void inscreverConvidadoCriaInscricaoComPessoaNulaENomeConvidadoPreenchido() {
+        UUID convidadoPorId = UUID.randomUUID();
+        Pessoa convidante = Pessoa.builder().id(convidadoPorId).build();
+        Evento evento = evento(null); // sem limite de vagas
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+        when(membroRepository.findByIdAndIgrejaId(convidadoPorId, igrejaId)).thenReturn(Optional.of(convidante));
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora",
+                "11999998888", convidadoPorId);
+
+        assertThat(salva.getPessoa()).isNull();
+        assertThat(salva.getNomeConvidado()).isEqualTo("Maria de Fora");
+        assertThat(salva.getTelefoneConvidado()).isEqualTo("11999998888");
+        assertThat(salva.isConvidadoSemCadastro()).isTrue();
+        verify(inscricaoRepository).save(any());
+    }
+
+    @Test
+    void inscreverConvidadoRecusaQuandoVagasEsgotadas() {
+        Evento evento = evento(1);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("esgotadas");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void inscreverConvidadoRecusaQuandoEventoExclusivoMembros() {
+        Evento evento = evento(null);
+        evento.setExclusivoMembros(true);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("exclusivo");
+
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void inscreverConvidadoNaoChecaElegibilidadeMesmoComRestricaoDeIdade() {
+        Evento eventoComRestricao = Evento.builder()
+                .id(eventoId).igreja(igreja())
+                .titulo("Evento Kids").inicioEm(LocalDateTime.now().plusDays(10))
+                .requerInscricao(true).idadeMin(0).idadeMax(12)
+                .build();
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(eventoComRestricao));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Não lança NaoElegivelException mesmo sem nenhum dado de idade — prova que
+        // inscreverConvidado nunca chama ElegibilidadeService.
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null);
+
+        assertThat(salva.isConvidadoSemCadastro()).isTrue();
+    }
+
+    @Test
+    void inscreverConvidadoGravaConvidadoPorPessoaIdQuandoInformado() {
+        UUID convidadoPorId = UUID.randomUUID();
+        Pessoa convidante = Pessoa.builder().id(convidadoPorId).build();
+        Evento evento = evento(null);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+        when(membroRepository.findByIdAndIgrejaId(convidadoPorId, igrejaId)).thenReturn(Optional.of(convidante));
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, convidadoPorId);
+
+        assertThat(salva.getConvidadoPor()).isEqualTo(convidante);
+    }
+
+    @Test
+    void inscreverConvidadoAceitaConvidadoPorNulo() {
+        Evento evento = evento(null);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null);
+
+        assertThat(salva.getConvidadoPor()).isNull();
+        verify(membroRepository, never()).findByIdAndIgrejaId(any(), any());
+    }
 }

@@ -7,6 +7,38 @@
 .colunaEditor { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .introducao { font-size: var(--font-size-sm); color: var(--color-text-muted); margin: 0; }
 
+.avisoConvidados {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.botaoTemplate {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-fast);
+}
+.botaoTemplate:hover { background: var(--color-primary-light); }
+
+.seloMapeado {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: none;
+}
+
 .colunaPreview {
   display: flex; flex-direction: column; gap: 12px; min-width: 0;
   background: var(--color-bg-subtle); border-radius: var(--radius-lg); padding: 16px;
@@ -31,6 +63,11 @@
 .previewCampo input[type="text"], .previewCampo input:not([type]), .previewCampo select {
   padding: 8px; border-radius: var(--radius-md); border: 1px solid var(--color-border-input);
   font-size: var(--font-size-sm); background: var(--color-bg-white);
+}
+.previewCampo input:disabled {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 .previewCheckboxLinha { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-sm); }
 .previewOpcoesMultiplas { display: flex; flex-direction: column; gap: 6px; }

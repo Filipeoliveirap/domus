@@ -36,7 +36,13 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
     retry: false,
   })
 
-  const [etapa, setEtapa] = useState<Etapa>('landing')
+  // window.location (não useSearchParams) — mesmo motivo do AuthGuard: evita forçar a rota
+  // inteira a virar dinâmica só por causa de um parâmetro lido uma vez no mount. Volta do
+  // login com `?entrar=1` já cai direto no formulário, sem precisar clicar "Inscrever-se"
+  // de novo (senão a pessoa perdia a intenção original ao sair pra logar e voltar).
+  const [etapa, setEtapa] = useState<Etapa>(() => (
+    typeof window !== 'undefined' && window.location.search.includes('entrar=1') ? 'formulario' : 'landing'
+  ))
 
   if (isLoading) {
     return <div className={styles.pagina}><p className={styles.estado}>Carregando…</p></div>
@@ -151,7 +157,7 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
 
         {etapa === 'escolha' && (
           <div className={styles.escolha}>
-            <Link href={`/login?next=${encodeURIComponent(`/convite/${token}`)}`} className={styles.btnLogin}>
+            <Link href={`/login?next=${encodeURIComponent(`/convite/${token}?entrar=1`)}`} className={styles.btnLogin}>
               Já tenho conta — Fazer login
             </Link>
             <button type="button" className={styles.btnSemConta} onClick={() => setEtapa('formulario')}>

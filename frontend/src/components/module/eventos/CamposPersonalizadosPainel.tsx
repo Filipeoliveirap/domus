@@ -37,29 +37,37 @@ function paraRequest(c: CampoPersonalizadoResponse): CampoPersonalizadoRequest {
 }
 
 export interface CamposPersonalizadosHandle {
-  salvar: () => Promise<void>
+  /** @param eventoId sobrescreve o id usado pra salvar — necessário quando o painel é
+   *  montado ANTES do evento existir (evento novo): quem chama só sabe o id definitivo
+   *  depois de criar o evento, então passa aqui na hora. Omitido = usa o id do próprio
+   *  painel (evento já existente, edição). */
+  salvar: (eventoId?: string) => Promise<void>
 }
 
-export const CamposPersonalizadosPainel = forwardRef<CamposPersonalizadosHandle, { eventoId: string }>(
+export const CamposPersonalizadosPainel = forwardRef<CamposPersonalizadosHandle, { eventoId?: string }>(
   function CamposPersonalizadosPainel({ eventoId }, ref) {
-    const { data, isLoading } = useCamposPersonalizados(eventoId)
+    // Evento novo (sem id ainda): nada pra buscar — começa vazio, e o painel funciona
+    // inteiramente em memória até `salvar(idDefinitivo)` ser chamado depois de criado.
+    const { data, isLoading } = useCamposPersonalizados(eventoId ?? '')
 
-    if (isLoading || !data) return null
-    return <PainelEditor key={eventoId} ref={ref} eventoId={eventoId} dadosIniciais={data} />
+    if (eventoId && (isLoading || !data)) return null
+    return <PainelEditor key={eventoId ?? 'novo'} ref={ref} eventoId={eventoId} dadosIniciais={eventoId ? data! : []} />
   },
 )
 
 const PainelEditor = forwardRef<
   CamposPersonalizadosHandle,
-  { eventoId: string; dadosIniciais: CampoPersonalizadoResponse[] }
+  { eventoId?: string; dadosIniciais: CampoPersonalizadoResponse[] }
 >(function PainelEditor({ eventoId, dadosIniciais }, ref) {
   const { salvar } = useSalvarCamposPersonalizados()
   const [campos, setCampos] = useState<CampoPersonalizadoRequest[]>(() => dadosIniciais.map(paraRequest))
 
   useImperativeHandle(ref, () => ({
-    salvar: async () => {
+    salvar: async (eventoIdParam?: string) => {
+      const idParaSalvar = eventoIdParam ?? eventoId
+      if (!idParaSalvar) return
       const camposLimpos = campos.map((c) => ({ ...c, opcoes: c.opcoes ? limparOpcoes(c.opcoes) : null }))
-      await salvar(eventoId, camposLimpos)
+      await salvar(idParaSalvar, camposLimpos)
     },
   }), [campos, eventoId, salvar])
 
@@ -212,8 +220,8 @@ const PainelEditor = forwardRef<
         </button>
 
         <p className={styles.dicaSalvar}>
-          As perguntas são salvas junto com o resto do evento, no botão &ldquo;Salvar
-          alterações&rdquo; no final da página.
+          As perguntas são salvas junto com o resto do evento, no botão de salvar no final
+          da página.
         </p>
       </div>
 

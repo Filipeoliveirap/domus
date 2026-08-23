@@ -908,6 +908,33 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void cancelarInscricoesEmEventosAbertosPorPessoaContinuaProcessandoAposFalhaDeEstornoDeUmaInscricao() {
+        Evento agendado1 = evento(10);
+        Evento agendado2 = evento(10);
+        InscricaoEvento comCobrancaPaga = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(agendado1)
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento semCobranca = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(agendado2)
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByPessoaIdAndStatus(pessoaId, StatusInscricao.CONFIRMADA))
+                .thenReturn(java.util.List.of(comCobrancaPaga, semCobranca));
+        when(cobrancaEventoRepository.findByInscricaoId(comCobrancaPaga.getId()))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-falha-3")));
+        when(cobrancaEventoRepository.findByInscricaoId(semCobranca.getId()))
+                .thenReturn(List.of());
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha-3"));
+
+        service.cancelarInscricoesEmEventosAbertosPorPessoa(pessoaId);
+
+        assertThat(comCobrancaPaga.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        assertThat(semCobranca.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
     void listaTrazTotalDePessoasEVagasRestantes() {
         Evento e = evento(10);
         when(eventoRepository.findByIdAndIgrejaIdIncluindoArquivados(eventoId, igrejaId)).thenReturn(Optional.of(e));
@@ -1100,6 +1127,36 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void removerInscritosNaoElegiveisContinuaProcessandoAposFalhaDeEstornoDeUmaPessoa() {
+        // Decisão do autor (fix round 1): falha de estorno de UMA pessoa no lote não pode
+        // travar as demais — cada item é processado isoladamente.
+        Evento e = evento(10);
+        e.setExclusivoMembros(true);
+        InscricaoEvento congreganteComCobrancaPaga = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento congreganteSemCobranca = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.listarPorEvento(eventoId))
+                .thenReturn(java.util.List.of(congreganteComCobrancaPaga, congreganteSemCobranca));
+        when(cobrancaEventoRepository.findByInscricaoId(congreganteComCobrancaPaga.getId()))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-falha")));
+        when(cobrancaEventoRepository.findByInscricaoId(congreganteSemCobranca.getId()))
+                .thenReturn(List.of());
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+
+        int removidos = service.removerInscritosNaoElegiveis(eventoId);
+
+        assertThat(removidos).isEqualTo(1);
+        assertThat(congreganteComCobrancaPaga.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        assertThat(congreganteSemCobranca.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
     void cancelarInscricoesEmEventosExclusivosCancelaSoOsExclusivosDaPessoa() {
         // A pessoa deixou de ser MEMBRO: deve perder a vaga no evento exclusivo, mas
         // manter a inscrição num evento comum (que a query já filtra fora).
@@ -1136,6 +1193,38 @@ class InscricaoServiceTest {
 
         assertThat(canceladas).isEqualTo(0);
         verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelarInscricoesEmEventosExclusivosContinuaProcessandoAposFalhaDeEstornoDeUmaInscricao() {
+        Evento exclusivo1 = evento(10);
+        exclusivo1.setExclusivoMembros(true);
+        Evento exclusivo2 = evento(10);
+        exclusivo2.setExclusivoMembros(true);
+        InscricaoEvento comCobrancaPaga = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(exclusivo1)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento semCobranca = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(exclusivo2)
+                .pessoa(membro(Vinculo.CONGREGANTE))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(
+                pessoaId, StatusInscricao.CONFIRMADA))
+                .thenReturn(java.util.List.of(comCobrancaPaga, semCobranca));
+        when(cobrancaEventoRepository.findByInscricaoId(comCobrancaPaga.getId()))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-falha-2")));
+        when(cobrancaEventoRepository.findByInscricaoId(semCobranca.getId()))
+                .thenReturn(List.of());
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha-2"));
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        int canceladas = service.cancelarInscricoesEmEventosExclusivos(pessoaId);
+
+        assertThat(canceladas).isEqualTo(1);
+        assertThat(comCobrancaPaga.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        assertThat(semCobranca.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
     }
 
     @Test

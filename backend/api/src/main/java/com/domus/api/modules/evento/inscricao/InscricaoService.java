@@ -540,7 +540,13 @@ public class InscricaoService {
         List<InscricaoEvento> confirmadas = inscricaoRepository.findByPessoaIdAndStatus(pessoaId, StatusInscricao.CONFIRMADA);
         for (InscricaoEvento inscricao : confirmadas) {
             if (inscricao.getEvento().getSituacao() == SituacaoEvento.AGENDADO) {
-                cancelarInterno(inscricao);
+                try {
+                    cancelarInterno(inscricao);
+                } catch (BusinessException e) {
+                    if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                    log.error("Falha ao estornar cobrança da inscrição {} durante cancelamento em lote "
+                            + "(pessoa arquivada) — pessoa mantida, requer retry manual", inscricao.getId(), e);
+                }
             }
         }
     }
@@ -558,8 +564,14 @@ public class InscricaoService {
 
             Elegibilidade elegibilidade = elegibilidadeService.avaliar(inscricao.getEvento(), pessoa);
             if (!elegibilidade.apto()) {
-                cancelarInterno(inscricao);
-                removidos++;
+                try {
+                    cancelarInterno(inscricao);
+                    removidos++;
+                } catch (BusinessException e) {
+                    if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                    log.error("Falha ao estornar cobrança da inscrição {} durante remoção em lote "
+                            + "de não-elegíveis — pessoa mantida, requer retry manual", inscricao.getId(), e);
+                }
             }
         }
 
@@ -603,15 +615,23 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository
                 .findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(pessoaId, StatusInscricao.CONFIRMADA);
 
+        int canceladas = 0;
         for (InscricaoEvento inscricao : inscricoes) {
-            cancelarInterno(inscricao);
+            try {
+                cancelarInterno(inscricao);
+                canceladas++;
+            } catch (BusinessException e) {
+                if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                log.error("Falha ao estornar cobrança da inscrição {} durante cancelamento em lote "
+                        + "(perda de vínculo MEMBRO) — pessoa mantida, requer retry manual", inscricao.getId(), e);
+            }
         }
 
-        if (!inscricoes.isEmpty()) {
+        if (canceladas > 0) {
             log.info("Inscrições canceladas por perda de vínculo MEMBRO. pessoa_id={}, canceladas={}",
-                    pessoaId, inscricoes.size());
+                    pessoaId, canceladas);
         }
-        return inscricoes.size();
+        return canceladas;
     }
 
     /** {@code busca} e a paginação afetam só {@code inscritos} — total/vagas restantes contam TODAS as confirmadas. */

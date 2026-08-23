@@ -193,6 +193,11 @@ export const Endpoints = {
     DESCONECTAR: '/pagamentos/conta',
   },
 
+  cobrancas: {
+    BUSCAR_POR_TOKEN: (token: string) => `/cobrancas/${token}`,
+    PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
+  },
+
   celulas: {
     LISTAR: '/celulas',
     CRIAR: '/celulas',

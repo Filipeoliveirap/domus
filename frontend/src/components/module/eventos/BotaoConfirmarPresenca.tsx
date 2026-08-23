@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, XCircle, ThumbsUp, AlertTriangle } from 'lucide-react'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
-import { ModalConfirmarPagamento } from './ModalConfirmarPagamento'
+import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { EscolhaPagamentoPorPessoa } from './EscolhaPagamentoPorPessoa'
+import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { useAuthStore } from '@/store/authStore'
@@ -32,7 +35,12 @@ export function BotaoConfirmarPresenca({
   eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco, onInscritoComSucesso,
 }: Props) {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
-  const [mostrarModalPagamento, setMostrarModalPagamento] = useState(false)
+  // Fluxo de evento pago (Task 14): 'escolha' -> card "Divisão de pagamento" (aqui só o
+  // titular, travado em "paga agora" — este botão não coleta acompanhantes); 'checkout'
+  // -> Payment Brick embutido, depois de a inscrição já existir e ter uma cobrança
+  // pendente pra pagar.
+  const [etapaPagamento, setEtapaPagamento] = useState<'sem-conta' | 'escolha' | 'checkout' | null>(null)
+  const [cobrancaId, setCobrancaId] = useState<string | null>(null)
   // 422 contornável: gestor quebrando recorte de elegibilidade
   const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
 
@@ -41,6 +49,8 @@ export function BotaoConfirmarPresenca({
   const ehGestor = podeGerenciarInscricoes(role)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
+  // Status da conta MP da própria igreja (Task 5) — só importa quando o evento é pago.
+  const { data: contaPagamento } = useContaPagamento()
   // Modo "Eu vou": sem toast, feedback é o próprio botão
   const inscrever = useInscrever(eventoId, !requerInscricao, {
     onContornavel: ehGestor ? (imps) => setImpedimentosParaConfirmar(imps) : undefined,
@@ -206,9 +216,15 @@ export function BotaoConfirmarPresenca({
         type="button"
         className={styles.botao}
         disabled={inscrever.isPending || !!impedimento}
-        onClick={() => (preco
-          ? setMostrarModalPagamento(true)
-          : inscrever.mutate({}, { onSuccess: onInscritoComSucesso }))}
+        onClick={() => {
+          if (!preco) {
+            inscrever.mutate({}, { onSuccess: onInscritoComSucesso })
+            return
+          }
+          // Sem conta MP conectada, o Brick nem carregaria (não há pra quem receber) —
+          // aviso com atalho em vez de abrir um checkout que ia falhar na hora.
+          setEtapaPagamento(contaPagamento?.conectada ? 'escolha' : 'sem-conta')
+        }}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
         {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
@@ -221,17 +237,56 @@ export function BotaoConfirmarPresenca({
         </span>
       )}
 
-      {mostrarModalPagamento && preco && (
-        <ModalConfirmarPagamento
-          preco={preco}
+      {etapaPagamento === 'sem-conta' && preco && (
+        <div className={styles.avisoSemConta}>
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>
+            Este evento é pago, mas a igreja ainda não conectou uma conta para receber
+            pagamentos.{' '}
+            {ehGestor ? (
+              <Link href="/configuracoes/igreja">Conectar agora</Link>
+            ) : (
+              'Fale com a secretaria da igreja.'
+            )}
+          </span>
+          <button type="button" className={styles.cancelarLink} onClick={() => setEtapaPagamento(null)}>
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {etapaPagamento === 'escolha' && preco && (
+        <EscolhaPagamentoPorPessoa
+          pessoas={[{ id: 'titular', nome: 'Você', valor: preco, ehTitular: true }]}
           isLoading={inscrever.isPending}
-          onConfirmar={() => inscrever.mutate(undefined, {
-            onSuccess: () => {
-              setMostrarModalPagamento(false)
-              onInscritoComSucesso?.()
-            },
-          })}
-          onClose={() => setMostrarModalPagamento(false)}
+          onConfirmar={() => {
+            // Titular é sempre "paga agora" — a escolha em si não muda nada aqui (não há
+            // acompanhante neste botão de auto-inscrição); só dispara a inscrição, que já
+            // cria a CobrancaEvento do titular no backend (Task 9).
+            inscrever.mutate(undefined, {
+              onSuccess: (resposta) => {
+                if (resposta.cobrancaPendenteId) {
+                  setCobrancaId(resposta.cobrancaPendenteId)
+                  setEtapaPagamento('checkout')
+                } else {
+                  // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
+                  setEtapaPagamento(null)
+                  onInscritoComSucesso?.()
+                }
+              },
+            })
+          }}
+        />
+      )}
+
+      {etapaPagamento === 'checkout' && cobrancaId && (
+        <PaymentBrickCheckout
+          cobrancaId={cobrancaId}
+          valor={preco ?? 0}
+          onPagamentoCriado={() => {
+            setEtapaPagamento(null)
+            onInscritoComSucesso?.()
+          }}
         />
       )}
 

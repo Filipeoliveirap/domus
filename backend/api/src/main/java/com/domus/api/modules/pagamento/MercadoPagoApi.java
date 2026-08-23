@@ -2,6 +2,7 @@ package com.domus.api.modules.pagamento;
 
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentCreateRequest;
+import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.core.MPRequestOptions;
 import java.math.BigDecimal;
@@ -67,6 +68,48 @@ public class MercadoPagoApi {
             return String.valueOf(pagamento.getId());
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao criar pagamento no Mercado Pago", e);
+        }
+    }
+
+    /**
+     * Cria o pagamento a partir dos dados TOKENIZADOS pelo Payment Brick no navegador do
+     * pagador (Task 14). Diferente de {@link #criarPagamento}, aqui o cartão já foi
+     * tokenizado no cliente — o Domus nunca vê número de cartão, só o {@code token}
+     * gerado pelo SDK JS do Mercado Pago. Campos ({@code token}, {@code paymentMethodId},
+     * {@code installments}, {@code payer.email}) confirmados no jar real
+     * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap
+     * com/mercadopago/client/payment/PaymentCreateRequest.class} e
+     * {@code PaymentPayerRequest.class}) — todos existem como campos do builder, exatamente
+     * o que o Payment Brick devolve em {@code onSubmit({ formData })}
+     * ({@code formData.token}, {@code formData.payment_method_id},
+     * {@code formData.installments}, {@code formData.payer.email}).
+     *
+     * <p>PIX não usa {@code token} nem {@code installments} (só
+     * {@code paymentMethodId = "pix"}) — os dois campos aceitam {@code null} no builder do
+     * SDK sem quebrar (campos de instância, não primitivos), então o mesmo método serve
+     * pros dois meios de pagamento que o Brick oferece.
+     */
+    public String criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
+                                            String token, String paymentMethodId, Integer installments,
+                                            String payerEmail) {
+        try {
+            PaymentClient client = new PaymentClient();
+            PaymentCreateRequest request = PaymentCreateRequest.builder()
+                .transactionAmount(valor)
+                .description("Inscrição em evento — Domus")
+                .externalReference(externalReference)
+                .token(token)
+                .paymentMethodId(paymentMethodId)
+                .installments(installments)
+                .payer(PaymentPayerRequest.builder().email(payerEmail).build())
+                .build();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            var pagamento = client.create(request, options);
+            return String.valueOf(pagamento.getId());
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
         }
     }
 

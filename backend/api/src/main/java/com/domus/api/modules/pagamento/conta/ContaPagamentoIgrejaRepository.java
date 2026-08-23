@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ContaPagamentoIgrejaRepository extends JpaRepository<ContaPagamentoIgreja, UUID> {
     Optional<ContaPagamentoIgreja> findByIgrejaId(UUID igrejaId);
+    Optional<ContaPagamentoIgreja> findByMpUserId(String mpUserId);
     void deleteByIgrejaId(UUID igrejaId);
 }

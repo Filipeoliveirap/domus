@@ -187,6 +187,12 @@ export const Endpoints = {
     BY_ID: (id: string) => `/fotos/${id}`,
   },
 
+  pagamento: {
+    STATUS: '/pagamentos/conta/status',
+    CONECTAR: '/pagamentos/conta/conectar',
+    DESCONECTAR: '/pagamentos/conta',
+  },
+
   celulas: {
     LISTAR: '/celulas',
     CRIAR: '/celulas',

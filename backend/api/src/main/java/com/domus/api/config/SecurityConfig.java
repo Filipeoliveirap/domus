@@ -53,7 +53,10 @@ public class SecurityConfig {
                         // Convite público: quem abre o link nunca teve sessão nenhuma (não faz
                         // sentido exigir cookie XSRF-TOKEN de um estranho vindo do WhatsApp) —
                         // CSRF protege sessão autenticada de forjadura, e aqui não existe sessão.
-                        .ignoringRequestMatchers("/convites/**"))
+                        // Webhook do Mercado Pago: chamado pelo próprio Mercado Pago, sem
+                        // sessão nossa — a validação de autenticidade é feita à parte, pela
+                        // assinatura HMAC do header x-signature (MercadoPagoAssinaturaValidator).
+                        .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -69,6 +72,7 @@ public class SecurityConfig {
                                 "/auth/reset-password"
                         ).permitAll()
                         .requestMatchers("/convites/**").permitAll()
+                        .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 

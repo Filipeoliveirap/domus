@@ -70,6 +70,30 @@ public class MercadoPagoApi {
         }
     }
 
+    /**
+     * Busca o pagamento pelo id no Mercado Pago e devolve o {@code external_reference}
+     * que foi setado por {@link #criarPagamento} (é o id da nossa {@code CobrancaEvento}).
+     * Usado pelo webhook, que só manda {@code data.id} — não o external_reference direto.
+     *
+     * <p>{@code PaymentClient.get(Long, MPRequestOptions)} foi confirmado no jar real
+     * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap}
+     * {@code com/mercadopago/client/payment/PaymentClient.class}) — existe com essa
+     * assinatura exata, e {@code Payment.getExternalReference()} também existe (javap em
+     * {@code com/mercadopago/resources/payment/Payment.class}).
+     */
+    public String buscarExternalReference(String accessToken, String mpPaymentId) {
+        try {
+            PaymentClient client = new PaymentClient();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            var pagamento = client.get(Long.parseLong(mpPaymentId), options);
+            return pagamento.getExternalReference();
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
+        }
+    }
+
     public void estornar(String accessToken, String mpPaymentId) {
         try {
             PaymentRefundClient client = new PaymentRefundClient();

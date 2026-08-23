@@ -36,6 +36,22 @@ public class MercadoPagoClient {
         api.estornar(accessToken, mpPaymentId);
     }
 
+    /**
+     * Usado pelo webhook: o Mercado Pago não manda o {@code external_reference} direto no
+     * payload de notificação (só {@code data.id}), e o webhook não sabe de antemão de qual
+     * igreja é o pagamento — é exatamente isso que esta chamada resolve. O próprio webhook
+     * manda o {@code user_id} da conta MP (dona do pagamento) junto do payload/query string;
+     * usamos esse id pra achar a {@code ContaPagamentoIgreja} certa (por {@code mp_user_id},
+     * não por {@code igreja_id}) e só então temos o access token pra consultar o pagamento.
+     */
+    public String buscarExternalReferencePorMpUserId(String mpUserId, String mpPaymentId) {
+        var conta = contaRepository.findByMpUserId(mpUserId)
+            .orElseThrow(() -> new BusinessException("CONTA_PAGAMENTO_NAO_ENCONTRADA",
+                "Nenhuma igreja conectada com este mp_user_id."));
+        String accessToken = encryptor.descriptografar(conta.getAccessTokenCriptografado());
+        return api.buscarExternalReference(accessToken, mpPaymentId);
+    }
+
     private String obterAccessTokenPlano(UUID igrejaId) {
         var conta = contaRepository.findByIgrejaId(igrejaId)
             .orElseThrow(() -> new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",

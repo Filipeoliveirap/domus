@@ -9,6 +9,8 @@ import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEventoService;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -40,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
 
 @Service
 @Slf4j
@@ -57,6 +60,8 @@ public class InscricaoService {
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     private final com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
     private final com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
+    private final CobrancaEventoService cobrancaEventoService;
+    private final CobrancaEventoRepository cobrancaEventoRepository;
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -101,6 +106,20 @@ public class InscricaoService {
         }
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
+
+        // Evento pago: titular sempre "eu pago agora" (nunca vira link, diferente do
+        // acompanhante em adicionarAcompanhante) — vaga fica reservada via CobrancaEvento
+        // (ver validarVaga), não pela InscricaoEvento CONFIRMADA (essa é sempre imediata,
+        // pago ou não). Quem assina como "criado por": quem inscreveu (admin/líder em
+        // lote) ou, na auto-inscrição (inscritoPorOuNull nulo), o próprio usuário do
+        // titular — sempre existe, pois só se auto-inscreve quem está logado.
+        if (evento.getPreco() != null) {
+            UUID criadoPorUsuarioId = inscritoPorOuNull != null
+                    ? inscritoPorOuNull
+                    : usuarioRepository.findByPessoaId(pessoaId).map(u -> u.getId()).orElse(null);
+            cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
+                    evento.getPreco(), criadoPorUsuarioId);
+        }
 
         // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
         // quem fez a ação já sabe dela.
@@ -283,11 +302,24 @@ public class InscricaoService {
     void validarVaga(Evento evento, int pessoasAAdicionar) {
         if (evento.getVagas() == null) return;
 
-        long ocupadas = inscricaoRepository.contarPessoasConfirmadas(evento.getId());
+        long ocupadas = contarOcupadas(evento);
         if (ocupadas + pessoasAAdicionar > evento.getVagas()) {
             throw new BusinessException("VAGAS_ESGOTADAS",
                     "As vagas deste evento estão esgotadas.");
         }
+    }
+
+    /**
+     * Evento pago reserva vaga pela cobrança (PAGO ou PENDENTE ainda não expirada), não pela
+     * inscrição confirmada — a inscrição é sempre confirmada na hora, pago ou não; quem de
+     * fato "segura" a vaga é a cobrança (expira e libera sozinha se ninguém pagar). Evento
+     * gratuito continua exatamente como antes: conta inscrições confirmadas + acompanhantes.
+     */
+    private long contarOcupadas(Evento evento) {
+        if (evento.getPreco() != null) {
+            return cobrancaEventoRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
+        }
+        return inscricaoRepository.contarPessoasConfirmadas(evento.getId());
     }
 
     /** Convidado sem cadastro ganha inscrição própria (não acompanhante aninhado) — sem
@@ -339,6 +371,11 @@ public class InscricaoService {
                 .build();
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
+        // TODO(cobrança de evento pago): convidado de topo (sem Pessoa, sem acompanhante-pai)
+        // ainda não gera CobrancaEvento — o construtor de CobrancaEvento exige pessoaId OU
+        // acompanhanteId, e este fluxo não tem nenhum dos dois. Fora do escopo da Task 9
+        // (o brief só cobre inscrever()/adicionarAcompanhante()); avaliar em task futura se
+        // vale estender CobrancaEvento para aceitar um convidado sem cadastro nenhum.
         log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, inscrito_por_usuario_id={}, igreja_id={}",
                 eventoId, convidadoPorPessoaId, inscritoPorUsuarioId, igrejaId);
         return salva;
@@ -380,6 +417,16 @@ public class InscricaoService {
                 .build();
 
         AcompanhanteInscricao salvo = acompanhanteRepository.save(a);
+
+        // Terceiro (não o titular): a escolha de "pagar agora" vs. "gerar link" vem do
+        // próprio AcompanhanteRequest (campo gerarLinkPagamento) — quem está adicionando o
+        // convidado decide se cobra na hora ou manda um link pra essa pessoa pagar sozinha.
+        if (inscricao.getEvento().getPreco() != null) {
+            cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
+                    inscricaoId, null, salvo.getId(), inscricao.getEvento().getPreco(),
+                    usuarioId, data.gerarLinkPagamento());
+        }
+
         log.info("Acompanhante adicionado. inscricao_id={}, por_usuario={}, igreja_id={}",
                 inscricaoId, usuarioId, igrejaId);
         return AcompanhanteResponse.from(salvo);

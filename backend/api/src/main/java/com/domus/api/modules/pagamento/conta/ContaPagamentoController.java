@@ -3,7 +3,6 @@ package com.domus.api.modules.pagamento.conta;
 import com.domus.api.modules.pagamento.conta.DTOs.ConectarContaResponseDTO;
 import com.domus.api.modules.pagamento.conta.DTOs.StatusContaPagamentoDTO;
 import com.domus.api.shared.security.UsuarioAutenticado;
-import java.util.UUID;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,8 +23,11 @@ public class ContaPagamentoController {
     }
 
     @GetMapping("/callback")
-    public void callback(@RequestParam String code, @RequestParam String state) {
-        service.processarCallback(code, UUID.fromString(state), usuarioAutenticado.getUsuarioId());
+    public void callback(@RequestParam String code) {
+        // `igrejaId` vem da sessão autenticada, nunca de um parâmetro da requisição
+        // (o Mercado Pago também devolve `state` aqui, mas não é a fonte da identidade
+        // da igreja — um usuário mal-intencionado poderia forjar esse valor).
+        service.processarCallback(code, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId());
     }
 
     @GetMapping("/status")

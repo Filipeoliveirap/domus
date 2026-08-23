@@ -36,8 +36,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 class InscricaoServiceTest {
@@ -52,6 +54,8 @@ class InscricaoServiceTest {
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
     com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
+    com.domus.api.modules.pagamento.cobranca.CobrancaEventoService cobrancaEventoService;
+    com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository cobrancaEventoRepository;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -78,10 +82,13 @@ class InscricaoServiceTest {
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
+        cobrancaEventoService = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class);
+        cobrancaEventoRepository = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
-                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
+                cobrancaEventoService, cobrancaEventoRepository);
     }
 
     private Igreja igreja() {
@@ -155,6 +162,49 @@ class InscricaoServiceTest {
         service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void eventoPagoCriaCobrancaDoTitularComoEuPagoAgora() {
+        Evento evento = evento(10);
+        evento.setPreco(java.math.BigDecimal.valueOf(50));
+        dado(evento, membro(Vinculo.MEMBRO), 0);
+        when(cobrancaEventoService.criarParaTitular(any(), any(), any(), any(), any(), any()))
+                .thenReturn(mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class));
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        verify(cobrancaEventoService).criarParaTitular(eq(igrejaId), eq(eventoId), any(),
+                eq(pessoaId), eq(java.math.BigDecimal.valueOf(50)), any());
+    }
+
+    @Test
+    void eventoGratuitoNaoCriaCobranca() {
+        dado(evento(10), membro(Vinculo.MEMBRO), 0);
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        verify(cobrancaEventoService, never())
+                .criarParaTitular(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void contagemDeVagaEmEventoPagoUsaCobrancaEmVezDeInscricaoDireta() {
+        Evento evento = evento(1);
+        evento.setPreco(java.math.BigDecimal.valueOf(50));
+        // contarPessoasConfirmadas devolveria 0 (sem ocupação) — se o service ainda usasse
+        // essa contagem para evento pago, a inscrição passaria; a vaga real está ocupada
+        // por uma cobrança PAGA/PENDENTE de outra pessoa, refletida só na cobrança.
+        dado(evento, membro(Vinculo.MEMBRO), 0);
+        when(cobrancaEventoRepository.contarPessoasComVagaReservada(eq(eventoId), any()))
+                .thenReturn(1L);
+
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("esgotadas");
+
+        verify(cobrancaEventoService, never())
+                .criarParaTitular(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -543,6 +593,67 @@ class InscricaoServiceTest {
                 "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("esgotadas");
+    }
+
+    @Test
+    void adicionarAcompanhanteEmEventoPagoCriaCobrancaParaTerceiroPagandoAgora() {
+        Evento e = evento(10);
+        e.setPreco(java.math.BigDecimal.valueOf(50));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId))).thenReturn(Optional.of(e));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e).pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(cobrancaEventoService.criarParaTerceiro(any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
+                .thenReturn(mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class));
+
+        service.adicionarAcompanhante(minha.getId(), new AcompanhanteRequest("João", null, false),
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(minha.getId()),
+                isNull(), any(), eq(java.math.BigDecimal.valueOf(50)), eq(usuarioId), eq(false));
+    }
+
+    @Test
+    void adicionarAcompanhanteComEscolhaDeLinkGeraCobrancaComLink() {
+        Evento e = evento(10);
+        e.setPreco(java.math.BigDecimal.valueOf(50));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId))).thenReturn(Optional.of(e));
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(e).pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(cobrancaEventoService.criarParaTerceiro(any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
+                .thenReturn(mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class));
+
+        service.adicionarAcompanhante(minha.getId(), new AcompanhanteRequest("João", null, true),
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(minha.getId()),
+                isNull(), any(), eq(java.math.BigDecimal.valueOf(50)), eq(usuarioId), eq(true));
+    }
+
+    @Test
+    void adicionarAcompanhanteEmEventoGratuitoNaoCriaCobranca() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha.getEvento()));
+        when(inscricaoRepository.buscarVisivelParaFamilia(minha.getId(), Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(acompanhanteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.adicionarAcompanhante(minha.getId(), new AcompanhanteRequest("João", null),
+                usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(cobrancaEventoService, never())
+                .criarParaTerceiro(any(), any(), any(), any(), any(), any(), any(), anyBoolean());
     }
 
     @Test

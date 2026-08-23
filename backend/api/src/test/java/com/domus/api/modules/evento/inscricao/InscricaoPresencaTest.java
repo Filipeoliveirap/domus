@@ -59,7 +59,9 @@ class InscricaoPresencaTest {
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, pessoaRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
-                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class));
     }
 
     private Igreja igreja() {

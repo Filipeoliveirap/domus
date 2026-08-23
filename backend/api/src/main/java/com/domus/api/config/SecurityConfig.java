@@ -56,7 +56,9 @@ public class SecurityConfig {
                         // Webhook do Mercado Pago: chamado pelo próprio Mercado Pago, sem
                         // sessão nossa — a validação de autenticidade é feita à parte, pela
                         // assinatura HMAC do header x-signature (MercadoPagoAssinaturaValidator).
-                        .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook"))
+                        // Cobrança pública: pagador abre o link (WhatsApp/e-mail) sem nunca
+                        // ter tido sessão — mesma lógica de /convites/**.
+                        .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook", "/cobrancas/**"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -73,6 +75,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/convites/**").permitAll()
                         .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
+                        .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 

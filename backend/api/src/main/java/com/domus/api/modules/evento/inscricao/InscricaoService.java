@@ -9,8 +9,11 @@ import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.modules.pagamento.MercadoPagoClient;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoService;
+import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -62,6 +65,7 @@ public class InscricaoService {
     private final com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
     private final CobrancaEventoService cobrancaEventoService;
     private final CobrancaEventoRepository cobrancaEventoRepository;
+    private final MercadoPagoClient mercadoPagoClient;
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -493,10 +497,36 @@ public class InscricaoService {
      *  herdaria resposta velha e pareceria "já respondido" sem a pessoa ter respondido nada
      *  desta vez. */
     private void cancelarInterno(InscricaoEvento inscricao) {
+        // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
+        // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
+        // com o dinheiro ainda retido no Mercado Pago.
+        estornarCobrancasDaInscricao(inscricao);
         inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
+    }
+
+    /** PAGO estorna de verdade no Mercado Pago; PENDENTE só cancela (nunca chegou a ser cobrado). */
+    private void estornarCobrancasDaInscricao(InscricaoEvento inscricao) {
+        List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
+        if (cobrancas.isEmpty()) return;
+
+        UUID igrejaId = inscricao.getIgreja().getId();
+        for (CobrancaEvento cobranca : cobrancas) {
+            if (cobranca.getStatus() == StatusCobranca.PAGO) {
+                try {
+                    mercadoPagoClient.estornar(igrejaId, cobranca.getMpPaymentId());
+                    cobranca.marcarComoReembolsado();
+                } catch (Exception e) {
+                    throw new BusinessException("FALHA_ESTORNO",
+                            "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
+                }
+            } else if (cobranca.getStatus() == StatusCobranca.PENDENTE) {
+                cobranca.marcarComoCancelado();
+            }
+        }
+        cobrancaEventoRepository.saveAll(cobrancas);
     }
 
     /**

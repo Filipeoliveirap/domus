@@ -56,6 +56,7 @@ class InscricaoServiceTest {
     com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
     com.domus.api.modules.pagamento.cobranca.CobrancaEventoService cobrancaEventoService;
     com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository cobrancaEventoRepository;
+    com.domus.api.modules.pagamento.MercadoPagoClient mercadoPagoClient;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -84,11 +85,12 @@ class InscricaoServiceTest {
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         cobrancaEventoService = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class);
         cobrancaEventoRepository = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class);
+        mercadoPagoClient = mock(com.domus.api.modules.pagamento.MercadoPagoClient.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
-                cobrancaEventoService, cobrancaEventoRepository);
+                cobrancaEventoService, cobrancaEventoRepository, mercadoPagoClient);
     }
 
     private Igreja igreja() {
@@ -112,6 +114,23 @@ class InscricaoServiceTest {
                 .id(pessoaId).igreja(igreja()).nome("Maria")
                 .vinculo(vinculo)
                 .build();
+    }
+
+    private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobrancaPagaComId(String mpPaymentId) {
+        com.domus.api.modules.pagamento.cobranca.CobrancaEvento c =
+                new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                        igrejaId, eventoId, inscricaoId, pessoaId, null,
+                        new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600),
+                        usuarioId, "token-" + UUID.randomUUID());
+        c.marcarComoPago(mpPaymentId);
+        return c;
+    }
+
+    private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobrancaPendente() {
+        return new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId, null,
+                new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-" + UUID.randomUUID());
     }
 
     private Evento eventoDeOutraIgreja(UUID outraIgrejaId, boolean restritoPropriaIgreja) {
@@ -817,6 +836,61 @@ class InscricaoServiceTest {
         service.cancelar(minha.getId(), usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
         verify(respostaCampoPersonalizadoRepository).deleteByInscricaoId(minha.getId());
+    }
+
+    @Test
+    void cancelarInscricaoComCobrancaPagaAcionaEstorno() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void cancelarInscricaoComCobrancaPendenteNaoAcionaEstorno() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPendente()));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornar(any(), any());
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void falhaNoEstornoNaoDeixaInscricaoComoCancelada() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), any());
+
+        assertThatThrownBy(() -> service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("FALHA_ESTORNO");
+
+        verify(inscricaoRepository, never()).save(argThat(i -> i.getStatus() == StatusInscricao.CANCELADA));
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
     }
 
     @Test

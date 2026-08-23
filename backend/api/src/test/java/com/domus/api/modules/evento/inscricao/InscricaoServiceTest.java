@@ -1413,6 +1413,23 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void inscreverConvidadoRecusaQuandoEventoEhPago() {
+        Evento evento = evento(null); // sem limite de vagas — a recusa é por preço, não por vaga
+        evento.setPreco(java.math.BigDecimal.valueOf(50));
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora",
+                "11999998888", null, null, null))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "CONVIDADO_NAO_PODE_EM_EVENTO_PAGO");
+
+        verify(inscricaoRepository, never()).save(any());
+        verify(cobrancaEventoService, never())
+                .criarParaTitular(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     void inscreverConvidadoRecusaQuandoVagasEsgotadas() {
         Evento evento = evento(1);
         when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))

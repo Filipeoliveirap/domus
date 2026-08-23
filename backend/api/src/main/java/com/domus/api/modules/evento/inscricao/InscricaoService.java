@@ -346,6 +346,16 @@ public class InscricaoService {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
         }
+        // Convidado de topo não tem Pessoa nem é um acompanhante — CobrancaEvento exige um
+        // dos dois (ver construtor), então não há como gerar cobrança pra ele hoje. Sem essa
+        // trava, evento pago poderia ser "furado" inscrevendo qualquer um por aqui, sem pagar
+        // nada, e essa vaga ficaria invisível pra contarPessoasComVagaReservada (ver
+        // contarOcupadas) — overbooking real. Bloqueia até existir uma forma de cobrar
+        // convidado sem cadastro (fora do escopo desta task).
+        if (evento.getPreco() != null) {
+            throw new BusinessException("CONVIDADO_NAO_PODE_EM_EVENTO_PAGO",
+                    "Este evento é pago — inscreva com uma pessoa cadastrada para gerar a cobrança.");
+        }
         validarEventoAberto(evento);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
         validarVaga(evento, 1);
@@ -371,11 +381,6 @@ public class InscricaoService {
                 .build();
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
-        // TODO(cobrança de evento pago): convidado de topo (sem Pessoa, sem acompanhante-pai)
-        // ainda não gera CobrancaEvento — o construtor de CobrancaEvento exige pessoaId OU
-        // acompanhanteId, e este fluxo não tem nenhum dos dois. Fora do escopo da Task 9
-        // (o brief só cobre inscrever()/adicionarAcompanhante()); avaliar em task futura se
-        // vale estender CobrancaEvento para aceitar um convidado sem cadastro nenhum.
         log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, inscrito_por_usuario_id={}, igreja_id={}",
                 eventoId, convidadoPorPessoaId, inscritoPorUsuarioId, igrejaId);
         return salva;

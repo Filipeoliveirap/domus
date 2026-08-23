@@ -31,6 +31,20 @@ public class MercadoPagoClient {
         return api.criarPagamento(accessToken, cobranca.getId().toString(), cobranca.getValor());
     }
 
+    /**
+     * Usado pelo endpoint {@code POST /cobrancas/{id}/pagar} (Task 14) — recebe os dados
+     * já TOKENIZADOS pelo Payment Brick no navegador do pagador (nunca o número do
+     * cartão em si) e delega pra {@link MercadoPagoApi#criarPagamentoTokenizado}. Só
+     * INICIA o pagamento no Mercado Pago; a confirmação definitiva (marcar a
+     * {@code CobrancaEvento} como PAGO) continua vindo assíncrona, pelo webhook (Task 10).
+     */
+    public String criarPagamentoComToken(UUID igrejaId, CobrancaEvento cobranca, String token,
+                                          String paymentMethodId, Integer installments, String payerEmail) {
+        String accessToken = obterAccessTokenPlano(igrejaId);
+        return api.criarPagamentoTokenizado(accessToken, cobranca.getId().toString(), cobranca.getValor(),
+            token, paymentMethodId, installments, payerEmail);
+    }
+
     public void estornar(UUID igrejaId, String mpPaymentId) {
         String accessToken = obterAccessTokenPlano(igrejaId);
         api.estornar(accessToken, mpPaymentId);

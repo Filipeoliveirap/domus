@@ -75,6 +75,38 @@ class MercadoPagoWebhookControllerTest {
         assertOk(resposta);
     }
 
+    @Test
+    void ignoraSilenciosamenteQuandoDataIdVemNulo() {
+        var resposta = controller.webhook("ts=1,v1=hash", "req-1", null, "payment", "mp-user-1");
+
+        assertOk(resposta);
+        verifyNoInteractions(validator, service, mercadoPagoClient);
+    }
+
+    @Test
+    void ignoraSilenciosamenteQuandoTypeVemEmBranco() {
+        var resposta = controller.webhook("ts=1,v1=hash", "req-1", "999", "  ", "mp-user-1");
+
+        assertOk(resposta);
+        verifyNoInteractions(validator, service, mercadoPagoClient);
+    }
+
+    @Test
+    void ignoraSilenciosamenteQuandoAssinaturaVemNula() {
+        var resposta = controller.webhook(null, "req-1", "999", "payment", "mp-user-1");
+
+        assertOk(resposta);
+        verifyNoInteractions(validator, service, mercadoPagoClient);
+    }
+
+    @Test
+    void ignoraSilenciosamenteQuandoRequestIdVemNulo() {
+        var resposta = controller.webhook("ts=1,v1=hash", null, "999", "payment", "mp-user-1");
+
+        assertOk(resposta);
+        verifyNoInteractions(validator, service, mercadoPagoClient);
+    }
+
     private void assertOk(org.springframework.http.ResponseEntity<Void> resposta) {
         org.assertj.core.api.Assertions.assertThat(resposta.getStatusCode().is2xxSuccessful()).isTrue();
     }

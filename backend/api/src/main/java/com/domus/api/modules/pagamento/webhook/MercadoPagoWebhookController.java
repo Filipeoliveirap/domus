@@ -51,14 +51,30 @@ public class MercadoPagoWebhookController {
 
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(
-        @RequestHeader("x-signature") String assinatura,
-        @RequestHeader("x-request-id") String requestId,
-        @RequestParam("data.id") String dataId,
-        @RequestParam String type,
+        @RequestHeader(value = "x-signature", required = false) String assinatura,
+        @RequestHeader(value = "x-request-id", required = false) String requestId,
+        @RequestParam(value = "data.id", required = false) String dataId,
+        @RequestParam(value = "type", required = false) String type,
         @RequestParam(value = "user_id", required = false) String userId
     ) {
-        // O Mercado Pago SEMPRE espera 200 — mesmo em rejeição, só loga e ignora,
-        // pra não entrar em reenvio infinito do provedor.
+        // O Mercado Pago SEMPRE espera 200 — mesmo em rejeição, ou em requisições fora do
+        // formato esperado (ping de verificação de URL, "Simular notificação" do painel,
+        // formato divergente do assumido), só loga e ignora. Por isso todo parâmetro é
+        // opcional aqui: se algum vier ausente, o Spring NUNCA pode lançar
+        // MissingServletRequestParameterException/MissingRequestHeaderException antes deste
+        // método rodar — isso viraria um 500 do GlobalExceptionHandler genérico, que o
+        // Mercado Pago entenderia como falha e reenviaria infinitamente.
+        if (isBlank(dataId) || isBlank(type)) {
+            log.warn("Webhook do Mercado Pago sem data.id/type (possível ping de verificação "
+                + "ou simulação do painel), ignorado. dataId={} type={}", dataId, type);
+            return ResponseEntity.ok().build();
+        }
+        if (isBlank(assinatura) || isBlank(requestId)) {
+            log.warn("Webhook do Mercado Pago sem header x-signature/x-request-id, ignorado. "
+                + "dataId={}", dataId);
+            return ResponseEntity.ok().build();
+        }
+
         if (!validator.valida(assinatura, dataId, requestId)) {
             log.warn("Webhook do Mercado Pago com assinatura inválida, ignorado. requestId={}", requestId);
             return ResponseEntity.ok().build();
@@ -82,6 +98,10 @@ public class MercadoPagoWebhookController {
         }
 
         return ResponseEntity.ok().build();
+    }
+
+    private boolean isBlank(String valor) {
+        return valor == null || valor.isBlank();
     }
 
     private String buscarExternalReference(String mpPaymentId, String userId) {

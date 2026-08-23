@@ -117,12 +117,14 @@ public class InscricaoService {
         // pago ou não). Quem assina como "criado por": quem inscreveu (admin/líder em
         // lote) ou, na auto-inscrição (inscritoPorOuNull nulo), o próprio usuário do
         // titular — sempre existe, pois só se auto-inscreve quem está logado.
+        UUID cobrancaPendenteId = null;
         if (evento.getPreco() != null) {
             UUID criadoPorUsuarioId = inscritoPorOuNull != null
                     ? inscritoPorOuNull
                     : usuarioRepository.findByPessoaId(pessoaId).map(u -> u.getId()).orElse(null);
-            cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
-                    evento.getPreco(), criadoPorUsuarioId);
+            CobrancaEvento cobranca = cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(),
+                    pessoaId, evento.getPreco(), criadoPorUsuarioId);
+            cobrancaPendenteId = cobranca.getId();
         }
 
         // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
@@ -147,7 +149,7 @@ public class InscricaoService {
 
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
                 eventoId, pessoaId, inscritoPorOuNull, igrejaId);
-        return MinhaInscricaoResponse.from(salva);
+        return MinhaInscricaoResponse.from(salva, cobrancaPendenteId);
     }
 
     private void notificarPendenciaDeCamposSeHouver(Evento evento, Pessoa pessoaInscrita, UUID igrejaId, UUID usuarioIdAtor) {
@@ -197,8 +199,23 @@ public class InscricaoService {
     public MinhaInscricaoResponse minhaInscricao(UUID eventoId, UUID pessoaId) {
         return inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)
                 .filter(InscricaoEvento::estaConfirmada)
-                .map(MinhaInscricaoResponse::from)
+                .map(i -> MinhaInscricaoResponse.from(i, cobrancaPendenteDoTitular(i.getId(), pessoaId)))
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
+    }
+
+    /**
+     * Task 14: se a pessoa recarregar a página antes de pagar (ou fechar o Brick sem
+     * concluir), {@code minhaInscricao} precisa continuar devolvendo o id da cobrança
+     * pendente do TITULAR — nunca a de um acompanhante, que segue um fluxo à parte
+     * (link compartilhado, não o Brick embutido nesta tela).
+     */
+    private UUID cobrancaPendenteDoTitular(UUID inscricaoId, UUID pessoaId) {
+        return cobrancaEventoRepository.findByInscricaoId(inscricaoId).stream()
+                .filter(c -> pessoaId.equals(c.getPessoaId()))
+                .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
+                .map(CobrancaEvento::getId)
+                .findFirst()
+                .orElse(null);
     }
 
     /** {@code requerInscricao} não se aplica à auto-inscrição (ver {@link #inscrever}), que funciona em qualquer evento. */

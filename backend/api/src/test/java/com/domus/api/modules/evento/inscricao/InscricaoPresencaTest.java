@@ -61,7 +61,8 @@ class InscricaoPresencaTest {
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
                 mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
-                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class));
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
+                mock(com.domus.api.modules.pagamento.MercadoPagoClient.class));
     }
 
     private Igreja igreja() {

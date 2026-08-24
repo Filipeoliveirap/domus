@@ -29,8 +29,8 @@
 }
 
 .areaCirculo {
-  width: 120px;
-  height: 120px;
+  width: 160px;
+  height: 160px;
   border-radius: var(--radius-full);
 }
 
@@ -211,7 +211,9 @@
 }
 
 @media (max-width: 767px) {
+  .areaCirculo { width: 140px; height: 140px; }
   .areaBanner { max-width: 100%; }
+  .placeholder { padding: 8px; }
   .acoes { flex-direction: column; }
   .botaoPrimario, .botaoSecundario, .botaoEditar, .botaoRemover { width: 100%; justify-content: center; }
 }

@@ -25,7 +25,7 @@ public class ProcessadorImagem {
     /** ~50 megapixels. Acima disso o bitmap descomprimido passa de 200 MB. */
     private static final long MAX_PIXELS = 50_000_000L;
 
-    private static final double QUALIDADE_JPEG = 0.85;
+    private static final double QUALIDADE_JPEG = 0.90;
 
     public record ImagemProcessada(byte[] original, byte[] display, byte[] thumb, String tipoOriginal) {}
 

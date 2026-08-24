@@ -13,6 +13,6 @@ public enum TamanhoFoto {
 
     public int getLadoMaximo() { return ladoMaximo; }
 
-    /** Sufixo da chave no bucket: `{chave}/display.jpg`. */
-    public String sufixo() { return name().toLowerCase() + ".jpg"; }
+    /** Sufixo da chave no bucket: `{chave}/display.webp`. */
+    public String sufixo() { return name().toLowerCase() + ".webp"; }
 }

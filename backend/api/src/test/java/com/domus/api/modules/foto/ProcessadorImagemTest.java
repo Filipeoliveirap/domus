@@ -55,7 +55,7 @@ class ProcessadorImagemTest {
 
     @Test
     void recusaImagemAcimaDoLimiteDePixels() throws IOException {
-        // Bomba de descompressao: o limite de 10MB do multipart NAO protege contra isto —
+        // Bomba de descompressao: o limite de 15MB do multipart NAO protege contra isto —
         // o perigo nao e o tamanho do arquivo, e o do bitmap depois de decodificado.
         assertThatThrownBy(() -> processador.validarEProcessar(jpegDe(9000, 9000)))
                 .isInstanceOf(BusinessException.class)

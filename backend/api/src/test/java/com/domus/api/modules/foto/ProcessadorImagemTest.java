@@ -88,4 +88,54 @@ class ProcessadorImagemTest {
         }
         return false;
     }
+
+    @Test
+    void aceitaWebpComoEntrada() throws IOException {
+        byte[] webpBytes = gerarWebpDe(3000, 2000);
+
+        var r = processador.validarEProcessar(webpBytes);
+
+        assertThat(r.original()).isEqualTo(webpBytes);
+        assertThat(r.display()).isNotEmpty();
+        assertThat(r.thumb()).isNotEmpty();
+        assertThat(r.tipoOriginal()).isEqualTo("image/webp");
+    }
+
+    @Test
+    void saidaESempreWebp() throws IOException {
+        byte[] jpegBytes = jpegDe(1500, 1000);
+        var r = processador.validarEProcessar(jpegBytes);
+
+        // Verifica magic bytes do WebP: "RIFF....WEBP" (bytes 0-3 e 8-11)
+        assertThat(ehWebp(r.display()))
+                .as("display deveria ser WebP independente da entrada")
+                .isTrue();
+        assertThat(ehWebp(r.thumb()))
+                .as("thumb deveria ser WebP independente da entrada")
+                .isTrue();
+    }
+
+    private byte[] gerarWebpDe(int largura, int altura) throws IOException {
+        BufferedImage img = new BufferedImage(largura, altura, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        java.util.Iterator<javax.imageio.ImageWriter> writers = ImageIO.getImageWritersByFormatName("webp");
+        javax.imageio.ImageWriter writer = writers.next();
+        try (javax.imageio.stream.ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
+            writer.setOutput(ios);
+            javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionType("Lossy");
+            param.setCompressionQuality(0.85f);
+            writer.write(null, new javax.imageio.IIOImage(img, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        return out.toByteArray();
+    }
+
+    private boolean ehWebp(byte[] bytes) {
+        if (bytes == null || bytes.length < 12) return false;
+        return bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
+    }
 }

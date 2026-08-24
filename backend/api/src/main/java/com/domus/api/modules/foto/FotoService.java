@@ -36,8 +36,8 @@ public class FotoService {
         String chave = "fotos/" + igrejaId + "/" + UUID.randomUUID();
 
         armazenamentoFotos.guardar(chave + "/original", imagem.original(), imagem.tipoOriginal());
-        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.DISPLAY.sufixo(), imagem.display(), "image/jpeg");
-        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.THUMB.sufixo(), imagem.thumb(), "image/jpeg");
+        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.DISPLAY.sufixo(), imagem.display(), "image/webp");
+        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.THUMB.sufixo(), imagem.thumb(), "image/webp");
 
         Foto foto = Foto.builder()
                 .igreja(Igreja.builder().id(igrejaId).build())

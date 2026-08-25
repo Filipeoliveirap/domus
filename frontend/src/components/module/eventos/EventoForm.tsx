@@ -537,8 +537,9 @@ export function EventoForm(props: EventoFormProps) {
                       }}
                     />
                     <span className={styles.campoHint}>
-                      Informativo. O pagamento é combinado com a igreja — informe o PIX ou um
-                      contato na descrição do evento.
+                      Cobrado automaticamente na inscrição, se a igreja tiver uma conta de
+                      recebimento conectada. Sem conta conectada, o pagamento precisa ser
+                      combinado por fora (informe o PIX ou um contato na descrição do evento).
                     </span>
                   </div>
                 )}

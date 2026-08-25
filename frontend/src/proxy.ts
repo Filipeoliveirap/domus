@@ -17,13 +17,17 @@ export function proxy(request: NextRequest) {
     // Refresh, reconstrução de stack trace) — nunca em produção, confirmado sem uso de
     // eval()/new Function() no bundle de produção (ver BACKLOG). Sem isso, `npm run dev`
     // trava com "eval() is not supported" no Console.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client`,
+    // https://sdk.mercadopago.com carrega o SDK JS do Payment Brick; https://http2.mlstatic.com
+    // serve os assets estáticos que o Brick injeta (fontes/scripts do form de cartão tokenizado).
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client https://sdk.mercadopago.com https://http2.mlstatic.com`,
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-    'frame-src https://accounts.google.com',
+    // O Payment Brick monta os campos de cartão (número/CVV) em iframes próprios servidos
+    // pelo domínio do Mercado Pago — sem isso o navegador recusa renderizar o Brick.
+    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com",
     // ws://localhost só em dev: é o websocket do Hot Module Reload (webpack-hmr) — sem
     // isso o navegador bloqueia a conexão e o Fast Refresh para de funcionar.
-    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br${isDev ? ' ws://localhost:*' : ''}`,
-    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com",
+    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://http2.mlstatic.com${isDev ? ' ws://localhost:*' : ''}`,
+    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://http2.mlstatic.com https://www.mercadopago.com",
     "font-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",

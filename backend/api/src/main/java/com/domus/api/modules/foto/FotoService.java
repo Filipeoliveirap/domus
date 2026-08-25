@@ -59,6 +59,30 @@ public class FotoService {
         return armazenamentoFotos.ler(foto.getChave() + "/" + tamanho.sufixo());
     }
 
+    /**
+     * Lê a foto tentando .webp primeiro (novo), cai pra .jpg (fotos antigas pré-mudança).
+     * Retorna null se nenhum dos dois existir.
+     */
+    @Transactional(readOnly = true)
+    public byte[] lerComFallback(UUID id, TamanhoFoto tamanho, UUID igrejaId) {
+        Foto foto = fotoRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Foto não encontrada."));
+
+        String chaveWebp = foto.getChave() + "/" + tamanho.sufixo();
+        String chaveJpg = foto.getChave() + "/" + tamanho.name().toLowerCase() + ".jpg";
+
+        try {
+            return armazenamentoFotos.ler(chaveWebp);
+        } catch (Exception e) {
+            log.debug("WebP não encontrado, tentando JPEG: {}", chaveWebp);
+            try {
+                return armazenamentoFotos.ler(chaveJpg);
+            } catch (Exception e2) {
+                throw new ResourceNotFoundException("Foto não encontrada.");
+            }
+        }
+    }
+
     /** Retorna {@code null} quando o id é {@code null} — "sem foto" é uma escolha válida. */
     @Transactional(readOnly = true)
     public Foto buscarParaVincular(UUID fotoId, UUID igrejaId) {

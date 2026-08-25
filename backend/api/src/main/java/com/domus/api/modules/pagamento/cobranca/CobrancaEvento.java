@@ -90,6 +90,19 @@ public class CobrancaEvento {
         this.mpPaymentId = mpPaymentId;
     }
 
+    /**
+     * Libera a cobrança para uma nova tentativa de pagamento depois que a tentativa
+     * anterior (que gravou {@code mpPaymentId} via {@link #registrarTentativaPagamento})
+     * termina recusada/cancelada no Mercado Pago. Sem isto, {@code mpPaymentId} ficava
+     * preenchido pra sempre num pagamento recusado e {@code CobrancaController.pagar}
+     * recusava toda tentativa seguinte com {@code COBRANCA_JA_EM_PROCESSAMENTO} — a
+     * pessoa nunca conseguia tentar outro cartão ou PIX. O status da cobrança continua
+     * PENDENTE: só o campo que trava a idempotência é limpo.
+     */
+    public void liberarParaNovaTentativa() {
+        this.mpPaymentId = null;
+    }
+
     public void marcarComoPago(String mpPaymentId) {
         this.status = StatusCobranca.PAGO;
         this.mpPaymentId = mpPaymentId;

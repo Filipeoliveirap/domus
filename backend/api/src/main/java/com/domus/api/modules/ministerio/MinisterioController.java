@@ -47,6 +47,14 @@ public class MinisterioController {
                 id, data, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<Void> atualizarFoto(@PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        exigirAdmin();
+        ministerioService.atualizarFoto(id, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(), data.fotoId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         exigirAdmin();

@@ -289,6 +289,31 @@ public class EventoService {
         return EventoResponse.from(salvo, inscricoesRemovidas, igrejaId, true);
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @Transactional
+    public void atualizarFoto(UUID id, UUID igrejaId, UUID usuarioId, UUID fotoId) {
+        Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(usuarioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        Foto fotoAntiga = evento.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        evento.setFoto(fotoNova);
+        evento.setAtualizadoPor(usuario);
+        eventoRepository.save(evento);
+
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+
+        evictarCacheDeEventosDaFamilia(igrejaId);
+        log.info("Foto do evento atualizada. id={}, igreja_id={}, por_usuario_id={}", id, igrejaId, usuarioId);
+    }
+
     @Transactional
     public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId,
                                com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {

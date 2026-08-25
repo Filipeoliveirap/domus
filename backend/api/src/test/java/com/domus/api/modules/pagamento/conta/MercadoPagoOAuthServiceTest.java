@@ -1,21 +1,27 @@
 package com.domus.api.modules.pagamento.conta;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.domus.api.modules.pagamento.seguranca.CredencialEncryptor;
+import com.domus.api.shared.exception.BusinessException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 class MercadoPagoOAuthServiceTest {
 
     ContaPagamentoIgrejaRepository repository;
     CredencialEncryptor encryptor;
     MercadoPagoOAuthClient client; // wrapper do SDK que troca `code` por tokens — mockado aqui
+    StringRedisTemplate redisTemplate;
+    ValueOperations<String, String> valueOperations;
     MercadoPagoOAuthService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -26,19 +32,34 @@ class MercadoPagoOAuthServiceTest {
         repository = mock(ContaPagamentoIgrejaRepository.class);
         encryptor = mock(CredencialEncryptor.class);
         client = mock(MercadoPagoOAuthClient.class);
-        service = new MercadoPagoOAuthService(repository, encryptor, client, "client-id-teste");
+        redisTemplate = mock(StringRedisTemplate.class);
+        valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        service = new MercadoPagoOAuthService(repository, encryptor, client, redisTemplate,
+                "client-id-teste", "https://app.teste.com/callback");
+    }
+
+    /** Simula o {@code state} já gravado no Redis pra {@code usuarioId} (como {@link #gerarUrlAutorizacao} faria). */
+    private void comStateValidoParaUsuario(String state, UUID usuario) {
+        when(valueOperations.get("mpoauth:state:" + state)).thenReturn(usuario.toString());
     }
 
     @Test
-    void geraUrlDeAutorizacaoComIgrejaIdNoState() {
-        String url = service.gerarUrlAutorizacao(igrejaId);
+    void geraUrlDeAutorizacaoComStateAleatorioERedirectUri() {
+        String url = service.gerarUrlAutorizacao(igrejaId, usuarioId);
 
         assertThat(url).contains("client_id=client-id-teste");
-        assertThat(url).contains("state=" + igrejaId);
+        assertThat(url).contains("redirect_uri=");
+        assertThat(url).contains("state=");
+        // Critical 3a: state NÃO pode ser o igrejaId em texto — tem que ser um nonce aleatório.
+        assertThat(url).doesNotContain("state=" + igrejaId);
+        verify(valueOperations).set(org.mockito.ArgumentMatchers.startsWith("mpoauth:state:"),
+                eq(usuarioId.toString()), any(java.time.Duration.class));
     }
 
     @Test
-    void processaCallbackSalvandoTokensCriptografados() {
+    void processaCallbackSalvandoTokensCriptografadosQuandoStateEhValido() {
+        comStateValidoParaUsuario("state-valido", usuarioId);
         var tokensObtidos = new MercadoPagoOAuthClient.TokensObtidos(
             "mp-user-999", "access-plano", "refresh-plano", 21600L
         );
@@ -47,7 +68,7 @@ class MercadoPagoOAuthServiceTest {
         when(encryptor.criptografar("refresh-plano")).thenReturn("refresh-cripto");
         when(repository.findByIgrejaId(igrejaId)).thenReturn(Optional.empty());
 
-        service.processarCallback("code-123", igrejaId, usuarioId);
+        service.processarCallback("code-123", "state-valido", igrejaId, usuarioId);
 
         verify(repository).save(argThat(conta ->
             conta.getIgrejaId().equals(igrejaId) &&
@@ -58,7 +79,34 @@ class MercadoPagoOAuthServiceTest {
     }
 
     @Test
+    void recusaCallbackQuandoStateNaoExisteOuExpirou() {
+        // Critical 3a (revisão final de branch): state nunca gravado (ou já expirado no Redis).
+        when(valueOperations.get("mpoauth:state:state-inexistente")).thenReturn(null);
+
+        assertThatThrownBy(() -> service.processarCallback("code-123", "state-inexistente", igrejaId, usuarioId))
+            .isInstanceOf(BusinessException.class)
+            .hasFieldOrPropertyWithValue("codigo", "OAUTH_STATE_INVALIDO");
+
+        verifyNoInteractions(client);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void recusaCallbackQuandoStateFoiGeradoParaOutroUsuario() {
+        // Critical 3a: o state existe no Redis, mas foi gerado pra OUTRO usuário — o
+        // cenário exato do ataque de CSRF de OAuth que esta correção fecha.
+        comStateValidoParaUsuario("state-de-outro", UUID.randomUUID());
+
+        assertThatThrownBy(() -> service.processarCallback("code-123", "state-de-outro", igrejaId, usuarioId))
+            .isInstanceOf(BusinessException.class)
+            .hasFieldOrPropertyWithValue("codigo", "OAUTH_STATE_INVALIDO");
+
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void processarCallbackAtualizaContaExistenteEmVezDeDuplicar() {
+        comStateValidoParaUsuario("state-valido", usuarioId);
         var contaExistente = new ContaPagamentoIgreja(
             igrejaId, "mp-user-antigo", "antigo-access", "antigo-refresh",
             Instant.now(), usuarioId
@@ -70,7 +118,7 @@ class MercadoPagoOAuthServiceTest {
         when(client.trocarCodePorTokens("code-123")).thenReturn(tokensObtidos);
         when(encryptor.criptografar(any())).thenReturn("cripto");
 
-        service.processarCallback("code-123", igrejaId, usuarioId);
+        service.processarCallback("code-123", "state-valido", igrejaId, usuarioId);
 
         verify(repository, never()).save(argThat(c -> c != contaExistente));
         verify(repository).save(contaExistente);

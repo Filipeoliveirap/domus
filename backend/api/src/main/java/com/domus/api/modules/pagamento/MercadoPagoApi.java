@@ -1,0 +1,167 @@
+package com.domus.api.modules.pagamento;
+
+import com.mercadopago.client.payment.PaymentClient;
+import com.mercadopago.client.payment.PaymentCreateRequest;
+import com.mercadopago.client.payment.PaymentPayerRequest;
+import com.mercadopago.client.payment.PaymentRefundClient;
+import com.mercadopago.core.MPRequestOptions;
+import java.math.BigDecimal;
+import org.springframework.stereotype.Component;
+
+/**
+ * Chamada HTTP real ao Mercado Pago, via SDK oficial ({@code com.mercadopago:sdk-java},
+ * versão 2.1.16). Isolado num componente próprio (em vez de dentro de
+ * {@link MercadoPagoClient}) só pra poder mockar a borda de I/O nos testes de
+ * {@code MercadoPagoClientTest} sem precisar de rede.
+ *
+ * <p><b>Nota sobre a Task 4 (OAuth) vs. esta task:</b> na Task 4, o fluxo de OAuth
+ * ({@code com.mercadopago.client.oauth.OauthClient}) se mostrou quebrado na v2.1.16 (não
+ * manda {@code client_id} no corpo) e teve que ser reescrito com {@code RestClient} direto
+ * na API REST. Aqui, no entanto, {@code PaymentClient} e {@code PaymentRefundClient} — as
+ * classes que este wrapper usa — foram conferidas abrindo o jar real (
+ * {@code ~/.m2/repository/com/mercadopago/sdk-java/2.1.16/sdk-java-2.1.16.jar}) com
+ * {@code jar xf} + {@code javap}: todas existem com exatamente a assinatura usada abaixo.
+ *
+ * <p><b>Por que {@code MPRequestOptions} por chamada, e não {@code MercadoPagoConfig.
+ * setAccessToken(...)} global (revisão pós-Task 8):</b> {@code MercadoPagoConfig} guarda o
+ * access token num campo {@code static} sem sincronização — confirmado via {@code javap
+ * com/mercadopago/MercadoPagoConfig.class} (getter/setter estáticos, sem
+ * {@code synchronized}). Com múltiplas igrejas processando pagamentos ao mesmo tempo (o
+ * app roda em threads concorrentes do Tomcat), duas chamadas simultâneas a
+ * {@code setAccessToken} + {@code create}/{@code refund} podiam entrelaçar e vazar o token
+ * de uma igreja para a chamada de outra — o tipo exato de vazamento cross-tenant que este
+ * projeto trata como grave (dinheiro real de igreja indo pra credencial errada). A
+ * inspeção do jar (abaixo) confirmou que {@code PaymentClient.create} e
+ * {@code PaymentRefundClient.refund} têm overloads que recebem um
+ * {@code com.mercadopago.core.MPRequestOptions} — que carrega o próprio
+ * {@code accessToken} como campo de instância, sem tocar em nenhum estado estático:
+ *
+ * <pre>
+ * javap com/mercadopago/client/payment/PaymentClient.class
+ * // create(PaymentCreateRequest, MPRequestOptions)
+ * javap com/mercadopago/client/payment/PaymentRefundClient.class
+ * // refund(Long, MPRequestOptions)
+ * javap com/mercadopago/core/MPRequestOptions.class
+ * javap 'com/mercadopago/core/MPRequestOptions$MPRequestOptionsBuilder.class'
+ * // builder().accessToken(String)...build() — getAccessToken()/setAccessToken() de instância
+ * </pre>
+ *
+ * Por isso este wrapper nunca chama {@code MercadoPagoConfig.setAccessToken}: o token é
+ * passado só por {@code MPRequestOptions}, isolado por chamada — resolve o vazamento na
+ * raiz, sem precisar serializar chamadas concorrentes.
+ */
+@Component
+public class MercadoPagoApi {
+
+    public String criarPagamento(String accessToken, String externalReference, BigDecimal valor) {
+        try {
+            PaymentClient client = new PaymentClient();
+            PaymentCreateRequest request = PaymentCreateRequest.builder()
+                .transactionAmount(valor)
+                .description("Inscrição em evento — Domus")
+                .externalReference(externalReference)
+                .build();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            var pagamento = client.create(request, options);
+            return String.valueOf(pagamento.getId());
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao criar pagamento no Mercado Pago", e);
+        }
+    }
+
+    /**
+     * Cria o pagamento a partir dos dados TOKENIZADOS pelo Payment Brick no navegador do
+     * pagador (Task 14). Diferente de {@link #criarPagamento}, aqui o cartão já foi
+     * tokenizado no cliente — o Domus nunca vê número de cartão, só o {@code token}
+     * gerado pelo SDK JS do Mercado Pago. Campos ({@code token}, {@code paymentMethodId},
+     * {@code installments}, {@code payer.email}) confirmados no jar real
+     * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap
+     * com/mercadopago/client/payment/PaymentCreateRequest.class} e
+     * {@code PaymentPayerRequest.class}) — todos existem como campos do builder, exatamente
+     * o que o Payment Brick devolve em {@code onSubmit({ formData })}
+     * ({@code formData.token}, {@code formData.payment_method_id},
+     * {@code formData.installments}, {@code formData.payer.email}).
+     *
+     * <p>PIX não usa {@code token} nem {@code installments} (só
+     * {@code paymentMethodId = "pix"}) — os dois campos aceitam {@code null} no builder do
+     * SDK sem quebrar (campos de instância, não primitivos), então o mesmo método serve
+     * pros dois meios de pagamento que o Brick oferece.
+     */
+    public String criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
+                                            String token, String paymentMethodId, Integer installments,
+                                            String payerEmail) {
+        try {
+            PaymentClient client = new PaymentClient();
+            PaymentCreateRequest request = PaymentCreateRequest.builder()
+                .transactionAmount(valor)
+                .description("Inscrição em evento — Domus")
+                .externalReference(externalReference)
+                .token(token)
+                .paymentMethodId(paymentMethodId)
+                .installments(installments)
+                .payer(PaymentPayerRequest.builder().email(payerEmail).build())
+                .build();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            var pagamento = client.create(request, options);
+            return String.valueOf(pagamento.getId());
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
+        }
+    }
+
+    /**
+     * Par {@code (externalReference, status)} de um pagamento no Mercado Pago. O
+     * {@code status} é o que decide, no webhook, se a cobrança pode ser marcada como PAGO
+     * (Critical 2, revisão final de branch) — valores documentados do SDK: {@code approved},
+     * {@code pending}, {@code in_process}, {@code rejected}, {@code cancelled},
+     * {@code refunded}, {@code charged_back}.
+     */
+    public record InformacoesPagamento(String externalReference, String status) {}
+
+    /**
+     * Busca o pagamento pelo id no Mercado Pago e devolve o {@code external_reference}
+     * (setado por {@link #criarPagamento}, é o id da nossa {@code CobrancaEvento}) junto
+     * do {@code status} real do pagamento. Usado pelo webhook, que só manda {@code data.id}
+     * — não o external_reference nem o status direto no payload.
+     *
+     * <p>{@code PaymentClient.get(Long, MPRequestOptions)} foi confirmado no jar real
+     * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap}
+     * {@code com/mercadopago/client/payment/PaymentClient.class}) — existe com essa
+     * assinatura exata, e {@code Payment.getExternalReference()}/{@code Payment.getStatus()}
+     * também existem (javap em {@code com/mercadopago/resources/payment/Payment.class}).
+     *
+     * <p><b>Critical 2 (revisão final de branch):</b> antes desta correção, o webhook
+     * confirmava a cobrança como PAGO incondicionalmente, sem checar {@code getStatus()} —
+     * PIX pendente, cartão recusado ou pagamento cancelado confirmavam a cobrança do mesmo
+     * jeito que um pagamento aprovado. Este método passou a expor o status pra o chamador
+     * decidir.
+     */
+    public InformacoesPagamento buscarInformacoesPagamento(String accessToken, String mpPaymentId) {
+        try {
+            PaymentClient client = new PaymentClient();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            var pagamento = client.get(Long.parseLong(mpPaymentId), options);
+            return new InformacoesPagamento(pagamento.getExternalReference(), pagamento.getStatus());
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
+        }
+    }
+
+    public void estornar(String accessToken, String mpPaymentId) {
+        try {
+            PaymentRefundClient client = new PaymentRefundClient();
+            MPRequestOptions options = MPRequestOptions.builder()
+                .accessToken(accessToken)
+                .build();
+            client.refund(Long.parseLong(mpPaymentId), options);
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao estornar pagamento no Mercado Pago", e);
+        }
+    }
+}

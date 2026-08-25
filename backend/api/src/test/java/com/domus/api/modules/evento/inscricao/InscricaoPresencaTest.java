@@ -59,7 +59,21 @@ class InscricaoPresencaTest {
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, pessoaRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
-                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
+                mock(com.domus.api.modules.pagamento.MercadoPagoClient.class),
+                contaPagamentoIgrejaRepositoryComContaConectada());
+    }
+
+    // Este teste não é sobre a regra de conta de pagamento conectada (Important 9) — todos
+    // os cenários assumem igreja com conta conectada, pra não misturar a asserção.
+    private static com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository
+            contaPagamentoIgrejaRepositoryComContaConectada() {
+        var repo = mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository.class);
+        when(repo.findByIgrejaId(any())).thenReturn(java.util.Optional.of(
+                mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
+        return repo;
     }
 
     private Igreja igreja() {

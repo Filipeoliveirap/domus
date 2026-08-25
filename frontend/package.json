@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@react-oauth/google": "^0.13.5",
     "@sentry/nextjs": "^10.65.0",
     "@tanstack/react-query": "^5.100.6",

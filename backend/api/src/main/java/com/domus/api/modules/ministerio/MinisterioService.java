@@ -138,6 +138,25 @@ public class MinisterioService {
         return response;
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @Transactional
+    public void atualizarFoto(UUID id, UUID igrejaId, UUID usuarioId, UUID fotoId) {
+        Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
+
+        Foto fotoAntiga = ministerio.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        ministerio.setFoto(fotoNova);
+        if (usuarioId != null) {
+            usuarioRepository.findById(usuarioId).ifPresent(ministerio::setAtualizadoPor);
+        }
+        ministerioRepository.save(ministerio);
+
+        if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null, fotoNova != null ? fotoNova.getId() : null)
+                && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+    }
+
     @Transactional
     public void arquivar(UUID id, UUID igrejaId) {
         Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);

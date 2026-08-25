@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus, Pencil, Archive, Grid3X3, Crown, X, Trash2 } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
+import { useAtualizarFotoCelula } from '@/hooks/celula/useAtualizarFotoCelula'
 import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
@@ -52,6 +53,7 @@ export default function CelulasPage() {
   const { celula: rotuloCelula } = useRotulos()
 
   const form = useCelulaForm()
+  const atualizarFoto = useAtualizarFotoCelula(editando?.id)
   const { register, handleSubmit, setValue, watch, formState: { errors }, isFormIncomplete, isLoading: salvando, erroGeral } = form
   const horarioValue = watch('horario') as string ?? ''
 
@@ -204,7 +206,23 @@ export default function CelulasPage() {
               <div className={styles.fotoWrap}>
                 <UploadFoto
                   valor={fotoId}
-                  onChange={(id) => setFotoId(id)}
+                  onChange={(id) => {
+                    setFotoId(id)
+                    // Em criação, a célula ainda não existe (sem id) — a foto só é
+                    // enviada junto do "Salvar". Em edição, salva sozinha ao confirmar o recorte.
+                    if (!editando) return
+                    const fotoAnterior = fotoId
+                    atualizarFoto.mutate(id, {
+                      onSuccess: () => notificar.sucesso(id ? 'Foto atualizada.' : 'Foto removida.'),
+                      onError: (erro: unknown) => {
+                        setFotoId(fotoAnterior)
+                        const mensagem =
+                          (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                          'Tente novamente em alguns instantes.'
+                        notificar.erro('Não foi possível salvar a foto', mensagem)
+                      },
+                    })
+                  }}
                   formato="circulo"
                   nomeFallback={form.getValues('nome') as string}
                 />

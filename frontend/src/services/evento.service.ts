@@ -40,6 +40,9 @@ export const eventosService = {
       params: { cancelarNaoElegiveis, escopo },
     }).then(res => res.data),
 
+  atualizarFoto: (id: string, fotoId: string | null): Promise<void> =>
+    api.patch(Endpoints.eventos.FOTO(id), { fotoId }).then(() => undefined),
+
   arquivar: (id: string, escopo?: EscopoEdicaoEvento): Promise<void> =>
     api.delete(Endpoints.eventos.BY_ID(id), { params: { escopo } }).then(() => undefined),
 

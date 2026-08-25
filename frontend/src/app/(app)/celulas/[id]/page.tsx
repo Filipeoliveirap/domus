@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X, Archive, ArrowLeft } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
+import { useAtualizarFotoCelula } from '@/hooks/celula/useAtualizarFotoCelula'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { celulaService } from '@/services/celula.service'
@@ -82,6 +83,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula, celula?.membros.length])
 
   const form = useCelulaForm({ celulaId: id, celulaInicial })
+  const atualizarFoto = useAtualizarFotoCelula(id)
   const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form
   const horarioValue = watch('horario') as string ?? ''
 
@@ -334,7 +336,20 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
               <div className={styles.fotoWrap}>
                 <UploadFoto
                   valor={fotoId}
-                  onChange={(id) => setFotoId(id)}
+                  onChange={(novoFotoId) => {
+                    const fotoAnterior = fotoId
+                    setFotoId(novoFotoId)
+                    atualizarFoto.mutate(novoFotoId, {
+                      onSuccess: () => notificar.sucesso(novoFotoId ? 'Foto atualizada.' : 'Foto removida.'),
+                      onError: (erro: unknown) => {
+                        setFotoId(fotoAnterior)
+                        const mensagem =
+                          (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                          'Tente novamente em alguns instantes.'
+                        notificar.erro('Não foi possível salvar a foto', mensagem)
+                      },
+                    })
+                  }}
                   formato="circulo"
                   nomeFallback={form.getValues('nome') as string}
                 />

@@ -50,6 +50,14 @@ public class CelulaController {
                 usuarioAutenticado.getPessoaId(), souAdmin()));
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<Void> atualizarFoto(@PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        celulaService.atualizarFoto(id, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                usuarioAutenticado.getPessoaId(), souAdmin(), data.fotoId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable UUID id) {
         exigirAdmin();

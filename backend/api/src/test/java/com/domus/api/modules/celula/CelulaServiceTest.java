@@ -17,6 +17,7 @@ import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalTime;
@@ -634,5 +635,50 @@ class CelulaServiceTest {
         List<CelulaResponse> response = service.listar(igrejaId, null);
 
         assertThat(response.get(0).temVinculo()).isFalse();
+    }
+
+    @Test
+    void atualizarFotoTrocaSoAFotoSemTocarNoNome() {
+        dadoQueExiste();
+        UUID fotoId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(fotoId);
+        when(fotoService.buscarParaVincular(fotoId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(celulaId, igrejaId, null, null, true, fotoId);
+
+        ArgumentCaptor<Celula> captor = ArgumentCaptor.forClass(Celula.class);
+        verify(celulaRepository).save(captor.capture());
+        assertThat(captor.getValue().getFoto()).isEqualTo(fotoNova);
+        assertThat(captor.getValue().getNome()).isEqualTo("Célula Bethânia");
+    }
+
+    @Test
+    void atualizarFotoRemoveAFotoAntigaQuandoTrocada() {
+        UUID fotoAntigaId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoAntiga = new com.domus.api.modules.foto.Foto();
+        fotoAntiga.setId(fotoAntigaId);
+        Celula existente = Celula.builder().id(celulaId).igreja(igreja()).nome("Célula Bethânia").foto(fotoAntiga).build();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        UUID fotoNovaId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(fotoNovaId);
+        when(fotoService.buscarParaVincular(fotoNovaId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(celulaId, igrejaId, null, null, true, fotoNovaId);
+
+        verify(fotoService).remover(fotoAntigaId);
+    }
+
+    @Test
+    void atualizarFotoRecusaQuemNaoEAdminNemLiderDaCelula() {
+        dadoQueExiste();
+        UUID atorPessoaId = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, atorPessoaId, PapelCelula.LIDER.name()))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> service.atualizarFoto(celulaId, igrejaId, null, atorPessoaId, false, UUID.randomUUID()))
+                .isInstanceOf(AccessDeniedException.class);
     }
 }

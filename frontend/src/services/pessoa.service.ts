@@ -37,6 +37,12 @@ export const pessoasService = {
   atualizarMe: (data: PessoaRequest): Promise<PessoaResponse> =>
     api.put<PessoaResponse>(Endpoints.pessoas.ME, data).then(res => res.data),
 
+  atualizarMinhaFoto: (fotoId: string | null): Promise<PessoaResponse> =>
+    api.patch<PessoaResponse>(Endpoints.pessoas.MINHA_FOTO, { fotoId }).then(res => res.data),
+
+  atualizarFoto: (id: string, fotoId: string | null): Promise<PessoaResponse> =>
+    api.patch<PessoaResponse>(Endpoints.pessoas.FOTO(id), { fotoId }).then(res => res.data),
+
   listarBairros: (): Promise<string[]> =>
     api.get<string[]>(Endpoints.pessoas.BAIRROS).then(res => res.data),
 

@@ -193,6 +193,35 @@ public class IgrejaService {
         return IgrejaDetalheDTO.from(igreja, nomeDoAutor(igreja.getAtualizadoPor()));
     }
 
+    /**
+     * Troca só a logo, sem tocar em nenhum outro campo — usado pelo fluxo de "salvar a
+     * foto assim que confirma o recorte", sem esperar o resto do formulário de Dados da
+     * Igreja ser salvo (ver brainstorm de UX de UploadFoto, 2026-08-25).
+     */
+    @Transactional
+    public void atualizarLogo(UUID igrejaId, UUID usuarioId, UUID fotoId) {
+        Igreja igreja = igrejaRepository.findById(igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+
+        // Mesma ordem de sempre: aponta pra nova antes de remover a antiga (ON DELETE
+        // RESTRICT recusaria apagar uma foto ainda referenciada).
+        Foto logoAntiga = igreja.getLogoFoto();
+        Foto logoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        igreja.setLogoFoto(logoNova);
+        igreja.setAtualizadoPor(usuarioRepository.getReferenceById(usuarioId));
+        igrejaRepository.save(igreja);
+
+        boolean logoMudou = !java.util.Objects.equals(
+                logoAntiga == null ? null : logoAntiga.getId(),
+                logoNova == null ? null : logoNova.getId());
+        if (logoMudou && logoAntiga != null) {
+            fotoService.remover(logoAntiga.getId());
+        }
+
+        cacheManager.getCache("igreja").evictIfPresent(igrejaId);
+        log.info("Logo da igreja atualizada. igreja_id={}, por_usuario_id={}", igrejaId, usuarioId);
+    }
+
     /** Cada bloco vem completo (3 campos) ou totalmente vazio (reseta pro padrão) — nunca parcial. */
     @Transactional
     public RotulosDTO atualizarRotulos(UUID igrejaId, RotulosRequest data) {

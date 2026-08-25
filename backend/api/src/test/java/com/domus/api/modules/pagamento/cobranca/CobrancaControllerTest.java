@@ -202,6 +202,47 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     @Test
     @Sql(statements = {
         "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('11111111-1111-1111-1111-111111111116', 'Igreja Teste 6', 'igreja6@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333338', '11111111-1111-1111-1111-111111111116', 'Pagador Duplicado', 'duplicado@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444449', '11111111-1111-1111-1111-111111111116', " +
+            "'33333333-3333-3333-3333-333333333338', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('77777777-7777-7777-7777-777777777782', '11111111-1111-1111-1111-111111111116', 'Salão 6')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('55555555-5555-5555-5555-555555555560', '11111111-1111-1111-1111-111111111116', " +
+            "'Culto Especial', now(), '77777777-7777-7777-7777-777777777782', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666671', '11111111-1111-1111-1111-111111111116', " +
+            "'55555555-5555-5555-5555-555555555560', '33333333-3333-3333-3333-333333333338', 'CONFIRMADA')"
+    })
+    void recusaSegundaTentativaDePagamentoQuandoJaExisteMpPaymentIdRegistrado() throws Exception {
+        // Critical 5 (revisão final de branch): cobrança PENDENTE, mas já com mpPaymentId
+        // registrado (1ª tentativa criou o pagamento no Mercado Pago, webhook ainda não
+        // confirmou) — a 2ª tentativa de pagar precisa ser recusada, sem chamar o Mercado
+        // Pago de novo (evita cobrança duplicada real do pagador).
+        UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111116");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555560");
+        UUID inscricaoId = UUID.fromString("66666666-6666-6666-6666-666666666671");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333338");
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444449");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+            BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobranca.registrarTentativaPagamento("mp-payment-1a-tentativa");
+        cobranca = cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"duplicado@teste.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("COBRANCA_JA_EM_PROCESSAMENTO")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
             "('11111111-1111-1111-1111-111111111115', 'Igreja Teste 5', 'igreja5@teste.com')",
         "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
             "('33333333-3333-3333-3333-333333333337', '11111111-1111-1111-1111-111111111115', 'Pagador Atrasado', 'atrasado@teste.com')",

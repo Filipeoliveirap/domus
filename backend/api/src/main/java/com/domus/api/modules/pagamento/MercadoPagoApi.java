@@ -114,24 +114,40 @@ public class MercadoPagoApi {
     }
 
     /**
+     * Par {@code (externalReference, status)} de um pagamento no Mercado Pago. O
+     * {@code status} é o que decide, no webhook, se a cobrança pode ser marcada como PAGO
+     * (Critical 2, revisão final de branch) — valores documentados do SDK: {@code approved},
+     * {@code pending}, {@code in_process}, {@code rejected}, {@code cancelled},
+     * {@code refunded}, {@code charged_back}.
+     */
+    public record InformacoesPagamento(String externalReference, String status) {}
+
+    /**
      * Busca o pagamento pelo id no Mercado Pago e devolve o {@code external_reference}
-     * que foi setado por {@link #criarPagamento} (é o id da nossa {@code CobrancaEvento}).
-     * Usado pelo webhook, que só manda {@code data.id} — não o external_reference direto.
+     * (setado por {@link #criarPagamento}, é o id da nossa {@code CobrancaEvento}) junto
+     * do {@code status} real do pagamento. Usado pelo webhook, que só manda {@code data.id}
+     * — não o external_reference nem o status direto no payload.
      *
      * <p>{@code PaymentClient.get(Long, MPRequestOptions)} foi confirmado no jar real
      * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap}
      * {@code com/mercadopago/client/payment/PaymentClient.class}) — existe com essa
-     * assinatura exata, e {@code Payment.getExternalReference()} também existe (javap em
-     * {@code com/mercadopago/resources/payment/Payment.class}).
+     * assinatura exata, e {@code Payment.getExternalReference()}/{@code Payment.getStatus()}
+     * também existem (javap em {@code com/mercadopago/resources/payment/Payment.class}).
+     *
+     * <p><b>Critical 2 (revisão final de branch):</b> antes desta correção, o webhook
+     * confirmava a cobrança como PAGO incondicionalmente, sem checar {@code getStatus()} —
+     * PIX pendente, cartão recusado ou pagamento cancelado confirmavam a cobrança do mesmo
+     * jeito que um pagamento aprovado. Este método passou a expor o status pra o chamador
+     * decidir.
      */
-    public String buscarExternalReference(String accessToken, String mpPaymentId) {
+    public InformacoesPagamento buscarInformacoesPagamento(String accessToken, String mpPaymentId) {
         try {
             PaymentClient client = new PaymentClient();
             MPRequestOptions options = MPRequestOptions.builder()
                 .accessToken(accessToken)
                 .build();
             var pagamento = client.get(Long.parseLong(mpPaymentId), options);
-            return pagamento.getExternalReference();
+            return new InformacoesPagamento(pagamento.getExternalReference(), pagamento.getStatus());
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
         }

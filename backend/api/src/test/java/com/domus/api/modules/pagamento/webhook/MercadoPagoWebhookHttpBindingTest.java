@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.domus.api.modules.pagamento.MercadoPagoApi;
 import com.domus.api.modules.pagamento.MercadoPagoClient;
 import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class MercadoPagoWebhookHttpBindingTest implements PostgresTestContainerSupport 
                         .param("type", "payment"))
                 .andExpect(status().isOk());
 
-        verify(service, never()).confirmarPagamento(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(service, never()).confirmarPagamento(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -61,14 +62,14 @@ class MercadoPagoWebhookHttpBindingTest implements PostgresTestContainerSupport 
                         .header("x-request-id", "req-1"))
                 .andExpect(status().isOk());
 
-        verify(service, never()).confirmarPagamento(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(service, never()).confirmarPagamento(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
     void requisicaoCompletaEValidaConfirmaPagamento() throws Exception {
         when(validator.valida("ts=1,v1=hash", "999", "req-1")).thenReturn(true);
-        when(mercadoPagoClient.buscarExternalReferencePorMpUserId("mp-user-1", "999"))
-                .thenReturn("cobranca-abc");
+        when(mercadoPagoClient.buscarInformacoesPagamentoPorMpUserId("mp-user-1", "999"))
+                .thenReturn(new MercadoPagoApi.InformacoesPagamento("cobranca-abc", "approved"));
 
         mockMvc.perform(post("/pagamentos/mercadopago/webhook")
                         .header("x-signature", "ts=1,v1=hash")
@@ -78,6 +79,6 @@ class MercadoPagoWebhookHttpBindingTest implements PostgresTestContainerSupport 
                         .param("user_id", "mp-user-1"))
                 .andExpect(status().isOk());
 
-        verify(service).confirmarPagamento("cobranca-abc", "999");
+        verify(service).confirmarPagamento("cobranca-abc", "999", "approved");
     }
 }

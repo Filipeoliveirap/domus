@@ -5,6 +5,8 @@ import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,6 +23,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class MercadoPagoWebhookService {
 
+    private static final Logger log = LoggerFactory.getLogger(MercadoPagoWebhookService.class);
+
+    /** Único status do Mercado Pago que confirma o pagamento de verdade (Critical 2). */
+    private static final String STATUS_APROVADO = "approved";
+
     private final CobrancaEventoRepository cobrancaRepository;
     private final NotificacaoService notificacaoService;
 
@@ -30,7 +37,23 @@ public class MercadoPagoWebhookService {
         this.notificacaoService = notificacaoService;
     }
 
-    public void confirmarPagamento(String cobrancaId, String mpPaymentId) {
+    /**
+     * Critical 2 (revisão final de branch): antes desta correção, este método marcava a
+     * cobrança como PAGO incondicionalmente — PIX pendente, cartão recusado ou pagamento
+     * cancelado confirmavam a cobrança do mesmo jeito que um pagamento de verdade aprovado.
+     * Agora só confirma quando {@code status} é {@code "approved"}; qualquer outro valor
+     * (ex.: {@code pending}, {@code in_process}, {@code rejected}, {@code cancelled},
+     * {@code refunded}, {@code charged_back}) só loga e não muda nada — a cobrança
+     * continua PENDENTE, esperando um webhook futuro (ex.: PIX que ainda vai ser pago) ou
+     * expirando naturalmente.
+     */
+    public void confirmarPagamento(String cobrancaId, String mpPaymentId, String status) {
+        if (!STATUS_APROVADO.equals(status)) {
+            log.info("Webhook do Mercado Pago com status não aprovado, cobrança não confirmada. "
+                + "cobrancaId={} mpPaymentId={} status={}", cobrancaId, mpPaymentId, status);
+            return;
+        }
+
         cobrancaRepository.findById(UUID.fromString(cobrancaId)).ifPresent(cobranca -> {
             cobranca.marcarComoPago(mpPaymentId);
             cobrancaRepository.save(cobranca);
@@ -40,7 +63,7 @@ public class MercadoPagoWebhookService {
                     TipoNotificacao.COBRANCA_EVENTO_PAGA,
                     cobranca.getIgrejaId(),
                     cobranca.getCriadoPorUsuarioId(),
-                    "O pagamento do convidado foi confirmado.",
+                    "O pagamento foi confirmado.",
                     "/eventos/" + cobranca.getEventoId() + "/inscritos");
             }
         });

@@ -37,7 +37,7 @@
 .areaBanner {
   width: 100%;
   max-width: 420px;
-  aspect-ratio: 3 / 1;
+  aspect-ratio: 16 / 9;
   border-radius: var(--radius-lg);
 }
 

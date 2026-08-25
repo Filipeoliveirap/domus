@@ -42,11 +42,18 @@ export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagame
   }, [])
 
   return (
-    <div className={styles.wrapper}>
+    // Critical 5 (revisão final de branch): o Brick não expõe uma prop "disabled" — a
+    // defesa real contra clique duplo é no backend (idempotência via mpPaymentId em
+    // CobrancaController.pagar), mas aqui soma-se uma camada de UX: `pointerEvents: none`
+    // bloqueia clique novo enquanto `enviando`, e o guard logo no início do onSubmit
+    // recusa uma segunda submissão que já esteja "em voo" (o SDK poderia disparar de novo
+    // antes do clique ser bloqueado visualmente).
+    <div className={styles.wrapper} style={enviando ? { pointerEvents: 'none', opacity: 0.6 } : undefined}>
       <Payment
         initialization={{ amount: valor, payer: { email: emailPagador } }}
         customization={{ paymentMethods: { bankTransfer: 'all', creditCard: 'all' } }}
         onSubmit={async ({ formData }) => {
+          if (enviando) return
           setEnviando(true)
           try {
             const resposta = await cobrancaService.pagar(cobrancaId, {

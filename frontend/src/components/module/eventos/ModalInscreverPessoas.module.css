@@ -63,6 +63,15 @@
   color: var(--color-text-muted);
 }
 
+/* ---- Task 14: checkout sequencial ---- */
+
+.contadorCheckout {
+  padding-bottom: 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .btnFechar {
   display: flex;
   align-items: center;

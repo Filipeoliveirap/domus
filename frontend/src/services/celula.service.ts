@@ -19,6 +19,9 @@ export const celulaService = {
   atualizar: (id: string, data: CelulaRequest): Promise<CelulaResponse> =>
     api.put<CelulaResponse>(Endpoints.celulas.BY_ID(id), data).then(res => res.data),
 
+  atualizarFoto: (id: string, fotoId: string | null): Promise<void> =>
+    api.patch(Endpoints.celulas.FOTO(id), { fotoId }).then(() => undefined),
+
   excluir: (id: string): Promise<void> =>
     api.delete(Endpoints.celulas.BY_ID(id)).then(() => undefined),
 

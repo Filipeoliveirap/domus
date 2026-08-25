@@ -387,4 +387,40 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
 
         assertThat(repository.findById(ministerioId)).isEmpty();
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.domus.api.modules.foto.FotoRepository fotoRepository;
+
+    private com.domus.api.modules.foto.Foto novaFoto(UUID igrejaId) {
+        Igreja igreja = igrejaRepository.findById(igrejaId).orElseThrow();
+        return fotoRepository.save(com.domus.api.modules.foto.Foto.builder()
+                .igreja(igreja)
+                .chave(UUID.randomUUID().toString())
+                .tipo("image/webp")
+                .bytes(1024)
+                .build());
+    }
+
+    @Test
+    void atualizarFotoTrocaSoAFotoSemTocarNoNome() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID fotoId = novaFoto(igrejaId).getId();
+
+        service.atualizarFoto(ministerioId, igrejaId, null, fotoId);
+
+        Ministerio salvo = repository.findByIdAndIgrejaId(ministerioId, igrejaId).orElseThrow();
+        assertThat(salvo.getFoto().getId()).isEqualTo(fotoId);
+        assertThat(salvo.getNome()).isEqualTo("Louvor");
+    }
+
+    @Test
+    void atualizarFotoRemoveAFotoAntigaQuandoTrocada() {
+        UUID fotoAntigaId = novaFoto(igrejaId).getId();
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", fotoAntigaId), igrejaId, null).id();
+        UUID fotoNovaId = novaFoto(igrejaId).getId();
+
+        service.atualizarFoto(ministerioId, igrejaId, null, fotoNovaId);
+
+        assertThat(fotoRepository.findById(fotoAntigaId)).isEmpty();
+    }
 }

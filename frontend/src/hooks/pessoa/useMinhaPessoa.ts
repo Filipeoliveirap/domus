@@ -10,6 +10,23 @@ export function useMinhaPessoa() {
   })
 }
 
+/**
+ * Salva só a foto de perfil — dispara assim que o UploadFoto confirma o
+ * recorte (ou remove a foto), sem esperar o resto do formulário ser salvo.
+ */
+export function useAtualizarMinhaFoto() {
+  const queryClient = useQueryClient()
+  const atualizarUsuarioLogado = useAuthStore((s) => s.atualizarUsuarioLogado)
+
+  return useMutation({
+    mutationFn: (fotoId: string | null) => pessoasService.atualizarMinhaFoto(fotoId),
+    onSuccess: (resposta) => {
+      queryClient.setQueryData(['pessoa', 'me'], resposta)
+      atualizarUsuarioLogado({ fotoId: resposta.fotoId })
+    },
+  })
+}
+
 export function useAtualizarMinhaPessoa() {
   const queryClient = useQueryClient()
   const atualizarUsuarioLogado = useAuthStore((s) => s.atualizarUsuarioLogado)

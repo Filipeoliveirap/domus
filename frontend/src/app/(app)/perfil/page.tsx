@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { User, MapPin, FileText, Church } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { useMinhaPessoa } from '@/hooks/pessoa/useMinhaPessoa'
+import { useMinhaPessoa, useAtualizarMinhaFoto } from '@/hooks/pessoa/useMinhaPessoa'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import { usePerfilForm } from '@/hooks/pessoa/usePerfilForm'
 import { podeGerenciarPessoas } from '@/lib/permissoes'
 import { AlterarSenhaForm } from '@/components/module/perfil/AlterarSenhaForm'
@@ -48,9 +49,10 @@ export default function PerfilPage() {
   const podeEditarTudo = podeGerenciarPessoas(role, capacidadesExtras)
 
   const { data: pessoa, isLoading: carregando } = useMinhaPessoa()
+  const atualizarFoto = useAtualizarMinhaFoto()
   const {
     register, handleSubmit, setValue, watch,
-    formState: { errors, dirtyFields },
+    formState: { errors },
     erroGeral, isLoading, onSubmit,
   } = usePerfilForm(pessoa)
 
@@ -94,7 +96,20 @@ export default function PerfilPage() {
         <div className={styles.fotoWrap}>
           <UploadFoto
             valor={fotoIdAtual}
-            onChange={(id) => setValue('fotoId', id, { shouldDirty: true })}
+            onChange={(id) => {
+              const fotoAnterior = fotoIdAtual ?? null
+              setValue('fotoId', id)
+              atualizarFoto.mutate(id, {
+                onSuccess: () => notificar.sucesso(id ? 'Foto atualizada.' : 'Foto removida.'),
+                onError: (erro: unknown) => {
+                  setValue('fotoId', fotoAnterior)
+                  const mensagem =
+                    (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                    'Tente novamente em alguns instantes.'
+                  notificar.erro('Não foi possível salvar a foto', mensagem)
+                },
+              })
+            }}
             formato="circulo"
             nomeFallback={nomeAtual}
           />
@@ -223,11 +238,12 @@ export default function PerfilPage() {
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
-        {/* Só habilita quando pode editar tudo OU a foto foi alterada. */}
-        <Button type="submit" variant="primary" isLoading={isLoading}
-          disabled={isLoading || (!podeEditarTudo && !dirtyFields.fotoId)}>
-          {podeEditarTudo ? 'Salvar alterações' : 'Salvar foto'}
-        </Button>
+        {/* Foto salva sozinha ao trocar; quem não edita o resto não tem o que salvar aqui. */}
+        {podeEditarTudo && (
+          <Button type="submit" variant="primary" isLoading={isLoading} disabled={isLoading}>
+            Salvar alterações
+          </Button>
+        )}
       </form>
 
       <AlterarSenhaForm />

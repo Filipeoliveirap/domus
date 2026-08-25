@@ -77,6 +77,10 @@ public class SecurityConfig {
                         .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
                         .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
+                        // "/igrejas/minha" acima só casa o path exato — /minha/logo é outro path e,
+                        // sem matcher próprio, caía em anyRequest().authenticated() (qualquer perfil
+                        // logado trocava a logo da igreja). Mesma classe de bug do comentário abaixo.
+                        .requestMatchers("/igrejas/minha/logo").hasRole(ADMIN)
                         // Critical 3b (revisão final de branch): conectar/desconectar/consultar a
                         // conta de recebimento da igreja é decisão de admin — sem este matcher,
                         // caía em anyRequest().authenticated() e qualquer perfil (ACESSO_COMUM
@@ -100,6 +104,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/pessoas/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasAnyRole(ADMIN, LIDER, COMUM)
+
+                        // PATCH não é coberto pelos matchers de PUT/DELETE "/eventos/**" abaixo
+                        // (são específicos de método) — sem isto caía em anyRequest().authenticated().
+                        .requestMatchers(HttpMethod.PATCH, "/eventos/*/foto")
+                        .hasAnyRole(ADMIN, LIDER)
 
                         .requestMatchers(HttpMethod.POST, "/eventos/*/presenca/marcar-todos")
                         .hasAnyRole(ADMIN, LIDER)

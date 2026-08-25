@@ -181,4 +181,60 @@ class IgrejaServiceTest {
         assertThat(resultado.celulaPlural()).isNull();
         assertThat(resultado.celulaGenero()).isNull();
     }
+
+    @Test
+    void atualizarLogoTrocaSoAFotoSemTocarNosDemaisCampos() {
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Igreja Original")
+                .cnpj("12345678900123").build();
+        UUID usuarioId = UUID.randomUUID();
+        UUID novaFotoId = UUID.randomUUID();
+        var novaFoto = com.domus.api.modules.foto.Foto.builder().id(novaFotoId).build();
+
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(fotoService.buscarParaVincular(novaFotoId, igrejaId)).thenReturn(novaFoto);
+        when(usuarioRepository.getReferenceById(usuarioId)).thenReturn(Usuario.builder().id(usuarioId).build());
+        when(cacheManager.getCache("igreja")).thenReturn(mock(org.springframework.cache.Cache.class));
+
+        igrejaService.atualizarLogo(igrejaId, usuarioId, novaFotoId);
+
+        assertThat(igreja.getLogoFoto()).isEqualTo(novaFoto);
+        assertThat(igreja.getNome()).as("nome não deveria mudar — endpoint é só de foto").isEqualTo("Igreja Original");
+        assertThat(igreja.getCnpj()).as("cnpj não deveria mudar").isEqualTo("12345678900123");
+        verify(igrejaRepository).save(igreja);
+    }
+
+    @Test
+    void atualizarLogoRemoveAFotoAntigaQuandoTrocada() {
+        var fotoAntiga = com.domus.api.modules.foto.Foto.builder().id(UUID.randomUUID()).build();
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Teste").logoFoto(fotoAntiga).build();
+        UUID usuarioId = UUID.randomUUID();
+        UUID novaFotoId = UUID.randomUUID();
+        var novaFoto = com.domus.api.modules.foto.Foto.builder().id(novaFotoId).build();
+
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(fotoService.buscarParaVincular(novaFotoId, igrejaId)).thenReturn(novaFoto);
+        when(usuarioRepository.getReferenceById(usuarioId)).thenReturn(Usuario.builder().id(usuarioId).build());
+        when(cacheManager.getCache("igreja")).thenReturn(mock(org.springframework.cache.Cache.class));
+
+        igrejaService.atualizarLogo(igrejaId, usuarioId, novaFotoId);
+
+        verify(fotoService).remover(fotoAntiga.getId());
+    }
+
+    @Test
+    void atualizarLogoParaNuloRemoveALogoAtual() {
+        var fotoAntiga = com.domus.api.modules.foto.Foto.builder().id(UUID.randomUUID()).build();
+        Igreja igreja = Igreja.builder().id(igrejaId).nome("Teste").logoFoto(fotoAntiga).build();
+        UUID usuarioId = UUID.randomUUID();
+
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(fotoService.buscarParaVincular(null, igrejaId)).thenReturn(null);
+        when(usuarioRepository.getReferenceById(usuarioId)).thenReturn(Usuario.builder().id(usuarioId).build());
+        when(cacheManager.getCache("igreja")).thenReturn(mock(org.springframework.cache.Cache.class));
+
+        igrejaService.atualizarLogo(igrejaId, usuarioId, null);
+
+        assertThat(igreja.getLogoFoto()).isNull();
+        verify(fotoService).remover(fotoAntiga.getId());
+    }
 }

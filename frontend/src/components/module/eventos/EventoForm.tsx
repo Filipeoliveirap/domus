@@ -21,6 +21,8 @@ import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
 import type { CamposPersonalizadosHandle } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
+import { useAtualizarFotoEvento } from '@/hooks/evento/useAtualizarFotoEvento'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -91,6 +93,7 @@ export function EventoForm(props: EventoFormProps) {
   const restricaoSexoAtual = watch('restricaoSexo') as RestricaoSexo | null | undefined
 
   const { data: tiposSugeridos = [] } = useTiposEvento()
+  const atualizarFoto = useAtualizarFotoEvento(eventoId)
 
   const { data: vinculoStatus } = useVinculoStatus()
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
@@ -375,7 +378,23 @@ export function EventoForm(props: EventoFormProps) {
               <span className={styles.labelData}>IMAGEM DO EVENTO</span>
               <UploadFoto
                 valor={fotoIdAtual}
-                onChange={(id) => setValue('fotoId', id, { shouldValidate: true, shouldDirty: true })}
+                onChange={(id) => {
+                  setValue('fotoId', id, { shouldValidate: true })
+                  // Em criação, o evento ainda não existe (sem id) — a foto só é enviada
+                  // junto do "Salvar evento". Em edição, salva sozinha ao confirmar o recorte.
+                  if (!ehEdicao || !eventoId) return
+                  const fotoAnterior = fotoIdAtual ?? null
+                  atualizarFoto.mutate(id, {
+                    onSuccess: () => notificar.sucesso(id ? 'Imagem atualizada.' : 'Imagem removida.'),
+                    onError: (erro: unknown) => {
+                      setValue('fotoId', fotoAnterior)
+                      const mensagem =
+                        (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                        'Tente novamente em alguns instantes.'
+                      notificar.erro('Não foi possível salvar a imagem', mensagem)
+                    },
+                  })
+                }}
                 formato="banner"
               />
             </div>

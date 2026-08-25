@@ -2,6 +2,7 @@ package com.domus.api.modules.igreja;
 
 import com.domus.api.modules.auth.DTO.SessaoDTO;
 import com.domus.api.modules.igreja.DTO.AtualizarIgrejaRequest;
+import com.domus.api.modules.igreja.DTO.AtualizarLogoRequest;
 import com.domus.api.modules.igreja.DTO.IgrejaDetalheDTO;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaAdminRequest;
 import com.domus.api.modules.igreja.DTO.RegistrarIgrejaResponse;
@@ -66,5 +67,13 @@ public class IgrejaController {
     public ResponseEntity<RotulosDTO> atualizarRotulos(
             @RequestBody @Valid RotulosRequest data) {
         return ResponseEntity.ok(igrejaService.atualizarRotulos(usuarioAutenticado.getIgrejaId(), data));
+    }
+
+    /** Só a logo — salva assim que o recorte é confirmado, sem esperar o resto do formulário. */
+    @PatchMapping("/minha/logo")
+    public ResponseEntity<Void> atualizarLogo(@RequestBody AtualizarLogoRequest data) {
+        igrejaService.atualizarLogo(
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(), data.fotoId());
+        return ResponseEntity.noContent().build();
     }
 }

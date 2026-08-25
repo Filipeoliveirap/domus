@@ -40,6 +40,18 @@ export function useAtualizarMinisterio(id: string) {
   })
 }
 
+/**
+ * Salva só a foto — dispara assim que o UploadFoto confirma o recorte (ou
+ * remove a foto), sem esperar o resto do modal ser salvo. Só usada em edição.
+ */
+export function useAtualizarFotoMinisterio(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (fotoId: string | null) => ministerioService.atualizarFoto(id, fotoId),
+    onSuccess: () => invalidarCache(queryClient, 'ministerio'),
+  })
+}
+
 export function useArquivarMinisterio() {
   const queryClient = useQueryClient()
   const { ministerio } = useRotulos()

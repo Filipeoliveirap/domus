@@ -890,4 +890,64 @@ class EventoServiceTest {
         verify(cacheEvictor).evictPorIgreja("eventos", igrejaId);
         verify(cacheEvictor).evictPorIgreja("eventos", outraIgrejaId);
     }
+
+    @Test
+    void atualizarFotoTrocaSoAFotoSemTocarNosDemaisCampos() {
+        UUID eventoId = UUID.randomUUID();
+        UUID novaFotoId = UUID.randomUUID();
+        Evento existente = evento(igrejaId, false);
+        existente.setId(eventoId);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(novaFotoId);
+        when(fotoService.buscarParaVincular(novaFotoId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(eventoId, igrejaId, usuarioId, novaFotoId);
+
+        assertThat(existente.getFoto()).isEqualTo(fotoNova);
+        assertThat(existente.getTitulo()).isEqualTo("Culto Dominical");
+        verify(eventoRepository).save(existente);
+    }
+
+    @Test
+    void atualizarFotoRemoveAFotoAntigaQuandoTrocada() {
+        UUID eventoId = UUID.randomUUID();
+        UUID fotoAntigaId = UUID.randomUUID();
+        UUID fotoNovaId = UUID.randomUUID();
+
+        com.domus.api.modules.foto.Foto fotoAntiga = new com.domus.api.modules.foto.Foto();
+        fotoAntiga.setId(fotoAntigaId);
+        Evento existente = evento(igrejaId, false);
+        existente.setId(eventoId);
+        existente.setFoto(fotoAntiga);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(fotoNovaId);
+        when(fotoService.buscarParaVincular(fotoNovaId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(eventoId, igrejaId, usuarioId, fotoNovaId);
+
+        verify(fotoService).remover(fotoAntigaId);
+    }
+
+    @Test
+    void atualizarFotoParaNuloRemoveAFotoAtual() {
+        UUID eventoId = UUID.randomUUID();
+        UUID fotoAntigaId = UUID.randomUUID();
+
+        com.domus.api.modules.foto.Foto fotoAntiga = new com.domus.api.modules.foto.Foto();
+        fotoAntiga.setId(fotoAntigaId);
+        Evento existente = evento(igrejaId, false);
+        existente.setId(eventoId);
+        existente.setFoto(fotoAntiga);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(fotoService.buscarParaVincular(isNull(), eq(igrejaId))).thenReturn(null);
+
+        service.atualizarFoto(eventoId, igrejaId, usuarioId, null);
+
+        assertThat(existente.getFoto()).isNull();
+        verify(fotoService).remover(fotoAntigaId);
+    }
 }

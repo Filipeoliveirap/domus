@@ -25,8 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -105,11 +107,14 @@ class ContaPagamentoControllerTest implements PostgresTestContainerSupport {
                 .thenReturn(new MercadoPagoOAuthClient.TokensObtidos(
                         "mp-user-123", "access-token-fake", "refresh-token-fake", 21600L));
 
+        String state = obterStateValido(adminDaIgrejaA);
+
         // Autenticado como usuário da Igreja A. Mesmo que o antigo `state` pudesse carregar
-        // o UUID da Igreja B (o bug corrigido no round anterior), hoje nem existe mais esse
-        // parâmetro no endpoint — só `code` é aceito.
+        // o UUID da Igreja B (o bug corrigido no round anterior), o `igrejaId` sempre veio
+        // da sessão — nunca de parâmetro. `state` aqui é o nonce anti-CSRF (Critical 3a),
+        // não uma fonte de igrejaId.
         mockMvc.perform(auth.autenticado(
-                        get("/pagamentos/conta/callback").param("code", "code-qualquer"),
+                        get("/pagamentos/conta/callback").param("code", "code-qualquer").param("state", state),
                         adminDaIgrejaA))
                 .andExpect(status().isOk());
 
@@ -122,5 +127,51 @@ class ContaPagamentoControllerTest implements PostgresTestContainerSupport {
 
         var contaIgrejaB = contaPagamentoIgrejaRepository.findByIgrejaId(igrejaB.getId());
         assertThat(contaIgrejaB).isEmpty();
+    }
+
+    @Test
+    void callback_comStateInvalidoOuInexistente_recusaSemChamarMercadoPago() throws Exception {
+        // Critical 3a (revisão final de branch): prova que um `state` forjado/inexistente
+        // é recusado ANTES de trocar o code por tokens — a mesma defesa que impede o
+        // ataque de CSRF de OAuth descrito no javadoc de MercadoPagoOAuthService.
+        Usuario admin = usuarioComRole(igrejaA, "ADMIN_IGREJA");
+
+        mockMvc.perform(auth.autenticado(
+                        get("/pagamentos/conta/callback")
+                                .param("code", "code-qualquer")
+                                .param("state", "state-forjado-por-atacante"),
+                        admin))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("OAUTH_STATE_INVALIDO"));
+
+        var conta = contaPagamentoIgrejaRepository.findByIgrejaId(igrejaA.getId());
+        assertThat(conta).isEmpty();
+    }
+
+    @Test
+    void conectar_desconectar_status_recusamAcessoComumComForbidden() throws Exception {
+        // Critical 3b (revisão final de branch): /pagamentos/conta/** precisa exigir
+        // ADMIN_IGREJA — antes desta correção, caía em anyRequest().authenticated() e
+        // qualquer perfil (inclusive ACESSO_COMUM) podia conectar/desconectar a conta de
+        // recebimento da igreja inteira.
+        Usuario acessoComum = usuarioComRole(igrejaA, "ACESSO_COMUM");
+
+        mockMvc.perform(auth.autenticado(get("/pagamentos/conta/conectar"), acessoComum))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(auth.autenticado(delete("/pagamentos/conta"), acessoComum))
+                .andExpect(status().isForbidden());
+    }
+
+    /** Chama o endpoint real de conectar (autenticado como {@code usuario}) e extrai o `state` da URL devolvida. */
+    private String obterStateValido(Usuario usuario) throws Exception {
+        var resultado = mockMvc.perform(auth.autenticado(get("/pagamentos/conta/conectar"), usuario))
+                .andExpect(status().isOk())
+                .andReturn();
+        String json = resultado.getResponse().getContentAsString();
+        String marcador = "state=";
+        int inicio = json.indexOf(marcador) + marcador.length();
+        // A URL vem dentro de um JSON (`{"url":"...state=XYZ"}`) — corta na aspa de fechamento.
+        int fim = json.indexOf('"', inicio);
+        return json.substring(inicio, fim);
     }
 }

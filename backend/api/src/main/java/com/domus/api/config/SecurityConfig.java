@@ -77,6 +77,11 @@ public class SecurityConfig {
                         .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
                         .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
+                        // Critical 3b (revisão final de branch): conectar/desconectar/consultar a
+                        // conta de recebimento da igreja é decisão de admin — sem este matcher,
+                        // caía em anyRequest().authenticated() e qualquer perfil (ACESSO_COMUM
+                        // incluso) podia mexer na conta de pagamento da igreja inteira.
+                        .requestMatchers("/pagamentos/conta/**").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 
                         .requestMatchers("/usuarios/**")

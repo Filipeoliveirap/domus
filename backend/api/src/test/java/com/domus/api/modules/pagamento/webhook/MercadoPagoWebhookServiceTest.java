@@ -123,6 +123,11 @@ class MercadoPagoWebhookServiceTest {
     @Test
     void naoConfirmaQuandoStatusEhRecusado() {
         // Critical 2 (revisão final de branch): cartão recusado não pode confirmar a cobrança.
+        // Ajustado na fix wave de 2026-08-25: "rejected" é status TERMINAL não aprovado, então
+        // agora BUSCA a cobrança e limpa o mpPaymentId (ver liberaMpPaymentIdQuandoStatusEhRecusado
+        // abaixo) — mas continua sem marcar como PAGO nem notificar. A asserção antiga
+        // (never().findById) provava um comportamento que o próprio bug desta fix wave corrige;
+        // a asserção de "nunca fica PAGO" e "nunca notifica" continua de pé.
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
@@ -132,9 +137,58 @@ class MercadoPagoWebhookServiceTest {
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
             .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
-        verify(cobrancaRepository, never()).save(any());
         verifyNoInteractions(notificacaoService);
-        // Não deve nem chegar a buscar a cobrança no repositório — recusado sai antes disso.
+    }
+
+    @Test
+    void liberaMpPaymentIdQuandoStatusEhRecusado() {
+        // Fix wave (2026-08-25): cobrança com mpPaymentId de uma tentativa anterior (gravado
+        // por CobrancaController.pagar assim que o pagamento é criado no MP) tem o campo
+        // limpo quando o webhook chega com "rejected" — liberando uma nova tentativa de
+        // pagamento (outro cartão, PIX) sem cair em COBRANCA_JA_EM_PROCESSAMENTO.
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "rejected");
+
+        org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId()).isNull();
+        org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
+            .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
+        verify(cobrancaRepository).save(cobranca);
+    }
+
+    @Test
+    void liberaMpPaymentIdQuandoStatusEhCancelado() {
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "cancelled");
+
+        org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId()).isNull();
+        verify(cobrancaRepository).save(cobranca);
+    }
+
+    @Test
+    void naoLiberaMpPaymentIdQuandoStatusEhPendente() {
+        // Status não-terminal (pending/in_process) ainda pode virar approved depois — não
+        // libera retry, senão criaria pagamento duplicado pro mesmo PIX pendente.
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "pending");
+
+        org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId())
+            .isEqualTo("mp-payment-tentativa-1");
+        verify(cobrancaRepository, never()).save(any());
         verify(cobrancaRepository, never()).findById(any());
     }
 

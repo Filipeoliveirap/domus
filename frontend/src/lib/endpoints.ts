@@ -187,6 +187,17 @@ export const Endpoints = {
     BY_ID: (id: string) => `/fotos/${id}`,
   },
 
+  pagamento: {
+    STATUS: '/pagamentos/conta/status',
+    CONECTAR: '/pagamentos/conta/conectar',
+    DESCONECTAR: '/pagamentos/conta',
+  },
+
+  cobrancas: {
+    BUSCAR_POR_TOKEN: (token: string) => `/cobrancas/${token}`,
+    PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
+  },
+
   celulas: {
     LISTAR: '/celulas',
     CRIAR: '/celulas',

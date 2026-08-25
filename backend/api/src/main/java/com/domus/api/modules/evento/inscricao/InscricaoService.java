@@ -9,12 +9,19 @@ import com.domus.api.modules.evento.elegibilidade.ElegibilidadeService;
 import com.domus.api.modules.evento.elegibilidade.Impedimento;
 import com.domus.api.modules.evento.elegibilidade.NaoElegivelException;
 import com.domus.api.modules.igreja.familia.FamiliaIgrejaService;
+import com.domus.api.modules.pagamento.MercadoPagoClient;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
+import com.domus.api.modules.pagamento.cobranca.CobrancaEventoService;
+import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
+import com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.PessoaInscritaComCobranca;
 import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -40,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
 
 @Service
 @Slf4j
@@ -57,17 +65,62 @@ public class InscricaoService {
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     private final com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
     private final com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
+    private final CobrancaEventoService cobrancaEventoService;
+    private final CobrancaEventoRepository cobrancaEventoRepository;
+    private final MercadoPagoClient mercadoPagoClient;
+    private final ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
+
+    /**
+     * Important 9 (revisão final de branch): sem isto, uma inscrição em evento pago era
+     * criada com sucesso mesmo sem a igreja ter conectado uma conta Mercado Pago — só
+     * falhava depois, na hora de {@code /pagar} (checagem que já existia em
+     * {@code MercadoPagoClient.obterAccessTokenPlano}). Checa ANTES de criar qualquer
+     * registro (inscrição ou cobrança), pra a transação inteira reverter sem deixar
+     * rastro — mesmo código de erro (`IGREJA_SEM_CONTA_PAGAMENTO`) que o pagamento já usa.
+     */
+    private void validarContaPagamentoConectada(UUID igrejaId) {
+        if (contaPagamentoIgrejaRepository.findByIgrejaId(igrejaId).isEmpty()) {
+            throw new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",
+                    "Esta igreja ainda não conectou uma conta para receber pagamentos.");
+        }
+    }
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
                                             UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
+        var resultado = inscreverInterno(eventoId, pessoaId, inscritoPorOuNull, minhaPessoaId, role,
+                confirmado, igrejaId, false);
+        return MinhaInscricaoResponse.from(resultado.inscricao(),
+                resultado.cobranca() != null ? resultado.cobranca().getId() : null);
+    }
+
+    /**
+     * Núcleo de {@link #inscrever}, com um parâmetro a mais: {@code gerarLinkSePago}
+     * (Task 14, revisão pós-review). Sozinho, {@code inscrever} nunca oferece link — é
+     * usado pela auto-inscrição, onde a regra "titular sempre paga agora" (Task 9) faz
+     * sentido total. Mas {@link #inscreverPessoas} (lote do admin/líder) inscreve OUTRAS
+     * pessoas, que não estão logadas nem presentes — nesse caso faz sentido permitir
+     * "gerar link" pra quem está sendo inscrito pagar depois, sozinho. Ainda assim, a
+     * pessoa que fez a ação (identificada por {@code minhaPessoaId}) nunca vira link para
+     * si mesma, mesmo que apareça na própria lista do lote — ela está logada e presente,
+     * então preserva a mesma trava de {@code inscrever}.
+     */
+    private record ResultadoInscricao(InscricaoEvento inscricao, CobrancaEvento cobranca) {}
+
+    private ResultadoInscricao inscreverInterno(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
+                                            UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId,
+                                            boolean gerarLinkSePago) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        if (evento.getPreco() != null) {
+            validarContaPagamentoConectada(igrejaId);
+        }
 
         validarEventoAberto(evento);
         boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
@@ -102,6 +155,28 @@ public class InscricaoService {
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
 
+        // Evento pago: titular sempre "eu pago agora" (nunca vira link, diferente do
+        // acompanhante em adicionarAcompanhante) — vaga fica reservada via CobrancaEvento
+        // (ver validarVaga), não pela InscricaoEvento CONFIRMADA (essa é sempre imediata,
+        // pago ou não). Quem assina como "criado por": quem inscreveu (admin/líder em
+        // lote) ou, na auto-inscrição (inscritoPorOuNull nulo), o próprio usuário do
+        // titular — sempre existe, pois só se auto-inscreve quem está logado.
+        CobrancaEvento cobranca = null;
+        if (evento.getPreco() != null) {
+            UUID criadoPorUsuarioId = inscritoPorOuNull != null
+                    ? inscritoPorOuNull
+                    : usuarioRepository.findByPessoaId(pessoaId).map(u -> u.getId()).orElse(null);
+            // "Gerar link" só faz sentido pra quem NÃO é quem está fazendo a ação agora —
+            // a própria pessoa logada continua travada em "paga agora" (Task 9), mesmo
+            // quando aparece na lista de um lote que ela mesma está confirmando.
+            boolean podeVirarLink = gerarLinkSePago && !pessoaId.equals(minhaPessoaId);
+            cobranca = podeVirarLink
+                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(), pessoaId, null,
+                            evento.getPreco(), criadoPorUsuarioId, true)
+                    : cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
+                            evento.getPreco(), criadoPorUsuarioId);
+        }
+
         // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
         // quem fez a ação já sabe dela.
         if (evento.getResponsavel() != null && !evento.getResponsavel().getId().equals(pessoaId)) {
@@ -124,7 +199,7 @@ public class InscricaoService {
 
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
                 eventoId, pessoaId, inscritoPorOuNull, igrejaId);
-        return MinhaInscricaoResponse.from(salva);
+        return new ResultadoInscricao(salva, cobranca);
     }
 
     private void notificarPendenciaDeCamposSeHouver(Evento evento, Pessoa pessoaInscrita, UUID igrejaId, UUID usuarioIdAtor) {
@@ -145,9 +220,31 @@ public class InscricaoService {
                         "/eventos?detalhe=" + evento.getId()));
     }
 
-    /** Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro. */
+    /**
+     * Overload de compatibilidade — mantém o comportamento anterior (ninguém vira link,
+     * todo mundo "paga agora") para quem ainda chama sem escolher por pessoa. Os 21+
+     * usos existentes (`InscricaoServiceTest`, `InscricaoController`) continuam valendo
+     * sem alteração.
+     */
     @Transactional
-    public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
+    public List<PessoaInscritaComCobranca> inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
+                                 UUID inscritoPorUsuarioId, UUID minhaPessoaId, String role, boolean confirmado,
+                                 UUID igrejaId) {
+        return inscreverPessoas(eventoId, pessoaIds, java.util.Set.of(), inscritoPorUsuarioId, minhaPessoaId,
+                role, confirmado, igrejaId);
+    }
+
+    /**
+     * Task 14 (revisão pós-review): {@code pessoaIdsParaLink} é o subconjunto de
+     * {@code pessoaIds} que a tela "Divisão de pagamento" (`EscolhaPagamentoPorPessoa`,
+     * front) marcou como "gerar link" em vez de "eu pago agora" — cada uma dessas
+     * recebe uma {@code CobrancaEvento} com {@code tokenLinkPublico}, pra pagar sozinha
+     * depois, sem que quem está inscrevendo (admin/líder) precise pagar por ela na hora.
+     * Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro.
+     */
+    @Transactional
+    public List<PessoaInscritaComCobranca> inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
+                                 java.util.Set<UUID> pessoaIdsParaLink, UUID inscritoPorUsuarioId,
                                  UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
@@ -165,17 +262,40 @@ public class InscricaoService {
             }
         }
 
+        List<PessoaInscritaComCobranca> resultado = new ArrayList<>();
         for (UUID pessoaId : pessoaIds) {
-            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado, igrejaId);
+            boolean gerarLink = pessoaIdsParaLink.contains(pessoaId);
+            var r = inscreverInterno(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado,
+                    igrejaId, gerarLink);
+            resultado.add(new PessoaInscritaComCobranca(
+                    pessoaId,
+                    r.cobranca() != null ? r.cobranca().getId() : null,
+                    r.cobranca() != null ? r.cobranca().getTokenLinkPublico() : null));
         }
+        return resultado;
     }
 
     @Transactional(readOnly = true)
     public MinhaInscricaoResponse minhaInscricao(UUID eventoId, UUID pessoaId) {
         return inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)
                 .filter(InscricaoEvento::estaConfirmada)
-                .map(MinhaInscricaoResponse::from)
+                .map(i -> MinhaInscricaoResponse.from(i, cobrancaPendenteDoTitular(i.getId(), pessoaId)))
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
+    }
+
+    /**
+     * Task 14: se a pessoa recarregar a página antes de pagar (ou fechar o Brick sem
+     * concluir), {@code minhaInscricao} precisa continuar devolvendo o id da cobrança
+     * pendente do TITULAR — nunca a de um acompanhante, que segue um fluxo à parte
+     * (link compartilhado, não o Brick embutido nesta tela).
+     */
+    private UUID cobrancaPendenteDoTitular(UUID inscricaoId, UUID pessoaId) {
+        return cobrancaEventoRepository.findByInscricaoId(inscricaoId).stream()
+                .filter(c -> pessoaId.equals(c.getPessoaId()))
+                .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
+                .map(CobrancaEvento::getId)
+                .findFirst()
+                .orElse(null);
     }
 
     /** {@code requerInscricao} não se aplica à auto-inscrição (ver {@link #inscrever}), que funciona em qualquer evento. */
@@ -283,11 +403,24 @@ public class InscricaoService {
     void validarVaga(Evento evento, int pessoasAAdicionar) {
         if (evento.getVagas() == null) return;
 
-        long ocupadas = inscricaoRepository.contarPessoasConfirmadas(evento.getId());
+        long ocupadas = contarOcupadas(evento);
         if (ocupadas + pessoasAAdicionar > evento.getVagas()) {
             throw new BusinessException("VAGAS_ESGOTADAS",
                     "As vagas deste evento estão esgotadas.");
         }
+    }
+
+    /**
+     * Evento pago reserva vaga pela cobrança (PAGO ou PENDENTE ainda não expirada), não pela
+     * inscrição confirmada — a inscrição é sempre confirmada na hora, pago ou não; quem de
+     * fato "segura" a vaga é a cobrança (expira e libera sozinha se ninguém pagar). Evento
+     * gratuito continua exatamente como antes: conta inscrições confirmadas + acompanhantes.
+     */
+    private long contarOcupadas(Evento evento) {
+        if (evento.getPreco() != null) {
+            return cobrancaEventoRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
+        }
+        return inscricaoRepository.contarPessoasConfirmadas(evento.getId());
     }
 
     /** Convidado sem cadastro ganha inscrição própria (não acompanhante aninhado) — sem
@@ -313,6 +446,16 @@ public class InscricaoService {
         if (evento.isExclusivoMembros()) {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
+        }
+        // Convidado de topo não tem Pessoa nem é um acompanhante — CobrancaEvento exige um
+        // dos dois (ver construtor), então não há como gerar cobrança pra ele hoje. Sem essa
+        // trava, evento pago poderia ser "furado" inscrevendo qualquer um por aqui, sem pagar
+        // nada, e essa vaga ficaria invisível pra contarPessoasComVagaReservada (ver
+        // contarOcupadas) — overbooking real. Bloqueia até existir uma forma de cobrar
+        // convidado sem cadastro (fora do escopo desta task).
+        if (evento.getPreco() != null) {
+            throw new BusinessException("CONVIDADO_NAO_PODE_EM_EVENTO_PAGO",
+                    "Este evento é pago — inscreva com uma pessoa cadastrada para gerar a cobrança.");
         }
         validarEventoAberto(evento);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
@@ -365,6 +508,9 @@ public class InscricaoService {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
         }
+        if (inscricao.getEvento().getPreco() != null) {
+            validarContaPagamentoConectada(igrejaId);
+        }
         validarEventoAberto(inscricao.getEvento());
         validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
 
@@ -380,6 +526,16 @@ public class InscricaoService {
                 .build();
 
         AcompanhanteInscricao salvo = acompanhanteRepository.save(a);
+
+        // Terceiro (não o titular): a escolha de "pagar agora" vs. "gerar link" vem do
+        // próprio AcompanhanteRequest (campo gerarLinkPagamento) — quem está adicionando o
+        // convidado decide se cobra na hora ou manda um link pra essa pessoa pagar sozinha.
+        if (inscricao.getEvento().getPreco() != null) {
+            cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
+                    inscricaoId, null, salvo.getId(), inscricao.getEvento().getPreco(),
+                    usuarioId, data.gerarLinkPagamento());
+        }
+
         log.info("Acompanhante adicionado. inscricao_id={}, por_usuario={}, igreja_id={}",
                 inscricaoId, usuarioId, igrejaId);
         return AcompanhanteResponse.from(salvo);
@@ -441,10 +597,64 @@ public class InscricaoService {
      *  herdaria resposta velha e pareceria "já respondido" sem a pessoa ter respondido nada
      *  desta vez. */
     private void cancelarInterno(InscricaoEvento inscricao) {
+        // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
+        // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
+        // com o dinheiro ainda retido no Mercado Pago.
+        estornarCobrancasDaInscricao(inscricao);
         inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
+    }
+
+    /**
+     * PAGO estorna de verdade no Mercado Pago; PENDENTE só cancela (nunca chegou a ser
+     * cobrado).
+     *
+     * <p><b>Important 7 (revisão final de branch) — fail-fast ANTES de mutar qualquer
+     * status:</b> antes desta correção, o loop chamava {@code marcarComoCancelado()} em
+     * cobranças PENDENTES e só DEPOIS chegava numa cobrança PAGA cujo estorno falhava —
+     * o {@code BusinessException} lançado ali abortava a transação do CANCELAMENTO
+     * individual, mas em cancelamento em LOTE ({@code cancelarInscricoesEmEventosAbertosPorPessoa},
+     * {@code removerInscritosNaoElegiveis}, {@code cancelarInscricoesEmEventosExclusivos})
+     * a exceção é capturada por item do lote — então essas mutações "sujas" (cobrança de
+     * acompanhante já marcada CANCELADO, vaga já liberada) eram persistidas no commit do
+     * lote mesmo a inscrição continuando CONFIRMADA. Resultado: vaga liberada sem a
+     * inscrição ter sido cancelada de verdade.
+     *
+     * <p>Correção (abordagem a — fail-fast, mais simples que isolar cada item do lote em
+     * {@code REQUIRES_NEW}, e resolve o problema na raiz em vez de só conter o dano):
+     * primeiro chama TODAS as chamadas externas de estorno (as únicas que podem falhar)
+     * e só DEPOIS que todas tiverem sucesso é que qualquer status é mutado — nem PAGO
+     * nem PENDENTE. Se uma falhar, nenhuma cobrança desta inscrição muda de estado.
+     */
+    private void estornarCobrancasDaInscricao(InscricaoEvento inscricao) {
+        List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
+        if (cobrancas.isEmpty()) return;
+
+        UUID igrejaId = inscricao.getIgreja().getId();
+
+        // 1ª passada: só chamadas externas (podem falhar), NENHUMA mutação de status ainda.
+        for (CobrancaEvento cobranca : cobrancas) {
+            if (cobranca.getStatus() == StatusCobranca.PAGO) {
+                try {
+                    mercadoPagoClient.estornar(igrejaId, cobranca.getMpPaymentId());
+                } catch (Exception e) {
+                    throw new BusinessException("FALHA_ESTORNO",
+                            "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
+                }
+            }
+        }
+
+        // 2ª passada: todas as chamadas externas tiveram sucesso — agora sim muta status.
+        for (CobrancaEvento cobranca : cobrancas) {
+            if (cobranca.getStatus() == StatusCobranca.PAGO) {
+                cobranca.marcarComoReembolsado();
+            } else if (cobranca.getStatus() == StatusCobranca.PENDENTE) {
+                cobranca.marcarComoCancelado();
+            }
+        }
+        cobrancaEventoRepository.saveAll(cobrancas);
     }
 
     /**
@@ -458,7 +668,13 @@ public class InscricaoService {
         List<InscricaoEvento> confirmadas = inscricaoRepository.findByPessoaIdAndStatus(pessoaId, StatusInscricao.CONFIRMADA);
         for (InscricaoEvento inscricao : confirmadas) {
             if (inscricao.getEvento().getSituacao() == SituacaoEvento.AGENDADO) {
-                cancelarInterno(inscricao);
+                try {
+                    cancelarInterno(inscricao);
+                } catch (BusinessException e) {
+                    if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                    log.error("Falha ao estornar cobrança da inscrição {} durante cancelamento em lote "
+                            + "(pessoa arquivada) — pessoa mantida, requer retry manual", inscricao.getId(), e);
+                }
             }
         }
     }
@@ -476,8 +692,14 @@ public class InscricaoService {
 
             Elegibilidade elegibilidade = elegibilidadeService.avaliar(inscricao.getEvento(), pessoa);
             if (!elegibilidade.apto()) {
-                cancelarInterno(inscricao);
-                removidos++;
+                try {
+                    cancelarInterno(inscricao);
+                    removidos++;
+                } catch (BusinessException e) {
+                    if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                    log.error("Falha ao estornar cobrança da inscrição {} durante remoção em lote "
+                            + "de não-elegíveis — pessoa mantida, requer retry manual", inscricao.getId(), e);
+                }
             }
         }
 
@@ -521,15 +743,23 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository
                 .findByPessoaIdAndStatusAndEventoExclusivoMembrosTrue(pessoaId, StatusInscricao.CONFIRMADA);
 
+        int canceladas = 0;
         for (InscricaoEvento inscricao : inscricoes) {
-            cancelarInterno(inscricao);
+            try {
+                cancelarInterno(inscricao);
+                canceladas++;
+            } catch (BusinessException e) {
+                if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                log.error("Falha ao estornar cobrança da inscrição {} durante cancelamento em lote "
+                        + "(perda de vínculo MEMBRO) — pessoa mantida, requer retry manual", inscricao.getId(), e);
+            }
         }
 
-        if (!inscricoes.isEmpty()) {
+        if (canceladas > 0) {
             log.info("Inscrições canceladas por perda de vínculo MEMBRO. pessoa_id={}, canceladas={}",
-                    pessoaId, inscricoes.size());
+                    pessoaId, canceladas);
         }
-        return inscricoes.size();
+        return canceladas;
     }
 
     /** {@code busca} e a paginação afetam só {@code inscritos} — total/vagas restantes contam TODAS as confirmadas. */

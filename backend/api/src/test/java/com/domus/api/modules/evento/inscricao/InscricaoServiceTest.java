@@ -57,6 +57,7 @@ class InscricaoServiceTest {
     com.domus.api.modules.pagamento.cobranca.CobrancaEventoService cobrancaEventoService;
     com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository cobrancaEventoRepository;
     com.domus.api.modules.pagamento.MercadoPagoClient mercadoPagoClient;
+    com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -86,11 +87,18 @@ class InscricaoServiceTest {
         cobrancaEventoService = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class);
         cobrancaEventoRepository = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class);
         mercadoPagoClient = mock(com.domus.api.modules.pagamento.MercadoPagoClient.class);
+        contaPagamentoIgrejaRepository = mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository.class);
+        // Por padrão a igreja TEM conta conectada — os testes de evento pago já existentes
+        // não são sobre esta regra (Important 9); cada teste que quer provar a recusa
+        // sobrescreve com Optional.empty() explicitamente.
+        when(contaPagamentoIgrejaRepository.findByIgrejaId(any()))
+                .thenReturn(Optional.of(mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
-                cobrancaEventoService, cobrancaEventoRepository, mercadoPagoClient);
+                cobrancaEventoService, cobrancaEventoRepository, mercadoPagoClient,
+                contaPagamentoIgrejaRepository);
     }
 
     private Igreja igreja() {
@@ -195,6 +203,25 @@ class InscricaoServiceTest {
 
         verify(cobrancaEventoService).criarParaTitular(eq(igrejaId), eq(eventoId), any(),
                 eq(pessoaId), eq(java.math.BigDecimal.valueOf(50)), any());
+    }
+
+    @Test
+    void eventoPagoSemIgrejaComContaConectadaRecusaInscricaoAntesDeCriarQualquerCoisa() {
+        // Important 9 (revisão final de branch): antes desta correção, essa inscrição era
+        // criada com sucesso e só falhava depois, na hora de /pagar. Prova que agora falha
+        // ANTES, sem criar nem InscricaoEvento nem CobrancaEvento nenhuma.
+        Evento evento = evento(10);
+        evento.setPreco(java.math.BigDecimal.valueOf(50));
+        dado(evento, membro(Vinculo.MEMBRO), 0);
+        when(contaPagamentoIgrejaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "IGREJA_SEM_CONTA_PAGAMENTO");
+
+        verify(inscricaoRepository, never()).save(any());
+        verify(cobrancaEventoService, never())
+                .criarParaTitular(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -890,6 +917,38 @@ class InscricaoServiceTest {
                 .hasMessageContaining("FALHA_ESTORNO");
 
         verify(inscricaoRepository, never()).save(argThat(i -> i.getStatus() == StatusInscricao.CANCELADA));
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    @Test
+    void falhaNoEstornoDeUmaCobrancaPagaNaoCancelaOutraCobrancaPendenteDaMesmaInscricao() {
+        // Important 7 (revisão final de branch): antes da correção, a cobrança PENDENTE era
+        // marcada CANCELADO na 1ª passada do loop, e só depois o loop chegava na cobrança
+        // PAGA cujo estorno falha — mutação parcial que, em cancelamento em lote, seria
+        // persistida mesmo a inscrição continuando CONFIRMADA. Prova aqui: depois da falha,
+        // a cobrança PENDENTE continua PENDENTE (nenhuma mutação de status aconteceu).
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        var cobrancaPendente = cobrancaPendente();
+        var cobrancaPaga = cobrancaPagaComId("mp-payment-falha");
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPendente, cobrancaPaga));
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+
+        assertThatThrownBy(() -> service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("FALHA_ESTORNO");
+
+        assertThat(cobrancaPendente.getStatus())
+                .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
+        assertThat(cobrancaPaga.getStatus())
+                .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        verify(cobrancaEventoRepository, never()).saveAll(any());
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
     }
 

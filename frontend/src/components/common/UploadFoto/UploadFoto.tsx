@@ -9,7 +9,7 @@ import { iniciais } from '@/lib/formats/pessoaFormat'
 import { CropperFoto } from './CropperFoto'
 import styles from './UploadFoto.module.css'
 
-const TIPOS_ACEITOS = ['image/jpeg', 'image/png']
+const TIPOS_ACEITOS = ['image/jpeg', 'image/png', 'image/webp']
 const TAMANHO_MAXIMO_BYTES = 15 * 1024 * 1024
 
 interface Props {
@@ -41,7 +41,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
 
   function validarArquivo(arquivo: File): boolean {
     if (!TIPOS_ACEITOS.includes(arquivo.type)) {
-      notificar.erro('Formato não aceito', 'Envie uma imagem JPEG ou PNG.')
+      notificar.erro('Formato não aceito', 'Envie uma imagem JPEG, PNG ou WebP.')
       return false
     }
     // Checagem no cliente só para poupar upload em vão (ex.: 4G) — quem decide de
@@ -151,7 +151,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
           <div className={styles.placeholder}>
             <Camera size={22} aria-hidden="true" />
             <span>Clique ou arraste uma foto</span>
-            <span className={styles.ajuda}>JPEG ou PNG, até 15 MB</span>
+            <span className={styles.ajuda}>JPEG, PNG ou WebP, até 15 MB</span>
           </div>
         )}
 

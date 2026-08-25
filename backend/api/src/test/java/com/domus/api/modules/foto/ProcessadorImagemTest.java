@@ -115,6 +115,30 @@ class ProcessadorImagemTest {
                 .isTrue();
     }
 
+    @Test
+    void areaTransparenteViraFundoBrancoNaoPreto() throws IOException {
+        // PNG 100x100 totalmente transparente (alpha=0) — se a composicao falhar, o
+        // BufferedImage TYPE_INT_RGB novo nasce preto (0,0,0) e o alpha e so descartado
+        // por cima do preto, em vez de composto sobre branco.
+        byte[] pngTransparente = pngTransparenteDe(100, 100);
+
+        var r = processador.validarEProcessar(pngTransparente);
+
+        BufferedImage thumb = ler(r.thumb());
+        int pixelCentral = thumb.getRGB(thumb.getWidth() / 2, thumb.getHeight() / 2);
+        assertThat(new java.awt.Color(pixelCentral, false))
+                .as("area transparente deveria virar branco, nao preto")
+                .isEqualTo(java.awt.Color.WHITE);
+    }
+
+    private byte[] pngTransparenteDe(int largura, int altura) throws IOException {
+        BufferedImage img = new BufferedImage(largura, altura, BufferedImage.TYPE_INT_ARGB);
+        // Já nasce com alpha=0 (transparente) em todos os pixels — não precisa desenhar nada.
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", out);
+        return out.toByteArray();
+    }
+
     private byte[] gerarWebpDe(int largura, int altura) throws IOException {
         BufferedImage img = new BufferedImage(largura, altura, BufferedImage.TYPE_INT_RGB);
         ByteArrayOutputStream out = new ByteArrayOutputStream();

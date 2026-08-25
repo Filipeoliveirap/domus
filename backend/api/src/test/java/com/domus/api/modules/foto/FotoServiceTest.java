@@ -2,6 +2,7 @@ package com.domus.api.modules.foto;
 
 import com.domus.api.modules.foto.DTOs.FotoResponse;
 import com.domus.api.shared.armazenamento.ArmazenamentoEmMemoria;
+import com.domus.api.shared.armazenamento.ArmazenamentoException;
 import com.domus.api.shared.armazenamento.ArmazenamentoFotos;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityManagerFactory;
@@ -96,6 +97,21 @@ class FotoServiceTest implements PostgresTestContainerSupport {
         byte[] bytes = service.ler(resposta.id(), TamanhoFoto.THUMB, igrejaId);
 
         assertThat(bytes).isNotEmpty();
+    }
+
+    @Test
+    void lerComFallbackPropagaFalhaRealDeInfraEmVezDeDisfarcarDe404() {
+        var resposta = service.enviar(arquivoJpeg(), igrejaId);
+
+        armazenamento.simularFalhaDeInfra(true);
+        try {
+            assertThatThrownBy(() -> service.lerComFallback(resposta.id(), TamanhoFoto.THUMB, igrejaId))
+                    .as("falha de rede/autenticação no storage não pode virar 'foto não encontrada'")
+                    .isInstanceOf(ArmazenamentoException.class)
+                    .isNotInstanceOf(ResourceNotFoundException.class);
+        } finally {
+            armazenamento.simularFalhaDeInfra(false);
+        }
     }
 
     /** Chave no bucket é `fotos/{igrejaId}/{UUID-aleatório}`, diferente do id da linha em `foto` — o prefixo por igreja basta pra contar as três versões. */

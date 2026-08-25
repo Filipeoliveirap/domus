@@ -46,7 +46,10 @@ public class FotoController {
             @RequestHeader(value = "Accept", defaultValue = "*/*") String accept) {
 
         byte[] bytes = fotoService.lerComFallback(id, tamanho, usuarioAutenticado.getIgrejaId());
-        boolean clienteAceitaWebp = accept.contains("image/webp") || accept.contains("*/*");
+        // "*/*" NÃO conta como aceitar WebP — é o valor default quando o cliente nem manda
+        // o header Accept (curl sem -H, <img> antigo, download direto). Só serve WebP pra
+        // quem declara suporte de verdade; o resto cai no fallback JPEG, mais compatível.
+        boolean clienteAceitaWebp = accept.contains("image/webp");
         boolean bytesSaoWebp = ehWebp(bytes);
 
         byte[] resposta;
@@ -69,6 +72,11 @@ public class FotoController {
         return ResponseEntity.ok()
                 .contentType(contentType)
                 .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
+                // Sem isso, um cache/CDN compartilhado guarda a resposta só pela URL e pode
+                // servir WebP pra quem pediu JPEG (ou vice-versa) — visto ao vivo testando:
+                // o <img> do navegador (Accept: image/webp nativo) cacheia a URL, e uma
+                // chamada seguinte com Accept diferente pega o cache do formato errado.
+                .header("Vary", "Accept")
                 .body(resposta);
     }
 
@@ -82,6 +90,20 @@ public class FotoController {
     private byte[] converterWebpParaJpeg(byte[] webpBytes) {
         try {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(webpBytes));
+            // Rede de segurança: display/thumb já não deveriam ter alpha (ProcessadorImagem
+            // achata transparência no envio), mas JPEG não suporta alpha de jeito nenhum —
+            // se algum WebP com alpha chegar aqui mesmo assim, ImageIO.write("jpg", ...)
+            // falha em vez de silenciosamente descartar o canal. Compor sobre branco garante
+            // que a conversão nunca quebra por causa disso.
+            if (img.getColorModel().hasAlpha()) {
+                BufferedImage opaca = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_RGB);
+                var g2d = opaca.createGraphics();
+                g2d.setColor(java.awt.Color.WHITE);
+                g2d.fillRect(0, 0, img.getWidth(), img.getHeight());
+                g2d.drawImage(img, 0, 0, null);
+                g2d.dispose();
+                img = opaca;
+            }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageIO.write(img, "jpg", out);
             return out.toByteArray();

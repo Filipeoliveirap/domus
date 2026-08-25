@@ -3,6 +3,7 @@ package com.domus.api.modules.foto;
 import com.domus.api.modules.foto.DTOs.FotoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.shared.armazenamento.ArmazenamentoFotos;
+import com.domus.api.shared.armazenamento.ArmazenamentoObjetoNaoEncontradoException;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -73,14 +74,17 @@ public class FotoService {
 
         try {
             return armazenamentoFotos.ler(chaveWebp);
-        } catch (Exception e) {
+        } catch (ArmazenamentoObjetoNaoEncontradoException e) {
             log.debug("WebP não encontrado, tentando JPEG: {}", chaveWebp);
             try {
                 return armazenamentoFotos.ler(chaveJpg);
-            } catch (Exception e2) {
+            } catch (ArmazenamentoObjetoNaoEncontradoException e2) {
                 throw new ResourceNotFoundException("Foto não encontrada.");
             }
+            // Falha real de infra (rede, autenticação) na tentativa do .jpg propaga como está —
+            // não vira 404 falso.
         }
+        // Falha real de infra na tentativa do .webp propaga como está — não vira 404 falso.
     }
 
     /** Retorna {@code null} quando o id é {@code null} — "sem foto" é uma escolha válida. */

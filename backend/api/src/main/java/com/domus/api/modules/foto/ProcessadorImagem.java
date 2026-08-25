@@ -130,7 +130,8 @@ public class ProcessadorImagem {
                 throw new BusinessException("FALHA_PROCESSAMENTO", "Não foi possível ler a imagem.");
             }
 
-            BufferedImage rotacionado = aplicarRotacao(original, rotacaoExif);
+            BufferedImage semTransparencia = removerTransparencia(original);
+            BufferedImage rotacionado = aplicarRotacao(semTransparencia, rotacaoExif);
 
             int ladoAlvo = tamanho.getLadoMaximo();
             BufferedImage redimensionado = redimensionarMantendoProporcao(rotacionado, ladoAlvo);
@@ -142,6 +143,24 @@ public class ProcessadorImagem {
             throw new BusinessException("FALHA_PROCESSAMENTO",
                     "Não foi possível processar esta imagem. Tente outra.");
         }
+    }
+
+    /**
+     * Compõe a imagem sobre um fundo branco, descartando o canal alpha. Saída sempre é
+     * JPEG/WebP (sem transparência), então uma foto com fundo transparente precisa virar
+     * branco sólido aqui — sem isso, o {@code BufferedImage} novo criado adiante (sem alpha)
+     * nasce preto e a transparência vira preto sólido em vez de branco.
+     */
+    private BufferedImage removerTransparencia(BufferedImage img) {
+        if (!img.getColorModel().hasAlpha()) return img;
+
+        BufferedImage opaca = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = opaca.createGraphics();
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, img.getWidth(), img.getHeight());
+        g2d.drawImage(img, 0, 0, null);
+        g2d.dispose();
+        return opaca;
     }
 
     /**
@@ -161,6 +180,10 @@ public class ProcessadorImagem {
         Graphics2D g2d = rotacionada.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        // A área que sobra fora da imagem rotacionada (cantos) precisa de fundo — o resto da
+        // transparência já foi achatado em removerTransparencia() antes de chegar aqui.
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, novaLargura, novaAltura);
 
         AffineTransform transform = new AffineTransform();
         transform.translate((novaLargura - img.getWidth()) / 2.0, (novaAltura - img.getHeight()) / 2.0);

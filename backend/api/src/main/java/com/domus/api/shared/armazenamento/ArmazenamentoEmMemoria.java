@@ -13,6 +13,9 @@ public class ArmazenamentoEmMemoria implements ArmazenamentoFotos {
 
     private final Map<String, byte[]> arquivos = new ConcurrentHashMap<>();
 
+    /** Só para teste: simula falha real de infraestrutura (rede, autenticação) na leitura. */
+    private volatile boolean simularFalhaDeInfra = false;
+
     @Override
     public void guardar(String chave, byte[] conteudo, String tipo) {
         arquivos.put(chave, conteudo);
@@ -20,9 +23,17 @@ public class ArmazenamentoEmMemoria implements ArmazenamentoFotos {
 
     @Override
     public byte[] ler(String chave) {
+        if (simularFalhaDeInfra) {
+            throw new ArmazenamentoException("Falha simulada de infraestrutura: " + chave, null);
+        }
         byte[] b = arquivos.get(chave);
-        if (b == null) throw new ArmazenamentoException("Chave não encontrada: " + chave, null);
+        if (b == null) throw new ArmazenamentoObjetoNaoEncontradoException(chave);
         return b;
+    }
+
+    /** Só para teste: liga/desliga a simulação de falha de infra em {@link #ler}. */
+    public void simularFalhaDeInfra(boolean ligado) {
+        this.simularFalhaDeInfra = ligado;
     }
 
     @Override

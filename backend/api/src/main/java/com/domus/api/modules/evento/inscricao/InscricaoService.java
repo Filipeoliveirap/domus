@@ -20,6 +20,7 @@ import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ParticipanteResponse;
+import com.domus.api.modules.evento.inscricao.DTOs.PessoaInscritaComCobranca;
 import com.domus.api.modules.evento.inscricao.DTOs.RegistranteResumo;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
@@ -71,6 +72,28 @@ public class InscricaoService {
     @Transactional
     public MinhaInscricaoResponse inscrever(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
                                             UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
+        var resultado = inscreverInterno(eventoId, pessoaId, inscritoPorOuNull, minhaPessoaId, role,
+                confirmado, igrejaId, false);
+        return MinhaInscricaoResponse.from(resultado.inscricao(),
+                resultado.cobranca() != null ? resultado.cobranca().getId() : null);
+    }
+
+    /**
+     * Núcleo de {@link #inscrever}, com um parâmetro a mais: {@code gerarLinkSePago}
+     * (Task 14, revisão pós-review). Sozinho, {@code inscrever} nunca oferece link — é
+     * usado pela auto-inscrição, onde a regra "titular sempre paga agora" (Task 9) faz
+     * sentido total. Mas {@link #inscreverPessoas} (lote do admin/líder) inscreve OUTRAS
+     * pessoas, que não estão logadas nem presentes — nesse caso faz sentido permitir
+     * "gerar link" pra quem está sendo inscrito pagar depois, sozinho. Ainda assim, a
+     * pessoa que fez a ação (identificada por {@code minhaPessoaId}) nunca vira link para
+     * si mesma, mesmo que apareça na própria lista do lote — ela está logada e presente,
+     * então preserva a mesma trava de {@code inscrever}.
+     */
+    private record ResultadoInscricao(InscricaoEvento inscricao, CobrancaEvento cobranca) {}
+
+    private ResultadoInscricao inscreverInterno(UUID eventoId, UUID pessoaId, UUID inscritoPorOuNull,
+                                            UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId,
+                                            boolean gerarLinkSePago) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -117,14 +140,20 @@ public class InscricaoService {
         // pago ou não). Quem assina como "criado por": quem inscreveu (admin/líder em
         // lote) ou, na auto-inscrição (inscritoPorOuNull nulo), o próprio usuário do
         // titular — sempre existe, pois só se auto-inscreve quem está logado.
-        UUID cobrancaPendenteId = null;
+        CobrancaEvento cobranca = null;
         if (evento.getPreco() != null) {
             UUID criadoPorUsuarioId = inscritoPorOuNull != null
                     ? inscritoPorOuNull
                     : usuarioRepository.findByPessoaId(pessoaId).map(u -> u.getId()).orElse(null);
-            CobrancaEvento cobranca = cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(),
-                    pessoaId, evento.getPreco(), criadoPorUsuarioId);
-            cobrancaPendenteId = cobranca.getId();
+            // "Gerar link" só faz sentido pra quem NÃO é quem está fazendo a ação agora —
+            // a própria pessoa logada continua travada em "paga agora" (Task 9), mesmo
+            // quando aparece na lista de um lote que ela mesma está confirmando.
+            boolean podeVirarLink = gerarLinkSePago && !pessoaId.equals(minhaPessoaId);
+            cobranca = podeVirarLink
+                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(), pessoaId, null,
+                            evento.getPreco(), criadoPorUsuarioId, true)
+                    : cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
+                            evento.getPreco(), criadoPorUsuarioId);
         }
 
         // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
@@ -149,7 +178,7 @@ public class InscricaoService {
 
         log.info("Inscrição confirmada. evento_id={}, pessoa_id={}, inscrito_por={}, igreja_id={}",
                 eventoId, pessoaId, inscritoPorOuNull, igrejaId);
-        return MinhaInscricaoResponse.from(salva, cobrancaPendenteId);
+        return new ResultadoInscricao(salva, cobranca);
     }
 
     private void notificarPendenciaDeCamposSeHouver(Evento evento, Pessoa pessoaInscrita, UUID igrejaId, UUID usuarioIdAtor) {
@@ -170,9 +199,31 @@ public class InscricaoService {
                         "/eventos?detalhe=" + evento.getId()));
     }
 
-    /** Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro. */
+    /**
+     * Overload de compatibilidade — mantém o comportamento anterior (ninguém vira link,
+     * todo mundo "paga agora") para quem ainda chama sem escolher por pessoa. Os 21+
+     * usos existentes (`InscricaoServiceTest`, `InscricaoController`) continuam valendo
+     * sem alteração.
+     */
     @Transactional
-    public void inscreverPessoas(UUID eventoId, List<UUID> pessoaIds, UUID inscritoPorUsuarioId,
+    public List<PessoaInscritaComCobranca> inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
+                                 UUID inscritoPorUsuarioId, UUID minhaPessoaId, String role, boolean confirmado,
+                                 UUID igrejaId) {
+        return inscreverPessoas(eventoId, pessoaIds, java.util.Set.of(), inscritoPorUsuarioId, minhaPessoaId,
+                role, confirmado, igrejaId);
+    }
+
+    /**
+     * Task 14 (revisão pós-review): {@code pessoaIdsParaLink} é o subconjunto de
+     * {@code pessoaIds} que a tela "Divisão de pagamento" (`EscolhaPagamentoPorPessoa`,
+     * front) marcou como "gerar link" em vez de "eu pago agora" — cada uma dessas
+     * recebe uma {@code CobrancaEvento} com {@code tokenLinkPublico}, pra pagar sozinha
+     * depois, sem que quem está inscrevendo (admin/líder) precise pagar por ela na hora.
+     * Tudo ou nada — checa os já inscritos em uma query só para nomear a quantidade no erro.
+     */
+    @Transactional
+    public List<PessoaInscritaComCobranca> inscreverPessoas(UUID eventoId, List<UUID> pessoaIds,
+                                 java.util.Set<UUID> pessoaIdsParaLink, UUID inscritoPorUsuarioId,
                                  UUID minhaPessoaId, String role, boolean confirmado, UUID igrejaId) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
@@ -190,9 +241,17 @@ public class InscricaoService {
             }
         }
 
+        List<PessoaInscritaComCobranca> resultado = new ArrayList<>();
         for (UUID pessoaId : pessoaIds) {
-            inscrever(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado, igrejaId);
+            boolean gerarLink = pessoaIdsParaLink.contains(pessoaId);
+            var r = inscreverInterno(eventoId, pessoaId, inscritoPorUsuarioId, minhaPessoaId, role, confirmado,
+                    igrejaId, gerarLink);
+            resultado.add(new PessoaInscritaComCobranca(
+                    pessoaId,
+                    r.cobranca() != null ? r.cobranca().getId() : null,
+                    r.cobranca() != null ? r.cobranca().getTokenLinkPublico() : null));
         }
+        return resultado;
     }
 
     @Transactional(readOnly = true)

@@ -19,15 +19,18 @@ public class ContaPagamentoController {
 
     @GetMapping("/conectar")
     public ConectarContaResponseDTO conectar() {
-        return new ConectarContaResponseDTO(service.gerarUrlAutorizacao(usuarioAutenticado.getIgrejaId()));
+        return new ConectarContaResponseDTO(
+            service.gerarUrlAutorizacao(usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
     }
 
     @GetMapping("/callback")
-    public void callback(@RequestParam String code) {
-        // `igrejaId` vem da sessão autenticada, nunca de um parâmetro da requisição
-        // (o Mercado Pago também devolve `state` aqui, mas não é a fonte da identidade
-        // da igreja — um usuário mal-intencionado poderia forjar esse valor).
-        service.processarCallback(code, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId());
+    public void callback(@RequestParam String code, @RequestParam String state) {
+        // `igrejaId` vem da sessão autenticada, nunca de um parâmetro da requisição — mas
+        // isso sozinho não bloqueia CSRF de OAuth (Critical 3a): sem verificar `state`,
+        // um atacante podia induzir um admin logado a abrir esta URL com o `code` do
+        // atacante, conectando a conta MP do atacante à igreja da vítima. `state` é
+        // verificado dentro do service contra o nonce gerado em `gerarUrlAutorizacao`.
+        service.processarCallback(code, state, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId());
     }
 
     @GetMapping("/status")

@@ -17,7 +17,7 @@ interface Props {
 
 const SAIDA: Record<Props['formato'], { largura: number; altura: number }> = {
   circulo: { largura: 480, altura: 480 },
-  banner: { largura: 1200, altura: 400 },
+  banner: { largura: 1200, altura: 675 },
 }
 
 function createImage(url: string): Promise<HTMLImageElement> {
@@ -62,11 +62,11 @@ async function getCroppedImg(imageUrl: string, pixelCrop: Area, formato: Props['
           reject(new Error('Falha ao gerar imagem recortada.'))
           return
         }
-        const name = imageUrl.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '.jpg') || 'foto.jpg'
-        resolve(new File([blob], name, { type: 'image/jpeg' }))
+        const name = imageUrl.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '.webp') || 'foto.webp'
+        resolve(new File([blob], name, { type: 'image/webp' }))
       },
-      'image/jpeg',
-      0.92,
+      'image/webp',
+      0.85,
     )
   })
 }
@@ -185,7 +185,7 @@ export function CropperFoto({ arquivo, formato, onCancelar, onConfirmar }: Props
 
   const urlParaUsar = urlBase64 || urlBlob
 
-  const aspect = formato === 'circulo' ? 1 : 3 / 1
+  const aspect = formato === 'circulo' ? 1 : 16 / 9
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     // O react-easy-crop dispara este callback antes da imagem terminar de carregar,

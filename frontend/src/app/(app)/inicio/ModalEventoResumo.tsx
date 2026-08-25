@@ -313,6 +313,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
           eventoId={eventoId}
           tituloEvento={evento?.titulo ?? ''}
           exclusivoMembros={evento?.exclusivoMembros ?? false}
+          preco={evento?.preco}
           onClose={() => setModalAberto(null)}
         />
       )}

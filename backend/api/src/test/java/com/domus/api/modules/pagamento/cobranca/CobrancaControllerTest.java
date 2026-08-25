@@ -198,4 +198,43 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("COBRANCA_NAO_PENDENTE")));
     }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('11111111-1111-1111-1111-111111111115', 'Igreja Teste 5', 'igreja5@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333337', '11111111-1111-1111-1111-111111111115', 'Pagador Atrasado', 'atrasado@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444448', '11111111-1111-1111-1111-111111111115', " +
+            "'33333333-3333-3333-3333-333333333337', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('77777777-7777-7777-7777-777777777781', '11111111-1111-1111-1111-111111111115', 'Salão 5')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('55555555-5555-5555-5555-555555555559', '11111111-1111-1111-1111-111111111115', " +
+            "'Vigília', now(), '77777777-7777-7777-7777-777777777781', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666670', '11111111-1111-1111-1111-111111111115', " +
+            "'55555555-5555-5555-5555-555555555559', '33333333-3333-3333-3333-333333333337', 'CONFIRMADA')"
+    })
+    void recusaPagarCobrancaComPrazoExpirado() throws Exception {
+        // Diferente de COBRANCA_NAO_PENDENTE: aqui o status no banco AINDA é PENDENTE (o
+        // job de expiração, Task 11, roda periodicamente e não necessariamente já passou)
+        // — o endpoint precisa recusar pelo prazo mesmo antes do job rodar.
+        UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111115");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555559");
+        UUID inscricaoId = UUID.fromString("66666666-6666-6666-6666-666666666670");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333337");
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444448");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+            BigDecimal.valueOf(150), Instant.now().minus(1, ChronoUnit.HOURS), usuarioId, null);
+        cobranca = cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"atrasado@teste.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("COBRANCA_EXPIRADA")));
+    }
 }

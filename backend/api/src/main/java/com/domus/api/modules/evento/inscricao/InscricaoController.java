@@ -44,15 +44,17 @@ public class InscricaoController {
     }
 
     @PostMapping("/eventos/{eventoId}/inscricoes/pessoas")
-    public ResponseEntity<Void> inscreverPessoas(
+    public ResponseEntity<List<PessoaInscritaComCobranca>> inscreverPessoas(
             @PathVariable UUID eventoId,
             @RequestParam(defaultValue = "false") boolean confirmado,
             @Valid @RequestBody InscreverPessoasRequest data) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(), usuario.getId(),
-                usuario.getPessoa().getId(), usuario.getRole().getNome(), confirmado,
+        java.util.Set<UUID> pessoasParaLink = data.pessoasParaLink() == null
+                ? java.util.Set.of() : java.util.Set.copyOf(data.pessoasParaLink());
+        var resultado = inscricaoService.inscreverPessoas(eventoId, data.pessoaIds(), pessoasParaLink,
+                usuario.getId(), usuario.getPessoa().getId(), usuario.getRole().getNome(), confirmado,
                 usuario.getIgreja().getId());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
     }
 
     @PostMapping("/eventos/{eventoId}/inscricoes/convidados")

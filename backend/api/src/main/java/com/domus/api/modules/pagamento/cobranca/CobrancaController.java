@@ -99,6 +99,15 @@ public class CobrancaController {
             throw new BusinessException("COBRANCA_NAO_PENDENTE",
                 "Esta cobrança já foi paga, cancelada ou não está mais disponível para pagamento.");
         }
+        // Critical 5 (revisão final de branch): sem isto, clicar "pagar" duas vezes (ou a
+        // requisição ser reenviada antes do webhook confirmar) criava um SEGUNDO pagamento
+        // no Mercado Pago pra mesma cobrança — cobrança duplicada real do pagador.
+        // mpPaymentId é gravado (ver registrarTentativaPagamento) assim que a 1ª tentativa
+        // cria o pagamento com sucesso, mesmo a cobrança continuando PENDENTE até o webhook.
+        if (cobranca.getMpPaymentId() != null) {
+            throw new BusinessException("COBRANCA_JA_EM_PROCESSAMENTO",
+                "Já existe um pagamento em andamento para esta cobrança.");
+        }
         if (cobranca.getExpiraEm().isBefore(Instant.now())) {
             throw new BusinessException("COBRANCA_EXPIRADA",
                 "O prazo para pagar esta cobrança expirou.");
@@ -107,6 +116,9 @@ public class CobrancaController {
         String mpPaymentId = mercadoPagoClient.criarPagamentoComToken(
             cobranca.getIgrejaId(), cobranca,
             request.token(), request.paymentMethodId(), request.installments(), request.payerEmail());
+
+        cobranca.registrarTentativaPagamento(mpPaymentId);
+        cobrancaRepository.save(cobranca);
 
         return new PagarCobrancaResponse(mpPaymentId);
     }

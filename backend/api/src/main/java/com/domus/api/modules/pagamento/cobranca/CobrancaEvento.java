@@ -75,6 +75,21 @@ public class CobrancaEvento {
         this.tokenLinkPublico = tokenLinkPublico;
     }
 
+    /**
+     * Critical 5 (revisão final de branch): grava o {@code mpPaymentId} assim que
+     * {@code POST /cobrancas/{id}/pagar} cria o pagamento no Mercado Pago com sucesso —
+     * ANTES de o webhook confirmar. Decisão de design: em vez de criar um status
+     * intermediário novo (ex.: PROCESSANDO), a cobrança continua PENDENTE até o webhook
+     * confirmar (menos invasivo no schema/nas telas que já leem {@code StatusCobranca}) —
+     * só o campo {@code mpPaymentId} passa a existir mais cedo, e é ELE que
+     * {@code CobrancaController.pagar} passa a checar pra recusar uma segunda tentativa de
+     * pagamento da mesma cobrança (evita cobrança duplicada se o pagador clicar "pagar"
+     * duas vezes, ou reenviar a requisição, antes do webhook chegar).
+     */
+    public void registrarTentativaPagamento(String mpPaymentId) {
+        this.mpPaymentId = mpPaymentId;
+    }
+
     public void marcarComoPago(String mpPaymentId) {
         this.status = StatusCobranca.PAGO;
         this.mpPaymentId = mpPaymentId;
@@ -98,5 +113,18 @@ public class CobrancaEvento {
     public Instant getExpiraEm() { return expiraEm; }
     public Instant getPagoEm() { return pagoEm; }
     public UUID getCriadoPorUsuarioId() { return criadoPorUsuarioId; }
-    public boolean ehDoTitular() { return pessoaId != null; }
+
+    /**
+     * "É do titular" quer dizer "quem paga é quem já está vendo a própria tela mudar" —
+     * exige as DUAS coisas: (1) é uma pessoa cadastrada ({@code pessoaId != null}, não um
+     * acompanhante sem cadastro) E (2) ninguém gerou um link público pra essa cobrança
+     * ({@code tokenLinkPublico == null}). Antes desta correção (Important 6, revisão
+     * final de branch) o discriminador era só {@code pessoaId != null} — o que classificava
+     * errado uma cobrança de link gerado pra OUTRA pessoa CADASTRADA (que também tem
+     * {@code pessoaId != null}, sem {@code acompanhanteId}) como "do titular", e por isso
+     * quem gerou o link nunca era notificado quando ela pagava. Cobrança de acompanhante
+     * (sem cadastro, {@code pessoaId == null}) nunca é "do titular", com ou sem link —
+     * continua notificando quem inscreveu, como sempre foi.
+     */
+    public boolean ehDoTitular() { return pessoaId != null && tokenLinkPublico == null; }
 }

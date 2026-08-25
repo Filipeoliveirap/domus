@@ -2,6 +2,7 @@ package com.domus.api.modules.pagamento.webhook;
 
 import static org.mockito.Mockito.*;
 
+import com.domus.api.modules.pagamento.MercadoPagoApi;
 import com.domus.api.modules.pagamento.MercadoPagoClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,13 +35,13 @@ class MercadoPagoWebhookControllerTest {
     @Test
     void resolveExternalReferencePeloMpUserIdEConfirma() {
         when(validator.valida(any(), any(), any())).thenReturn(true);
-        when(mercadoPagoClient.buscarExternalReferencePorMpUserId("mp-user-1", "999"))
-            .thenReturn("cobranca-abc");
+        when(mercadoPagoClient.buscarInformacoesPagamentoPorMpUserId("mp-user-1", "999"))
+            .thenReturn(new MercadoPagoApi.InformacoesPagamento("cobranca-abc", "approved"));
 
         var resposta = controller.webhook("ts=1,v1=hash", "req-1", "999", "payment", "mp-user-1");
 
         assertOk(resposta);
-        verify(service).confirmarPagamento("cobranca-abc", "999");
+        verify(service).confirmarPagamento("cobranca-abc", "999", "approved");
     }
 
     @Test
@@ -51,7 +52,7 @@ class MercadoPagoWebhookControllerTest {
 
         assertOk(resposta);
         verifyNoInteractions(mercadoPagoClient);
-        verify(service, never()).confirmarPagamento(any(), any());
+        verify(service, never()).confirmarPagamento(any(), any(), any());
     }
 
     @Test
@@ -67,7 +68,7 @@ class MercadoPagoWebhookControllerTest {
     @Test
     void devolve200MesmoQuandoConsultaAoMercadoPagoFalha() {
         when(validator.valida(any(), any(), any())).thenReturn(true);
-        when(mercadoPagoClient.buscarExternalReferencePorMpUserId(any(), any()))
+        when(mercadoPagoClient.buscarInformacoesPagamentoPorMpUserId(any(), any()))
             .thenThrow(new RuntimeException("falha de rede simulada"));
 
         var resposta = controller.webhook("ts=1,v1=hash", "req-1", "999", "payment", "mp-user-1");

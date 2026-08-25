@@ -58,12 +58,12 @@ public class MercadoPagoClient {
      * usamos esse id pra achar a {@code ContaPagamentoIgreja} certa (por {@code mp_user_id},
      * não por {@code igreja_id}) e só então temos o access token pra consultar o pagamento.
      */
-    public String buscarExternalReferencePorMpUserId(String mpUserId, String mpPaymentId) {
+    public MercadoPagoApi.InformacoesPagamento buscarInformacoesPagamentoPorMpUserId(String mpUserId, String mpPaymentId) {
         var conta = contaRepository.findByMpUserId(mpUserId)
             .orElseThrow(() -> new BusinessException("CONTA_PAGAMENTO_NAO_ENCONTRADA",
                 "Nenhuma igreja conectada com este mp_user_id."));
         String accessToken = encryptor.descriptografar(conta.getAccessTokenCriptografado());
-        return api.buscarExternalReference(accessToken, mpPaymentId);
+        return api.buscarInformacoesPagamento(accessToken, mpPaymentId);
     }
 
     private String obterAccessTokenPlano(UUID igrejaId) {

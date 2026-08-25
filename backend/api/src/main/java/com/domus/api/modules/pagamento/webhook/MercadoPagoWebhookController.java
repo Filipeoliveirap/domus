@@ -82,9 +82,9 @@ public class MercadoPagoWebhookController {
 
         if ("payment".equals(type)) {
             try {
-                String externalReference = buscarExternalReference(dataId, userId);
-                if (externalReference != null) {
-                    service.confirmarPagamento(externalReference, dataId);
+                var informacoes = buscarInformacoesPagamento(dataId, userId);
+                if (informacoes != null && informacoes.externalReference() != null) {
+                    service.confirmarPagamento(informacoes.externalReference(), dataId, informacoes.status());
                 } else {
                     log.warn("Webhook do Mercado Pago sem external_reference resolvido, ignorado. "
                         + "dataId={} userId={}", dataId, userId);
@@ -104,12 +104,13 @@ public class MercadoPagoWebhookController {
         return valor == null || valor.isBlank();
     }
 
-    private String buscarExternalReference(String mpPaymentId, String userId) {
+    private com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento buscarInformacoesPagamento(
+            String mpPaymentId, String userId) {
         if (userId == null || userId.isBlank()) {
             log.warn("Webhook do Mercado Pago sem user_id — não é possível resolver a conta "
                 + "dona do pagamento. dataId={}", mpPaymentId);
             return null;
         }
-        return mercadoPagoClient.buscarExternalReferencePorMpUserId(userId, mpPaymentId);
+        return mercadoPagoClient.buscarInformacoesPagamentoPorMpUserId(userId, mpPaymentId);
     }
 }

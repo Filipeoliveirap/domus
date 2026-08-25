@@ -369,6 +369,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 eventoId={evento.id}
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
+                preco={evento.preco}
                 onClose={() => setModalAberto(null)}
               />
             )}

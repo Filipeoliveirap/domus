@@ -94,6 +94,20 @@ export interface ListaInscritosResponse {
 
 export interface InscreverPessoasRequest {
   pessoaIds: string[]
+  /** Task 14 (revisão pós-review) — subconjunto de `pessoaIds` marcado como "gerar link"
+   *  em `EscolhaPagamentoPorPessoa`. Vazio/ausente = todo mundo "paga agora" (comportamento
+   *  anterior). Só importa em evento pago. */
+  pessoasParaLink?: string[]
+}
+
+/** Item da resposta de `POST /eventos/{id}/inscricoes/pessoas` — espelha
+ *  `PessoaInscritaComCobranca` (backend). `tokenLinkPublico` presente = a pessoa recebeu
+ *  um link pra pagar sozinha depois; `cobrancaId` presente sem token = alguém precisa
+ *  pagar agora (Payment Brick); os dois nulos = evento gratuito. */
+export interface PessoaInscritaComCobranca {
+  pessoaId: string
+  cobrancaId: string | null
+  tokenLinkPublico: string | null
 }
 
 export interface AcompanhanteRequest {

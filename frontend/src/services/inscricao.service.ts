@@ -5,6 +5,7 @@ import type {
   ParticipanteResponse,
   ListaInscritosResponse,
   InscreverPessoasRequest,
+  PessoaInscritaComCobranca,
   AcompanhanteRequest,
   AcompanhanteResponse,
   ElegibilidadeResponse,
@@ -31,9 +32,11 @@ export const inscricoesService = {
    * `confirmado=true` só tem efeito para quem `podeGerenciarInscricoes` — de quem não
    * gerencia o backend ignora o parâmetro (Regra 2 do InscricaoService).
    */
-  inscreverPessoas: (eventoId: string, data: InscreverPessoasRequest, confirmado = false): Promise<void> =>
-    api.post(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data, { params: { confirmado } })
-      .then(() => undefined),
+  inscreverPessoas: (
+    eventoId: string, data: InscreverPessoasRequest, confirmado = false,
+  ): Promise<PessoaInscritaComCobranca[]> =>
+    api.post<PessoaInscritaComCobranca[]>(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data, { params: { confirmado } })
+      .then(res => res.data),
 
   criarConvidado: (eventoId: string, data: CriarConvidadoRequest): Promise<ConvidadoResponse> =>
     api.post<ConvidadoResponse>(Endpoints.inscricoes.CONVIDADOS(eventoId), data).then(res => res.data),

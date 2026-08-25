@@ -9,6 +9,7 @@ import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgrej
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { ModalExcluirIgreja } from '@/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja'
+import { SecaoRecebimentos } from '@/components/module/configuracoes/SecaoRecebimentos'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
@@ -301,6 +302,8 @@ export default function DadosDaIgrejaPage() {
       </div>
 
       <SecaoNomenclatura rotulosAtuais={igreja.rotulos} />
+
+      <SecaoRecebimentos />
 
       <div className={styles.cardsRodape}>
         <section className={styles.cardRodape}>

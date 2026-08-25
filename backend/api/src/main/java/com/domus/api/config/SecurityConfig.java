@@ -53,7 +53,12 @@ public class SecurityConfig {
                         // Convite público: quem abre o link nunca teve sessão nenhuma (não faz
                         // sentido exigir cookie XSRF-TOKEN de um estranho vindo do WhatsApp) —
                         // CSRF protege sessão autenticada de forjadura, e aqui não existe sessão.
-                        .ignoringRequestMatchers("/convites/**"))
+                        // Webhook do Mercado Pago: chamado pelo próprio Mercado Pago, sem
+                        // sessão nossa — a validação de autenticidade é feita à parte, pela
+                        // assinatura HMAC do header x-signature (MercadoPagoAssinaturaValidator).
+                        // Cobrança pública: pagador abre o link (WhatsApp/e-mail) sem nunca
+                        // ter tido sessão — mesma lógica de /convites/**.
+                        .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook", "/cobrancas/**"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -69,7 +74,14 @@ public class SecurityConfig {
                                 "/auth/reset-password"
                         ).permitAll()
                         .requestMatchers("/convites/**").permitAll()
+                        .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
+                        .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
+                        // Critical 3b (revisão final de branch): conectar/desconectar/consultar a
+                        // conta de recebimento da igreja é decisão de admin — sem este matcher,
+                        // caía em anyRequest().authenticated() e qualquer perfil (ACESSO_COMUM
+                        // incluso) podia mexer na conta de pagamento da igreja inteira.
+                        .requestMatchers("/pagamentos/conta/**").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 
                         .requestMatchers("/usuarios/**")

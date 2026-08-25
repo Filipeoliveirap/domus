@@ -20,10 +20,12 @@ interface Props {
   eventoId: string
   tituloEvento: string
   exclusivoMembros: boolean
+  /** Task 14 — evento pago habilita a etapa de pagamento na aba "Pessoas da igreja". */
+  preco?: number | null
   onClose: () => void
 }
 
-export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, onClose }: Props) {
+export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, onClose }: Props) {
   const [aba, setAba] = useState<Aba>('pessoas')
 
   const [buscaVisitante, setBuscaVisitante] = useState('')
@@ -141,6 +143,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
             eventoId={eventoId}
             tituloEvento={tituloEvento}
             exclusivoMembros={exclusivoMembros}
+            preco={preco}
             onClose={onClose}
             embutido
           />

@@ -10,6 +10,9 @@ interface Variaveis {
   pessoaIds: string[]
   /** `true` = "inscrever mesmo assim" — só tem efeito para quem gerencia (backend decide). */
   confirmado?: boolean
+  /** Task 14 (revisão pós-review) — subconjunto de `pessoaIds` marcado "gerar link" em
+   *  `EscolhaPagamentoPorPessoa`. Ausente = ninguém vira link. */
+  pessoasParaLink?: string[]
 }
 
 interface Opcoes {
@@ -33,8 +36,8 @@ export function useInscreverPessoas(eventoId: string, opcoes: Opcoes = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ pessoaIds, confirmado }: Variaveis) =>
-      inscricoesService.inscreverPessoas(eventoId, { pessoaIds }, confirmado),
+    mutationFn: ({ pessoaIds, confirmado, pessoasParaLink }: Variaveis) =>
+      inscricoesService.inscreverPessoas(eventoId, { pessoaIds, pessoasParaLink }, confirmado),
     onSuccess: (_dados, { pessoaIds }) => {
       invalidarCache(queryClient, 'inscricao')
       const um = pessoaIds.length === 1

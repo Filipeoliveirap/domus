@@ -14,6 +14,7 @@ import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoService;
 import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
+import com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
 import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
@@ -67,6 +68,22 @@ public class InscricaoService {
     private final CobrancaEventoService cobrancaEventoService;
     private final CobrancaEventoRepository cobrancaEventoRepository;
     private final MercadoPagoClient mercadoPagoClient;
+    private final ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
+
+    /**
+     * Important 9 (revisão final de branch): sem isto, uma inscrição em evento pago era
+     * criada com sucesso mesmo sem a igreja ter conectado uma conta Mercado Pago — só
+     * falhava depois, na hora de {@code /pagar} (checagem que já existia em
+     * {@code MercadoPagoClient.obterAccessTokenPlano}). Checa ANTES de criar qualquer
+     * registro (inscrição ou cobrança), pra a transação inteira reverter sem deixar
+     * rastro — mesmo código de erro (`IGREJA_SEM_CONTA_PAGAMENTO`) que o pagamento já usa.
+     */
+    private void validarContaPagamentoConectada(UUID igrejaId) {
+        if (contaPagamentoIgrejaRepository.findByIgrejaId(igrejaId).isEmpty()) {
+            throw new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",
+                    "Esta igreja ainda não conectou uma conta para receber pagamentos.");
+        }
+    }
 
     /** Auto-inscrição funciona em QUALQUER evento, independente de {@code requerInscricao}; evento buscado com lock. */
     @Transactional
@@ -100,6 +117,10 @@ public class InscricaoService {
 
         Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        if (evento.getPreco() != null) {
+            validarContaPagamentoConectada(igrejaId);
+        }
 
         validarEventoAberto(evento);
         boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
@@ -487,6 +508,9 @@ public class InscricaoService {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
         }
+        if (inscricao.getEvento().getPreco() != null) {
+            validarContaPagamentoConectada(igrejaId);
+        }
         validarEventoAberto(inscricao.getEvento());
         validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
 
@@ -583,21 +607,49 @@ public class InscricaoService {
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
     }
 
-    /** PAGO estorna de verdade no Mercado Pago; PENDENTE só cancela (nunca chegou a ser cobrado). */
+    /**
+     * PAGO estorna de verdade no Mercado Pago; PENDENTE só cancela (nunca chegou a ser
+     * cobrado).
+     *
+     * <p><b>Important 7 (revisão final de branch) — fail-fast ANTES de mutar qualquer
+     * status:</b> antes desta correção, o loop chamava {@code marcarComoCancelado()} em
+     * cobranças PENDENTES e só DEPOIS chegava numa cobrança PAGA cujo estorno falhava —
+     * o {@code BusinessException} lançado ali abortava a transação do CANCELAMENTO
+     * individual, mas em cancelamento em LOTE ({@code cancelarInscricoesEmEventosAbertosPorPessoa},
+     * {@code removerInscritosNaoElegiveis}, {@code cancelarInscricoesEmEventosExclusivos})
+     * a exceção é capturada por item do lote — então essas mutações "sujas" (cobrança de
+     * acompanhante já marcada CANCELADO, vaga já liberada) eram persistidas no commit do
+     * lote mesmo a inscrição continuando CONFIRMADA. Resultado: vaga liberada sem a
+     * inscrição ter sido cancelada de verdade.
+     *
+     * <p>Correção (abordagem a — fail-fast, mais simples que isolar cada item do lote em
+     * {@code REQUIRES_NEW}, e resolve o problema na raiz em vez de só conter o dano):
+     * primeiro chama TODAS as chamadas externas de estorno (as únicas que podem falhar)
+     * e só DEPOIS que todas tiverem sucesso é que qualquer status é mutado — nem PAGO
+     * nem PENDENTE. Se uma falhar, nenhuma cobrança desta inscrição muda de estado.
+     */
     private void estornarCobrancasDaInscricao(InscricaoEvento inscricao) {
         List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
         if (cobrancas.isEmpty()) return;
 
         UUID igrejaId = inscricao.getIgreja().getId();
+
+        // 1ª passada: só chamadas externas (podem falhar), NENHUMA mutação de status ainda.
         for (CobrancaEvento cobranca : cobrancas) {
             if (cobranca.getStatus() == StatusCobranca.PAGO) {
                 try {
                     mercadoPagoClient.estornar(igrejaId, cobranca.getMpPaymentId());
-                    cobranca.marcarComoReembolsado();
                 } catch (Exception e) {
                     throw new BusinessException("FALHA_ESTORNO",
                             "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
                 }
+            }
+        }
+
+        // 2ª passada: todas as chamadas externas tiveram sucesso — agora sim muta status.
+        for (CobrancaEvento cobranca : cobrancas) {
+            if (cobranca.getStatus() == StatusCobranca.PAGO) {
+                cobranca.marcarComoReembolsado();
             } else if (cobranca.getStatus() == StatusCobranca.PENDENTE) {
                 cobranca.marcarComoCancelado();
             }

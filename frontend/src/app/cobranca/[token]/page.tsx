@@ -86,7 +86,7 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
             Obrigado! Sua parte em &quot;{cobranca.tituloEvento}&quot; já está paga.
           </p>
           <div className={styles.aprovadoResumo}>
-            <span className={styles.aprovadoResumoLabel}>Valor pago por {cobranca.nomePagador}</span>
+            <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
             <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
           </div>
         </div>

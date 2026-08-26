@@ -90,7 +90,7 @@ export default function PagamentoEventoPage({
         <div className={styles.card}>
           <h1>Pagamento não disponível</h1>
           <p>Esta cobrança já foi paga, cancelada ou expirou.</p>
-          <Link href={`/eventos/${eventoId}`} className={styles.voltarLink}>Voltar para o evento</Link>
+          <Link href={`/eventos?detalhe=${eventoId}`} className={styles.voltarLink}>Voltar para o evento</Link>
         </div>
       </div>
     )
@@ -120,10 +120,10 @@ export default function PagamentoEventoPage({
               Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
             </p>
             <div className={styles.aprovadoResumo}>
-              <span className={styles.aprovadoResumoLabel}>Valor pago por {cobranca.nomePagador}</span>
+              <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
               <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
             </div>
-            <Link href={`/eventos/${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+            <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
           </div>
         )}
 
@@ -133,7 +133,7 @@ export default function PagamentoEventoPage({
             <h1>Pagamento não disponível</h1>
             <p>{indisponivel}</p>
             <p>Volte pro evento e se inscreva de novo pra gerar uma nova cobrança.</p>
-            <Link href={`/eventos/${eventoId}`} className={styles.voltarLink}>Voltar para o evento</Link>
+            <Link href={`/eventos?detalhe=${eventoId}`} className={styles.voltarLink}>Voltar para o evento</Link>
           </div>
         )}
 

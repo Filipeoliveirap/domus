@@ -15,14 +15,17 @@ interface Props {
   token: string
   eventoId: string
   campos: CampoPersonalizadoResponse[]
+  /** Evento pago torna o e-mail obrigatório (comprovante de pagamento). */
+  preco: number | null
   onSucesso: () => void
 }
 
-export function FormularioConvidado({ token, eventoId, campos, onSucesso }: Props) {
+export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso }: Props) {
   const router = useRouter()
   const entrar = useEntrarComoConvidado(token)
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [email, setEmail] = useState('')
   const [camposValores, setCamposValores] = useState<Record<string, string>>({})
   const [tentouEnviar, setTentouEnviar] = useState(false)
 
@@ -35,13 +38,18 @@ export function FormularioConvidado({ token, eventoId, campos, onSucesso }: Prop
     return digitos.length === 10 || digitos.length === 11
   }
 
+  function emailValido(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  }
+
   function aoConfirmar() {
     setTentouEnviar(true)
     if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
+    if (preco !== null && !emailValido()) return
 
     const respostas = campos.map((c) => ({ campoId: c.id, valor: camposValores[c.id] ?? '' }))
     entrar.mutate(
-      { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), respostas },
+      { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), email: email.trim() || undefined, respostas },
       {
         onSuccess: (resposta) => {
           if (resposta.cobrancaId) {
@@ -81,6 +89,23 @@ export function FormularioConvidado({ token, eventoId, campos, onSucesso }: Prop
           <span className={styles.erroTexto}>Telefone inválido. Digite um número válido com DDD.</span>
         )}
       </label>
+
+      {preco !== null && (
+        <label className={styles.campo}>
+          <span className={styles.label}>E-mail*</span>
+          <input
+            type="email"
+            placeholder="Ex.: maria@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <span className={styles.dica}>Evento pago — o comprovante de pagamento é enviado pra esse e-mail.</span>
+          {tentouEnviar && !email.trim() && <span className={styles.erroTexto}>O e-mail é obrigatório em evento pago.</span>}
+          {tentouEnviar && email.trim() && !emailValido() && (
+            <span className={styles.erroTexto}>E-mail inválido.</span>
+          )}
+        </label>
+      )}
 
       <CamposExtrasForm campos={campos} valores={camposValores} onChange={(id, valor) => setCamposValores((v) => ({ ...v, [id]: valor }))} tentouEnviar={tentouEnviar} />
 

@@ -48,6 +48,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [email, setEmail] = useState('')
   const [camposValores, setCamposValores] = useState<Record<string, string>>({})
   const [tentouConfirmar, setTentouConfirmar] = useState(false)
 
@@ -67,6 +68,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   function limparFormulario() {
     setNome('')
     setTelefone('')
+    setEmail('')
     setVisitanteSelecionadoId(null)
     setBuscaVisitante('')
     setCamposValores({})
@@ -103,16 +105,26 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
     return digitos.length === 10 || digitos.length === 11
   }
 
+  // Evento pago: e-mail vira obrigatório (é como a pessoa recebe o comprovante de
+  // pagamento) — o backend recusa sem ele nesse caso, mas validar aqui evita a viagem.
+  function emailValido(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  }
+
   /** Evento gratuito: sempre chamado sem gerarLink (irrelevante). Evento pago: chamado
    *  duas vezes possíveis, uma por botão ("Pagar inscrição"/"Enviar link"). */
   function confirmar(gerarLink: boolean) {
     setTentouConfirmar(true)
     if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
+    if (preco && !emailValido()) return
 
     const visitanteId = aba === 'visitantes' ? visitanteSelecionadoId ?? undefined : undefined
     const nomeConfirmado = nome.trim()
     criarConvidado.mutate(
-      { nome: nomeConfirmado, telefone: telefone.replace(/\D/g, ''), visitanteId, respostas: montarRespostas(), gerarLink },
+      {
+        nome: nomeConfirmado, telefone: telefone.replace(/\D/g, ''),
+        email: email.trim() || undefined, visitanteId, respostas: montarRespostas(), gerarLink,
+      },
       {
         onSuccess: (resposta) => {
           if (!resposta.cobrancaId) {
@@ -263,6 +275,27 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                   <span className={styles.avisoErro}>Telefone inválido. Digite um número válido com DDD.</span>
                 )}
               </label>
+
+              {!!preco && (
+                <label className={styles.campo}>
+                  <span>E-mail*</span>
+                  <input
+                    type="email"
+                    placeholder="Ex.: maria@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <span className={styles.avisoCamposExtra}>
+                    Evento pago — o comprovante de pagamento é enviado pra esse e-mail.
+                  </span>
+                  {tentouConfirmar && !email.trim() && (
+                    <span className={styles.avisoErro}>O e-mail é obrigatório em evento pago.</span>
+                  )}
+                  {tentouConfirmar && email.trim() && !emailValido() && (
+                    <span className={styles.avisoErro}>E-mail inválido.</span>
+                  )}
+                </label>
+              )}
 
               {campos.length > 0 && (
                 <p className={styles.avisoCamposExtra}>

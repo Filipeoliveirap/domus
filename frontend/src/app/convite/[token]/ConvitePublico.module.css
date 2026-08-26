@@ -253,6 +253,11 @@
   color: var(--color-error, #dc2626);
 }
 
+.dica {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+}
+
 .aviso {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);

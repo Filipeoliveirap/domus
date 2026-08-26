@@ -74,6 +74,9 @@ export interface InscritoResponse {
 export interface CriarConvidadoRequest {
   nome: string
   telefone?: string
+  /** Opcional em evento gratuito, obrigatório em evento pago (usado pra mandar o
+   *  comprovante de pagamento) — o backend recusa sem isso quando o evento tem preço. */
+  email?: string
   /** Preenchido só quando o admin selecionou um Visitante existente na busca (aba "Visitantes"). */
   visitanteId?: string
   respostas?: RespostaRequest[]

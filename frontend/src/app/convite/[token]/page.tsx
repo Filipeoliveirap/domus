@@ -169,7 +169,7 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
         )}
 
         {convite.requerInscricao && etapa === 'formulario' && !sessao && (
-          <FormularioConvidado token={token} eventoId={convite.eventoId} campos={convite.campos} onSucesso={() => setEtapa('sucesso')} />
+          <FormularioConvidado token={token} eventoId={convite.eventoId} campos={convite.campos} preco={convite.preco} onSucesso={() => setEtapa('sucesso')} />
         )}
 
         {convite.requerInscricao && etapa === 'formulario' && sessao && (

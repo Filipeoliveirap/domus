@@ -66,6 +66,10 @@ export function ModalInscreverPessoas({
   const [camposValores, setCamposValores] = useState<Record<string, string>>({})
   const [tentouConfirmarCampos, setTentouConfirmarCampos] = useState(false)
   const [compartilhando, setCompartilhando] = useState<{ nome: string; token: string } | null>(null)
+  // A mutation já resolveu (isPending vira false) antes do router.push completar a
+  // navegação — sem isto, o botão "pisca" de volta pro texto normal por um instante
+  // enquanto a rota de checkout ainda está carregando.
+  const [navegandoParaCheckout, setNavegandoParaCheckout] = useState(false)
   // Impedimentos contornáveis devolvidos pelo 422 — abre a confirmação "inscrever mesmo
   // assim" só para quem gerencia. `null` = confirmação fechada.
   const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
@@ -160,6 +164,7 @@ export function ModalInscreverPessoas({
             setCompartilhando({ nome: pessoaClicada.nome, token: item.tokenLinkPublico! })
             voltarParaLista()
           } else {
+            setNavegandoParaCheckout(true)
             router.push(`/eventos/${eventoId}/pagamento/${item.cobrancaId}`)
           }
         },
@@ -279,15 +284,15 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoPagar}
-              disabled={inscreverPessoas.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout}
               onClick={() => confirmarPessoa(false)}
             >
-              {inscreverPessoas.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
+              {inscreverPessoas.isPending || navegandoParaCheckout ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
             </button>
             <button
               type="button"
               className={styles.botaoLink}
-              disabled={inscreverPessoas.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout}
               onClick={() => confirmarPessoa(true)}
             >
               Enviar link pra {pessoaClicada.nome} pagar

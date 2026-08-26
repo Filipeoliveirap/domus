@@ -13,9 +13,14 @@ export function useCriarConvidado(eventoId: string) {
 
   return useMutation({
     mutationFn: (data: CriarConvidadoRequest) => inscricoesService.criarConvidado(eventoId, data),
-    onSuccess: () => {
+    onSuccess: (resposta) => {
       invalidarCache(queryClient, 'inscricao')
-      notificar.sucesso('Convidado inscrito!')
+      // Evento pago: a inscrição fica AGUARDANDO_PAGAMENTO — quem sinaliza o próximo passo
+      // é a navegação pro checkout ou o modal de compartilhar link, não um toast de
+      // "inscrito" que soaria como confirmado antes de qualquer pagamento acontecer.
+      if (!resposta.cobrancaId) {
+        notificar.sucesso('Convidado inscrito!')
+      }
     },
     onError: (error: unknown) => {
       const mensagem = axios.isAxiosError<ApiError>(error)

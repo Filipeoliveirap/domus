@@ -243,6 +243,59 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     @Test
     @Sql(statements = {
         "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('11111111-1111-1111-1111-111111111117', 'Igreja Teste 7', 'igreja7@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333339', '11111111-1111-1111-1111-111111111117', 'Ocupante Da Vaga', 'ocupante@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333340', '11111111-1111-1111-1111-111111111117', 'Tentando Pagar Depois', 'depois@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444450', '11111111-1111-1111-1111-111111111117', " +
+            "'33333333-3333-3333-3333-333333333339', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('77777777-7777-7777-7777-777777777783', '11111111-1111-1111-1111-111111111117', 'Salão 7')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, vagas) VALUES " +
+            "('55555555-5555-5555-5555-555555555561', '11111111-1111-1111-1111-111111111117', " +
+            "'Evento Com Vaga Unica', now(), '77777777-7777-7777-7777-777777777783', true, 1)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666672', '11111111-1111-1111-1111-111111111117', " +
+            "'55555555-5555-5555-5555-555555555561', '33333333-3333-3333-3333-333333333339', 'AGUARDANDO_PAGAMENTO')",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666673', '11111111-1111-1111-1111-111111111117', " +
+            "'55555555-5555-5555-5555-555555555561', '33333333-3333-3333-3333-333333333340', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void recusaPagarQuandoVagaJaFoiOcupadaPorOutraTentativaEmAndamento() throws Exception {
+        // Duas pessoas clicaram "Se inscrever" pro mesmo evento de 1 vaga (nenhuma segura
+        // a vaga só por isso, ver CobrancaEventoRepository) — a primeira já enviou o
+        // pagamento (mpPaymentId gravado, ocupa a vaga); a segunda tenta pagar agora e
+        // precisa ser recusada, sem sequer chamar o Mercado Pago.
+        UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111117");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555561");
+
+        var cobrancaOcupante = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("66666666-6666-6666-6666-666666666672"),
+            UUID.fromString("33333333-3333-3333-3333-333333333339"), null,
+            BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS),
+            UUID.fromString("44444444-4444-4444-4444-444444444450"), null);
+        cobrancaOcupante.registrarTentativaPagamento("mp-payment-ocupante");
+        cobrancaEventoRepository.save(cobrancaOcupante);
+
+        var cobrancaTardia = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("66666666-6666-6666-6666-666666666673"),
+            UUID.fromString("33333333-3333-3333-3333-333333333340"), null,
+            BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS),
+            UUID.fromString("44444444-4444-4444-4444-444444444450"), null);
+        cobrancaTardia = cobrancaEventoRepository.save(cobrancaTardia);
+
+        mockMvc.perform(post("/cobrancas/" + cobrancaTardia.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"depois@teste.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("VAGAS_ESGOTADAS")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
             "('11111111-1111-1111-1111-111111111115', 'Igreja Teste 5', 'igreja5@teste.com')",
         "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
             "('33333333-3333-3333-3333-333333333337', '11111111-1111-1111-1111-111111111115', 'Pagador Atrasado', 'atrasado@teste.com')",

@@ -138,8 +138,16 @@ public class InscricaoService {
 
         validarVaga(evento, 1);
 
+        // Evento pago: a inscrição nasce AGUARDANDO_PAGAMENTO — só vira CONFIRMADA quando
+        // o webhook do Mercado Pago confirmar o pagamento (MercadoPagoWebhookService). A
+        // reserva de vaga não depende deste status (ver contarOcupadas, baseada em
+        // CobrancaEvento) — este status é só o que aparece pra quem lista inscritos.
+        StatusInscricao statusInicial = evento.getPreco() != null
+                ? StatusInscricao.AGUARDANDO_PAGAMENTO
+                : StatusInscricao.CONFIRMADA;
+
         if (inscricao != null) {
-            inscricao.setStatus(StatusInscricao.CONFIRMADA);
+            inscricao.setStatus(statusInicial);
             inscricao.setInscritoPorUsuarioId(inscritoPorOuNull);
             inscricao.setInscritoPorExcecao(porExcecao);
         } else {
@@ -148,7 +156,7 @@ public class InscricaoService {
                     .evento(evento)
                     .pessoa(membro)
                     .inscritoPorUsuarioId(inscritoPorOuNull)
-                    .status(StatusInscricao.CONFIRMADA)
+                    .status(statusInicial)
                     .inscritoPorExcecao(porExcecao)
                     .build();
         }
@@ -157,10 +165,11 @@ public class InscricaoService {
 
         // Evento pago: titular sempre "eu pago agora" (nunca vira link, diferente do
         // acompanhante em adicionarAcompanhante) — vaga fica reservada via CobrancaEvento
-        // (ver validarVaga), não pela InscricaoEvento CONFIRMADA (essa é sempre imediata,
-        // pago ou não). Quem assina como "criado por": quem inscreveu (admin/líder em
-        // lote) ou, na auto-inscrição (inscritoPorOuNull nulo), o próprio usuário do
-        // titular — sempre existe, pois só se auto-inscreve quem está logado.
+        // (ver validarVaga), não pela InscricaoEvento (que agora só confirma quando o
+        // pagamento é aprovado, ver statusInicial acima). Quem assina como "criado por":
+        // quem inscreveu (admin/líder em lote) ou, na auto-inscrição (inscritoPorOuNull
+        // nulo), o próprio usuário do titular — sempre existe, pois só se auto-inscreve
+        // quem está logado.
         CobrancaEvento cobranca = null;
         if (evento.getPreco() != null) {
             UUID criadoPorUsuarioId = inscritoPorOuNull != null

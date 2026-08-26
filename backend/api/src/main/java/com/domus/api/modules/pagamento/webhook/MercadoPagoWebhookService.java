@@ -92,7 +92,9 @@ public class MercadoPagoWebhookService {
                 inscricaoRepository.save(inscricao);
             });
 
-            if (!cobranca.ehDoTitular()) {
+            // Plano 4b — convidado sem cadastro via convite público não tem
+            // criadoPorUsuarioId (inscritoPorUsuarioId=null): não há quem notificar.
+            if (!cobranca.ehDoTitular() && cobranca.getCriadoPorUsuarioId() != null) {
                 notificacaoService.criar(
                     TipoNotificacao.COBRANCA_EVENTO_PAGA,
                     cobranca.getIgrejaId(),

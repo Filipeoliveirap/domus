@@ -129,6 +129,22 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    void naoTentaNotificarQuandoCriadoPorUsuarioIdEhNulo() {
+        // Plano 4b — convidado sem cadastro via convite público (inscritoPorUsuarioId=null):
+        // a cobrança não tem criadoPorUsuarioId nenhum pra notificar. ehDoTitular() é false
+        // (pessoaId/acompanhanteId ambos nulos), então sem esta guarda o notificacaoService
+        // seria chamado com destinatarioId=null.
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            null, null, BigDecimal.TEN, Instant.now().plusSeconds(600), null, null);
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        verifyNoInteractions(notificacaoService);
+    }
+
+    @Test
     void naoConfirmaQuandoStatusEhPendente() {
         // Critical 2 (revisão final de branch): PIX ainda não pago não pode confirmar a cobrança.
         UUID cobrancaId = UUID.randomUUID();

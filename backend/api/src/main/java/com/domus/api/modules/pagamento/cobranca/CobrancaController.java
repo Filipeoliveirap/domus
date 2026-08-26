@@ -73,10 +73,12 @@ public class CobrancaController {
             .orElseThrow(() -> new ResourceNotFoundException("Evento da cobrança não encontrado."));
 
         String nomePagador;
+        String emailPagador = null;
         if (cobranca.getPessoaId() != null) {
-            nomePagador = pessoaRepository.findById(cobranca.getPessoaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
-                .getNome();
+            var pessoa = pessoaRepository.findById(cobranca.getPessoaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."));
+            nomePagador = pessoa.getNome();
+            emailPagador = pessoa.getEmail();
         } else {
             nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
@@ -89,6 +91,7 @@ public class CobrancaController {
             evento.getTitulo(),
             evento.getInicioEm(),
             nomePagador,
+            emailPagador,
             cobranca.getValor(),
             cobranca.getStatus().name(),
             cobranca.getExpiraEm()

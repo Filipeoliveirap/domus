@@ -71,6 +71,7 @@ public class InscricaoService {
     private final MercadoPagoClient mercadoPagoClient;
     private final ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
     private final EmailService emailService;
+    private final com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService movimentacaoAutomaticaService;
 
     /**
      * Important 9 (revisão final de branch): sem isto, uma inscrição em evento pago era
@@ -698,6 +699,23 @@ public class InscricaoService {
         // PENDENTE cancelada nunca chegou a debitar ninguém.
         if (valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0) {
             enviarEmailCancelamento(inscricao, valorReembolsado);
+            registrarEstornoNoFinanceiro(inscricao, valorReembolsado);
+        }
+    }
+
+    /** Espelha a entrada que {@code MercadoPagoWebhookService.registrarNoFinanceiro} criou
+     *  quando o pagamento foi confirmado — nunca quebra o cancelamento em si, só loga. */
+    private void registrarEstornoNoFinanceiro(InscricaoEvento inscricao, java.math.BigDecimal valorReembolsado) {
+        try {
+            String nomePagador = inscricao.getPessoa() != null
+                ? inscricao.getPessoa().getNome()
+                : inscricao.getNomeConvidado();
+            movimentacaoAutomaticaService.registrarSaidaDeEvento(
+                inscricao.getIgreja().getId(), valorReembolsado,
+                "Reembolso — " + inscricao.getEvento().getTitulo() + " (" + nomePagador + ")",
+                inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null);
+        } catch (RuntimeException e) {
+            log.error("Falha ao registrar estorno na movimentação financeira. inscricaoId={}", inscricao.getId(), e);
         }
     }
 

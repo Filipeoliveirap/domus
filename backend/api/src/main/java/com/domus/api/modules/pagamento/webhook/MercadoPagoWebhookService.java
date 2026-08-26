@@ -4,7 +4,9 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.inscricao.AcompanhanteRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
+import com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
@@ -63,19 +65,25 @@ public class MercadoPagoWebhookService {
     private final EventoRepository eventoRepository;
     private final PessoaRepository pessoaRepository;
     private final EmailService emailService;
+    private final MovimentacaoAutomaticaService movimentacaoAutomaticaService;
+    private final AcompanhanteRepository acompanhanteRepository;
 
     public MercadoPagoWebhookService(CobrancaEventoRepository cobrancaRepository,
                                       InscricaoRepository inscricaoRepository,
                                       NotificacaoService notificacaoService,
                                       EventoRepository eventoRepository,
                                       PessoaRepository pessoaRepository,
-                                      EmailService emailService) {
+                                      EmailService emailService,
+                                      MovimentacaoAutomaticaService movimentacaoAutomaticaService,
+                                      AcompanhanteRepository acompanhanteRepository) {
         this.cobrancaRepository = cobrancaRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.notificacaoService = notificacaoService;
         this.eventoRepository = eventoRepository;
         this.pessoaRepository = pessoaRepository;
         this.emailService = emailService;
+        this.movimentacaoAutomaticaService = movimentacaoAutomaticaService;
+        this.acompanhanteRepository = acompanhanteRepository;
     }
 
     /**
@@ -121,6 +129,7 @@ public class MercadoPagoWebhookService {
             inscricao.setStatus(StatusInscricao.CONFIRMADA);
             inscricaoRepository.save(inscricao);
             enviarEmailConfirmacao(cobranca, inscricao);
+            registrarNoFinanceiro(cobranca, inscricao);
         });
 
         // Plano 4b — convidado sem cadastro via convite público não tem
@@ -133,6 +142,40 @@ public class MercadoPagoWebhookService {
                 "O pagamento foi confirmado.",
                 "/eventos/" + cobranca.getEventoId() + "/inscritos");
         }
+    }
+
+    /**
+     * Nunca falha o pagamento por causa do financeiro — o registro aqui é um "a mais", a
+     * cobrança já está PAGO de verdade independente disso. Falha só loga, mesmo padrão do
+     * e-mail de confirmação.
+     */
+    private void registrarNoFinanceiro(CobrancaEvento cobranca, InscricaoEvento inscricao) {
+        try {
+            Evento evento = eventoRepository.findById(cobranca.getEventoId()).orElse(null);
+            if (evento == null) return;
+
+            String nomePagador = resolverNomePagador(cobranca, inscricao);
+            movimentacaoAutomaticaService.registrarEntradaDeEvento(
+                cobranca.getIgrejaId(), cobranca.getValor(),
+                "Pagamento de inscrição — " + evento.getTitulo() + " (" + nomePagador + ")",
+                cobranca.getPessoaId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao registrar movimentação financeira do pagamento. cobrancaId={}", cobranca.getId(), e);
+        }
+    }
+
+    private String resolverNomePagador(CobrancaEvento cobranca, InscricaoEvento inscricao) {
+        if (cobranca.getPessoaId() != null) {
+            return pessoaRepository.findById(cobranca.getPessoaId())
+                .map(Pessoa::getNome)
+                .orElse("pagador removido");
+        }
+        if (cobranca.getAcompanhanteId() != null) {
+            return acompanhanteRepository.findById(cobranca.getAcompanhanteId())
+                .map(com.domus.api.modules.evento.inscricao.AcompanhanteInscricao::getNome)
+                .orElse("acompanhante");
+        }
+        return inscricao.getNomeConvidado();
     }
 
     /**

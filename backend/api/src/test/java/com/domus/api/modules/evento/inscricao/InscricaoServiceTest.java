@@ -60,6 +60,7 @@ class InscricaoServiceTest {
     com.domus.api.modules.pagamento.MercadoPagoClient mercadoPagoClient;
     com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
     com.domus.api.shared.email.EmailService emailService;
+    com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService movimentacaoAutomaticaService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -96,12 +97,13 @@ class InscricaoServiceTest {
         when(contaPagamentoIgrejaRepository.findByIgrejaId(any()))
                 .thenReturn(Optional.of(mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
         emailService = mock(com.domus.api.shared.email.EmailService.class);
+        movimentacaoAutomaticaService = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
                 cobrancaEventoService, cobrancaEventoRepository, mercadoPagoClient,
-                contaPagamentoIgrejaRepository, emailService);
+                contaPagamentoIgrejaRepository, emailService, movimentacaoAutomaticaService);
     }
 
     private Igreja igreja() {
@@ -953,6 +955,40 @@ class InscricaoServiceTest {
 
         verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void cancelamentoComReembolsoRegistraSaidaNoFinanceiro() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
+            eq(igrejaId), eq(new java.math.BigDecimal("50.00")),
+            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId));
+    }
+
+    @Test
+    void cancelamentoDeCobrancaPendenteNaoRegistraNadaNoFinanceiro() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPendente()));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verifyNoInteractions(movimentacaoAutomaticaService);
     }
 
     @Test

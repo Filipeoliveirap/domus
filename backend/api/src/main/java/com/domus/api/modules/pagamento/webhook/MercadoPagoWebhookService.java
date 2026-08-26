@@ -9,6 +9,7 @@ import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
+import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.shared.email.EmailService;
@@ -78,52 +79,60 @@ public class MercadoPagoWebhookService {
     }
 
     /**
-     * Critical 2 (revisão final de branch): antes desta correção, este método marcava a
-     * cobrança como PAGO incondicionalmente — PIX pendente, cartão recusado ou pagamento
-     * cancelado confirmavam a cobrança do mesmo jeito que um pagamento de verdade aprovado.
-     * Agora só confirma quando {@code status} é {@code "approved"}; qualquer outro valor
-     * (ex.: {@code pending}, {@code in_process}, {@code rejected}, {@code cancelled},
-     * {@code refunded}, {@code charged_back}) só loga e não muda nada — a cobrança
-     * continua PENDENTE, esperando um webhook futuro (ex.: PIX que ainda vai ser pago) ou
+     * Ponto de entrada único, chamado tanto pelo webhook quanto pelo poll ativo
+     * ({@code PagamentoPollingService}) — os dois correm em paralelo pra resolver quem
+     * confirmar primeiro, o que só é seguro porque este método é idempotente (guard logo
+     * abaixo): quem chegar depois de a cobrança já ter saído de PENDENTE não repete nenhum
+     * efeito colateral (e-mail em duplicidade, notificação em duplicidade). Mesma guarda
+     * protege contra o Mercado Pago reenviar o mesmo webhook mais de uma vez, o que é
+     * documentado e acontece.
+     *
+     * <p>Critical 2 (revisão final de branch): só confirma quando {@code status} é
+     * {@code "approved"}; qualquer outro valor (ex.: {@code pending}, {@code in_process},
+     * {@code rejected}, {@code cancelled}, {@code refunded}, {@code charged_back}) só loga e
+     * não muda nada — a cobrança continua PENDENTE, esperando uma confirmação futura ou
      * expirando naturalmente.
      */
     public void confirmarPagamento(String cobrancaId, String mpPaymentId, String status) {
+        var cobranca = cobrancaRepository.findById(UUID.fromString(cobrancaId)).orElse(null);
+        if (cobranca == null || cobranca.getStatus() != StatusCobranca.PENDENTE) {
+            log.info("Confirmação de pagamento ignorada — cobrança já resolvida ou inexistente. "
+                + "cobrancaId={} mpPaymentId={} status={}", cobrancaId, mpPaymentId, status);
+            return;
+        }
+
         if (!STATUS_APROVADO.equals(status)) {
             log.info("Webhook do Mercado Pago com status não aprovado, cobrança não confirmada. "
                 + "cobrancaId={} mpPaymentId={} status={}", cobrancaId, mpPaymentId, status);
 
             if (STATUS_TERMINAL_NAO_APROVADO.contains(status)) {
-                cobrancaRepository.findById(UUID.fromString(cobrancaId)).ifPresent(cobranca -> {
-                    cobranca.liberarParaNovaTentativa();
-                    cobrancaRepository.save(cobranca);
-                });
+                cobranca.liberarParaNovaTentativa();
+                cobrancaRepository.save(cobranca);
             }
             return;
         }
 
-        cobrancaRepository.findById(UUID.fromString(cobrancaId)).ifPresent(cobranca -> {
-            cobranca.marcarComoPago(mpPaymentId);
-            cobrancaRepository.save(cobranca);
+        cobranca.marcarComoPago(mpPaymentId);
+        cobrancaRepository.save(cobranca);
 
-            // A inscrição só confirma quando o pagamento é aprovado de verdade — ver
-            // InscricaoService.inscreverInterno, que a cria como AGUARDANDO_PAGAMENTO.
-            inscricaoRepository.findById(cobranca.getInscricaoId()).ifPresent(inscricao -> {
-                inscricao.setStatus(StatusInscricao.CONFIRMADA);
-                inscricaoRepository.save(inscricao);
-                enviarEmailConfirmacao(cobranca, inscricao);
-            });
-
-            // Plano 4b — convidado sem cadastro via convite público não tem
-            // criadoPorUsuarioId (inscritoPorUsuarioId=null): não há quem notificar.
-            if (!cobranca.ehDoTitular() && cobranca.getCriadoPorUsuarioId() != null) {
-                notificacaoService.criar(
-                    TipoNotificacao.COBRANCA_EVENTO_PAGA,
-                    cobranca.getIgrejaId(),
-                    cobranca.getCriadoPorUsuarioId(),
-                    "O pagamento foi confirmado.",
-                    "/eventos/" + cobranca.getEventoId() + "/inscritos");
-            }
+        // A inscrição só confirma quando o pagamento é aprovado de verdade — ver
+        // InscricaoService.inscreverInterno, que a cria como AGUARDANDO_PAGAMENTO.
+        inscricaoRepository.findById(cobranca.getInscricaoId()).ifPresent(inscricao -> {
+            inscricao.setStatus(StatusInscricao.CONFIRMADA);
+            inscricaoRepository.save(inscricao);
+            enviarEmailConfirmacao(cobranca, inscricao);
         });
+
+        // Plano 4b — convidado sem cadastro via convite público não tem
+        // criadoPorUsuarioId (inscritoPorUsuarioId=null): não há quem notificar.
+        if (!cobranca.ehDoTitular() && cobranca.getCriadoPorUsuarioId() != null) {
+            notificacaoService.criar(
+                TipoNotificacao.COBRANCA_EVENTO_PAGA,
+                cobranca.getIgrejaId(),
+                cobranca.getCriadoPorUsuarioId(),
+                "O pagamento foi confirmado.",
+                "/eventos/" + cobranca.getEventoId() + "/inscritos");
+        }
     }
 
     /**

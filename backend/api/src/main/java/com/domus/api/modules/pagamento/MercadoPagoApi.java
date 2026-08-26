@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentCreateRequest;
 import com.mercadopago.client.payment.PaymentPayerRequest;
-import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.core.MPRequestOptions;
 import com.mercadopago.exceptions.MPApiException;
 import java.math.BigDecimal;
@@ -122,7 +121,7 @@ public class MercadoPagoApi {
      * {@code PaymentTransactionData.getQrCode()}/{@code getQrCodeBase64()} existem com essa
      * assinatura exata.
      */
-    public record ResultadoPagamento(String mpPaymentId, String status, String qrCode, String qrCodeBase64) {}
+    public record ResultadoPagamento(String mpPaymentId, String status, String statusDetail, String qrCode, String qrCodeBase64) {}
 
     public ResultadoPagamento criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
                                             String token, String paymentMethodId, Integer installments,
@@ -149,6 +148,7 @@ public class MercadoPagoApi {
             return new ResultadoPagamento(
                 String.valueOf(pagamento.getId()),
                 pagamento.getStatus(),
+                pagamento.getStatusDetail(),
                 transactionData != null ? transactionData.getQrCode() : null,
                 transactionData != null ? transactionData.getQrCodeBase64() : null
             );
@@ -220,13 +220,22 @@ public class MercadoPagoApi {
         @JsonProperty("status_detail") String statusDetail
     ) {}
 
+    /**
+     * Por {@code RestClient} direto, não {@code PaymentRefundClient.refund(Long,
+     * MPRequestOptions)} do SDK — mesmo bug de classe já documentado em
+     * {@link #buscarInformacoesPagamento}: confirmado ao vivo (2026-08-26) testando um
+     * cancelamento de inscrição paga, o SDK devolve 401 {@code "authorization value not
+     * present"} mesmo com {@code accessToken} válido (o mesmo token funciona em
+     * {@link #criarPagamentoTokenizado}) — {@code MPRequestOptions} não propaga o header
+     * {@code Authorization} nesta versão (2.1.16) em várias chamadas do SDK.
+     */
     public void estornar(String accessToken, String mpPaymentId) {
         try {
-            PaymentRefundClient client = new PaymentRefundClient();
-            MPRequestOptions options = MPRequestOptions.builder()
-                .accessToken(accessToken)
-                .build();
-            client.refund(Long.parseLong(mpPaymentId), options);
+            restClient.post()
+                .uri("https://api.mercadopago.com/v1/payments/{id}/refunds", mpPaymentId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .retrieve()
+                .toBodilessEntity();
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao estornar pagamento no Mercado Pago", e);
         }

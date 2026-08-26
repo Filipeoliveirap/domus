@@ -32,14 +32,17 @@ public class MercadoPagoOAuthClient {
     private final String clientId;
     private final String clientSecret;
     private final String redirectUri;
+    private final boolean testToken;
     private final RestClient restClient;
 
     public MercadoPagoOAuthClient(@Value("${app.pagamento.mercadopago.client-id}") String clientId,
                                    @Value("${app.pagamento.mercadopago.client-secret}") String clientSecret,
-                                   @Value("${app.pagamento.mercadopago.redirect-uri}") String redirectUri) {
+                                   @Value("${app.pagamento.mercadopago.redirect-uri}") String redirectUri,
+                                   @Value("${app.pagamento.mercadopago.test-token}") boolean testToken) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+        this.testToken = testToken;
         this.restClient = RestClient.create();
     }
 
@@ -51,6 +54,9 @@ public class MercadoPagoOAuthClient {
             corpo.put("client_secret", clientSecret);
             corpo.put("code", code);
             corpo.put("redirect_uri", redirectUri);
+            if (testToken) {
+                corpo.put("test_token", "true");
+            }
 
             RespostaTokenMercadoPago resposta = restClient.post()
                 .uri(TOKEN_URL)

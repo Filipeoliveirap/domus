@@ -1,10 +1,13 @@
 'use client'
 
 import { use, useEffect, useRef, useState } from 'react'
+import axios from 'axios'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaCheckout } from '@/hooks/cobranca/useCobrancaCheckout'
 import { cobrancaService } from '@/services/cobranca.service'
+import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -28,6 +31,21 @@ export default function PagamentoEventoPage({
 }) {
   const { id: eventoId, cobrancaId } = use(params)
   const { data: cobranca, isLoading, isError } = useCobrancaCheckout(cobrancaId)
+
+  // Esta página é usada tanto pelo titular logado (fluxo normal) quanto por convidado sem
+  // cadastro pagando pelo link público (Plano 4b, sem sessão nenhuma) — "Voltar para o
+  // evento" navegaria pra uma tela que exige login, então não pode aparecer pra quem não
+  // tem sessão. Sessão própria (não o authStore global), mesmo motivo de /convite/[token]:
+  // precisa funcionar sem AuthGuard.
+  const { data: sessao, isFetched: sessaoVerificada } = useQuery({
+    queryKey: ['pagamento-sessao-atual'],
+    queryFn: () => authService.me({ semRedirect: true }).catch((erro: unknown) => {
+      if (axios.isAxiosError(erro) && erro.response?.status === 401) return null
+      throw erro
+    }),
+    retry: false,
+  })
+
   const [resultado, setResultado] = useState<Resultado | null>(null)
   // Preenchido quando a cobrança em si não tem mais como ser paga (expirou, vagas
   // esgotadas, já foi paga/cancelada) — vindo tanto do backend na hora de pagar quanto do
@@ -37,6 +55,13 @@ export default function PagamentoEventoPage({
   // Guarda contra o poll continuar rodando depois da resposta final (ou do componente
   // desmontar) — sem isto, um tick atrasado podia sobrescrever um estado já resolvido.
   const resolvidoRef = useRef(false)
+
+  // Reload no meio de um pagamento em voo (mpPaymentId já gravado, webhook ainda não
+  // confirmou) não pode voltar pro formulário — reenviar esbarraria em
+  // COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando", que já dispara o poll abaixo.
+  useEffect(() => {
+    if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
+  }, [cobranca, resultado])
 
   // Assim que o Mercado Pago recebe a tentativa de pagamento, pergunta a cada poucos
   // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
@@ -123,7 +148,11 @@ export default function PagamentoEventoPage({
               <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
               <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
             </div>
-            <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+            {sessaoVerificada && sessao ? (
+              <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+            ) : (
+              sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
+            )}
           </div>
         )}
 
@@ -155,7 +184,6 @@ export default function PagamentoEventoPage({
             <PaymentBrickCheckout
               cobrancaId={cobranca.id}
               valor={cobranca.valor}
-              emailPagador={cobranca.emailPagador ?? undefined}
               onPagamentoCriado={() => setResultado('enviado')}
               onCobrancaIndisponivel={setIndisponivel}
             />

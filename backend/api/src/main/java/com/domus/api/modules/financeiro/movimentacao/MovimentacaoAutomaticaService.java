@@ -78,17 +78,18 @@ public class MovimentacaoAutomaticaService {
 
     /** Chamado quando um pagamento de evento é confirmado — entrada na categoria de eventos. */
     @Transactional
-    public void registrarEntradaDeEvento(UUID igrejaId, BigDecimal valor, String descricao, UUID pessoaId) {
-        registrar(igrejaId, TipoMovimentacao.ENTRADA, valor, descricao, pessoaId);
+    public void registrarEntradaDeEvento(UUID igrejaId, BigDecimal valor, String descricao, UUID pessoaId, String nomePagador) {
+        registrar(igrejaId, TipoMovimentacao.ENTRADA, valor, descricao, pessoaId, nomePagador);
     }
 
     /** Chamado quando um pagamento de evento é estornado — saída espelhando a entrada. */
     @Transactional
-    public void registrarSaidaDeEvento(UUID igrejaId, BigDecimal valor, String descricao, UUID pessoaId) {
-        registrar(igrejaId, TipoMovimentacao.SAIDA, valor, descricao, pessoaId);
+    public void registrarSaidaDeEvento(UUID igrejaId, BigDecimal valor, String descricao, UUID pessoaId, String nomePagador) {
+        registrar(igrejaId, TipoMovimentacao.SAIDA, valor, descricao, pessoaId, nomePagador);
     }
 
-    private void registrar(UUID igrejaId, TipoMovimentacao tipo, BigDecimal valor, String descricao, UUID pessoaId) {
+    private void registrar(UUID igrejaId, TipoMovimentacao tipo, BigDecimal valor, String descricao,
+                            UUID pessoaId, String nomePagador) {
         CategoriaFinanceira categoria = buscarOuCriarCategoriaEventos(igrejaId);
 
         MovimentacaoFinanceira mov = MovimentacaoFinanceira.builder()
@@ -101,13 +102,15 @@ public class MovimentacaoAutomaticaService {
             .descricao(descricao)
             .build();
 
-        if (pessoaId != null) {
-            mov.getContribuintes().add(MovimentacaoContribuinte.builder()
-                .movimentacao(mov)
-                .pessoa(pessoaRepository.getReferenceById(pessoaId))
-                .valor(valor)
-                .build());
-        }
+        // Contribuinte/beneficiário sempre entra — com pessoa cadastrada quando existe, ou só
+        // o nome (convidado sem cadastro/acompanhante) quando não. Sem isso, quem paga sem
+        // cadastro só aparecia no texto da descrição, nunca na coluna dedicada nem no
+        // relatório "por contribuinte" (achado revisando com o usuário, 2026-08-26).
+        mov.getContribuintes().add(pessoaId != null
+            ? MovimentacaoContribuinte.builder().movimentacao(mov)
+                .pessoa(pessoaRepository.getReferenceById(pessoaId)).valor(valor).build()
+            : MovimentacaoContribuinte.builder().movimentacao(mov)
+                .nomeExterno(nomePagador).valor(valor).build());
 
         movimentacaoRepository.save(mov);
         outboxRegistrador.registrar(TipoEntidadeOutbox.MOVIMENTACAO, TipoEventoOutbox.CRIADO, mov.getId(), igrejaId);

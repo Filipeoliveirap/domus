@@ -158,7 +158,7 @@ public class MercadoPagoWebhookService {
             movimentacaoAutomaticaService.registrarEntradaDeEvento(
                 cobranca.getIgrejaId(), cobranca.getValor(),
                 "Pagamento de inscrição — " + evento.getTitulo() + " (" + nomePagador + ")",
-                cobranca.getPessoaId());
+                cobranca.getPessoaId(), nomePagador);
         } catch (RuntimeException e) {
             log.error("Falha ao registrar movimentação financeira do pagamento. cobrancaId={}", cobranca.getId(), e);
         }

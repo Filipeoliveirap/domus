@@ -58,9 +58,11 @@ public class CobrancaEvento {
     public CobrancaEvento(UUID igrejaId, UUID eventoId, UUID inscricaoId, UUID pessoaId,
                            UUID acompanhanteId, BigDecimal valor, Instant expiraEm,
                            UUID criadoPorUsuarioId, String tokenLinkPublico) {
-        if ((pessoaId == null) == (acompanhanteId == null)) {
+        // Os dois nulos = convidado sem cadastro (resolvido só por inscricaoId, ver
+        // CobrancaController) — só os dois PREENCHIDOS ao mesmo tempo é inválido.
+        if (pessoaId != null && acompanhanteId != null) {
             throw new IllegalArgumentException(
-                "CobrancaEvento precisa de exatamente pessoaId OU acompanhanteId");
+                "CobrancaEvento não pode ter pessoaId e acompanhanteId ao mesmo tempo");
         }
         this.igrejaId = igrejaId;
         this.eventoId = eventoId;

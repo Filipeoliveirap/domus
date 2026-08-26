@@ -77,12 +77,18 @@ export interface CriarConvidadoRequest {
   /** Preenchido só quando o admin selecionou um Visitante existente na busca (aba "Visitantes"). */
   visitanteId?: string
   respostas?: RespostaRequest[]
+  /** Plano 4b — evento pago: false = quem preencheu paga agora; true = gera link pra
+   *  pessoa pagar sozinha depois. Sem efeito em evento gratuito. */
+  gerarLink?: boolean
 }
 
 export interface ConvidadoResponse {
   inscricaoId: string
   nome: string
   telefone: string | null
+  /** Plano 4b — presente só em evento pago. */
+  cobrancaId: string | null
+  tokenLinkPublico: string | null
 }
 
 export interface ListaInscritosResponse {

@@ -1,12 +1,19 @@
 package com.domus.api.modules.pagamento;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentCreateRequest;
 import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.core.MPRequestOptions;
+import com.mercadopago.exceptions.MPApiException;
 import java.math.BigDecimal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
 /**
  * Chamada HTTP real ao Mercado Pago, via SDK oficial ({@code com.mercadopago:sdk-java},
@@ -53,6 +60,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class MercadoPagoApi {
 
+    private static final Logger log = LoggerFactory.getLogger(MercadoPagoApi.class);
+
+    private final RestClient restClient = RestClient.create();
+
+    // MPApiException não expõe o corpo do erro no getMessage() ("Api error. Check response
+    // for details") — só em getApiResponse().getContent(). Sem logar isso, todo erro do
+    // Mercado Pago (cartão recusado, token expirado, campo inválido) vira uma
+    // IllegalStateException opaca e o motivo real fica invisível nos logs.
+    private static void logarDetalheSeApiException(String contexto, Exception e) {
+        if (e instanceof MPApiException apiException) {
+            log.error("{}: {} (status {})", contexto,
+                apiException.getApiResponse() != null ? apiException.getApiResponse().getContent() : "sem corpo",
+                apiException.getStatusCode());
+        }
+    }
+
     public String criarPagamento(String accessToken, String externalReference, BigDecimal valor) {
         try {
             PaymentClient client = new PaymentClient();
@@ -67,6 +90,7 @@ public class MercadoPagoApi {
             var pagamento = client.create(request, options);
             return String.valueOf(pagamento.getId());
         } catch (Exception e) {
+            logarDetalheSeApiException("Falha ao criar pagamento no Mercado Pago", e);
             throw new IllegalStateException("Falha ao criar pagamento no Mercado Pago", e);
         }
     }
@@ -89,9 +113,20 @@ public class MercadoPagoApi {
      * SDK sem quebrar (campos de instância, não primitivos), então o mesmo método serve
      * pros dois meios de pagamento que o Brick oferece.
      */
-    public String criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
+    /**
+     * {@code qrCode}/{@code qrCodeBase64} só vêm preenchidos quando {@code paymentMethodId}
+     * é {@code "pix"} — cartão resolve na hora (aprovado/recusado) e não tem QR nenhum. Vêm
+     * de {@code Payment.getPointOfInteraction().getTransactionData()}, confirmado no jar
+     * real (mesmo processo de inspeção via {@code jar xf} + {@code javap} usado no resto
+     * desta classe) — {@code PaymentPointOfInteraction.getTransactionData()} e
+     * {@code PaymentTransactionData.getQrCode()}/{@code getQrCodeBase64()} existem com essa
+     * assinatura exata.
+     */
+    public record ResultadoPagamento(String mpPaymentId, String status, String qrCode, String qrCodeBase64) {}
+
+    public ResultadoPagamento criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
                                             String token, String paymentMethodId, Integer installments,
-                                            String payerEmail) {
+                                            String payerEmail, String issuerId) {
         try {
             PaymentClient client = new PaymentClient();
             PaymentCreateRequest request = PaymentCreateRequest.builder()
@@ -101,14 +136,24 @@ public class MercadoPagoApi {
                 .token(token)
                 .paymentMethodId(paymentMethodId)
                 .installments(installments)
+                .issuerId(issuerId)
                 .payer(PaymentPayerRequest.builder().email(payerEmail).build())
                 .build();
             MPRequestOptions options = MPRequestOptions.builder()
                 .accessToken(accessToken)
                 .build();
             var pagamento = client.create(request, options);
-            return String.valueOf(pagamento.getId());
+            var transactionData = pagamento.getPointOfInteraction() != null
+                ? pagamento.getPointOfInteraction().getTransactionData()
+                : null;
+            return new ResultadoPagamento(
+                String.valueOf(pagamento.getId()),
+                pagamento.getStatus(),
+                transactionData != null ? transactionData.getQrCode() : null,
+                transactionData != null ? transactionData.getQrCodeBase64() : null
+            );
         } catch (Exception e) {
+            logarDetalheSeApiException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
             throw new IllegalStateException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
         }
     }
@@ -128,30 +173,52 @@ public class MercadoPagoApi {
      * do {@code status} real do pagamento. Usado pelo webhook, que só manda {@code data.id}
      * — não o external_reference nem o status direto no payload.
      *
-     * <p>{@code PaymentClient.get(Long, MPRequestOptions)} foi confirmado no jar real
-     * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap}
-     * {@code com/mercadopago/client/payment/PaymentClient.class}) — existe com essa
-     * assinatura exata, e {@code Payment.getExternalReference()}/{@code Payment.getStatus()}
-     * também existem (javap em {@code com/mercadopago/resources/payment/Payment.class}).
+     * <p><b>Por que {@code RestClient} direto, e não {@code PaymentClient.get(Long,
+     * MPRequestOptions)} do SDK oficial (achado testando o fluxo end-to-end, 2026-08-26):</b>
+     * embora {@code PaymentClient.get(Long, MPRequestOptions)} exista com essa assinatura no
+     * jar real ({@code sdk-java-2.1.16.jar}), a chamada devolve 401 "Must provide your
+     * access_token to proceed" mesmo com um {@code accessToken} válido (confirmado: o MESMO
+     * token funciona em {@link #criarPagamentoTokenizado}, via {@code PaymentClient.create}) —
+     * o SDK não anexa o header de autorização no {@code GET}, mesmo bug de classe do
+     * {@code OauthClient} já documentado em {@code MercadoPagoOAuthClient}. Por isso este
+     * método fala direto com {@code GET /v1/payments/{id}} da API do Mercado Pago.
      *
      * <p><b>Critical 2 (revisão final de branch):</b> antes desta correção, o webhook
-     * confirmava a cobrança como PAGO incondicionalmente, sem checar {@code getStatus()} —
-     * PIX pendente, cartão recusado ou pagamento cancelado confirmavam a cobrança do mesmo
-     * jeito que um pagamento aprovado. Este método passou a expor o status pra o chamador
-     * decidir.
+     * confirmava a cobrança como PAGO incondicionalmente, sem checar o status — PIX pendente,
+     * cartão recusado ou pagamento cancelado confirmavam a cobrança do mesmo jeito que um
+     * pagamento aprovado. Este método passou a expor o status pra o chamador decidir.
      */
     public InformacoesPagamento buscarInformacoesPagamento(String accessToken, String mpPaymentId) {
         try {
-            PaymentClient client = new PaymentClient();
-            MPRequestOptions options = MPRequestOptions.builder()
-                .accessToken(accessToken)
-                .build();
-            var pagamento = client.get(Long.parseLong(mpPaymentId), options);
-            return new InformacoesPagamento(pagamento.getExternalReference(), pagamento.getStatus());
+            var pagamento = restClient.get()
+                .uri("https://api.mercadopago.com/v1/payments/{id}", mpPaymentId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .retrieve()
+                .body(RespostaPagamentoMercadoPago.class);
+            if (pagamento == null) {
+                throw new IllegalStateException("Resposta vazia do Mercado Pago ao consultar pagamento");
+            }
+            if ("rejected".equals(pagamento.status())) {
+                // `status` sozinho não diz o motivo — o Mercado Pago só expõe isso em
+                // `status_detail` (ex.: cc_rejected_insufficient_amount,
+                // cc_rejected_bad_filled_security_code, cc_rejected_high_risk). Sem logar
+                // aqui, toda recusa vira "recusado" genérico, sem pista nenhuma pra
+                // diagnosticar se é problema do cartão, do ambiente de teste, ou nosso.
+                log.info("Pagamento recusado pelo Mercado Pago. mpPaymentId={} statusDetail={}",
+                    mpPaymentId, pagamento.statusDetail());
+            }
+            return new InformacoesPagamento(pagamento.externalReference(), pagamento.status());
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
         }
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record RespostaPagamentoMercadoPago(
+        @JsonProperty("external_reference") String externalReference,
+        String status,
+        @JsonProperty("status_detail") String statusDetail
+    ) {}
 
     public void estornar(String accessToken, String mpPaymentId) {
         try {

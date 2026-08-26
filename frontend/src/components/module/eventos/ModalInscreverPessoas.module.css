@@ -338,3 +338,80 @@
     text-align: center;
   }
 }
+
+/* ---- Plano 4: painel de uma pessoa (evento pago) ---- */
+
+.botaoVoltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  transition: color var(--transition-fast);
+}
+
+.botaoVoltar:hover {
+  color: var(--color-primary);
+}
+
+.painelPessoa {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.painelTitulo {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.painelValor {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.acoesPagamento {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.botaoPagar {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.botaoPagar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.botaoLink {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-dark);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.botaoLink:hover:not(:disabled) {
+  background: var(--color-bg-page);
+}
+
+.botaoPagar:disabled,
+.botaoLink:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

@@ -972,7 +972,7 @@ class InscricaoServiceTest {
 
         verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
             eq(igrejaId), eq(new java.math.BigDecimal("50.00")),
-            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId));
+            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
     }
 
     @Test

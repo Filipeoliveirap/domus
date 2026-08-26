@@ -27,26 +27,30 @@ class MovimentacaoRequestDTOTest {
 
     @Test
     void contribuinteValido_naoGeraViolacao() {
-        var contribuintes = List.of(new ContribuinteDTO(UUID.randomUUID(), BigDecimal.TEN));
+        var contribuintes = List.of(new ContribuinteDTO(UUID.randomUUID(), null, BigDecimal.TEN));
         assertThat(VALIDATOR.validate(base(contribuintes))).isEmpty();
     }
 
     @Test
     void contribuinteComValorNulo_recusaComViolacao() {
-        var contribuintes = List.of(new ContribuinteDTO(UUID.randomUUID(), null));
+        var contribuintes = List.of(new ContribuinteDTO(UUID.randomUUID(), null, null));
         assertThat(VALIDATOR.validate(base(contribuintes))).isNotEmpty();
     }
 
     @Test
-    void contribuinteComPessoaIdNulo_recusaComViolacao() {
-        var contribuintes = List.of(new ContribuinteDTO(null, BigDecimal.TEN));
-        assertThat(VALIDATOR.validate(base(contribuintes))).isNotEmpty();
+    void contribuinteSoComNomeExterno_naoGeraViolacaoDeBeanValidation() {
+        // pessoaId nulo deixou de ser violação de bean validation — virou válido quando
+        // nomeExterno vem preenchido (pessoa de fora, sem cadastro). A exclusividade
+        // pessoaId XOR nomeExterno é regra de negócio, checada em
+        // MovimentacaoFinanceiraService.validarContribuintes, não aqui.
+        var contribuintes = List.of(new ContribuinteDTO(null, "Visitante Anônimo", BigDecimal.TEN));
+        assertThat(VALIDATOR.validate(base(contribuintes))).isEmpty();
     }
 
     @Test
     void listaComMaisDe200Contribuintes_recusaComViolacao() {
         var contribuintes = java.util.stream.IntStream.range(0, 201)
-                .mapToObj(i -> new ContribuinteDTO(UUID.randomUUID(), BigDecimal.ONE))
+                .mapToObj(i -> new ContribuinteDTO(UUID.randomUUID(), null, BigDecimal.ONE))
                 .toList();
         assertThat(VALIDATOR.validate(base(contribuintes))).isNotEmpty();
     }

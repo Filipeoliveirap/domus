@@ -713,7 +713,7 @@ public class InscricaoService {
             movimentacaoAutomaticaService.registrarSaidaDeEvento(
                 inscricao.getIgreja().getId(), valorReembolsado,
                 "Reembolso — " + inscricao.getEvento().getTitulo() + " (" + nomePagador + ")",
-                inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null);
+                inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null, nomePagador);
         } catch (RuntimeException e) {
             log.error("Falha ao registrar estorno na movimentação financeira. inscricaoId={}", inscricao.getId(), e);
         }

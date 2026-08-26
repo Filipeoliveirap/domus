@@ -209,8 +209,13 @@ export const categoriaSchema = z.object({
 })
 
 const contribuinteSchema = z.object({
-  pessoaId: z.string().min(1, 'Selecione a pessoa.'),
+  pessoaId: z.string(),
+  /** Pessoa de fora, sem cadastro — exatamente um entre pessoaId/nomeExterno preenchido. */
+  nomeExterno: z.string(),
   valor: z.string().min(1, 'Informe o valor.').refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
+}).refine((c) => c.pessoaId.trim() !== '' || c.nomeExterno.trim() !== '', {
+  message: 'Selecione a pessoa ou digite um nome.',
+  path: ['pessoaId'],
 })
 
 export const movimentacaoSchema = z.object({

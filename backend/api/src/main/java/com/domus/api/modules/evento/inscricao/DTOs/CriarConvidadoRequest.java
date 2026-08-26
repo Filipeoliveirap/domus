@@ -20,5 +20,8 @@ public record CriarConvidadoRequest(
          *  "Visitantes"); null pra "Pessoa de fora". */
         UUID visitanteId,
         @Valid
-        List<RespostaRequest> respostas
+        List<RespostaRequest> respostas,
+        /** Plano 4b — evento pago: false = quem está preenchendo paga agora; true = gera
+         *  link pra pessoa pagar sozinha depois. */
+        boolean gerarLink
 ) {}

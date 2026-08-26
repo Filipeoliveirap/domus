@@ -62,14 +62,15 @@ public class InscricaoController {
             @PathVariable UUID eventoId,
             @Valid @RequestBody CriarConvidadoRequest data) {
         var usuario = usuarioAutenticado.get();
-        var inscricao = inscricaoService.inscreverConvidado(
+        var resultado = inscricaoService.inscreverConvidado(
                 eventoId, usuario.getIgreja().getId(), data.nome(), data.telefone(),
-                usuario.getPessoa().getId(), usuario.getId(), data.visitanteId());
+                usuario.getPessoa().getId(), usuario.getId(), data.visitanteId(), data.gerarLink());
         if (data.respostas() != null && !data.respostas().isEmpty()) {
-            campoPersonalizadoService.responder(inscricao.getId(), null, data.respostas(),
+            campoPersonalizadoService.responder(resultado.inscricao().getId(), null, data.respostas(),
                     usuario.getIgreja().getId(), usuario.getPessoa().getId(), usuario.getRole().getNome());
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(ConvidadoResponse.from(inscricao));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ConvidadoResponse.from(resultado.inscricao(), resultado.cobranca()));
     }
 
     @PostMapping("/eventos/{eventoId}/inscricoes/{inscricaoId}/acompanhantes")

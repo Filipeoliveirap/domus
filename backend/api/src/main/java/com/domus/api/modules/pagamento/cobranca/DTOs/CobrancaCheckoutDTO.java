@@ -19,6 +19,10 @@ public record CobrancaCheckoutDTO(
     String tituloEvento,
     LocalDateTime inicioEmEvento,
     String nomePagador,
+    /** E-mail da pessoa (nulo quando o pagador é acompanhante sem cadastro, que não tem
+     *  e-mail) — pré-preenche o Payment Brick pra ele não perguntar de novo no Pix, que
+     *  senão pede e-mail mesmo já sabendo quem está pagando. */
+    String emailPagador,
     BigDecimal valor,
     String status,
     Instant expiraEm

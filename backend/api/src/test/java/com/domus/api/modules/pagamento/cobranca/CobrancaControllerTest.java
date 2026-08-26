@@ -369,6 +369,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(jsonPath("$.id", is(cobranca.getId().toString())))
             .andExpect(jsonPath("$.eventoId", is(eventoId.toString())))
             .andExpect(jsonPath("$.tituloEvento", is("Congresso Anual")))
+            .andExpect(jsonPath("$.emailPagador", is("ciclana@teste.com")))
             .andExpect(jsonPath("$.nomePagador", is("Ciclana")))
             .andExpect(jsonPath("$.valor", is(75.00)))
             .andExpect(jsonPath("$.status", is("PENDENTE")));

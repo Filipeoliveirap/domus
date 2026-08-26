@@ -451,7 +451,7 @@ public class InscricaoService {
 
     @Transactional
     public ResultadoConvidado inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
-                                               String telefone, UUID convidadoPorPessoaId,
+                                               String telefone, String email, UUID convidadoPorPessoaId,
                                                UUID inscritoPorUsuarioId, UUID visitanteId,
                                                boolean gerarLink) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
@@ -465,6 +465,12 @@ public class InscricaoService {
         }
         if (evento.getPreco() != null) {
             validarContaPagamentoConectada(igrejaId);
+            // E-mail é a única forma de mandar o comprovante de pagamento pra quem não tem
+            // cadastro — sem ele, o convidado paga e nunca recebe confirmação nenhuma.
+            if (email == null || email.isBlank()) {
+                throw new BusinessException("EMAIL_OBRIGATORIO",
+                        "O e-mail é obrigatório para se inscrever em um evento pago.");
+            }
         }
         validarEventoAberto(evento);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
@@ -490,6 +496,7 @@ public class InscricaoService {
                 .pessoa(null)
                 .nomeConvidado(TextoUtil.capitalizar(nome))
                 .telefoneConvidado(telefone)
+                .emailConvidado(email)
                 .convidadoPor(convidadoPor)
                 .visitante(visitante)
                 .inscritoPorUsuarioId(inscritoPorUsuarioId)

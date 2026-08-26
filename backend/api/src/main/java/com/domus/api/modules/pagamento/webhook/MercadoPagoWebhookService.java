@@ -1,11 +1,19 @@
 package com.domus.api.modules.pagamento.webhook;
 
+import com.domus.api.modules.evento.Evento;
+import com.domus.api.modules.evento.EventoRepository;
+import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
+import com.domus.api.modules.pessoa.Pessoa;
+import com.domus.api.modules.pessoa.PessoaRepository;
+import com.domus.api.shared.email.EmailService;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,16 +53,28 @@ public class MercadoPagoWebhookService {
     private static final java.util.Set<String> STATUS_TERMINAL_NAO_APROVADO =
         java.util.Set.of("rejected", "cancelled");
 
+    private static final DateTimeFormatter FORMATADOR_DATA =
+        DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm", new Locale("pt", "BR"));
+
     private final CobrancaEventoRepository cobrancaRepository;
     private final InscricaoRepository inscricaoRepository;
     private final NotificacaoService notificacaoService;
+    private final EventoRepository eventoRepository;
+    private final PessoaRepository pessoaRepository;
+    private final EmailService emailService;
 
     public MercadoPagoWebhookService(CobrancaEventoRepository cobrancaRepository,
                                       InscricaoRepository inscricaoRepository,
-                                      NotificacaoService notificacaoService) {
+                                      NotificacaoService notificacaoService,
+                                      EventoRepository eventoRepository,
+                                      PessoaRepository pessoaRepository,
+                                      EmailService emailService) {
         this.cobrancaRepository = cobrancaRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.notificacaoService = notificacaoService;
+        this.eventoRepository = eventoRepository;
+        this.pessoaRepository = pessoaRepository;
+        this.emailService = emailService;
     }
 
     /**
@@ -90,6 +110,7 @@ public class MercadoPagoWebhookService {
             inscricaoRepository.findById(cobranca.getInscricaoId()).ifPresent(inscricao -> {
                 inscricao.setStatus(StatusInscricao.CONFIRMADA);
                 inscricaoRepository.save(inscricao);
+                enviarEmailConfirmacao(cobranca, inscricao);
             });
 
             // Plano 4b — convidado sem cadastro via convite público não tem
@@ -103,5 +124,90 @@ public class MercadoPagoWebhookService {
                     "/eventos/" + cobranca.getEventoId() + "/inscritos");
             }
         });
+    }
+
+    /**
+     * Confirmação de pagamento por e-mail — só pra evento pago (o único jeito de chegar
+     * aqui) e só quando existe um e-mail pra mandar: pessoa cadastrada sempre tem (campo
+     * único no domínio); acompanhante nunca tem (modelo antigo, sem e-mail); convidado sem
+     * cadastro tem desde que o e-mail virou obrigatório em evento pago (ver
+     * {@code InscricaoService.inscreverConvidado}). Falha de envio nunca pode quebrar a
+     * confirmação do pagamento em si — só loga, mesmo padrão de
+     * {@code PasswordResetService}.
+     */
+    private void enviarEmailConfirmacao(CobrancaEvento cobranca, InscricaoEvento inscricao) {
+        String nomeDestinatario;
+        String email;
+        UUID igrejaDaPessoaId = null;
+
+        if (cobranca.getPessoaId() != null) {
+            Pessoa pessoa = pessoaRepository.findById(cobranca.getPessoaId()).orElse(null);
+            if (pessoa == null) return;
+            nomeDestinatario = pessoa.getNome();
+            email = pessoa.getEmail();
+            igrejaDaPessoaId = pessoa.getIgreja().getId();
+        } else if (cobranca.getAcompanhanteId() != null) {
+            // Acompanhante (modelo antigo, ver Plano 4b) nunca tem e-mail — nada a enviar.
+            return;
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+
+        if (email == null || email.isBlank()) {
+            log.info("Cobrança confirmada sem e-mail pra enviar comprovante. cobrancaId={}", cobranca.getId());
+            return;
+        }
+
+        Evento evento = eventoRepository.findById(cobranca.getEventoId()).orElse(null);
+        if (evento == null) return;
+
+        // Evento de outra igreja da família/rede (ver eventos-compartilhados) — a pessoa
+        // precisa saber que não foi a própria igreja dela que organizou.
+        String igrejaOrganizadora = igrejaDaPessoaId != null && !igrejaDaPessoaId.equals(evento.getIgreja().getId())
+            ? evento.getIgreja().getNome()
+            : null;
+
+        try {
+            emailService.enviar(email, "Inscrição confirmada — " + evento.getTitulo(),
+                montarCorpoEmail(nomeDestinatario, evento, cobranca, igrejaOrganizadora));
+            log.info("E-mail de confirmação de pagamento enviado. cobrancaId={}", cobranca.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de confirmação de pagamento. cobrancaId={}", cobranca.getId(), e);
+        }
+    }
+
+    private String montarCorpoEmail(String nome, Evento evento, CobrancaEvento cobranca, String igrejaOrganizadora) {
+        String valorFormatado = java.text.NumberFormat.getCurrencyInstance(new Locale("pt", "BR"))
+            .format(cobranca.getValor());
+        String local = evento.getLocalExibicao();
+
+        return """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <p style="text-align: center; margin-bottom: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center;
+                       width: 48px; height: 48px; border-radius: 999px; background: #f0fdf4;
+                       color: #16a34a; font-size: 28px; line-height: 48px;">&#10003;</span>
+                  </p>
+                  <h2 style="text-align: center; color: #131b2e;">Pagamento aprovado!</h2>
+                  <p>Olá, %s.</p>
+                  <p>Sua inscrição no evento abaixo está confirmada.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0 0 4px; font-weight: bold; color: #131b2e;">%s</p>
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">%s%s</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">Valor pago: <strong>%s</strong></p>
+                  %s
+                </div>
+                """.formatted(
+            nome,
+            evento.getTitulo(),
+            FORMATADOR_DATA.format(evento.getInicioEm()),
+            local != null ? " — " + local : "",
+            valorFormatado,
+            igrejaOrganizadora != null
+                ? "<p style=\"color: #64748b; font-size: 12px;\">Evento organizado por: " + igrejaOrganizadora + "</p>"
+                : ""
+        );
     }
 }

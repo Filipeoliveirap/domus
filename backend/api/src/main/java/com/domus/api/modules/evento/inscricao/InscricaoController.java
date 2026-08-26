@@ -63,7 +63,7 @@ public class InscricaoController {
             @Valid @RequestBody CriarConvidadoRequest data) {
         var usuario = usuarioAutenticado.get();
         var resultado = inscricaoService.inscreverConvidado(
-                eventoId, usuario.getIgreja().getId(), data.nome(), data.telefone(),
+                eventoId, usuario.getIgreja().getId(), data.nome(), data.telefone(), data.email(),
                 usuario.getPessoa().getId(), usuario.getId(), data.visitanteId(), data.gerarLink());
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responder(resultado.inscricao().getId(), null, data.respostas(),

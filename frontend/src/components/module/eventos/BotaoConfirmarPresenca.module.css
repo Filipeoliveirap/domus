@@ -208,3 +208,25 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
 }
+
+/* ---- Plano 3: retomar pagamento pendente (AGUARDANDO_PAGAMENTO) ---- */
+
+.pagamentoPendente {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning, #d97706);
+  background: var(--color-bg-page);
+  color: var(--color-warning, #d97706);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.pagamentoPendente:hover {
+  opacity: 0.85;
+}

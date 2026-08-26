@@ -18,7 +18,7 @@ import { useMarcarPresencaInscricao } from '@/hooks/inscricao/useMarcarPresencaI
 import { useMarcarPresencaAcompanhante } from '@/hooks/inscricao/useMarcarPresencaAcompanhante'
 import { useMarcarPresencaSelecionados, type ItemSelecionado } from '@/hooks/inscricao/useMarcarPresencaSelecionados'
 import { useRelatorioEvento } from '@/hooks/evento/useRelatorioEvento'
-import { ModalInscreverPessoas } from '@/components/module/eventos/ModalInscreverPessoas'
+import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscreverAlguem'
 import { CardsRelatorioEvento } from '@/components/module/eventos/CardsRelatorioEvento'
 import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
 import { PendenciaCamposBadge } from '@/components/module/eventos/PendenciaCamposBadge'
@@ -587,10 +587,11 @@ export default function InscritosPage() {
       {relatorio && <CardsRelatorioEvento relatorio={relatorio} />}
 
       {modalInscreverAberto && evento && (
-        <ModalInscreverPessoas
+        <ModalInscreverAlguem
           eventoId={eventoId}
           tituloEvento={evento.titulo}
           exclusivoMembros={evento.exclusivoMembros}
+          preco={evento.preco}
           onClose={() => setModalInscreverAberto(false)}
         />
       )}

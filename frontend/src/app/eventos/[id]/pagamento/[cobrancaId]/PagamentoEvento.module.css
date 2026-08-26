@@ -1,0 +1,120 @@
+.pagina {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 48px;
+}
+
+.topo {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+}
+
+.topoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.topoTextos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topoTitulo {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topoData {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+}
+
+.conteudo {
+  width: 100%;
+  max-width: 480px;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.card {
+  padding: 24px 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.card h1 {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-bottom: 8px;
+}
+
+.card p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.iconeSucesso {
+  color: var(--color-success, #16a34a);
+  margin-bottom: 8px;
+}
+
+.saudacao {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.valor {
+  font-size: var(--font-size-xl, 28px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-top: 4px;
+}
+
+.seguranca {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.estado {
+  padding: 24px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.voltarLink {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 480px) {
+  .conteudo {
+    padding: 0 12px;
+  }
+}

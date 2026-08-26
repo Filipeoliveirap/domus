@@ -24,5 +24,6 @@ public record ConvitePublicoResponse(
         UUID convidadoPorFotoId,
         Integer vagasRestantes,
         BigDecimal preco,
-        List<CampoPersonalizadoResponse> campos
+        List<CampoPersonalizadoResponse> campos,
+        boolean requerInscricao
 ) {}

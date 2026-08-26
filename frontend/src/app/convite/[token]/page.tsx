@@ -143,7 +143,7 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
             <p className={styles.aviso}>{convite.vagasRestantes} vagas restantes</p>
           )}
 
-          {etapa === 'landing' && (
+          {convite.requerInscricao && etapa === 'landing' && (
             <button
               type="button"
               className={styles.btnInscrever}
@@ -155,7 +155,9 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
           )}
         </div>
 
-        {etapa === 'escolha' && (
+        {/* Evento sem inscrição: convite é só informativo (título/data/hora/local acima) —
+           não tem o que confirmar, então nem etapa 'escolha'/'formulario' existe aqui. */}
+        {convite.requerInscricao && etapa === 'escolha' && (
           <div className={styles.escolha}>
             <Link href={`/login?next=${encodeURIComponent(`/convite/${token}?entrar=1`)}`} className={styles.btnLogin}>
               Já tenho conta — Fazer login
@@ -166,11 +168,11 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
           </div>
         )}
 
-        {etapa === 'formulario' && !sessao && (
+        {convite.requerInscricao && etapa === 'formulario' && !sessao && (
           <FormularioConvidado token={token} eventoId={convite.eventoId} campos={convite.campos} onSucesso={() => setEtapa('sucesso')} />
         )}
 
-        {etapa === 'formulario' && sessao && (
+        {convite.requerInscricao && etapa === 'formulario' && sessao && (
           <EntrarLogado eventoId={convite.eventoId} nomeUsuario={sessao.nome} onSucesso={() => setEtapa('sucesso')} />
         )}
       </div>

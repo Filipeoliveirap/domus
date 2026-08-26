@@ -21,6 +21,7 @@ export interface ConvitePublico {
   vagasRestantes: number | null
   preco: number | null
   campos: CampoPersonalizadoResponse[]
+  requerInscricao: boolean
 }
 
 export interface EntrarConviteRequest {

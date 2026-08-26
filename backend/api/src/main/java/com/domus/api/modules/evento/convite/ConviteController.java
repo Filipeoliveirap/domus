@@ -118,7 +118,7 @@ public class ConviteController {
         // sempre false: é a própria pessoa se auto-inscrevendo, sempre "paga agora" (mesma
         // regra do titular em inscreverInterno).
         var resultado = inscricaoService.inscreverConvidado(
-                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(),
+                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), data.email(),
                 resolvido.convidante().getId(), null, null, false);
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {

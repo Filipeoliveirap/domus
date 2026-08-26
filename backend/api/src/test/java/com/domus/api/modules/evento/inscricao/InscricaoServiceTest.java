@@ -233,6 +233,26 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void minhaInscricaoDevolveCobrancaPendenteQuandoAguardandoPagamento() {
+        InscricaoEvento inscricaoAguardando = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId))
+                .thenReturn(Optional.of(inscricaoAguardando));
+        var cobranca = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class);
+        when(cobranca.getId()).thenReturn(UUID.randomUUID());
+        when(cobranca.getPessoaId()).thenReturn(pessoaId);
+        when(cobranca.getStatus()).thenReturn(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobranca));
+
+        MinhaInscricaoResponse resposta = service.minhaInscricao(eventoId, pessoaId);
+
+        assertThat(resposta.inscrito()).isFalse();
+        assertThat(resposta.cobrancaPendenteId()).isNotNull();
+    }
+
+    @Test
     void eventoPagoSemIgrejaComContaConectadaRecusaInscricaoAntesDeCriarQualquerCoisa() {
         // Important 9 (revisão final de branch): antes desta correção, essa inscrição era
         // criada com sucesso e só falhava depois, na hora de /pagar. Prova que agora falha

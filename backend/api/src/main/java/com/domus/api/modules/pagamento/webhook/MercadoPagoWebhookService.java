@@ -1,5 +1,7 @@
 package com.domus.api.modules.pagamento.webhook;
 
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
@@ -44,11 +46,14 @@ public class MercadoPagoWebhookService {
         java.util.Set.of("rejected", "cancelled");
 
     private final CobrancaEventoRepository cobrancaRepository;
+    private final InscricaoRepository inscricaoRepository;
     private final NotificacaoService notificacaoService;
 
     public MercadoPagoWebhookService(CobrancaEventoRepository cobrancaRepository,
+                                      InscricaoRepository inscricaoRepository,
                                       NotificacaoService notificacaoService) {
         this.cobrancaRepository = cobrancaRepository;
+        this.inscricaoRepository = inscricaoRepository;
         this.notificacaoService = notificacaoService;
     }
 
@@ -79,6 +84,13 @@ public class MercadoPagoWebhookService {
         cobrancaRepository.findById(UUID.fromString(cobrancaId)).ifPresent(cobranca -> {
             cobranca.marcarComoPago(mpPaymentId);
             cobrancaRepository.save(cobranca);
+
+            // A inscrição só confirma quando o pagamento é aprovado de verdade — ver
+            // InscricaoService.inscreverInterno, que a cria como AGUARDANDO_PAGAMENTO.
+            inscricaoRepository.findById(cobranca.getInscricaoId()).ifPresent(inscricao -> {
+                inscricao.setStatus(StatusInscricao.CONFIRMADA);
+                inscricaoRepository.save(inscricao);
+            });
 
             if (!cobranca.ehDoTitular()) {
                 notificacaoService.criar(

@@ -160,9 +160,15 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
             <Link href={`/login?next=${encodeURIComponent(`/convite/${token}?entrar=1`)}`} className={styles.btnLogin}>
               Já tenho conta — Fazer login
             </Link>
-            <button type="button" className={styles.btnSemConta} onClick={() => setEtapa('formulario')}>
-              Continuar sem conta
-            </button>
+            {convite.preco === null ? (
+              <button type="button" className={styles.btnSemConta} onClick={() => setEtapa('formulario')}>
+                Continuar sem conta
+              </button>
+            ) : (
+              <p className={styles.aviso}>
+                Este evento é pago — para pagar sua inscrição, entre com sua conta.
+              </p>
+            )}
           </div>
         )}
 

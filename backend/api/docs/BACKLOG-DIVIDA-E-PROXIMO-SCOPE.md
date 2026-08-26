@@ -718,4 +718,35 @@ travar a entrega da feature pra montar a infra primeiro. Escopo inicial sugerido
 mutation (`useCriarConvidado`, `useGerarConvite`, etc.) e componentes com mais estado
 condicional (`ModalInscreverAlguem`, com a pergunta "você também vai participar?"), não a
 base de código inteira de uma vez.
+
+### Desconectar conta Mercado Pago: sem confirmação nem aviso do que isso implica
+
+Achado testando o fluxo de pagamento contra o sandbox do Mercado Pago (2026-08-25): o
+botão de desconectar a conta de recebimento (`useDesconectarMercadoPago` /
+`DELETE /pagamentos/conta`) executa na hora, sem `ModalConfirmacao` nem explicar a
+consequência prática (eventos pagos com essa conta deixam de conseguir cobrar até
+reconectar; inscrições já pagas não são afetadas, mas isso não fica dito em lugar nenhum).
+Corrigir seguindo o padrão de confirmação já usado em outras ações destrutivas do projeto
+(ver `ui-notificar-e-confirmacao` — não é `window.confirm` nem toast do sonner).
 `/login`) conforme esse campo.
+
+### Prazo do link de pagamento ("enviar link") fixo em 48h — devia acompanhar o evento
+
+Levantado pelo autor testando o Plano 4b (2026-08-26): o link de pagamento gerado por
+"Enviar link pra pagar" (`CobrancaEventoService.PRAZO_LINK_COMPARTILHADO`, 48h fixas) não
+tem relação nenhuma com o evento em si — ideal seria valer até não dar mais pra se
+inscrever (hoje, na prática, até o evento começar). Depende da feature abaixo pra fazer
+sentido de verdade.
+
+### Prazo de inscrição opcional no evento (nova feature)
+
+Ideia do autor (2026-08-26), ainda não desenhada: eventos com inscrição já fecham
+naturalmente quando o evento começa (`situacao !== 'AGENDADO'` bloqueia — ver
+`BotaoConfirmarPresenca`), mas alguns eventos precisam de um prazo de inscrição **anterior**
+ao início (ex.: acampamento, evento que exige logística prévia). Em vez de um botão manual
+"encerrar inscrições", a ideia é um campo opcional na `EVENTO` (algo como
+`inscricao_ate`/`prazo_inscricao`, nulável) que, quando preenchido, some com a exigência
+`situacao === AGENDADO` como segunda trava de "pode se inscrever". Isso também resolveria o
+item acima: o prazo do link de pagamento passaria a acompanhar esse campo quando presente,
+em vez do fixo de 48h. Precisa de brainstorm completo (schema, UI de cadastro, mensagem pro
+usuário quando o prazo já passou mas o evento ainda não começou) antes de virar plano.

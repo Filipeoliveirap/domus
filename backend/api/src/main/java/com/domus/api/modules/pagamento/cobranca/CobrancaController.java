@@ -87,12 +87,13 @@ public class CobrancaController {
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
         } else {
-            // Convidado sem cadastro (Plano 4b) — nem pessoa nem acompanhante, resolvido
-            // só pela InscricaoEvento (nomeConvidado). Sem e-mail: não existe onde buscar
-            // um pra convidado sem cadastro.
-            nomePagador = inscricaoRepository.findById(cobranca.getInscricaoId())
-                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."))
-                .getNomeConvidado();
+            // Convidado sem cadastro (Plano 4b) — nem pessoa nem acompanhante, resolvido só
+            // pela InscricaoEvento. Desde que o e-mail virou obrigatório em evento pago
+            // (feature de comprovante por e-mail), emailConvidado sempre existe aqui.
+            var inscricaoConvidado = inscricaoRepository.findById(cobranca.getInscricaoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."));
+            nomePagador = inscricaoConvidado.getNomeConvidado();
+            emailPagador = inscricaoConvidado.getEmailConvidado();
         }
 
         return new CobrancaCheckoutDTO(

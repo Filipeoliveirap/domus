@@ -43,6 +43,12 @@ public class InscricaoEvento {
     @Column(name = "telefone_convidado", length = 20)
     private String telefoneConvidado;
 
+    /** Obrigatório no front quando o evento é pago (usado pra mandar o comprovante de
+     *  pagamento) — opcional em evento gratuito. Nulável aqui só por causa de inscrições
+     *  antigas, criadas antes deste campo existir. */
+    @Column(name = "email_convidado", length = 255)
+    private String emailConvidado;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "convidado_por_pessoa_id")
     private Pessoa convidadoPor;

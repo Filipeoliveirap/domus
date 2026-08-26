@@ -287,7 +287,7 @@ public class InscricaoService {
     @Transactional(readOnly = true)
     public MinhaInscricaoResponse minhaInscricao(UUID eventoId, UUID pessoaId) {
         return inscricaoRepository.findByEventoIdAndPessoaId(eventoId, pessoaId)
-                .filter(InscricaoEvento::estaConfirmada)
+                .filter(i -> i.estaConfirmada() || i.estaAguardandoPagamento())
                 .map(i -> MinhaInscricaoResponse.from(i, cobrancaPendenteDoTitular(i.getId(), pessoaId)))
                 .orElseGet(MinhaInscricaoResponse::naoInscrito);
     }

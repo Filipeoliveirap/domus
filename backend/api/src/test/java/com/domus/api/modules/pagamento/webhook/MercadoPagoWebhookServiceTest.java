@@ -2,6 +2,9 @@ package com.domus.api.modules.pagamento.webhook;
 
 import static org.mockito.Mockito.*;
 
+import com.domus.api.modules.evento.inscricao.InscricaoEvento;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
@@ -13,17 +16,38 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 class MercadoPagoWebhookServiceTest {
 
     CobrancaEventoRepository cobrancaRepository;
+    InscricaoRepository inscricaoRepository;
     NotificacaoService notificacaoService;
     MercadoPagoWebhookService service;
 
     @BeforeEach
     void setup() {
         cobrancaRepository = mock(CobrancaEventoRepository.class);
+        inscricaoRepository = mock(InscricaoRepository.class);
         notificacaoService = mock(NotificacaoService.class);
-        service = new MercadoPagoWebhookService(cobrancaRepository, notificacaoService);
+        service = new MercadoPagoWebhookService(cobrancaRepository, inscricaoRepository, notificacaoService);
+    }
+
+    @Test
+    void confirmaInscricaoVinculadaQuandoPagamentoAprovado() {
+        UUID cobrancaId = UUID.randomUUID();
+        UUID inscricaoId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(inscricaoRepository).save(inscricao);
     }
 
     @Test

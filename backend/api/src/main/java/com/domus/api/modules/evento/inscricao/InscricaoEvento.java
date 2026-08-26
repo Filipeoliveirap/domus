@@ -86,6 +86,10 @@ public class InscricaoEvento {
         return status == StatusInscricao.CONFIRMADA;
     }
 
+    public boolean estaAguardandoPagamento() {
+        return status == StatusInscricao.AGUARDANDO_PAGAMENTO;
+    }
+
     /** {@code true} = inscrição de gente sem cadastro no sistema (modelo desta spec — nunca
      *  confundir com {@link #getAcompanhantes()}, que é o modelo antigo aninhado). */
     public boolean isConvidadoSemCadastro() {

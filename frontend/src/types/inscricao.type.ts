@@ -106,6 +106,7 @@ export interface InscreverPessoasRequest {
  *  pagar agora (Payment Brick); os dois nulos = evento gratuito. */
 export interface PessoaInscritaComCobranca {
   pessoaId: string
+  inscricaoId: string
   cobrancaId: string | null
   tokenLinkPublico: string | null
 }

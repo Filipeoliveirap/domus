@@ -29,6 +29,7 @@ import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.modules.visitante.Visitante;
 import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.DTO.PagedResponse;
+import com.domus.api.shared.email.EmailService;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ConflitoNegocioException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -69,6 +70,7 @@ public class InscricaoService {
     private final CobrancaEventoRepository cobrancaEventoRepository;
     private final MercadoPagoClient mercadoPagoClient;
     private final ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
+    private final EmailService emailService;
 
     /**
      * Important 9 (revisão final de branch): sem isto, uma inscrição em evento pago era
@@ -672,6 +674,8 @@ public class InscricaoService {
                 try {
                     mercadoPagoClient.estornar(igrejaId, cobranca.getMpPaymentId());
                 } catch (Exception e) {
+                    log.error("Falha ao estornar pagamento no Mercado Pago. cobrancaId={} mpPaymentId={}",
+                            cobranca.getId(), cobranca.getMpPaymentId(), e);
                     throw new BusinessException("FALHA_ESTORNO",
                             "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
                 }
@@ -679,14 +683,75 @@ public class InscricaoService {
         }
 
         // 2ª passada: todas as chamadas externas tiveram sucesso — agora sim muta status.
+        java.math.BigDecimal valorReembolsado = java.math.BigDecimal.ZERO;
         for (CobrancaEvento cobranca : cobrancas) {
             if (cobranca.getStatus() == StatusCobranca.PAGO) {
                 cobranca.marcarComoReembolsado();
+                valorReembolsado = valorReembolsado.add(cobranca.getValor());
             } else if (cobranca.getStatus() == StatusCobranca.PENDENTE) {
                 cobranca.marcarComoCancelado();
             }
         }
         cobrancaEventoRepository.saveAll(cobrancas);
+
+        // Só existe reembolso pra avisar quando algo foi de fato cobrado e estornado — cobrança
+        // PENDENTE cancelada nunca chegou a debitar ninguém.
+        if (valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            enviarEmailCancelamento(inscricao, valorReembolsado);
+        }
+    }
+
+    /**
+     * Aviso de cancelamento com reembolso — mesmo padrão de resolução de destinatário e
+     * mesma postura de falha (nunca quebra o cancelamento em si) do e-mail de confirmação
+     * de pagamento em {@code MercadoPagoWebhookService.enviarEmailConfirmacao}.
+     */
+    private void enviarEmailCancelamento(InscricaoEvento inscricao, java.math.BigDecimal valorReembolsado) {
+        String nomeDestinatario;
+        String email;
+
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            // Acompanhante (modelo antigo) não tem e-mail; convidado sem cadastro em evento
+            // pago sempre tem (obrigatório desde a feature de comprovante por e-mail).
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+
+        if (email == null || email.isBlank()) {
+            log.info("Inscrição cancelada com reembolso, sem e-mail pra avisar. inscricaoId={}", inscricao.getId());
+            return;
+        }
+
+        Evento evento = inscricao.getEvento();
+        String valorFormatado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                .format(valorReembolsado);
+
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">Inscrição cancelada</h2>
+                  <p>Olá, %s.</p>
+                  <p>Sua inscrição no evento abaixo foi cancelada.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">
+                    O valor de <strong>%s</strong> será reembolsado de acordo com o método de pagamento
+                    que você utilizou. O prazo para o reembolso aparecer depende do seu banco ou
+                    operadora do cartão — costuma ser em poucos dias, mas pode levar até duas faturas
+                    em alguns casos.
+                  </p>
+                </div>
+                """.formatted(nomeDestinatario, evento.getTitulo(), valorFormatado);
+
+        try {
+            emailService.enviar(email, "Inscrição cancelada — " + evento.getTitulo(), corpo);
+            log.info("E-mail de cancelamento com reembolso enviado. inscricaoId={}", inscricao.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de cancelamento com reembolso. inscricaoId={}", inscricao.getId(), e);
+        }
     }
 
     /**

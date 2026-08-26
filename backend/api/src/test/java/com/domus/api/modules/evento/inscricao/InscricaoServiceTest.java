@@ -59,6 +59,7 @@ class InscricaoServiceTest {
     com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository cobrancaEventoRepository;
     com.domus.api.modules.pagamento.MercadoPagoClient mercadoPagoClient;
     com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
+    com.domus.api.shared.email.EmailService emailService;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -94,12 +95,13 @@ class InscricaoServiceTest {
         // sobrescreve com Optional.empty() explicitamente.
         when(contaPagamentoIgrejaRepository.findByIgrejaId(any()))
                 .thenReturn(Optional.of(mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
+        emailService = mock(com.domus.api.shared.email.EmailService.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
                 cobrancaEventoService, cobrancaEventoRepository, mercadoPagoClient,
-                contaPagamentoIgrejaRepository);
+                contaPagamentoIgrejaRepository, emailService);
     }
 
     private Igreja igreja() {
@@ -951,6 +953,45 @@ class InscricaoServiceTest {
 
         verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void cancelamentoComReembolsoEnviaEmailAvisandoQueSeraReembolsado() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
+        assertThat(assuntoCaptor.getValue()).contains("cancelada");
+        assertThat(corpoCaptor.getValue()).contains("reembolsado");
+    }
+
+    @Test
+    void cancelamentoDeCobrancaPendenteNaoEnviaEmailPorqueNaoHouveCobranca() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPendente()));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(emailService, never()).enviar(any(), any(), any());
     }
 
     @Test

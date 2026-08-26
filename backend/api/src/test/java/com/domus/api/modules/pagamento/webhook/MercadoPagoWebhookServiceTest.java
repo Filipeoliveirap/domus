@@ -90,6 +90,24 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    void ignoraConfirmacaoQuandoCobrancaJaSaiuDePendente() {
+        // Poll ativo (PagamentoPollingService) e webhook correm em paralelo — quem chegar
+        // segundo, com a cobrança já PAGO, não pode repetir save/e-mail/notificação.
+        UUID cobrancaId = UUID.randomUUID();
+        UUID inscricaoId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        cobranca.marcarComoPago("mp-payment-999");
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        verify(cobrancaRepository, never()).save(any());
+        verify(inscricaoRepository, never()).findById(any());
+        verify(notificacaoService, never()).criar(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void ignoraSilenciosamenteQuandoCobrancaNaoExiste() {
         when(cobrancaRepository.findById(any())).thenReturn(Optional.empty());
 
@@ -255,7 +273,6 @@ class MercadoPagoWebhookServiceTest {
         org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId())
             .isEqualTo("mp-payment-tentativa-1");
         verify(cobrancaRepository, never()).save(any());
-        verify(cobrancaRepository, never()).findById(any());
     }
 
     @Test

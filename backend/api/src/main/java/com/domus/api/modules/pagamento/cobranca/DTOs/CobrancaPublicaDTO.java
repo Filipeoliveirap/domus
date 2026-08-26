@@ -19,5 +19,8 @@ public record CobrancaPublicaDTO(
     String nomePagador,
     BigDecimal valor,
     String status,
-    Instant expiraEm
+    Instant expiraEm,
+    /** {@code true} quando já existe uma tentativa de pagamento em voo (mpPaymentId
+     *  gravado, esperando o webhook confirmar) — mesma lógica de {@link CobrancaCheckoutDTO}. */
+    boolean pagamentoEmAndamento
 ) {}

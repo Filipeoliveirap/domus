@@ -30,6 +30,12 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
   const [indisponivel, setIndisponivel] = useState<string | null>(null)
   const resolvidoRef = useRef(false)
 
+  // Reload no meio de um pagamento em voo não pode voltar pro formulário — reenviar
+  // esbarraria em COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando".
+  useEffect(() => {
+    if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
+  }, [cobranca, resultado])
+
   useEffect(() => {
     if (!cobranca || resultado !== 'enviado') return
     resolvidoRef.current = false

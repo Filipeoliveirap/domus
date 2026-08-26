@@ -3,6 +3,7 @@ package com.domus.api.modules.pagamento.cobranca;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.inscricao.AcompanhanteRepository;
 import com.domus.api.modules.pagamento.MercadoPagoClient;
+import com.domus.api.modules.pagamento.PagamentoPollingService;
 import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaCheckoutDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaPublicaDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.PagarCobrancaRequest;
@@ -50,6 +51,7 @@ public class CobrancaController {
     private final PessoaRepository pessoaRepository;
     private final AcompanhanteRepository acompanhanteRepository;
     private final MercadoPagoClient mercadoPagoClient;
+    private final PagamentoPollingService pagamentoPollingService;
 
     public CobrancaController(CobrancaEventoService service,
                                CobrancaEventoRepository cobrancaRepository,
@@ -57,7 +59,8 @@ public class CobrancaController {
                                com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
                                AcompanhanteRepository acompanhanteRepository,
-                               MercadoPagoClient mercadoPagoClient) {
+                               MercadoPagoClient mercadoPagoClient,
+                               PagamentoPollingService pagamentoPollingService) {
         this.service = service;
         this.cobrancaRepository = cobrancaRepository;
         this.eventoRepository = eventoRepository;
@@ -65,6 +68,7 @@ public class CobrancaController {
         this.pessoaRepository = pessoaRepository;
         this.acompanhanteRepository = acompanhanteRepository;
         this.mercadoPagoClient = mercadoPagoClient;
+        this.pagamentoPollingService = pagamentoPollingService;
     }
 
     @GetMapping("/id/{id}")
@@ -76,24 +80,20 @@ public class CobrancaController {
             .orElseThrow(() -> new ResourceNotFoundException("Evento da cobrança não encontrado."));
 
         String nomePagador;
-        String emailPagador = null;
         if (cobranca.getPessoaId() != null) {
-            var pessoa = pessoaRepository.findById(cobranca.getPessoaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."));
-            nomePagador = pessoa.getNome();
-            emailPagador = pessoa.getEmail();
+            nomePagador = pessoaRepository.findById(cobranca.getPessoaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
+                .getNome();
         } else if (cobranca.getAcompanhanteId() != null) {
             nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
         } else {
             // Convidado sem cadastro (Plano 4b) — nem pessoa nem acompanhante, resolvido só
-            // pela InscricaoEvento. Desde que o e-mail virou obrigatório em evento pago
-            // (feature de comprovante por e-mail), emailConvidado sempre existe aqui.
-            var inscricaoConvidado = inscricaoRepository.findById(cobranca.getInscricaoId())
-                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."));
-            nomePagador = inscricaoConvidado.getNomeConvidado();
-            emailPagador = inscricaoConvidado.getEmailConvidado();
+            // pela InscricaoEvento.
+            nomePagador = inscricaoRepository.findById(cobranca.getInscricaoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."))
+                .getNomeConvidado();
         }
 
         return new CobrancaCheckoutDTO(
@@ -102,10 +102,10 @@ public class CobrancaController {
             evento.getTitulo(),
             evento.getInicioEm(),
             nomePagador,
-            emailPagador,
             cobranca.getValor(),
             cobranca.getStatus().name(),
-            cobranca.getExpiraEm()
+            cobranca.getExpiraEm(),
+            cobranca.getMpPaymentId() != null
         );
     }
 
@@ -138,14 +138,22 @@ public class CobrancaController {
             nomePagador,
             cobranca.getValor(),
             cobranca.getStatus().name(),
-            cobranca.getExpiraEm()
+            cobranca.getExpiraEm(),
+            cobranca.getMpPaymentId() != null
         );
     }
 
     @PostMapping("/{id}/pagar")
     @Transactional
     public PagarCobrancaResponse pagar(@PathVariable UUID id, @RequestBody PagarCobrancaRequest request) {
-        var cobranca = cobrancaRepository.findById(id)
+        // Achado em revisão de segurança (2026-08-26): lock pessimista na PRIMEIRA leitura,
+        // não só no evento — sem isto, duas requisições quase simultâneas (duplo clique,
+        // retry de rede) liam mpPaymentId == null antes de qualquer uma travar nada, e as
+        // duas criavam um pagamento de verdade no Mercado Pago pra mesma cobrança (a
+        // proteção "Critical 5" abaixo só barra o caso sequencial). Travando aqui, a segunda
+        // requisição bloqueia até a primeira commitar e só então lê o mpPaymentId já
+        // gravado — cai certinho no COBRANCA_JA_EM_PROCESSAMENTO.
+        var cobranca = cobrancaRepository.buscarComLock(id)
             .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
 
         if (cobranca.getStatus() != StatusCobranca.PENDENTE) {
@@ -188,7 +196,11 @@ public class CobrancaController {
         cobranca.registrarTentativaPagamento(resultado.mpPaymentId());
         cobrancaRepository.save(cobranca);
 
-        return new PagarCobrancaResponse(resultado.mpPaymentId(), resultado.status(), resultado.qrCode(), resultado.qrCodeBase64());
+        // Corre em paralelo ao webhook (não no lugar dele) — só reduz a espera percebida
+        // pelo usuário quando o webhook demora. Ver PagamentoPollingService.
+        pagamentoPollingService.pollarConfirmacao(cobranca.getIgrejaId(), cobranca.getId().toString(), resultado.mpPaymentId());
+
+        return new PagarCobrancaResponse(resultado.mpPaymentId(), resultado.status(), resultado.statusDetail(), resultado.qrCode(), resultado.qrCodeBase64());
     }
 
     /**

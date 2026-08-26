@@ -242,6 +242,13 @@
   opacity: 0.9;
 }
 
+.aprovadoFechar {
+  margin-top: 24px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  animation: entrarDeBaixo 0.4s ease-out 0.48s both;
+}
+
 @media (max-width: 480px) {
   .conteudo {
     padding: 0 12px;

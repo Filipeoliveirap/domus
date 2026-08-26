@@ -12,9 +12,6 @@ import styles from './PaymentBrickCheckout.module.css'
 interface Props {
   cobrancaId: string
   valor: number
-  /** E-mail do pagador — o Brick aceita o campo vazio e deixa a pessoa preencher, mas
-   *  pré-preencher com o e-mail já conhecido (titular logado) evita retrabalho. */
-  emailPagador?: string
   onPagamentoCriado: (mpPaymentId: string) => void
   /** Erro em que continuar tentando NO MESMO formulário não resolve — a cobrança em si
    *  não pode mais ser paga (expirou, vagas esgotadas, já foi paga/cancelada). A mensagem
@@ -32,6 +29,33 @@ const ERROS_COBRANCA_MORTA = new Set([
   'COBRANCA_EXPIRADA',
   'VAGAS_ESGOTADAS',
 ])
+
+/** `status_detail` do Mercado Pago pra `status === 'rejected'` — cobre os casos oficiais
+ *  de teste do MP (cartões de teste com CPF 12345678909, ver documentação de sandbox):
+ *  OTHE/CALL/FUND/SECU/EXPI/FORM. Sem isso, toda recusa mostrava o mesmo texto genérico
+ *  "cartão recusado", mesmo quando o motivo (CVV errado vs. sem saldo vs. precisa ligar
+ *  pro banco) muda completamente o que a pessoa devia fazer a seguir. Motivo não mapeado
+ *  cai no genérico. */
+const MENSAGENS_RECUSA: Record<string, string> = {
+  cc_rejected_insufficient_amount: 'O cartão não tem limite ou saldo suficiente para esse valor.',
+  cc_rejected_bad_filled_security_code: 'O código de segurança (CVV) informado está incorreto.',
+  cc_rejected_bad_filled_date: 'A data de validade do cartão está incorreta ou o cartão está vencido.',
+  cc_rejected_bad_filled_card_number: 'O número do cartão está incorreto.',
+  cc_rejected_bad_filled_other: 'Há um erro nos dados preenchidos. Confira o número, a validade e o CVV do cartão.',
+  cc_rejected_call_for_authorize: 'O seu banco precisa autorizar esse pagamento. Entre em contato com ele e tente novamente.',
+  cc_rejected_card_disabled: 'O cartão está desativado. Ligue para o seu banco para ativá-lo, ou tente outro cartão.',
+  cc_rejected_duplicated_payment: 'Já existe um pagamento igual a esse recente. Se precisar pagar de novo, aguarde alguns minutos.',
+  cc_rejected_high_risk: 'O pagamento foi recusado por segurança. Tente outro cartão ou outro meio de pagamento.',
+  cc_rejected_max_attempts: 'Número máximo de tentativas com esse cartão atingido. Tente outro cartão.',
+  cc_rejected_invalid_installments: 'O cartão não aceita esse número de parcelas.',
+  cc_rejected_blacklist: 'O cartão não pôde ser processado por este meio de pagamento.',
+  cc_rejected_other_reason: 'O cartão foi recusado pelo banco emissor.',
+}
+
+function mensagemDeRecusa(statusDetail: string | null): string {
+  return (statusDetail && MENSAGENS_RECUSA[statusDetail])
+    ?? 'O cartão foi recusado pelo Mercado Pago. Confira os dados ou tente outro cartão.'
+}
 
 // Guarda a CHAVE usada, não só um booleano — se `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`
 // mudar (ex.: troca de teste pra produção em dev), o SDK precisa reinicializar com a
@@ -53,7 +77,7 @@ let chaveInicializada: string | null = null
  * PIX não gera `token`/`installments` (o Brick manda `undefined`) — o backend aceita os
  * dois nulos nesse caso.</p>
  */
-export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagamentoCriado, onCobrancaIndisponivel }: Props) {
+export function PaymentBrickCheckout({ cobrancaId, valor, onPagamentoCriado, onCobrancaIndisponivel }: Props) {
   const publicKeyRef = useRef(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? '')
   const [enviando, setEnviando] = useState(false)
   // Só é preenchido quando o meio escolhido é Pix — nesse caso o pagamento nasce `pending`
@@ -111,16 +135,9 @@ export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagame
   // referência de objeto nova — o que acontecia a cada re-render deste componente (refetch
   // de useMinhaInscricao, notificação, etc.), já que eram objetos literais inline. Memoizar
   // pelas dependências reais evita o Brick duplicado.
-  // `payer: { email: undefined }` (sem emailPagador) faz o SDK tentar resolver o "tipo de
-  // pessoa" do pagador com um e-mail vazio e quebrar internamente — o form de cartão nunca
-  // sai do esqueleto de carregamento e o console mostra "Cannot read properties of
-  // undefined (reading 'message')" dentro do próprio script do Mercado Pago. Omitir
-  // `payer` por completo quando não há e-mail conhecido deixa o Brick pedir o e-mail à
-  // própria pessoa, do jeito documentado.
-  const initialization = useMemo(
-    () => ({ amount: valor, ...(emailPagador ? { payer: { email: emailPagador } } : {}) }),
-    [valor, emailPagador]
-  )
+  // Sem `payer.email` pré-preenchido (removido por segurança — ver CobrancaCheckoutDTO,
+  // 2026-08-26), o Brick sempre pede o e-mail à própria pessoa, do jeito documentado.
+  const initialization = useMemo(() => ({ amount: valor }), [valor])
   const customization = useMemo(() => ({ paymentMethods: { bankTransfer: 'all' as const, creditCard: 'all' as const } }), [])
 
   // O componente `Payment` do SDK reagenda a criação do Brick (`useEffect` com
@@ -145,7 +162,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagame
           token: formData.token ?? null,
           paymentMethodId: formData.payment_method_id,
           installments: formData.installments ?? null,
-          payerEmail: formData.payer?.email ?? emailPagador ?? '',
+          payerEmail: formData.payer?.email ?? '',
           issuerId: formData.issuer_id ?? null,
         })
         if (resposta.qrCode && resposta.qrCodeBase64) {
@@ -158,16 +175,16 @@ export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagame
           // devolve 200 com mpPaymentId igual a um aprovado — sem checar `status` aqui,
           // a pessoa via a mesma tela de "pagamento em processamento" pra um cartão que
           // o Mercado Pago já tinha recusado na hora.
-          notificar.erro(
-            'Pagamento recusado',
-            'O cartão foi recusado pelo Mercado Pago. Confira os dados ou tente outro cartão.'
-          )
+          notificar.erro('Pagamento recusado', mensagemDeRecusa(resposta.statusDetail))
           // O Brick só libera o formulário pra uma nova tentativa quando a Promise de
           // onSubmit REJEITA — resolver normalmente aqui (como fazíamos antes) faz o SDK
           // entender "terminou com sucesso" e travar o botão até um reload da página
           // (achado testando o fluxo de ponta a ponta, 2026-08-26).
           throw new Error('Pagamento recusado')
         } else {
+          // Cobre também o cartão de teste "CONT" do Mercado Pago (nasce `pending`, sem
+          // recusa) — mesma tela de "confirmando pagamento" que Pix usa, e o poll (front +
+          // backend) resolve quando o status mudar de verdade.
           onPagamentoCriadoRef.current(resposta.mpPaymentId)
         }
       } catch (erro) {
@@ -198,7 +215,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, emailPagador, onPagame
         setEnviando(false)
       }
     },
-    [cobrancaId, emailPagador]
+    [cobrancaId]
   )
 
   // O SDK chama onError também para situações não-fatais (ex.: uma revalidação interna de

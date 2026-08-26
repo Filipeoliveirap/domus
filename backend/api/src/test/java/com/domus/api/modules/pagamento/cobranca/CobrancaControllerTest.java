@@ -369,7 +369,9 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(jsonPath("$.id", is(cobranca.getId().toString())))
             .andExpect(jsonPath("$.eventoId", is(eventoId.toString())))
             .andExpect(jsonPath("$.tituloEvento", is("Congresso Anual")))
-            .andExpect(jsonPath("$.emailPagador", is("ciclana@teste.com")))
+            // Segurança (2026-08-26): e-mail nunca sai nesta rota pública, mesma regra de
+            // CobrancaPublicaDTO — só rota autenticada exporia esse dado.
+            .andExpect(jsonPath("$.emailPagador").doesNotExist())
             .andExpect(jsonPath("$.nomePagador", is("Ciclana")))
             .andExpect(jsonPath("$.valor", is(75.00)))
             .andExpect(jsonPath("$.status", is("PENDENTE")));
@@ -400,6 +402,6 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         mockMvc.perform(get("/cobrancas/id/" + cobranca.getId()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.nomePagador", is("Convidado Sem Cadastro")))
-            .andExpect(jsonPath("$.emailPagador").value(org.hamcrest.Matchers.nullValue()));
+            .andExpect(jsonPath("$.emailPagador").doesNotExist());
     }
 }

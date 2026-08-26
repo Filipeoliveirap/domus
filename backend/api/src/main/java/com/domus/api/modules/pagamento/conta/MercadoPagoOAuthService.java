@@ -101,6 +101,26 @@ public class MercadoPagoOAuthService {
         }
     }
 
+    /**
+     * Renova o token de uma conta já conectada — chamado pelo job diário
+     * ({@code MercadoPagoTokenRenovacaoJob}) para contas perto de vencer. Se o próprio
+     * refresh token também estiver vencido/revogado, o Mercado Pago recusa a renovação e
+     * este método propaga a exceção — o job decide o que fazer (notificar a igreja pra
+     * reconectar manualmente, já que não tem mais como automatizar).
+     */
+    @Transactional
+    public void renovarTokenDaConta(ContaPagamentoIgreja conta) {
+        String refreshTokenPlano = encryptor.descriptografar(conta.getRefreshTokenCriptografado());
+        var tokens = client.renovarToken(refreshTokenPlano);
+
+        String accessCriptografado = encryptor.criptografar(tokens.accessToken());
+        String refreshCriptografado = encryptor.criptografar(tokens.refreshToken());
+        Instant expiraEm = Instant.now().plusSeconds(tokens.expiresInSegundos());
+
+        conta.atualizarTokens(accessCriptografado, refreshCriptografado, expiraEm);
+        repository.save(conta);
+    }
+
     private void validarState(String state, UUID usuarioId) {
         String chave = PREFIXO_STATE + state;
         String usuarioIdGuardado = redisTemplate.opsForValue().get(chave);

@@ -80,6 +80,42 @@ public class MercadoPagoOAuthClient {
         }
     }
 
+    /**
+     * Renova o access token usando o refresh token — mesmo endpoint {@code POST
+     * /oauth/token} da troca inicial, só muda o {@code grant_type}. O Mercado Pago emite um
+     * refresh token NOVO a cada renovação (uso único); {@link TokensObtidos#refreshToken()}
+     * da resposta é o que precisa ser persistido dali pra frente, não o antigo.
+     */
+    public TokensObtidos renovarToken(String refreshToken) {
+        try {
+            Map<String, String> corpo = new LinkedHashMap<>();
+            corpo.put("grant_type", "refresh_token");
+            corpo.put("client_id", clientId);
+            corpo.put("client_secret", clientSecret);
+            corpo.put("refresh_token", refreshToken);
+
+            RespostaTokenMercadoPago resposta = restClient.post()
+                .uri(TOKEN_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(corpo)
+                .retrieve()
+                .body(RespostaTokenMercadoPago.class);
+
+            if (resposta == null) {
+                throw new IllegalStateException("Resposta vazia do Mercado Pago ao renovar token");
+            }
+
+            return new TokensObtidos(
+                String.valueOf(resposta.userId()),
+                resposta.accessToken(),
+                resposta.refreshToken(),
+                resposta.expiresIn()
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao renovar token no Mercado Pago", e);
+        }
+    }
+
     public record TokensObtidos(String mpUserId, String accessToken, String refreshToken, long expiresInSegundos) {}
 
     private record RespostaTokenMercadoPago(

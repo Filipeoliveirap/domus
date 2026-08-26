@@ -46,6 +46,17 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     List<Usuario> findByIgrejaIdAndRole_NomeAndAtivoTrue(UUID igrejaId, String roleNome);
 
+    /** Capacidade extra (SECRETARIO/TESOUREIRO) não é role — precisa juntar com
+     *  usuario_capacidade. Usado pra notificar quem tem a capacidade além do ADMIN_IGREJA
+     *  (ver {@code Permissoes.podeVerFinanceiro}). */
+    @Query(value = """
+        SELECT u.* FROM usuario u
+        JOIN usuario_capacidade uc ON uc.usuario_id = u.id
+        WHERE u.igreja_id = :igrejaId AND u.ativo = true AND uc.capacidade = :capacidade
+        """, nativeQuery = true)
+    List<Usuario> findByIgrejaIdAndCapacidadeAndAtivoTrue(@Param("igrejaId") UUID igrejaId,
+                                                           @Param("capacidade") String capacidade);
+
     /** Só o id — usado pra notificar em massa (ex.: novo evento) sem carregar a entidade inteira. */
     @Query("SELECT u.id FROM Usuario u WHERE u.igreja.id = :igrejaId AND u.ativo = true")
     List<UUID> findIdsAtivosPorIgreja(@Param("igrejaId") UUID igrejaId);

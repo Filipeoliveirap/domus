@@ -146,4 +146,39 @@ class MercadoPagoOAuthServiceTest {
 
         verify(repository).deleteByIgrejaId(igrejaId);
     }
+
+    @Test
+    void renovarTokenDaContaAtualizaTokensCriptografados() {
+        var conta = new ContaPagamentoIgreja(
+            igrejaId, "mp-user-999", "access-antigo-cripto", "refresh-antigo-cripto",
+            Instant.now(), usuarioId
+        );
+        when(encryptor.descriptografar("refresh-antigo-cripto")).thenReturn("refresh-antigo-plano");
+        when(client.renovarToken("refresh-antigo-plano")).thenReturn(
+            new MercadoPagoOAuthClient.TokensObtidos("mp-user-999", "access-novo", "refresh-novo", 21600L)
+        );
+        when(encryptor.criptografar("access-novo")).thenReturn("access-novo-cripto");
+        when(encryptor.criptografar("refresh-novo")).thenReturn("refresh-novo-cripto");
+
+        service.renovarTokenDaConta(conta);
+
+        assertThat(conta.getAccessTokenCriptografado()).isEqualTo("access-novo-cripto");
+        assertThat(conta.getRefreshTokenCriptografado()).isEqualTo("refresh-novo-cripto");
+        verify(repository).save(conta);
+    }
+
+    @Test
+    void renovarTokenDaContaPropagaExcecaoQuandoRefreshTokenTambemVenceu() {
+        // Sem refresh token válido não tem como automatizar mais nada — quem chama (o job)
+        // decide notificar a igreja pra reconectar manualmente.
+        var conta = new ContaPagamentoIgreja(
+            igrejaId, "mp-user-999", "access-antigo-cripto", "refresh-antigo-cripto",
+            Instant.now(), usuarioId
+        );
+        when(encryptor.descriptografar("refresh-antigo-cripto")).thenReturn("refresh-antigo-plano");
+        when(client.renovarToken("refresh-antigo-plano")).thenThrow(new IllegalStateException("refresh_token inválido"));
+
+        assertThatThrownBy(() -> service.renovarTokenDaConta(conta)).isInstanceOf(IllegalStateException.class);
+        verify(repository, never()).save(any());
+    }
 }

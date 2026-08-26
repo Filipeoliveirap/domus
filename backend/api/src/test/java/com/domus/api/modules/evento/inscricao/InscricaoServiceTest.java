@@ -253,6 +253,30 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void inscreverPessoasDevolveInscricaoIdDeCadaPessoa() {
+        Evento evento = evento(10);
+        dado(evento, membro(Vinculo.MEMBRO), 0);
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.listarPessoaIdsJaInscritos(any(), any())).thenReturn(List.of());
+        // dado() faz save() ecoar o mesmo objeto — sem id, porque @GeneratedValue só
+        // atua com Hibernate de verdade. Aqui o id importa (é o que o teste prova), então
+        // sobrescreve com um id gerado.
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> {
+            InscricaoEvento i = inv.getArgument(0);
+            if (i.getId() == null) i.setId(UUID.randomUUID());
+            return i;
+        });
+
+        var resultado = service.inscreverPessoas(eventoId, List.of(pessoaId), Set.of(),
+                null, pessoaId, "ADMIN_IGREJA", false, igrejaId);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).inscricaoId()).isNotNull();
+        assertThat(resultado.get(0).pessoaId()).isEqualTo(pessoaId);
+    }
+
+    @Test
     void eventoPagoSemIgrejaComContaConectadaRecusaInscricaoAntesDeCriarQualquerCoisa() {
         // Important 9 (revisão final de branch): antes desta correção, essa inscrição era
         // criada com sucesso e só falhava depois, na hora de /pagar. Prova que agora falha

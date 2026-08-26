@@ -278,6 +278,7 @@ public class InscricaoService {
                     igrejaId, gerarLink);
             resultado.add(new PessoaInscritaComCobranca(
                     pessoaId,
+                    r.inscricao().getId(),
                     r.cobranca() != null ? r.cobranca().getId() : null,
                     r.cobranca() != null ? r.cobranca().getTokenLinkPublico() : null));
         }

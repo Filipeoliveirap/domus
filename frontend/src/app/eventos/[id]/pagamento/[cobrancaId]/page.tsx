@@ -81,6 +81,7 @@ export default function PagamentoEventoPage({
             <PaymentBrickCheckout
               cobrancaId={cobranca.id}
               valor={cobranca.valor}
+              emailPagador={cobranca.emailPagador ?? undefined}
               onPagamentoCriado={() => setConfirmado(true)}
             />
 

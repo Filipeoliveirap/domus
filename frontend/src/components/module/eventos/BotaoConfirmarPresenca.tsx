@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, XCircle, ThumbsUp, AlertTriangle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { CheckCircle2, XCircle, ThumbsUp, AlertTriangle, Clock } from 'lucide-react'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
-import { EscolhaPagamentoPorPessoa } from './EscolhaPagamentoPorPessoa'
-import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { useAuthStore } from '@/store/authStore'
@@ -26,21 +25,18 @@ interface Props {
   requerInscricao: boolean
   situacao: SituacaoEvento
   preco?: number | null
-  /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo —
-   *  o drawer usa isso pra abrir na hora o modal de campos personalizados, se o evento tiver. */
+  /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo,
+   *  SEM pagamento pendente — evento pago com sucesso navega pra rota de checkout em vez
+   *  de chamar isto (o drawer não teria o que abrir; a pessoa já saiu da tela). */
   onInscritoComSucesso?: () => void
 }
 
 export function BotaoConfirmarPresenca({
   eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco, onInscritoComSucesso,
 }: Props) {
+  const router = useRouter()
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
-  // Fluxo de evento pago (Task 14): 'escolha' -> card "Divisão de pagamento" (aqui só o
-  // titular, travado em "paga agora" — este botão não coleta acompanhantes); 'checkout'
-  // -> Payment Brick embutido, depois de a inscrição já existir e ter uma cobrança
-  // pendente pra pagar.
-  const [etapaPagamento, setEtapaPagamento] = useState<'sem-conta' | 'escolha' | 'checkout' | null>(null)
-  const [cobrancaId, setCobrancaId] = useState<string | null>(null)
+  const [semConta, setSemConta] = useState(false)
   // 422 contornável: gestor quebrando recorte de elegibilidade
   const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
 
@@ -49,10 +45,12 @@ export function BotaoConfirmarPresenca({
   const ehGestor = podeGerenciarInscricoes(role)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
-  // Status da conta MP da própria igreja (Task 5) — só importa quando o evento é pago.
+  // Status da conta MP da própria igreja — só importa quando o evento é pago.
   const { data: contaPagamento } = useContaPagamento()
-  // Modo "Eu vou": sem toast, feedback é o próprio botão
-  const inscrever = useInscrever(eventoId, !requerInscricao, {
+  // Modo "Eu vou": sem toast, feedback é o próprio botão. Evento pago também silencia o
+  // toast genérico ("Inscrição confirmada!" seria enganoso — o pagamento ainda não foi
+  // feito; a rota de checkout mostra o próprio feedback quando o pagamento é aprovado).
+  const inscrever = useInscrever(eventoId, !requerInscricao || !!preco, {
     onContornavel: ehGestor ? (imps) => setImpedimentosParaConfirmar(imps) : undefined,
   })
   const cancelar = useCancelarInscricao(!requerInscricao)
@@ -68,9 +66,13 @@ export function BotaoConfirmarPresenca({
 
   function aoConfirmarMesmoAssim() {
     inscrever.mutate({ confirmado: true }, {
-      onSuccess: () => {
+      onSuccess: (resposta) => {
         setImpedimentosParaConfirmar(null)
-        onInscritoComSucesso?.()
+        if (resposta.cobrancaPendenteId) {
+          router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+        } else {
+          onInscritoComSucesso?.()
+        }
       },
     })
   }
@@ -123,7 +125,7 @@ export function BotaoConfirmarPresenca({
     // Cancelamento não esbarra em elegibilidade
     const bloqueadoPorImpedimento = !marcado && !!impedimento
 
-    function aoClicar() {
+    function aoClicarEuVou() {
       if (marcado) {
         if (!minha?.id) return
         cancelar.mutate(minha.id)
@@ -137,7 +139,7 @@ export function BotaoConfirmarPresenca({
         <button
           type="button"
           className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
-          onClick={aoClicar}
+          onClick={aoClicarEuVou}
           disabled={pendente || bloqueadoPorImpedimento}
           aria-pressed={marcado}
         >
@@ -152,6 +154,18 @@ export function BotaoConfirmarPresenca({
         )}
         {modalContorno}
       </span>
+    )
+  }
+
+  // Pagamento em aberto: inscrição existe como AGUARDANDO_PAGAMENTO. Vem de dado do
+  // servidor (não de state local), então sobrevive a reload/fechar e reabrir o drawer —
+  // ao contrário do antigo `etapaPagamento`, que se perdia ao desmontar o componente.
+  if (!minha?.inscrito && minha?.cobrancaPendenteId) {
+    return (
+      <Link href={`/eventos/${eventoId}/pagamento/${minha.cobrancaPendenteId}`} className={styles.pagamentoPendente}>
+        <Clock size={16} aria-hidden="true" />
+        <span>Pagamento pendente — continuar</span>
+      </Link>
     )
   }
 
@@ -221,13 +235,26 @@ export function BotaoConfirmarPresenca({
             inscrever.mutate({}, { onSuccess: onInscritoComSucesso })
             return
           }
-          // Sem conta MP conectada, o Brick nem carregaria (não há pra quem receber) —
-          // aviso com atalho em vez de abrir um checkout que ia falhar na hora.
-          setEtapaPagamento(contaPagamento?.conectada ? 'escolha' : 'sem-conta')
+          // Sem conta MP conectada, a rota de checkout nem carregaria (não há pra quem
+          // receber) — aviso com atalho em vez de navegar pra uma tela que ia falhar.
+          if (!contaPagamento?.conectada) {
+            setSemConta(true)
+            return
+          }
+          inscrever.mutate({}, {
+            onSuccess: (resposta) => {
+              if (resposta.cobrancaPendenteId) {
+                router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+              } else {
+                // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
+                onInscritoComSucesso?.()
+              }
+            },
+          })
         }}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
-        {inscrever.isPending ? 'Confirmando…' : 'Confirmar presença'}
+        {inscrever.isPending ? 'Inscrevendo…' : 'Se inscrever'}
       </button>
 
       {impedimento && (
@@ -237,7 +264,7 @@ export function BotaoConfirmarPresenca({
         </span>
       )}
 
-      {etapaPagamento === 'sem-conta' && preco && (
+      {semConta && preco && (
         <div className={styles.avisoSemConta}>
           <AlertTriangle size={16} aria-hidden="true" />
           <span>
@@ -249,45 +276,10 @@ export function BotaoConfirmarPresenca({
               'Fale com a secretaria da igreja.'
             )}
           </span>
-          <button type="button" className={styles.cancelarLink} onClick={() => setEtapaPagamento(null)}>
+          <button type="button" className={styles.cancelarLink} onClick={() => setSemConta(false)}>
             Fechar
           </button>
         </div>
-      )}
-
-      {etapaPagamento === 'escolha' && preco && (
-        <EscolhaPagamentoPorPessoa
-          pessoas={[{ id: 'titular', nome: 'Você', valor: preco, ehTitular: true }]}
-          isLoading={inscrever.isPending}
-          onConfirmar={() => {
-            // Titular é sempre "paga agora" — a escolha em si não muda nada aqui (não há
-            // acompanhante neste botão de auto-inscrição); só dispara a inscrição, que já
-            // cria a CobrancaEvento do titular no backend (Task 9).
-            inscrever.mutate(undefined, {
-              onSuccess: (resposta) => {
-                if (resposta.cobrancaPendenteId) {
-                  setCobrancaId(resposta.cobrancaPendenteId)
-                  setEtapaPagamento('checkout')
-                } else {
-                  // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
-                  setEtapaPagamento(null)
-                  onInscritoComSucesso?.()
-                }
-              },
-            })
-          }}
-        />
-      )}
-
-      {etapaPagamento === 'checkout' && cobrancaId && (
-        <PaymentBrickCheckout
-          cobrancaId={cobrancaId}
-          valor={preco ?? 0}
-          onPagamentoCriado={() => {
-            setEtapaPagamento(null)
-            onInscritoComSucesso?.()
-          }}
-        />
       )}
 
       {modalContorno}

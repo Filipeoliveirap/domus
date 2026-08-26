@@ -2,6 +2,9 @@ package com.domus.api.modules.pagamento.job;
 
 import static org.mockito.Mockito.*;
 
+import com.domus.api.modules.evento.inscricao.InscricaoEvento;
+import com.domus.api.modules.evento.inscricao.InscricaoRepository;
+import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEvento;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
 import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
@@ -12,15 +15,36 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 class CobrancaEventoExpiracaoJobTest {
 
     CobrancaEventoRepository repository;
+    InscricaoRepository inscricaoRepository;
     CobrancaEventoExpiracaoJob job;
 
     @BeforeEach
     void setup() {
         repository = mock(CobrancaEventoRepository.class);
-        job = new CobrancaEventoExpiracaoJob(repository);
+        inscricaoRepository = mock(InscricaoRepository.class);
+        job = new CobrancaEventoExpiracaoJob(repository, inscricaoRepository);
+    }
+
+    @Test
+    void cancelaInscricaoVinculadaQuandoCobrancaExpira() {
+        UUID inscricaoId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), null);
+        when(repository.findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any()))
+            .thenReturn(List.of(cobranca));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findAllById(List.of(inscricaoId))).thenReturn(List.of(inscricao));
+
+        job.executar();
+
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        verify(inscricaoRepository).saveAll(List.of(inscricao));
     }
 
     @Test

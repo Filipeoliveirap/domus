@@ -161,7 +161,16 @@ public class CategoriaFinanceiraService {
             throw new ConflitoNegocioException("CATEGORIA_COM_MOVIMENTACAO",
                     "Não é possível apagar uma categoria que tem movimentações.");
         }
-        repository.hardDeleteById(id);
+        // Rede de segurança (achado em teste, 2026-08-26): a guarda acima só vale no instante
+        // em que checou — se uma movimentação for criada pra esta categoria entre o check e o
+        // DELETE (corrida, sem lock nenhum aqui), o banco recusa por causa da FK. Sem isto, a
+        // pessoa via um erro cru de banco em vez de "tem movimentação, não dá pra apagar".
+        try {
+            repository.hardDeleteById(id);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflitoNegocioException("CATEGORIA_COM_MOVIMENTACAO",
+                    "Não é possível apagar uma categoria que tem movimentações.");
+        }
         outboxRegistrador.registrar(TipoEntidadeOutbox.CATEGORIA, TipoEventoOutbox.REMOVIDO, id, igrejaId);
         cacheEvictor.evictPorIgreja("categorias", igrejaId);
     }

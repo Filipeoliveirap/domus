@@ -12,6 +12,7 @@ import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -123,6 +124,7 @@ public class CobrancaController {
     }
 
     @PostMapping("/{id}/pagar")
+    @Transactional
     public PagarCobrancaResponse pagar(@PathVariable UUID id, @RequestBody PagarCobrancaRequest request) {
         var cobranca = cobrancaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
@@ -143,6 +145,21 @@ public class CobrancaController {
         if (cobranca.getExpiraEm().isBefore(Instant.now())) {
             throw new BusinessException("COBRANCA_EXPIRADA",
                 "O prazo para pagar esta cobrança expirou.");
+        }
+
+        // A vaga só é reservada a partir daqui — clicar "Se inscrever" e ficar navegando
+        // no checkout, sem enviar nada, não segura vaga de ninguém (ver
+        // CobrancaEventoRepository.contarPessoasComVagaReservada). Lock no evento serializa
+        // duas tentativas de pagamento concorrentes pra mesma última vaga: quem chega
+        // primeiro aqui reserva; a segunda é recusada antes de chamar o Mercado Pago.
+        var evento = eventoRepository.buscarComLock(cobranca.getEventoId(), cobranca.getIgrejaId())
+            .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (evento.getVagas() != null) {
+            long ocupadas = cobrancaRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
+            if (ocupadas >= evento.getVagas()) {
+                throw new BusinessException("VAGAS_ESGOTADAS",
+                    "As vagas deste evento estão esgotadas.");
+            }
         }
 
         var resultado = mercadoPagoClient.criarPagamentoComToken(

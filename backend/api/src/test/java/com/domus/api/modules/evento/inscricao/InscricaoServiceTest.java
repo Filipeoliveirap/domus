@@ -25,6 +25,7 @@ import com.domus.api.modules.visitante.VisitanteRepository;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -203,6 +204,32 @@ class InscricaoServiceTest {
 
         verify(cobrancaEventoService).criarParaTitular(eq(igrejaId), eq(eventoId), any(),
                 eq(pessoaId), eq(java.math.BigDecimal.valueOf(50)), any());
+    }
+
+    @Test
+    void eventoPagoCriaInscricaoComoAguardandoPagamentoNaoComoConfirmada() {
+        Evento evento = evento(10);
+        evento.setPreco(java.math.BigDecimal.valueOf(50));
+        dado(evento, membro(Vinculo.MEMBRO), 0);
+        when(cobrancaEventoService.criarParaTitular(any(), any(), any(), any(), any(), any()))
+                .thenReturn(mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class));
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        ArgumentCaptor<InscricaoEvento> captor = ArgumentCaptor.forClass(InscricaoEvento.class);
+        verify(inscricaoRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+    }
+
+    @Test
+    void eventoGratuitoContinuaCriandoInscricaoComoConfirmada() {
+        dado(evento(10), membro(Vinculo.MEMBRO), 0);
+
+        service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
+
+        ArgumentCaptor<InscricaoEvento> captor = ArgumentCaptor.forClass(InscricaoEvento.class);
+        verify(inscricaoRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
     }
 
     @Test

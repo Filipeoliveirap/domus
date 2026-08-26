@@ -48,10 +48,12 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: String(movimentacaoInicial.valor),
         categoriaId: movimentacaoInicial.categoriaId,
         dataMovimentacao: movimentacaoInicial.dataMovimentacao.split('T')[0],
-        // pessoaId nulo (pessoa excluída definitivamente) vira campo vazio — precisa
-        // escolher alguém de novo pra editar essa linha, não dá pra recuperar quem era.
+        // pessoaId nulo (pessoa excluída definitivamente, sem nomeExterno) vira campo vazio
+        // — precisa escolher alguém de novo pra editar essa linha, não dá pra recuperar
+        // quem era. nomeExterno preenchido é o caso "de fora", editável como texto livre.
         contribuintes: movimentacaoInicial.contribuintes.map((c) => ({
           pessoaId: c.pessoaId ?? '',
+          nomeExterno: c.nomeExterno ?? '',
           valor: String(c.valor),
         })),
         descricao: movimentacaoInicial.descricao ?? '',
@@ -68,7 +70,12 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         valor: data.valor,
         categoriaId: data.categoriaId,
         dataMovimentacao: data.dataMovimentacao,
-        contribuintes: data.contribuintes,
+        // String vazia não é válida como UUID no backend — precisa virar null.
+        contribuintes: data.contribuintes.map((c) => ({
+          pessoaId: c.pessoaId || null,
+          nomeExterno: c.nomeExterno || null,
+          valor: c.valor,
+        })),
         descricao: data.descricao || undefined,
       }
 

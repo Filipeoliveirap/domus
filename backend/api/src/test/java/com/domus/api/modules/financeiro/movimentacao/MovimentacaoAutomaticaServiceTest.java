@@ -72,7 +72,7 @@ class MovimentacaoAutomaticaServiceTest {
         var categoria = categoriaExistente("eventos");
         when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of(categoria));
 
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null);
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null, "Maria");
 
         verify(categoriaRepository, never()).save(any());
         var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
@@ -95,7 +95,7 @@ class MovimentacaoAutomaticaServiceTest {
         when(usuarioRepository.findByIgrejaIdAndCapacidadeAndAtivoTrue(igrejaId, "TESOUREIRO"))
             .thenReturn(List.of(Usuario.builder().id(tesoureiroId).build()));
 
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null);
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null, "Maria");
 
         var categoriaCaptor = ArgumentCaptor.forClass(CategoriaFinanceira.class);
         verify(categoriaRepository).save(categoriaCaptor.capture());
@@ -113,7 +113,7 @@ class MovimentacaoAutomaticaServiceTest {
         UUID pessoaId = UUID.randomUUID();
         when(pessoaRepository.getReferenceById(pessoaId)).thenReturn(Pessoa.builder().id(pessoaId).build());
 
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", pessoaId);
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", pessoaId, "Maria");
 
         var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
         verify(movimentacaoRepository).save(captor.capture());
@@ -127,15 +127,20 @@ class MovimentacaoAutomaticaServiceTest {
     }
 
     @Test
-    void registraSaidaSemContribuinteQuandoPessoaDesconhecida() {
+    void registraSaidaComNomeExternoQuandoPessoaDesconhecida() {
+        // Convidado sem cadastro/acompanhante (pessoaId nulo) — o contribuinte não fica
+        // vazio, entra com o nome, senão some da coluna Contribuinte/Beneficiário e do
+        // relatório por contribuinte (achado revisando com o usuário, 2026-08-26).
         var categoria = categoriaExistente("Eventos");
         when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of(categoria));
 
-        service.registrarSaidaDeEvento(igrejaId, new BigDecimal("50.00"), "Reembolso — Retiro (Convidado)", null);
+        service.registrarSaidaDeEvento(igrejaId, new BigDecimal("50.00"), "Reembolso — Retiro (Convidado)", null, "Convidado");
 
         var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
         verify(movimentacaoRepository).save(captor.capture());
         assertThat(captor.getValue().getTipo()).isEqualTo(TipoMovimentacao.SAIDA);
-        assertThat(captor.getValue().getContribuintes()).isEmpty();
+        assertThat(captor.getValue().getContribuintes()).hasSize(1);
+        assertThat(captor.getValue().getContribuintes().get(0).getPessoa()).isNull();
+        assertThat(captor.getValue().getContribuintes().get(0).getNomeExterno()).isEqualTo("Convidado");
     }
 }

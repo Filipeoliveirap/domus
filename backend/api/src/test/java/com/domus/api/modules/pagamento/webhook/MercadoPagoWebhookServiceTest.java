@@ -102,7 +102,7 @@ class MercadoPagoWebhookServiceTest {
 
         verify(movimentacaoAutomaticaService).registrarEntradaDeEvento(
             eq(igrejaId), eq(BigDecimal.TEN),
-            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId));
+            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
     }
 
     @Test

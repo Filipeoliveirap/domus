@@ -78,4 +78,28 @@ class RelatorioRepositoryContribuinteAnonimoTest implements PostgresTestContaine
         assertThat(agregados.get(0).getPessoaNome()).isEqualTo("Pessoa removida do sistema");
         assertThat(agregados.get(0).getTotal()).isEqualByComparingTo(BigDecimal.valueOf(100));
     }
+
+    @Test
+    void agregarPorContribuinte_contribuinteDeForaAparecePeloProprioNomeNaoComoRemovido() {
+        // Achado revisando com o usuário (2026-08-26): sem o fix, doação de fora (sem
+        // cadastro) caía misturada com "Pessoa removida do sistema" — enganoso.
+        CategoriaFinanceira categoria = categoriaRepository.save(CategoriaFinanceira.builder()
+                .igreja(igreja).nome("Dízimo " + UUID.randomUUID()).tipo(TipoCategoria.ENTRADA).build());
+        MovimentacaoFinanceira mov = movimentacaoRepository.save(MovimentacaoFinanceira.builder()
+                .igreja(igreja).categoria(categoria)
+                .tipo(TipoMovimentacao.ENTRADA).valor(BigDecimal.valueOf(50))
+                .dataMovimentacao(LocalDate.now()).build());
+        contribuinteRepository.save(MovimentacaoContribuinte.builder()
+                .movimentacao(mov).nomeExterno("Visitante Anônimo").valor(BigDecimal.valueOf(50)).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        var agregados = relatorioRepository.agregarPorContribuinte(
+                igreja.getId(), LocalDate.now().minusDays(1), LocalDate.now().plusDays(1));
+
+        assertThat(agregados).hasSize(1);
+        assertThat(agregados.get(0).getPessoaId()).isNull();
+        assertThat(agregados.get(0).getPessoaNome()).isEqualTo("Visitante Anônimo");
+        assertThat(agregados.get(0).getTotal()).isEqualByComparingTo(BigDecimal.valueOf(50));
+    }
 }

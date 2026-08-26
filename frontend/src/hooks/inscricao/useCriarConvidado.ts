@@ -7,8 +7,7 @@ import type { ApiError } from '@/types/api.types'
 import type { CriarConvidadoRequest } from '@/types/inscricao.type'
 
 /** Convidado sem cadastro ganha inscrição própria (não acompanhante aninhado) — usado pelo
- *  modal unificado "Inscrever alguém" (abas Visitantes/Pessoa de fora), nunca pelo antigo
- *  "Vou levar alguém de fora" (esse continua em useAdicionarConvidado). */
+ *  modal unificado "Inscrever alguém" (abas Visitantes/Pessoa de fora). */
 export function useCriarConvidado(eventoId: string) {
   const queryClient = useQueryClient()
 

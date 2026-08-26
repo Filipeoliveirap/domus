@@ -24,11 +24,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -113,10 +114,14 @@ class ContaPagamentoControllerTest implements PostgresTestContainerSupport {
         // o UUID da Igreja B (o bug corrigido no round anterior), o `igrejaId` sempre veio
         // da sessão — nunca de parâmetro. `state` aqui é o nonce anti-CSRF (Critical 3a),
         // não uma fonte de igrejaId.
+        // O endpoint sempre redireciona pro front (nunca deixa o navegador "parado" nesta
+        // URL, ver javadoc de ContaPagamentoController.callback) — sucesso vira
+        // "?mpConectado=1" na URL de destino, não um corpo JSON.
         mockMvc.perform(auth.autenticado(
                         get("/pagamentos/conta/callback").param("code", "code-qualquer").param("state", state),
                         adminDaIgrejaA))
-                .andExpect(status().isOk());
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", containsString("/configuracoes/igreja?mpConectado=1")));
 
         entityManager.flush();
         entityManager.clear();
@@ -136,13 +141,15 @@ class ContaPagamentoControllerTest implements PostgresTestContainerSupport {
         // ataque de CSRF de OAuth descrito no javadoc de MercadoPagoOAuthService.
         Usuario admin = usuarioComRole(igrejaA, "ADMIN_IGREJA");
 
+        // Mesmo motivo do teste de sucesso acima: recusa também vira redirect, com o
+        // código do erro na query string ("?mpErro=..."), não um corpo JSON com 400.
         mockMvc.perform(auth.autenticado(
                         get("/pagamentos/conta/callback")
                                 .param("code", "code-qualquer")
                                 .param("state", "state-forjado-por-atacante"),
                         admin))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("OAUTH_STATE_INVALIDO"));
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", containsString("/configuracoes/igreja?mpErro=OAUTH_STATE_INVALIDO")));
 
         var conta = contaPagamentoIgrejaRepository.findByIgrejaId(igrejaA.getId());
         assertThat(conta).isEmpty();

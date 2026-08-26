@@ -200,7 +200,9 @@ export const Endpoints = {
 
   cobrancas: {
     BUSCAR_POR_TOKEN: (token: string) => `/cobrancas/${token}`,
+    BUSCAR_POR_ID: (id: string) => `/cobrancas/id/${id}`,
     PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
+    STATUS: (id: string) => `/cobrancas/${id}/status`,
   },
 
   celulas: {

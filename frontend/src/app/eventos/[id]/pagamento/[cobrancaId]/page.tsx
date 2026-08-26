@@ -74,7 +74,7 @@ export default function PagamentoEventoPage({
         ) : (
           <>
             <div className={styles.card}>
-              <p className={styles.saudacao}>{cobranca.nomePagador}, sua parte:</p>
+              <p className={styles.saudacao}>Valor da inscrição de {cobranca.nomePagador}:</p>
               <p className={styles.valor}>{formatarMoeda(cobranca.valor)}</p>
             </div>
 

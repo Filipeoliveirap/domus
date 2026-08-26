@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEntrarComoConvidado } from '@/hooks/convite/useEntrarComoConvidado'
 import { CamposExtrasForm } from '@/components/module/eventos/CamposExtrasForm'
 import { formatarTelefone } from '@/lib/masks'
@@ -12,11 +13,13 @@ import styles from './ConvitePublico.module.css'
 
 interface Props {
   token: string
+  eventoId: string
   campos: CampoPersonalizadoResponse[]
   onSucesso: () => void
 }
 
-export function FormularioConvidado({ token, campos, onSucesso }: Props) {
+export function FormularioConvidado({ token, eventoId, campos, onSucesso }: Props) {
+  const router = useRouter()
   const entrar = useEntrarComoConvidado(token)
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -39,7 +42,15 @@ export function FormularioConvidado({ token, campos, onSucesso }: Props) {
     const respostas = campos.map((c) => ({ campoId: c.id, valor: camposValores[c.id] ?? '' }))
     entrar.mutate(
       { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), respostas },
-      { onSuccess: onSucesso },
+      {
+        onSuccess: (resposta) => {
+          if (resposta.cobrancaId) {
+            router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaId}`)
+          } else {
+            onSucesso()
+          }
+        },
+      },
     )
   }
 

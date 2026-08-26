@@ -444,10 +444,16 @@ public class InscricaoService {
      *  {@code visitanteId} só vem preenchido quando o convidado veio da busca de Visitante
      *  já cadastrado (aba "Visitantes" do modal) — habilita checar duplicidade por id, exata,
      *  em vez de comparar nome/telefone. */
+    /** Devolvido por {@link #inscreverConvidado} — {@code cobranca} é nulo em evento
+     *  gratuito, ou tem valor em evento pago (mesmo padrão de {@code ResultadoInscricao},
+     *  usado por {@link #inscreverInterno}). */
+    public record ResultadoConvidado(InscricaoEvento inscricao, CobrancaEvento cobranca) {}
+
     @Transactional
-    public InscricaoEvento inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
+    public ResultadoConvidado inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
                                                String telefone, UUID convidadoPorPessoaId,
-                                               UUID inscritoPorUsuarioId, UUID visitanteId) {
+                                               UUID inscritoPorUsuarioId, UUID visitanteId,
+                                               boolean gerarLink) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -457,15 +463,8 @@ public class InscricaoService {
             throw new BusinessException("EXCLUSIVO_MEMBROS",
                     "Este evento é exclusivo para membros — não é possível levar convidados.");
         }
-        // Convidado de topo não tem Pessoa nem é um acompanhante — CobrancaEvento exige um
-        // dos dois (ver construtor), então não há como gerar cobrança pra ele hoje. Sem essa
-        // trava, evento pago poderia ser "furado" inscrevendo qualquer um por aqui, sem pagar
-        // nada, e essa vaga ficaria invisível pra contarPessoasComVagaReservada (ver
-        // contarOcupadas) — overbooking real. Bloqueia até existir uma forma de cobrar
-        // convidado sem cadastro (fora do escopo desta task).
         if (evento.getPreco() != null) {
-            throw new BusinessException("CONVIDADO_NAO_PODE_EM_EVENTO_PAGO",
-                    "Este evento é pago — inscreva com uma pessoa cadastrada para gerar a cobrança.");
+            validarContaPagamentoConectada(igrejaId);
         }
         validarEventoAberto(evento);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
@@ -479,6 +478,12 @@ public class InscricaoService {
                 : visitanteRepository.findByIdAndIgrejaId(visitanteId, igrejaId)
                         .orElseThrow(() -> new ResourceNotFoundException("Visitante não encontrado."));
 
+        // Evento pago: a inscrição nasce AGUARDANDO_PAGAMENTO, mesmo padrão de
+        // inscreverInterno (ver Plano 1) — só confirma quando o webhook aprovar.
+        StatusInscricao statusInicial = evento.getPreco() != null
+                ? StatusInscricao.AGUARDANDO_PAGAMENTO
+                : StatusInscricao.CONFIRMADA;
+
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .igreja(evento.getIgreja())
                 .evento(evento)
@@ -488,13 +493,23 @@ public class InscricaoService {
                 .convidadoPor(convidadoPor)
                 .visitante(visitante)
                 .inscritoPorUsuarioId(inscritoPorUsuarioId)
-                .status(StatusInscricao.CONFIRMADA)
+                .status(statusInicial)
                 .build();
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
+
+        // pessoaId/acompanhanteId nulos = convidado sem cadastro (Plano 4b) — resolvido só
+        // por inscricaoId (ver CobrancaController). criadoPorUsuarioId pode ser nulo aqui
+        // (auto-registro anônimo via /convite/{token}, ver migration V30).
+        CobrancaEvento cobranca = null;
+        if (evento.getPreco() != null) {
+            cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(),
+                    null, null, evento.getPreco(), inscritoPorUsuarioId, gerarLink);
+        }
+
         log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, inscrito_por_usuario_id={}, igreja_id={}",
                 eventoId, convidadoPorPessoaId, inscritoPorUsuarioId, igrejaId);
-        return salva;
+        return new ResultadoConvidado(salva, cobranca);
     }
 
     /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */

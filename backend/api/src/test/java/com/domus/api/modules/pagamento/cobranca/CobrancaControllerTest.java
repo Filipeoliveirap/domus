@@ -374,4 +374,32 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(jsonPath("$.valor", is(75.00)))
             .andExpect(jsonPath("$.status", is("PENDENTE")));
     }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('21111111-1111-1111-1111-111111111112', 'Igreja Teste Convidado', 'igrejaconv@teste.com')",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('27777777-7777-7777-7777-777777777778', '21111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('25555555-5555-5555-5555-555555555556', '21111111-1111-1111-1111-111111111112', " +
+            "'Evento Com Convidado', '2026-09-11 19:00:00', '27777777-7777-7777-7777-777777777778', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, nome_convidado, telefone_convidado, status) VALUES " +
+            "('26666666-6666-6666-6666-666666666667', '21111111-1111-1111-1111-111111111112', " +
+            "'25555555-5555-5555-5555-555555555556', 'Convidado Sem Cadastro', '11988887777', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void retornaContextoDaCobrancaDeConvidadoSemCadastro() throws Exception {
+        UUID igrejaId = UUID.fromString("21111111-1111-1111-1111-111111111112");
+        UUID eventoId = UUID.fromString("25555555-5555-5555-5555-555555555556");
+        UUID inscricaoId = UUID.fromString("26666666-6666-6666-6666-666666666667");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(
+            igrejaId, eventoId, inscricaoId, null, null,
+            new BigDecimal("40.00"), Instant.now().plus(1, ChronoUnit.HOURS), null, null));
+
+        mockMvc.perform(get("/cobrancas/id/" + cobranca.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.nomePagador", is("Convidado Sem Cadastro")))
+            .andExpect(jsonPath("$.emailPagador").value(org.hamcrest.Matchers.nullValue()));
+    }
 }

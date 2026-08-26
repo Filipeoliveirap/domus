@@ -46,6 +46,7 @@ public class CobrancaController {
     private final CobrancaEventoService service;
     private final CobrancaEventoRepository cobrancaRepository;
     private final EventoRepository eventoRepository;
+    private final com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
     private final AcompanhanteRepository acompanhanteRepository;
     private final MercadoPagoClient mercadoPagoClient;
@@ -53,12 +54,14 @@ public class CobrancaController {
     public CobrancaController(CobrancaEventoService service,
                                CobrancaEventoRepository cobrancaRepository,
                                EventoRepository eventoRepository,
+                               com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
                                AcompanhanteRepository acompanhanteRepository,
                                MercadoPagoClient mercadoPagoClient) {
         this.service = service;
         this.cobrancaRepository = cobrancaRepository;
         this.eventoRepository = eventoRepository;
+        this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.acompanhanteRepository = acompanhanteRepository;
         this.mercadoPagoClient = mercadoPagoClient;
@@ -79,10 +82,17 @@ public class CobrancaController {
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."));
             nomePagador = pessoa.getNome();
             emailPagador = pessoa.getEmail();
-        } else {
+        } else if (cobranca.getAcompanhanteId() != null) {
             nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
+        } else {
+            // Convidado sem cadastro (Plano 4b) — nem pessoa nem acompanhante, resolvido
+            // só pela InscricaoEvento (nomeConvidado). Sem e-mail: não existe onde buscar
+            // um pra convidado sem cadastro.
+            nomePagador = inscricaoRepository.findById(cobranca.getInscricaoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."))
+                .getNomeConvidado();
         }
 
         return new CobrancaCheckoutDTO(
@@ -110,10 +120,15 @@ public class CobrancaController {
             nomePagador = pessoaRepository.findById(cobranca.getPessoaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
-        } else {
+        } else if (cobranca.getAcompanhanteId() != null) {
             nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
+        } else {
+            // Convidado sem cadastro (Plano 4b) — resolvido só pela InscricaoEvento.
+            nomePagador = inscricaoRepository.findById(cobranca.getInscricaoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."))
+                .getNomeConvidado();
         }
 
         return new CobrancaPublicaDTO(

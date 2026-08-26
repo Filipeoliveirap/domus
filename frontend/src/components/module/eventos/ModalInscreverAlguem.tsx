@@ -57,8 +57,12 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   const [compartilharAberto, setCompartilharAberto] = useState(false)
   // Plano 4b: link de cobrança gerado pra um convidado (evento pago, "enviar link").
   const [compartilhandoCobranca, setCompartilhandoCobranca] = useState<{ nome: string; token: string } | null>(null)
+  // A mutation já resolveu (isPending vira false) antes do router.push completar a
+  // navegação — sem isto, o botão "pisca" de volta pro texto normal por um instante
+  // enquanto a rota de checkout ainda está carregando.
+  const [navegandoParaCheckout, setNavegandoParaCheckout] = useState(false)
 
-  const isPending = criarConvidado.isPending
+  const isPending = criarConvidado.isPending || navegandoParaCheckout
 
   function limparFormulario() {
     setNome('')
@@ -120,6 +124,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
             setCompartilhandoCobranca({ nome: nomeConfirmado, token: resposta.tokenLinkPublico! })
             limparFormulario()
           } else {
+            setNavegandoParaCheckout(true)
             router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaId}`)
           }
         },

@@ -22,6 +22,9 @@ export interface CobrancaCheckout {
   tituloEvento: string
   inicioEmEvento: string
   nomePagador: string
+  /** Nulo quando o pagador é acompanhante sem cadastro (não tem e-mail). Pré-preenche o
+   *  Payment Brick pra ele não pedir e-mail de novo no Pix. */
+  emailPagador: string | null
   valor: number
   status: StatusCobranca
   expiraEm: string

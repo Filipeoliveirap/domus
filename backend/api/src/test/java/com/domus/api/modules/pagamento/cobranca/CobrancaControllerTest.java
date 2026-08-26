@@ -278,4 +278,46 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("COBRANCA_EXPIRADA")));
     }
+
+    @Test
+    void retorna404ParaIdInexistente() throws Exception {
+        mockMvc.perform(get("/cobrancas/id/" + UUID.randomUUID()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('21111111-1111-1111-1111-111111111111', 'Igreja Teste 2', 'igreja2b@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('23333333-3333-3333-3333-333333333333', '21111111-1111-1111-1111-111111111111', 'Ciclana', 'ciclana@teste.com')",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('27777777-7777-7777-7777-777777777777', '21111111-1111-1111-1111-111111111111', 'Salão 2')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('25555555-5555-5555-5555-555555555555', '21111111-1111-1111-1111-111111111111', " +
+            "'Congresso Anual', '2026-09-10 19:00:00', '27777777-7777-7777-7777-777777777777', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('26666666-6666-6666-6666-666666666666', '21111111-1111-1111-1111-111111111111', " +
+            "'25555555-5555-5555-5555-555555555555', '23333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void retornaContextoDaCobrancaParaIdValido() throws Exception {
+        UUID igrejaId = UUID.fromString("21111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("25555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("26666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("23333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("23333333-3333-3333-3333-333333333333");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(
+            igrejaId, eventoId, inscricaoId, pessoaId, null,
+            new BigDecimal("75.00"), Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, null));
+
+        mockMvc.perform(get("/cobrancas/id/" + cobranca.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id", is(cobranca.getId().toString())))
+            .andExpect(jsonPath("$.eventoId", is(eventoId.toString())))
+            .andExpect(jsonPath("$.tituloEvento", is("Congresso Anual")))
+            .andExpect(jsonPath("$.nomePagador", is("Ciclana")))
+            .andExpect(jsonPath("$.valor", is(75.00)))
+            .andExpect(jsonPath("$.status", is("PENDENTE")));
+    }
 }

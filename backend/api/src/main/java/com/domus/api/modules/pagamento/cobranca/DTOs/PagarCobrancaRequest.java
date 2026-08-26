@@ -11,5 +11,9 @@ public record PagarCobrancaRequest(
     String token,
     String paymentMethodId,
     Integer installments,
-    String payerEmail
+    String payerEmail,
+    /** {@code formData.issuer_id} do Brick — nulo pra Pix. Sem ele, o Mercado Pago falha o
+     *  cálculo de parcelamento/preço pra alguns bancos emissores ({@code error_pricing},
+     *  código 10107) mesmo com token/cartão válidos. */
+    String issuerId
 ) {}

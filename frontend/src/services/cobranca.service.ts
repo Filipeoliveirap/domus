@@ -11,6 +11,10 @@ export interface CobrancaPublica {
   valor: number
   status: StatusCobranca
   expiraEm: string
+  /** Já existe uma tentativa de pagamento em voo (mpPaymentId gravado, esperando o
+   *  webhook confirmar) — usado pra retomar a tela de "confirmando" após um reload
+   *  em vez de mostrar o formulário de pagamento de novo. */
+  pagamentoEmAndamento: boolean
 }
 
 /** Espelha `CobrancaCheckoutDTO` (backend) — usado pela página de checkout dedicada
@@ -22,12 +26,11 @@ export interface CobrancaCheckout {
   tituloEvento: string
   inicioEmEvento: string
   nomePagador: string
-  /** Nulo quando o pagador é acompanhante sem cadastro (não tem e-mail). Pré-preenche o
-   *  Payment Brick pra ele não pedir e-mail de novo no Pix. */
-  emailPagador: string | null
   valor: number
   status: StatusCobranca
   expiraEm: string
+  /** Mesma lógica de {@link CobrancaPublica.pagamentoEmAndamento}. */
+  pagamentoEmAndamento: boolean
 }
 
 /** Payload que o Payment Brick devolve em `onSubmit({ formData })`, repassado quase igual
@@ -47,6 +50,10 @@ export interface PagarCobrancaResponse {
   mpPaymentId: string
   /** Status bruto do Mercado Pago (`approved`, `pending`, `rejected`, ...). */
   status: string
+  /** Motivo específico da recusa (ex.: `cc_rejected_insufficient_amount`) — usado pra
+   *  mostrar uma mensagem certeira em vez de "cartão recusado" genérico. Nulo fora de
+   *  `status === 'rejected'`. */
+  statusDetail: string | null
   /** Só vem preenchido quando o meio escolhido foi Pix. */
   qrCode: string | null
   /** Só vem preenchido quando o meio escolhido foi Pix — imagem do QR em base64. */

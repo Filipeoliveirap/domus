@@ -23,10 +23,15 @@ export function proxy(request: NextRequest) {
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
     // O Payment Brick monta os campos de cartão (número/CVV) em iframes próprios servidos
     // pelo domínio do Mercado Pago — sem isso o navegador recusa renderizar o Brick.
-    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com",
+    // https://api.mercadopago.com e https://http2.mlstatic.com são de onde os "secure
+    // fields" (número/CVV do cartão) realmente carregam; sem eles o iframe é bloqueado em
+    // silêncio pelo navegador e o formulário fica preso no "carregando" pra sempre.
+    // secure-fields.mercadopago.com/api-static.mercadopago.com: mesmo propósito (secure
+    // fields), domínio separado que o SDK também usa dependendo do fluxo.
+    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com https://api.mercadopago.com https://http2.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com",
     // ws://localhost só em dev: é o websocket do Hot Module Reload (webpack-hmr) — sem
     // isso o navegador bloqueia a conexão e o Fast Refresh para de funcionar.
-    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://http2.mlstatic.com${isDev ? ' ws://localhost:*' : ''}`,
+    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://http2.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com${isDev ? ' ws://localhost:*' : ''}`,
     "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://http2.mlstatic.com https://www.mercadopago.com",
     "font-src 'self'",
     "base-uri 'self'",

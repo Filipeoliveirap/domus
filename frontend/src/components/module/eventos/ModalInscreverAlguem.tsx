@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Share2 } from 'lucide-react'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
 import { ModalCompartilharConvite } from './ModalCompartilharConvite'
+import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
 import { useVisitantesBuscaLeve } from '@/hooks/visitante/useVisitantesBuscaLeve'
 import { useCriarConvidado } from '@/hooks/inscricao/useCriarConvidado'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
@@ -20,12 +22,14 @@ interface Props {
   eventoId: string
   tituloEvento: string
   exclusivoMembros: boolean
-  /** Task 14 — evento pago habilita a etapa de pagamento na aba "Pessoas da igreja". */
+  /** Evento pago habilita a escolha de pagamento nas abas Visitantes/Pessoa de fora,
+   *  além de "Pessoas da igreja" (ModalInscreverPessoas). */
   preco?: number | null
   onClose: () => void
 }
 
 export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, onClose }: Props) {
+  const router = useRouter()
   const [aba, setAba] = useState<Aba>('pessoas')
 
   const [buscaVisitante, setBuscaVisitante] = useState('')
@@ -51,20 +55,26 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   const criarConvidado = useCriarConvidado(eventoId)
 
   const [compartilharAberto, setCompartilharAberto] = useState(false)
+  // Plano 4b: link de cobrança gerado pra um convidado (evento pago, "enviar link").
+  const [compartilhandoCobranca, setCompartilhandoCobranca] = useState<{ nome: string; token: string } | null>(null)
 
   const isPending = criarConvidado.isPending
 
-  /** Troca de aba limpa nome/telefone/campos — sem isso, selecionar um visitante e depois
-   *  ir pra "Pessoa de fora" deixava os dados dele preenchidos lá, como se já tivessem sido
-   *  digitados pra outra pessoa. */
-  function trocarAba(novaAba: Aba) {
-    setAba(novaAba)
+  function limparFormulario() {
     setNome('')
     setTelefone('')
     setVisitanteSelecionadoId(null)
     setBuscaVisitante('')
     setCamposValores({})
     setTentouConfirmar(false)
+  }
+
+  /** Troca de aba limpa nome/telefone/campos — sem isso, selecionar um visitante e depois
+   *  ir pra "Pessoa de fora" deixava os dados dele preenchidos lá, como se já tivessem sido
+   *  digitados pra outra pessoa. */
+  function trocarAba(novaAba: Aba) {
+    setAba(novaAba)
+    limparFormulario()
   }
 
   function selecionarVisitante(id: string) {
@@ -89,14 +99,43 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
     return digitos.length === 10 || digitos.length === 11
   }
 
-  function aoConfirmar() {
+  /** Evento gratuito: sempre chamado sem gerarLink (irrelevante). Evento pago: chamado
+   *  duas vezes possíveis, uma por botão ("Pagar inscrição"/"Enviar link"). */
+  function confirmar(gerarLink: boolean) {
     setTentouConfirmar(true)
     if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
 
     const visitanteId = aba === 'visitantes' ? visitanteSelecionadoId ?? undefined : undefined
+    const nomeConfirmado = nome.trim()
     criarConvidado.mutate(
-      { nome: nome.trim(), telefone: telefone.replace(/\D/g, ''), visitanteId, respostas: montarRespostas() },
-      { onSuccess: () => onClose() },
+      { nome: nomeConfirmado, telefone: telefone.replace(/\D/g, ''), visitanteId, respostas: montarRespostas(), gerarLink },
+      {
+        onSuccess: (resposta) => {
+          if (!resposta.cobrancaId) {
+            // Evento gratuito — fluxo antigo, sem escolha de pagamento.
+            onClose()
+            return
+          }
+          if (gerarLink) {
+            setCompartilhandoCobranca({ nome: nomeConfirmado, token: resposta.tokenLinkPublico! })
+            limparFormulario()
+          } else {
+            router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaId}`)
+          }
+        },
+      },
+    )
+  }
+
+  if (compartilhandoCobranca) {
+    return (
+      <ModalCompartilharCobranca
+        nomePessoa={compartilhandoCobranca.nome}
+        tituloEvento={tituloEvento}
+        valor={preco ?? 0}
+        token={compartilhandoCobranca.token}
+        onClose={() => setCompartilhandoCobranca(null)}
+      />
     )
   }
 
@@ -285,9 +324,20 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={isPending}>
                 Cancelar
               </button>
-              <button type="button" className={styles.btnConfirmar} onClick={aoConfirmar} disabled={isPending}>
-                {isPending ? 'Inscrevendo…' : 'Inscrever'}
-              </button>
+              {preco ? (
+                <div className={styles.acoesPagamentoConvidado}>
+                  <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending}>
+                    {isPending ? 'Inscrevendo…' : `Pagar inscrição${nome.trim() ? ` de ${nome.trim()}` : ''}`}
+                  </button>
+                  <button type="button" className={styles.btnEnviarLink} onClick={() => confirmar(true)} disabled={isPending}>
+                    Enviar link pra pagar
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending}>
+                  {isPending ? 'Inscrevendo…' : 'Inscrever'}
+                </button>
+              )}
             </div>
           </>
         )}

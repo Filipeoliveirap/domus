@@ -37,6 +37,10 @@ export function BotaoConfirmarPresenca({
   const router = useRouter()
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [semConta, setSemConta] = useState(false)
+  // A mutation já resolveu (isPending vira false) antes do router.push completar a
+  // navegação — sem isto, o botão "pisca" de volta pro texto normal por um instante
+  // enquanto a rota de checkout ainda está carregando.
+  const [navegandoParaCheckout, setNavegandoParaCheckout] = useState(false)
   // 422 contornável: gestor quebrando recorte de elegibilidade
   const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
 
@@ -229,7 +233,7 @@ export function BotaoConfirmarPresenca({
       <button
         type="button"
         className={styles.botao}
-        disabled={inscrever.isPending || !!impedimento}
+        disabled={inscrever.isPending || navegandoParaCheckout || !!impedimento}
         onClick={() => {
           if (!preco) {
             inscrever.mutate({}, { onSuccess: onInscritoComSucesso })
@@ -244,6 +248,7 @@ export function BotaoConfirmarPresenca({
           inscrever.mutate({}, {
             onSuccess: (resposta) => {
               if (resposta.cobrancaPendenteId) {
+                setNavegandoParaCheckout(true)
                 router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
               } else {
                 // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
@@ -254,7 +259,7 @@ export function BotaoConfirmarPresenca({
         }}
       >
         <CheckCircle2 size={18} aria-hidden="true" />
-        {inscrever.isPending ? 'Inscrevendo…' : 'Se inscrever'}
+        {inscrever.isPending || navegandoParaCheckout ? 'Inscrevendo…' : 'Se inscrever'}
       </button>
 
       {impedimento && (

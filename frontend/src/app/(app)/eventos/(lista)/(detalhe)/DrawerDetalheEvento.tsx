@@ -325,18 +325,23 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
-              {evento.requerInscricao && !inscricaoBloqueadaPelaSituacao && (
+              {!inscricaoBloqueadaPelaSituacao && (
                 <>
-                  <button
-                    type="button"
-                    className={styles.acaoSecundaria}
-                    onClick={() => setModalAberto('inscrever-alguem')}
-                    disabled={esgotado}
-                  >
-                    <Users size={16} aria-hidden="true" />
-                    {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
-                  </button>
+                  {evento.requerInscricao && (
+                    <button
+                      type="button"
+                      className={styles.acaoSecundaria}
+                      onClick={() => setModalAberto('inscrever-alguem')}
+                      disabled={esgotado}
+                    >
+                      <Users size={16} aria-hidden="true" />
+                      {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
+                    </button>
+                  )}
 
+                  {/* Sem inscrição, o convite é só informativo (local/hora/data) — ver
+                     /convite/[token]/page.tsx, que esconde o formulário quando
+                     !requerInscricao. */}
                   <button
                     type="button"
                     className={styles.acaoSecundaria}

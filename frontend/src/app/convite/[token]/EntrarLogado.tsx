@@ -26,6 +26,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
   const { responder, isLoading: respondendo } = useResponderCampos()
 
   const [inscricaoId, setInscricaoId] = useState<string | null>(null)
+  const [cobrancaPendenteId, setCobrancaPendenteId] = useState<string | null>(null)
   const [camposValores, setCamposValores] = useState<Record<string, string>>({})
   const [tentouEnviar, setTentouEnviar] = useState(false)
 
@@ -57,9 +58,20 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
     inscrever.mutate(undefined, {
       onSuccess: (dados) => {
         setInscricaoId(dados.id)
-        if (campos.length === 0) onSucesso()
+        setCobrancaPendenteId(dados.cobrancaPendenteId)
+        if (campos.length === 0) finalizar(dados.cobrancaPendenteId)
       },
     })
+  }
+
+  /** Evento pago (cobrancaId presente) navega pro checkout dedicado; gratuito segue pro
+   *  fluxo antigo (`onSucesso`, tela estática "Inscrição confirmada!"). */
+  function finalizar(cobrancaId: string | null) {
+    if (cobrancaId) {
+      router.push(`/eventos/${eventoId}/pagamento/${cobrancaId}`)
+    } else {
+      onSucesso()
+    }
   }
 
   async function aoSalvarRespostas() {
@@ -68,7 +80,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
 
     const dados = campos.map((c) => ({ campoId: c.id, valor: camposValores[c.id] ?? '' }))
     const sucesso = await responder(idParaResponder, dados)
-    if (sucesso) onSucesso()
+    if (sucesso) finalizar(cobrancaPendenteId)
   }
 
   if (!jaConfirmouInscricao) {

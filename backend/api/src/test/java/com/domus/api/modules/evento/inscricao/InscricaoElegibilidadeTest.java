@@ -77,7 +77,8 @@ class InscricaoElegibilidadeTest {
                 mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
                 mock(com.domus.api.modules.pagamento.MercadoPagoClient.class),
                 contaPagamentoIgrejaRepositoryComContaConectada(),
-                mock(com.domus.api.shared.email.EmailService.class));
+                mock(com.domus.api.shared.email.EmailService.class),
+                mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class));
     }
 
     // Este teste não é sobre a regra de conta de pagamento conectada (Important 9) — todos

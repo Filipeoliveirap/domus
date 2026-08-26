@@ -33,6 +33,8 @@ class MercadoPagoWebhookServiceTest {
     EventoRepository eventoRepository;
     PessoaRepository pessoaRepository;
     EmailService emailService;
+    com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService movimentacaoAutomaticaService;
+    com.domus.api.modules.evento.inscricao.AcompanhanteRepository acompanhanteRepository;
     MercadoPagoWebhookService service;
 
     @BeforeEach
@@ -43,8 +45,10 @@ class MercadoPagoWebhookServiceTest {
         eventoRepository = mock(EventoRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         emailService = mock(EmailService.class);
+        movimentacaoAutomaticaService = mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class);
+        acompanhanteRepository = mock(com.domus.api.modules.evento.inscricao.AcompanhanteRepository.class);
         service = new MercadoPagoWebhookService(cobrancaRepository, inscricaoRepository, notificacaoService,
-                eventoRepository, pessoaRepository, emailService);
+                eventoRepository, pessoaRepository, emailService, movimentacaoAutomaticaService, acompanhanteRepository);
     }
 
     private Igreja igreja(UUID id, String nome) {
@@ -74,6 +78,43 @@ class MercadoPagoWebhookServiceTest {
 
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(inscricao);
+    }
+
+    @Test
+    void registraMovimentacaoFinanceiraDeEntradaQuandoPagamentoAprovado() {
+        UUID cobrancaId = UUID.randomUUID();
+        UUID inscricaoId = UUID.randomUUID();
+        UUID pessoaId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        UUID igrejaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+            BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
+        var evento = evento(eventoId, igreja(igrejaId, "Igreja Teste"));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
+        when(pessoaRepository.findById(pessoaId)).thenReturn(Optional.of(
+            Pessoa.builder().id(pessoaId).nome("Maria").igreja(igreja(igrejaId, "Igreja Teste")).build()));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        verify(movimentacaoAutomaticaService).registrarEntradaDeEvento(
+            eq(igrejaId), eq(BigDecimal.TEN),
+            org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId));
+    }
+
+    @Test
+    void naoRegistraMovimentacaoQuandoPagamentoNaoEhAprovado() {
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "pending");
+
+        verifyNoInteractions(movimentacaoAutomaticaService);
     }
 
     @Test

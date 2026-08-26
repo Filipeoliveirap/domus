@@ -126,6 +126,22 @@ class CategoriaFinanceiraServiceTest {
     }
 
     @Test
+    void excluirDefinitivoTraduzErroDeFkQuandoBancoRecusaAExclusao() {
+        // Achado em teste ao vivo (2026-08-26): a guarda por COUNT passou (0), mas o DELETE
+        // esbarrou numa FK de verdade — rede de segurança pra nunca vazar erro cru de banco.
+        when(repository.findByIdAndIgrejaIdIncluindoArquivadas(categoriaId, igrejaId))
+                .thenReturn(Optional.of(categoria()));
+        when(movimentacaoFinanceiraRepository.countByCategoriaIdAndIgrejaId(categoriaId, igrejaId))
+                .thenReturn(0L);
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("FK"))
+                .when(repository).hardDeleteById(categoriaId);
+
+        assertThatThrownBy(() -> service.excluirDefinitivo(categoriaId, igrejaId))
+                .isInstanceOf(com.domus.api.shared.exception.ConflitoNegocioException.class)
+                .hasFieldOrPropertyWithValue("codigo", "CATEGORIA_COM_MOVIMENTACAO");
+    }
+
+    @Test
     void restaurarFalhaQuandoIdNaoPertenceAEssaIgreja() {
         when(repository.restaurarPorId(categoriaId, igrejaId)).thenReturn(0);
 

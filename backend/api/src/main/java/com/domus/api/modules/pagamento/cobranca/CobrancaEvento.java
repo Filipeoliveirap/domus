@@ -123,14 +123,13 @@ public class CobrancaEvento {
     /**
      * "É do titular" quer dizer "quem paga é quem já está vendo a própria tela mudar" —
      * exige as DUAS coisas: (1) é uma pessoa cadastrada ({@code pessoaId != null}, não um
-     * acompanhante sem cadastro) E (2) ninguém gerou um link público pra essa cobrança
+     * convidado sem cadastro) E (2) ninguém gerou um link público pra essa cobrança
      * ({@code tokenLinkPublico == null}). Antes desta correção (Important 6, revisão
      * final de branch) o discriminador era só {@code pessoaId != null} — o que classificava
      * errado uma cobrança de link gerado pra OUTRA pessoa CADASTRADA (que também tem
-     * {@code pessoaId != null}, sem {@code acompanhanteId}) como "do titular", e por isso
-     * quem gerou o link nunca era notificado quando ela pagava. Cobrança de acompanhante
-     * (sem cadastro, {@code pessoaId == null}) nunca é "do titular", com ou sem link —
-     * continua notificando quem inscreveu, como sempre foi.
+     * {@code pessoaId != null}) como "do titular", e por isso quem gerou o link nunca era
+     * notificado quando ela pagava. Cobrança de convidado (sem cadastro, {@code pessoaId == null})
+     * nunca é "do titular", com ou sem link — continua notificando quem inscreveu, como sempre foi.
      */
     public boolean ehDoTitular() { return pessoaId != null && tokenLinkPublico == null; }
 }

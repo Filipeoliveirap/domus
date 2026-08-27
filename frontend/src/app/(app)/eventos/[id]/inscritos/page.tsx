@@ -96,13 +96,12 @@ export default function InscritosPage() {
     })
   }
 
-  // Modo seleção: checkboxes para marcar subconjunto. Chave composta (tipo:id) porque
-  // inscrito e acompanhante têm ids de espaços distintos.
+  // Modo seleção: checkboxes para marcar subconjunto.
   const [modoSelecao, setModoSelecao] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   function chaveSelecao(item: ItemSelecionado) {
-    return `${item.tipo}:${item.id}`
+    return item.id
   }
 
   function alternarSelecao(item: ItemSelecionado) {
@@ -128,10 +127,7 @@ export default function InscritosPage() {
   }
 
   function aoMarcarSelecionados() {
-    const itens: ItemSelecionado[] = Array.from(selecionados).map((chave) => {
-      const [tipo, id] = chave.split(':') as [ItemSelecionado['tipo'], string]
-      return { tipo, id }
-    })
+    const itens: ItemSelecionado[] = Array.from(selecionados).map((id) => ({ id }))
     marcarPresencaSelecionados.mutate(itens, { onSuccess: sairDoModoSelecao })
   }
 
@@ -320,7 +316,7 @@ export default function InscritosPage() {
                     const ehConvidadoSemCadastro = !inscrito.pessoaId && !inscrito.pessoaRemovida
                     const clicavel = modoSelecao || !!inscrito.pessoaId || ehConvidadoSemCadastro
                     const aoClicarLinha = () => {
-                      if (modoSelecao) alternarSelecao({ tipo: 'inscricao', id: inscrito.id })
+                      if (modoSelecao) alternarSelecao({ id: inscrito.id })
                       else if (ehConvidadoSemCadastro) {
                         abrirDetalheConvidado(inscrito.nome, inscrito.telefoneConvidado, inscrito.convidadoPorNome, inscrito.inscritoEm)
                       } else abrirDetalhe(inscrito)
@@ -385,9 +381,9 @@ export default function InscritosPage() {
                               <input
                                 type="checkbox"
                                 className={styles.checkboxSelecao}
-                                checked={selecionados.has(chaveSelecao({ tipo: 'inscricao', id: inscrito.id }))}
+                                checked={selecionados.has(chaveSelecao({ id: inscrito.id }))}
                                 aria-label={`Selecionar ${inscrito.nome}`}
-                                onChange={() => alternarSelecao({ tipo: 'inscricao', id: inscrito.id })}
+                                onChange={() => alternarSelecao({ id: inscrito.id })}
                                 onClick={(e) => e.stopPropagation()}
                               />
                             ) : (

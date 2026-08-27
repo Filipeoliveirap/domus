@@ -201,8 +201,7 @@
   gap: 4px;
 }
 
-.linha,
-.linhaConvidado {
+.linha {
   display: grid;
   grid-template-columns: 2fr 1fr 1.2fr 100px;
   gap: 16px;
@@ -210,14 +209,6 @@
   padding: 14px 16px;
   background: var(--color-bg-white);
   border-radius: var(--radius-md);
-}
-
-.linhaConvidado {
-  position: relative;
-  margin-left: 28px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  background: var(--color-bg-page);
 }
 
 /* Card inteiro clicável: modo seleção (seleciona em qualquer ponto) ou detalhe da pessoa.
@@ -231,21 +222,6 @@
 }
 .linhaClicavel:hover {
   background: var(--color-bg-page);
-}
-.linhaConvidado.linhaClicavel:hover {
-  background: var(--color-bg-table-head);
-}
-
-/* Conector visual: mostra que o convidado pertence à linha acima */
-.conector {
-  position: absolute;
-  top: -6px;
-  left: -16px;
-  width: 16px;
-  height: calc(50% + 6px);
-  border-left: 2px solid var(--color-border);
-  border-bottom: 2px solid var(--color-border);
-  border-bottom-left-radius: 8px;
 }
 
 /* ─── Colunas ─── */
@@ -577,13 +553,6 @@
   .colInscritoPor {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
-  }
-
-  .linhaConvidado {
-    margin-left: 20px;
-  }
-  .conector {
-    left: -12px;
   }
 }
 

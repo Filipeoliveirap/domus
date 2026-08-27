@@ -36,7 +36,6 @@ class InscricaoElegibilidadeTest {
 
     EventoRepository eventoRepository;
     InscricaoRepository inscricaoRepository;
-    AcompanhanteRepository acompanhanteRepository;
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
     VisitanteRepository visitanteRepository;
@@ -55,7 +54,6 @@ class InscricaoElegibilidadeTest {
     void setup() {
         eventoRepository = mock(EventoRepository.class);
         inscricaoRepository = mock(InscricaoRepository.class);
-        acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
@@ -70,7 +68,7 @@ class InscricaoElegibilidadeTest {
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
+                membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
                 mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),

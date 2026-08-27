@@ -34,7 +34,7 @@ class CobrancaEventoExpiracaoJobTest {
     void cancelaInscricaoVinculadaQuandoCobrancaExpira() {
         UUID inscricaoId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
-            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), null);
+            UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), null);
         when(repository.findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any()))
             .thenReturn(List.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
@@ -50,9 +50,9 @@ class CobrancaEventoExpiracaoJobTest {
     @Test
     void expiraTodasAsCobrancasPendentesVencidas() {
         var cobranca1 = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), null);
+            UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), null);
         var cobranca2 = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-            null, UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), "token");
+            null, BigDecimal.TEN, Instant.now().minusSeconds(60), UUID.randomUUID(), "token");
 
         when(repository.findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any()))
             .thenReturn(List.of(cobranca1, cobranca2));

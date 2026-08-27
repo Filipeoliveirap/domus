@@ -38,7 +38,7 @@ class MercadoPagoClientTest {
     void lancaErroDeNegocioQuandoIgrejaNaoTemContaConectada() {
         when(contaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.empty());
         var cobranca = new CobrancaEvento(igrejaId, UUID.randomUUID(), UUID.randomUUID(),
-            UUID.randomUUID(), null, BigDecimal.TEN, Instant.now().plusSeconds(60),
+            UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(60),
             UUID.randomUUID(), null);
 
         assertThatThrownBy(() -> client.criarPagamento(igrejaId, cobranca))
@@ -55,7 +55,7 @@ class MercadoPagoClientTest {
         when(api.criarPagamento(eq("access-plano"), any(), any())).thenReturn("mp-payment-999");
 
         var cobranca = new CobrancaEvento(igrejaId, UUID.randomUUID(), UUID.randomUUID(),
-            UUID.randomUUID(), null, BigDecimal.valueOf(50), Instant.now().plusSeconds(60),
+            UUID.randomUUID(), BigDecimal.valueOf(50), Instant.now().plusSeconds(60),
             UUID.randomUUID(), null);
         UUID cobrancaId = UUID.randomUUID();
         ReflectionTestUtils.setField(cobranca, "id", cobrancaId);

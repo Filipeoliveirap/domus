@@ -8,7 +8,6 @@ import com.domus.api.modules.pessoa.Pessoa;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +26,6 @@ class InscritoResponseTest {
                 .igreja(igreja)
                 .evento(Evento.builder().id(UUID.randomUUID()).igreja(igreja).titulo("Retiro").build())
                 .status(StatusInscricao.CONFIRMADA)
-                .acompanhantes(List.of())
                 .createdAt(LocalDateTime.now())
                 .build();
     }

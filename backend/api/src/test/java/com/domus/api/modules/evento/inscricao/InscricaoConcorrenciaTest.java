@@ -34,12 +34,9 @@ class InscricaoConcorrenciaTest implements PostgresTestContainerSupport {
     @AfterEach
     void limpar() {
         if (igrejaId == null) return;
-        // Ordem segura de FK: acompanhante -> inscricao -> membro/evento -> igreja.
+        // Ordem segura de FK: inscricao (convidado já é sua própria linha, não precisa de
+        // DELETE separado) -> membro/evento -> igreja.
         executarCommitado(em -> {
-            em.createNativeQuery("""
-                    DELETE FROM acompanhante_inscricao
-                    WHERE inscricao_id IN (SELECT id FROM inscricao_evento WHERE evento_id = :ev)
-                    """).setParameter("ev", eventoId).executeUpdate();
             em.createNativeQuery("DELETE FROM inscricao_evento WHERE evento_id = :ev")
                     .setParameter("ev", eventoId).executeUpdate();
             em.createNativeQuery("DELETE FROM evento WHERE id = :ev")

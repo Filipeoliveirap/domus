@@ -1,7 +1,5 @@
 package com.domus.api.modules.evento;
 
-import com.domus.api.modules.evento.inscricao.AcompanhanteInscricao;
-import com.domus.api.modules.evento.inscricao.AcompanhanteRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.igreja.Igreja;
@@ -37,9 +35,6 @@ class EventoDefaultsTest implements PostgresTestContainerSupport {
 
     @Autowired
     InscricaoRepository inscricaoRepository;
-
-    @Autowired
-    AcompanhanteRepository acompanhanteRepository;
 
     @Autowired
     EntityManager entityManager;
@@ -90,9 +85,11 @@ class EventoDefaultsTest implements PostgresTestContainerSupport {
                 .pessoa(pessoa)
                 .build());
 
-        AcompanhanteInscricao acompanhante = acompanhanteRepository.save(AcompanhanteInscricao.builder()
-                .inscricao(inscricao)
-                .nome("Convidado de Fulano")
+        InscricaoEvento convidado = inscricaoRepository.save(InscricaoEvento.builder()
+                .igreja(igreja)
+                .evento(evento)
+                .nomeConvidado("Convidado de Fulano")
+                .convidadoPor(pessoa)
                 .build());
 
         entityManager.flush();
@@ -101,7 +98,7 @@ class EventoDefaultsTest implements PostgresTestContainerSupport {
         InscricaoEvento inscricaoRecarregada = inscricaoRepository.findById(inscricao.getId()).orElseThrow();
         assertThat(inscricaoRecarregada.isCompareceu()).isFalse();
 
-        AcompanhanteInscricao acompanhanteRecarregado = acompanhanteRepository.findById(acompanhante.getId()).orElseThrow();
-        assertThat(acompanhanteRecarregado.isCompareceu()).isFalse();
+        InscricaoEvento convidadoRecarregado = inscricaoRepository.findById(convidado.getId()).orElseThrow();
+        assertThat(convidadoRecarregado.isCompareceu()).isFalse();
     }
 }

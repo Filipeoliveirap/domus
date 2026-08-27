@@ -52,9 +52,8 @@ export function ModalImpactoMudancaPreco({ impacto, isLoading, onConfirmar, onCl
               <p className={styles.subtitulo}>
                 {pessoasComPagamentoPago > 0 && (
                   <>
-                    {pessoasComPagamentoPago === 1 ? '1 pessoa' : `${pessoasComPagamentoPago} pessoas`}
-                    {' '}já pagou — <strong>{formatarMoeda(valorTotalAEstornar)}</strong> serão estornados de
-                    verdade no Mercado Pago.
+                    {pessoasComPagamentoPago === 1 ? '1 pessoa já pagou' : `${pessoasComPagamentoPago} pessoas já pagaram`}
+                    {' — '}<strong>{formatarMoeda(valorTotalAEstornar)}</strong> serão estornados. As inscrições permanecerão.
                     {pessoasAguardandoPagamento > 0 && ' '}
                   </>
                 )}
@@ -64,7 +63,6 @@ export function ModalImpactoMudancaPreco({ impacto, isLoading, onConfirmar, onCl
                     {' '}aguardando pagamento — a inscrição será confirmada direto, sem cobrar nada.
                   </>
                 )}
-                {' '}Ninguém perde a vaga.
               </p>
             </div>
           </div>

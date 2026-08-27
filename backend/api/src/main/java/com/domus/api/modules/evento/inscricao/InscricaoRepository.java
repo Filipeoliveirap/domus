@@ -105,6 +105,7 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         SELECT COUNT(i) FROM InscricaoEvento i
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NULL
     """)
     long countPessoasInscritas(@Param("eventoId") UUID eventoId);
 
@@ -121,6 +122,7 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
           AND i.compareceu = true
+          AND i.convidadoPor IS NULL
     """)
     long countPessoasCompareceram(@Param("eventoId") UUID eventoId);
 

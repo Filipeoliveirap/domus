@@ -864,6 +864,106 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void calcularImpactoEventoVirarPagoContaConfirmadosEMultiplicaPeloPrecoNovo() {
+        InscricaoEvento confirmada1 = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento confirmada2 = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("João").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento aguardando = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("Ana").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(confirmada1, confirmada2, aguardando));
+
+        var impacto = service.calcularImpactoEventoVirarPago(eventoId, new java.math.BigDecimal("30.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.GRATUITO_PARA_PAGO);
+        assertThat(impacto.pessoasSeraoCobradas()).isEqualTo(2);
+        assertThat(impacto.valorTotalACobrar()).isEqualByComparingTo("60.00");
+        verifyNoInteractions(cobrancaEventoService);
+    }
+
+    @Test
+    void calcularImpactoEventoVirarPagoDevolveSemImpactoQuandoNaoHaConfirmado() {
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of());
+
+        var impacto = service.calcularImpactoEventoVirarPago(eventoId, new java.math.BigDecimal("30.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.SEM_IMPACTO);
+    }
+
+    @Test
+    void eventoVirouPagoCriaCobrancaEConfirmaComoAguardandoPagamento() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        var cobrancaCriada = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-gerado");
+        when(cobrancaEventoService.criarParaTerceiro(
+                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true))
+                .thenReturn(cobrancaCriada);
+
+        int processadas = service.aplicarEventoVirouPago(eventoId, new java.math.BigDecimal("30.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        verify(cobrancaEventoService).criarParaTerceiro(
+                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true);
+
+        var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
+        assertThat(assuntoCaptor.getValue()).contains("pago");
+        assertThat(corpoCaptor.getValue()).contains("token-gerado");
+    }
+
+    @Test
+    void eventoVirouPagoIgnoraInscricoesNaoConfirmadas() {
+        InscricaoEvento aguardando = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        InscricaoEvento cancelada = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("João").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.CANCELADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(aguardando, cancelada));
+
+        int processadas = service.aplicarEventoVirouPago(eventoId, new java.math.BigDecimal("30.00"), usuarioId);
+
+        assertThat(processadas).isZero();
+        verifyNoInteractions(cobrancaEventoService);
+        assertThat(aguardando.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        assertThat(cancelada.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void eventoVirouPagoLancaErroSemContaDePagamentoConectada() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(contaPagamentoIgrejaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.aplicarEventoVirouPago(eventoId, new java.math.BigDecimal("30.00"), usuarioId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "IGREJA_SEM_CONTA_PAGAMENTO");
+        verifyNoInteractions(cobrancaEventoService);
+    }
+
+    @Test
     void eventoVirouGratuitoEstornaCobrancaPagaEMantemInscricaoConfirmada() {
         Pessoa pessoaComEmail = Pessoa.builder()
                 .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")

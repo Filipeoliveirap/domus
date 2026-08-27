@@ -163,7 +163,7 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     """)
     List<InscricaoEvento> listarConvidadosSemCadastroPorEvento(@Param("eventoId") UUID eventoId);
 
-    /** Purga da igreja: acompanhante_inscricao cascadeia sozinho via ON DELETE CASCADE. */
+    /** Purga da igreja: delete de inscrição_evento cobre convidados (linhas normais com pessoa_id nulo). */
     @Modifying
     @Query(value = "DELETE FROM inscricao_evento WHERE igreja_id = :igrejaId", nativeQuery = true)
     void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);

@@ -296,7 +296,7 @@ public class InscricaoService {
     /**
      * Task 14: se a pessoa recarregar a página antes de pagar (ou fechar o Brick sem
      * concluir), {@code minhaInscricao} precisa continuar devolvendo o id da cobrança
-     * pendente do TITULAR — nunca a de um acompanhante, que segue um fluxo à parte
+     * pendente do TITULAR — nunca a de um convidado, que segue um fluxo à parte
      * (link compartilhado, não o Brick embutido nesta tela).
      */
     private UUID cobrancaPendenteDoTitular(UUID inscricaoId, UUID pessoaId) {
@@ -409,7 +409,7 @@ public class InscricaoService {
      * Evento pago reserva vaga pela cobrança (PAGO ou PENDENTE ainda não expirada), não pela
      * inscrição confirmada — a inscrição é sempre confirmada na hora, pago ou não; quem de
      * fato "segura" a vaga é a cobrança (expira e libera sozinha se ninguém pagar). Evento
-     * gratuito continua exatamente como antes: conta inscrições confirmadas + acompanhantes.
+     * gratuito continua exatamente como antes: conta inscrições confirmadas + convidados.
      */
     private long contarOcupadas(Evento evento) {
         if (evento.getPreco() != null) {
@@ -553,7 +553,7 @@ public class InscricaoService {
      * individual, mas em cancelamento em LOTE ({@code cancelarInscricoesEmEventosAbertosPorPessoa},
      * {@code removerInscritosNaoElegiveis}, {@code cancelarInscricoesEmEventosExclusivos})
      * a exceção é capturada por item do lote — então essas mutações "sujas" (cobrança de
-     * acompanhante já marcada CANCELADO, vaga já liberada) eram persistidas no commit do
+     * convidado já marcada CANCELADO, vaga já liberada) eram persistidas no commit do
      * lote mesmo a inscrição continuando CONFIRMADA. Resultado: vaga liberada sem a
      * inscrição ter sido cancelada de verdade.
      *

@@ -215,7 +215,7 @@ public class EventoService {
         evento.setRestricaoSexo(data.restricaoSexo());
         evento.setAtualizadoPor(usuario);
 
-        // Vagas contam inscritos confirmados + acompanhantes.
+        // Vagas contam inscritos confirmados + convidados.
         // Reduzir abaixo do total de confirmados é proibido; null = sem limite.
         if (data.vagas() != null) {
             long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());

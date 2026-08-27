@@ -7,7 +7,7 @@ import java.util.UUID;
 /**
  * DTO da rota pública {@code GET /cobrancas/{token}} — sem autenticação, por isso
  * carrega estritamente o necessário para montar a tela de checkout: nem telefone, nem
- * e-mail, nem qualquer outro campo de Pessoa/AcompanhanteInscricao além do nome.
+ * e-mail, nem qualquer outro campo além do nome do pagador.
  *
  * <p>{@code id} (Task 14) é o identificador que a página pública usa para chamar
  * {@code POST /cobrancas/{id}/pagar} depois de resolver o {@code token} da URL — o

@@ -5,12 +5,12 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { inscricoesService } from '@/services/inscricao.service'
 import type { ApiError } from '@/types/api.types'
 
-/** Remove um convidado (chama `/acompanhantes/{id}` no backend). */
+/** Remove um convidado (chama `DELETE /inscricoes/{id}` no backend — convidado é uma InscricaoEvento). */
 export function useRemoverConvidado() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (acompanhanteId: string) => inscricoesService.removerAcompanhante(acompanhanteId),
+    mutationFn: (inscricaoId: string) => inscricoesService.cancelar(inscricaoId),
     onSuccess: () => {
       invalidarCache(queryClient, 'inscricao')
       notificar.sucesso('Convidado removido.')

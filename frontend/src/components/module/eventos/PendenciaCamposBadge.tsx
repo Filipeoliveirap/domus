@@ -56,11 +56,19 @@ function ModalPendencias({
 
   if (typeof document === 'undefined') return null
 
+  // e.stopPropagation() em todo clique daqui pra baixo: o portal renderiza no <body>,
+  // mas continua descendente de PendenciaCamposBadge na árvore do React — e essa árvore
+  // é o que decide bubbling de evento sintético, não o DOM real. Sem isso, qualquer
+  // clique aqui dentro (fechar, backdrop) borbulha até o onClick da linha da tabela (que
+  // fica ancestral desta badge) e reabre o modal de detalhe do inscrito por engano.
   return createPortal(
-    <div className={baseStyles.overlay} onMouseDown={onClose}>
+    <div
+      className={baseStyles.overlay}
+      onClick={(e) => { e.stopPropagation(); onClose() }}
+    >
       <div
         className={baseStyles.modal}
-        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-pendencias-titulo"
@@ -82,7 +90,11 @@ function ModalPendencias({
         </div>
 
         <div className={baseStyles.rodape}>
-          <button type="button" className={baseStyles.btnCancelar} onClick={onClose}>
+          <button
+            type="button"
+            className={baseStyles.btnCancelar}
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+          >
             Fechar
           </button>
         </div>

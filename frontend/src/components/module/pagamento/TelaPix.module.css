@@ -41,3 +41,15 @@
   color: var(--color-text-muted);
   margin-top: 0.5rem;
 }
+
+.pixContagem {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0.75rem 0 0;
+}
+.pixContagem strong {
+  font-variant-numeric: tabular-nums;
+}
+.pixContagemUrgente {
+  color: var(--color-danger);
+}

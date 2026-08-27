@@ -1,6 +1,5 @@
 package com.domus.api.modules.evento.campopersonalizado;
 
-import com.domus.api.modules.evento.inscricao.AcompanhanteInscricao;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,11 +24,6 @@ public class RespostaCampoPersonalizado {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "inscricao_id", nullable = false)
     private InscricaoEvento inscricao;
-
-    /** NULL = resposta do titular; preenchido = resposta desse acompanhante específico. */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "acompanhante_id")
-    private AcompanhanteInscricao acompanhante;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String valor;

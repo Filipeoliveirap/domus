@@ -161,10 +161,11 @@ public class CampoPersonalizadoService {
         }
     }
 
-    /** Titular responde quando {@code acompanhanteId == null}; senão, responde por esse
-     *  acompanhante específico. Valida obrigatoriedade aqui — nunca em inscrever(). */
+    /** Cada convidado tem sua própria inscrição agora (modelo unificado convidado/titular) —
+     *  responde sempre pela {@code inscricaoId} dele mesmo, nunca mais por acompanhanteId.
+     *  Valida obrigatoriedade aqui — nunca em inscrever(). */
     @Transactional
-    public void responder(UUID inscricaoId, UUID acompanhanteId,
+    public void responder(UUID inscricaoId,
                           List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> respostas,
                           UUID igrejaId, UUID pessoaLogadaId, String role) {
         var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
@@ -179,23 +180,22 @@ public class CampoPersonalizadoService {
                     "SEM_PERMISSAO", "Você não pode responder por essa inscrição.");
         }
 
-        validarEResponder(inscricao, acompanhanteId, respostas, igrejaId);
+        validarEResponder(inscricao, respostas, igrejaId);
     }
 
     /** Variante sem autor logado, usada só pelo fluxo de convite público (entrar sem conta): a
      *  posse do token — já validado antes de chegar aqui — É a autorização. Responde sempre
-     *  como titular da inscrição recém-criada ({@code acompanhanteId} sempre null). */
+     *  como titular da inscrição recém-criada. */
     @Transactional
     public void responderComoConvidado(UUID inscricaoId,
                                         List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> respostas,
                                         UUID igrejaId) {
         var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
-        validarEResponder(inscricao, null, respostas, igrejaId);
+        validarEResponder(inscricao, respostas, igrejaId);
     }
 
     private void validarEResponder(com.domus.api.modules.evento.inscricao.InscricaoEvento inscricao,
-                                    UUID acompanhanteId,
                                     List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest> respostas,
                                     UUID igrejaId) {
         List<CampoPersonalizadoEvento> campos = campoRepository
@@ -204,7 +204,7 @@ public class CampoPersonalizadoService {
         Map<UUID, String> valoresEnviados = new HashMap<>();
         for (var r : respostas) valoresEnviados.put(r.campoId(), r.valor());
 
-        if (acompanhanteId == null && inscricao.getPessoa() != null) {
+        if (inscricao.getPessoa() != null) {
             for (CampoPersonalizadoEvento campo : campos) {
                 if (campo.getMapeamento() == null || valoresEnviados.containsKey(campo.getId())) continue;
                 valorJaConhecido(campo.getMapeamento(), inscricao.getPessoa())
@@ -217,7 +217,7 @@ public class CampoPersonalizadoService {
             String valor = valoresEnviados.get(campo.getId());
             boolean respondidoAgora = valor != null && !valor.isBlank();
             boolean jaRespondidoAntes = !respondidoAgora && respostaRepository
-                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(campo.getId(), inscricao.getId(), acompanhanteId)
+                    .findByCampoIdAndInscricaoId(campo.getId(), inscricao.getId())
                     .map(r -> r.getValor() != null && !r.getValor().isBlank())
                     .orElse(false);
             if (!respondidoAgora && !jaRespondidoAntes) {
@@ -232,31 +232,21 @@ public class CampoPersonalizadoService {
                     .orElseThrow(() -> new ResourceNotFoundException("Campo não encontrado."));
 
             var existente = respostaRepository
-                    .findByCampoIdAndInscricaoIdAndAcompanhanteId(entry.getKey(), inscricao.getId(), acompanhanteId);
+                    .findByCampoIdAndInscricaoId(entry.getKey(), inscricao.getId());
 
-            RespostaCampoPersonalizado resposta = existente.orElseGet(() -> {
-                var nova = RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).build();
-                if (acompanhanteId != null) {
-                    var achado = inscricao.getAcompanhantes().stream()
-                            .filter(a -> a.getId().equals(acompanhanteId)).findFirst()
-                            .orElseThrow(() -> new ResourceNotFoundException("Acompanhante não encontrado."));
-                    nova.setAcompanhante(achado);
-                }
-                return nova;
-            });
+            RespostaCampoPersonalizado resposta = existente.orElseGet(() ->
+                    RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).build());
             resposta.setValor(entry.getValue());
             respostaRepository.save(resposta);
         }
     }
 
     public List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse> respostasPorInscricao(
-            UUID inscricaoId, UUID acompanhanteId, UUID igrejaId) {
+            UUID inscricaoId, UUID igrejaId) {
         inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
         return respostaRepository.findByInscricaoId(inscricaoId).stream()
-                .filter(r -> java.util.Objects.equals(
-                        r.getAcompanhante() == null ? null : r.getAcompanhante().getId(), acompanhanteId))
                 .map(com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse::from)
                 .toList();
     }

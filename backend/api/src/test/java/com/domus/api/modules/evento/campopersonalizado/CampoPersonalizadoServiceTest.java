@@ -198,10 +198,10 @@ class CampoPersonalizadoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoObrigatorio));
-        when(respostaRepository.findByCampoIdAndInscricaoIdAndAcompanhanteId(campoObrigatorioId, inscricaoId, null))
+        when(respostaRepository.findByCampoIdAndInscricaoId(campoObrigatorioId, inscricaoId))
                 .thenReturn(Optional.empty());
 
-        service.responder(inscricaoId, null,
+        service.responder(inscricaoId,
                 List.of(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaRequest(campoObrigatorioId, "Sem lactose")),
                 igrejaId, pessoaId, "ACESSO_COMUM");
 
@@ -229,7 +229,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoObrigatorio));
 
-        assertThatThrownBy(() -> service.responder(inscricaoId, null, List.of(), igrejaId, pessoaId, "ACESSO_COMUM"))
+        assertThatThrownBy(() -> service.responder(inscricaoId, List.of(), igrejaId, pessoaId, "ACESSO_COMUM"))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
 
         verify(respostaRepository, never()).save(any());
@@ -249,7 +249,7 @@ class CampoPersonalizadoServiceTest {
 
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
 
-        assertThatThrownBy(() -> service.responder(inscricaoId, null, List.of(), igrejaId, quemTaTentandoId, "ACESSO_COMUM"))
+        assertThatThrownBy(() -> service.responder(inscricaoId, List.of(), igrejaId, quemTaTentandoId, "ACESSO_COMUM"))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
     }
 
@@ -268,7 +268,7 @@ class CampoPersonalizadoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of());
 
-        service.responder(inscricaoId, null, List.of(), igrejaId, gestorId, "LIDER");
+        service.responder(inscricaoId, List.of(), igrejaId, gestorId, "LIDER");
 
         // Não lança — chegou até o fim sem exceção de autorização.
     }
@@ -456,12 +456,12 @@ class CampoPersonalizadoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoIdade));
-        when(respostaRepository.findByCampoIdAndInscricaoIdAndAcompanhanteId(campoIdadeId, inscricaoId, null))
+        when(respostaRepository.findByCampoIdAndInscricaoId(campoIdadeId, inscricaoId))
                 .thenReturn(Optional.empty());
 
-        service.responder(inscricaoId, null, List.of(), igrejaId, pessoaId, "ACESSO_COMUM");
+        service.responder(inscricaoId, List.of(), igrejaId, pessoaId, "ACESSO_COMUM");
 
-        verify(respostaRepository).save(argThat(r -> r.getValor().equals("20") && r.getAcompanhante() == null));
+        verify(respostaRepository).save(argThat(r -> r.getValor().equals("20")));
     }
 
     @Test

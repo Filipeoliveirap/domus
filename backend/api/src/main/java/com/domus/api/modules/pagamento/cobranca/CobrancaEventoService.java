@@ -24,18 +24,18 @@ public class CobrancaEventoService {
 
     public CobrancaEvento criarParaTitular(UUID igrejaId, UUID eventoId, UUID inscricaoId,
                                             UUID pessoaId, BigDecimal valor, UUID criadoPorUsuarioId) {
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null, valor,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, valor,
             Instant.now().plus(PRAZO_PAGAMENTO_IMEDIATO), criadoPorUsuarioId, null);
         return repository.save(cobranca);
     }
 
     public CobrancaEvento criarParaTerceiro(UUID igrejaId, UUID eventoId, UUID inscricaoId,
-                                             UUID pessoaId, UUID acompanhanteId, BigDecimal valor,
+                                             UUID pessoaId, BigDecimal valor,
                                              UUID criadoPorUsuarioId, boolean gerarLink) {
         String token = gerarLink ? gerarToken() : null;
         Duration prazo = gerarLink ? PRAZO_LINK_COMPARTILHADO : PRAZO_PAGAMENTO_IMEDIATO;
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, acompanhanteId,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             valor, Instant.now().plus(prazo), criadoPorUsuarioId, token);
         return repository.save(cobranca);
     }

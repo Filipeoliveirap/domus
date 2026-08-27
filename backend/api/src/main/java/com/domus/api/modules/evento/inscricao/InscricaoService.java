@@ -180,7 +180,7 @@ public class InscricaoService {
             // quando aparece na lista de um lote que ela mesma está confirmando.
             boolean podeVirarLink = gerarLinkSePago && !pessoaId.equals(minhaPessoaId);
             cobranca = podeVirarLink
-                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(), pessoaId, null,
+                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(), pessoaId,
                             evento.getPreco(), criadoPorUsuarioId, true)
                     : cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
                             evento.getPreco(), criadoPorUsuarioId);
@@ -490,13 +490,13 @@ public class InscricaoService {
 
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
 
-        // pessoaId/acompanhanteId nulos = convidado sem cadastro (Plano 4b) — resolvido só
-        // por inscricaoId (ver CobrancaController). criadoPorUsuarioId pode ser nulo aqui
+        // pessoaId nulo = convidado sem cadastro (Plano 4b) — resolvido só por
+        // inscricaoId (ver CobrancaController). criadoPorUsuarioId pode ser nulo aqui
         // (auto-registro anônimo via /convite/{token}, ver migration V30).
         CobrancaEvento cobranca = null;
         if (evento.getPreco() != null) {
             cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(),
-                    null, null, evento.getPreco(), inscritoPorUsuarioId, gerarLink);
+                    null, evento.getPreco(), inscritoPorUsuarioId, gerarLink);
         }
 
         log.info("Convidado inscrito. evento_id={}, convidado_por_pessoa_id={}, inscrito_por_usuario_id={}, igreja_id={}",

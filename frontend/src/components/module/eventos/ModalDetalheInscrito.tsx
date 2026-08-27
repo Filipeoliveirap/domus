@@ -72,13 +72,17 @@ export function ModalDetalheInscrito({
                   <li>{inscrito.telefoneConvidado ? `Telefone: ${inscrito.telefoneConvidado}` : 'Sem telefone informado'}</li>
                 </>
               ) : (
-                <li>
-                  {inscrito.inscritoPorUsuarioId === null
-                    ? 'Inscrito por ele mesmo'
-                    : inscrito.inscritoPorNome
-                      ? `Inscrito por ${inscrito.inscritoPorNome}`
-                      : 'Inscrito por cadastro removido'}
-                </li>
+                <>
+                  <li>
+                    {inscrito.inscritoPorUsuarioId === null
+                      ? 'Inscrito por ele mesmo'
+                      : inscrito.inscritoPorNome
+                        ? `Inscrito por ${inscrito.inscritoPorNome}`
+                        : 'Inscrito por cadastro removido'}
+                  </li>
+                  <li>{inscrito.telefonePessoa ? `Telefone: ${inscrito.telefonePessoa}` : 'Sem telefone cadastrado'}</li>
+                  <li>{inscrito.emailPessoa ? `E-mail: ${inscrito.emailPessoa}` : 'Sem e-mail cadastrado'}</li>
+                </>
               )}
               {mostraPresenca && (
                 <li>{inscrito.compareceu ? 'Presença confirmada neste evento' : 'Ainda não marcado presente neste evento'}</li>

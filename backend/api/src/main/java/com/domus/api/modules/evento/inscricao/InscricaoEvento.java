@@ -76,10 +76,6 @@ public class InscricaoEvento {
     @Builder.Default
     private boolean compareceu = false;
 
-    @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<AcompanhanteInscricao> acompanhantes = new ArrayList<>();
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -96,8 +92,7 @@ public class InscricaoEvento {
         return status == StatusInscricao.AGUARDANDO_PAGAMENTO;
     }
 
-    /** {@code true} = inscrição de gente sem cadastro no sistema (modelo desta spec — nunca
-     *  confundir com {@link #getAcompanhantes()}, que é o modelo antigo aninhado). */
+    /** {@code true} = inscrição de gente sem cadastro no sistema. */
     public boolean isConvidadoSemCadastro() {
         return pessoa == null && nomeConvidado != null;
     }

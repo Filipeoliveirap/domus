@@ -12,6 +12,8 @@ import styles from './PaymentBrickCheckout.module.css'
 interface Props {
   cobrancaId: string
   valor: number
+  /** Prazo da cobrança — repassado pro contador regressivo da tela do Pix. */
+  expiraEm: string
   onPagamentoCriado: (mpPaymentId: string) => void
   /** Erro em que continuar tentando NO MESMO formulário não resolve — a cobrança em si
    *  não pode mais ser paga (expirou, vagas esgotadas, já foi paga/cancelada). A mensagem
@@ -77,7 +79,7 @@ let chaveInicializada: string | null = null
  * PIX não gera `token`/`installments` (o Brick manda `undefined`) — o backend aceita os
  * dois nulos nesse caso.</p>
  */
-export function PaymentBrickCheckout({ cobrancaId, valor, onPagamentoCriado, onCobrancaIndisponivel }: Props) {
+export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoCriado, onCobrancaIndisponivel }: Props) {
   const publicKeyRef = useRef(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? '')
   const [enviando, setEnviando] = useState(false)
   // Só é preenchido quando o meio escolhido é Pix — nesse caso o pagamento nasce `pending`
@@ -237,7 +239,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, onPagamentoCriado, onC
   if (pix) {
     return (
       <div className={styles.wrapper}>
-        <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} />
+        <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={expiraEm} />
       </div>
     )
   }

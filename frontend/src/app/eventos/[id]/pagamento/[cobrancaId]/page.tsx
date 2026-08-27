@@ -182,7 +182,7 @@ export default function PagamentoEventoPage({
         {resultado === 'enviado' && !indisponivel && (
           pix?.qrCode && pix?.qrCodeBase64 ? (
             <div className={styles.card}>
-              <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} />
+              <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={cobranca.expiraEm} />
             </div>
           ) : (
             <div className={styles.card}>
@@ -203,6 +203,7 @@ export default function PagamentoEventoPage({
             <PaymentBrickCheckout
               cobrancaId={cobranca.id}
               valor={cobranca.valor}
+              expiraEm={cobranca.expiraEm}
               onPagamentoCriado={() => setResultado('enviado')}
               onCobrancaIndisponivel={setIndisponivel}
             />

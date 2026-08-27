@@ -141,10 +141,14 @@ class EventoServiceTest {
     }
 
     private EventoRequest requestComPreco(java.math.BigDecimal preco) {
+        return requestComPrecoERequerInscricao(preco, false);
+    }
+
+    private EventoRequest requestComPrecoERequerInscricao(java.math.BigDecimal preco, boolean requerInscricao) {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, preco, false, false, false, false, null, null);
+                null, preco, false, requerInscricao, false, false, null, null);
     }
 
     private EventoRequest requestComRecorrencia(com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia) {
@@ -263,7 +267,8 @@ class EventoServiceTest {
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
 
-        service.atualizarEvento(eventoId, requestComPreco(new java.math.BigDecimal("30.00")), igrejaId, usuarioId,
+        service.atualizarEvento(eventoId,
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("30.00"), true), igrejaId, usuarioId,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         verify(inscricaoService, never()).aplicarEventoVirouGratuito(any());
@@ -316,6 +321,39 @@ class EventoServiceTest {
         assertThatThrownBy(() -> service.calcularImpactoMudancaPreco(
                 eventoId, requestComPreco(null), igrejaId, "ACESSO_COMUM"))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void cadastrarEventoRecusaPrecoSemRequerInscricao() {
+        assertThatThrownBy(() -> service.cadastrarEvento(
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("30.00"), false), igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "PRECO_SEM_INSCRICAO");
+    }
+
+    @Test
+    void cadastrarEventoAceitaPrecoQuandoRequerInscricao() {
+        service.cadastrarEvento(
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("30.00"), true), igrejaId, usuarioId);
+        verify(eventoRepository).save(argThat(e -> e.getPreco() != null));
+    }
+
+    @Test
+    void atualizarEventoRecusaPrecoSemRequerInscricao() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        assertThatThrownBy(() -> service.atualizarEvento(eventoId,
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("30.00"), false), igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "PRECO_SEM_INSCRICAO");
     }
 
     @Test

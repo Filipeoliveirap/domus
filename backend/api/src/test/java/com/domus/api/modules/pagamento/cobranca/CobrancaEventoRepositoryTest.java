@@ -43,39 +43,47 @@ class CobrancaEventoRepositoryTest implements PostgresTestContainerSupport {
         "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
             "('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', " +
             "'55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', 'CONFIRMADA')",
-        "INSERT INTO acompanhante_inscricao (id, inscricao_id, nome) VALUES " +
-            "('88888888-8888-8888-8888-888888888888', '66666666-6666-6666-6666-666666666666', 'Acompanhante Expirada')",
-        "INSERT INTO acompanhante_inscricao (id, inscricao_id, nome) VALUES " +
-            "('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '66666666-6666-6666-6666-666666666666', 'Acompanhante Paga')",
-        "INSERT INTO acompanhante_inscricao (id, inscricao_id, nome) VALUES " +
-            "('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '66666666-6666-6666-6666-666666666666', 'Acompanhante Cancelada')"
+        // Convidados agora são suas próprias inscricao_evento (ligadas por convidado_por_pessoa_id),
+        // não mais linhas de acompanhante_inscricao (tabela removida na V33).
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES " +
+            "('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555555', NULL, 'Convidado Expirado', " +
+            "'33333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES " +
+            "('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555555', NULL, 'Convidado Pago', " +
+            "'33333333-3333-3333-3333-333333333333', 'CONFIRMADA')",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES " +
+            "('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555555', NULL, 'Convidado Cancelado', " +
+            "'33333333-3333-3333-3333-333333333333', 'CANCELADA')"
     })
     void contaSoPagosEPendentesNaoExpiradasComTentativaDePagamentoEmAndamento() {
         // PENDENTE não-expirada, COM tentativa de pagamento em andamento (mpPaymentId
         // gravado por CobrancaController.pagar) -> conta. Sem isso, a vaga só é reservada
         // quando a pessoa realmente envia o pagamento (cartão ou Pix) — não só por ter
         // clicado "Se inscrever" e ainda estar decidindo/navegando no checkout.
-        var cobrancaComTentativa = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobrancaComTentativa = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, null);
         cobrancaComTentativa.registrarTentativaPagamento("mp-payment-em-andamento");
         entityManager.persist(cobrancaComTentativa);
 
         // PENDENTE expirada (por passagem de prazo, sem transição explícita de status) -> não conta
-        var cobrancaExpirada = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
-            UUID.fromString("88888888-8888-8888-8888-888888888888"), BigDecimal.TEN,
+        var cobrancaExpirada = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("88888888-8888-8888-8888-888888888888"), null, BigDecimal.TEN,
             Instant.now().minus(1, ChronoUnit.HOURS), usuarioId, "token-x");
         entityManager.persist(cobrancaExpirada);
 
         // PAGO (marcado explicitamente) -> conta, mesmo que expiraEm já tenha passado
-        var cobrancaPaga = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
-            UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), BigDecimal.TEN,
+        var cobrancaPaga = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), null, BigDecimal.TEN,
             Instant.now().minus(1, ChronoUnit.HOURS), usuarioId, "token-paga");
         cobrancaPaga.marcarComoPago("mp-payment-123");
         entityManager.persist(cobrancaPaga);
 
         // CANCELADO (marcado explicitamente), mesmo com expiraEm no futuro -> não conta
-        var cobrancaCancelada = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
-            UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), BigDecimal.TEN,
+        var cobrancaCancelada = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), null, BigDecimal.TEN,
             Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, "token-cancelada");
         cobrancaCancelada.marcarComoCancelado();
         entityManager.persist(cobrancaCancelada);
@@ -110,7 +118,7 @@ class CobrancaEventoRepositoryTest implements PostgresTestContainerSupport {
         // A pessoa clicou "Se inscrever" mas ainda não enviou nenhum pagamento (nem
         // escolheu cartão/Pix) — não deve segurar a vaga. Só conta a partir do momento
         // que CobrancaController.pagar() grava mpPaymentId.
-        entityManager.persist(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        entityManager.persist(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, null));
         entityManager.flush();
         entityManager.clear();
@@ -137,12 +145,14 @@ class CobrancaEventoRepositoryTest implements PostgresTestContainerSupport {
         "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
             "('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', " +
             "'55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', 'CONFIRMADA')",
-        "INSERT INTO acompanhante_inscricao (id, inscricao_id, nome) VALUES " +
-            "('99999999-9999-9999-9999-999999999999', '66666666-6666-6666-6666-666666666666', 'Acompanhante Token')"
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES " +
+            "('99999999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555555', NULL, 'Convidado Token', " +
+            "'33333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
     })
     void buscaPorTokenLinkPublico() {
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
-            UUID.fromString("99999999-9999-9999-9999-999999999999"),
+        var cobranca = new CobrancaEvento(igrejaId, eventoId,
+            UUID.fromString("99999999-9999-9999-9999-999999999999"), null,
             BigDecimal.TEN, Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, "token-unico-123");
         entityManager.persist(cobranca);
         entityManager.flush();

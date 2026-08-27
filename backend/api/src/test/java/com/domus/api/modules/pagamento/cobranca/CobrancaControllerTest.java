@@ -338,6 +338,80 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     @Test
     @Sql(statements = {
         "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('11111111-1111-1111-1111-111111111118', 'Igreja Teste 8', 'igreja8@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333341', '11111111-1111-1111-1111-111111111118', 'Sem Tentativa De Pagamento', 'semtentativa@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444451', '11111111-1111-1111-1111-111111111118', " +
+            "'33333333-3333-3333-3333-333333333341', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('77777777-7777-7777-7777-777777777784', '11111111-1111-1111-1111-111111111118', 'Salão 8')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('55555555-5555-5555-5555-555555555562', '11111111-1111-1111-1111-111111111118', " +
+            "'Retiro Sem Pagamento Iniciado', now(), '77777777-7777-7777-7777-777777777784', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666674', '11111111-1111-1111-1111-111111111118', " +
+            "'55555555-5555-5555-5555-555555555562', '33333333-3333-3333-3333-333333333341', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void retorna404ParaPixSemNenhumaTentativaDePagamento() throws Exception {
+        // Sem mpPaymentId gravado (ninguém clicou "pagar" ainda) — o front só chama este
+        // endpoint quando `pagamentoEmAndamento` já é true, mas o backend responde honesto
+        // em vez de devolver um objeto com tudo nulo.
+        UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111118");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555562");
+        UUID inscricaoId = UUID.fromString("66666666-6666-6666-6666-666666666674");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333341");
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444451");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobranca = cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(get("/cobrancas/" + cobranca.getId() + "/pix"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('11111111-1111-1111-1111-111111111119', 'Igreja Teste 9', 'igreja9@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333342', '11111111-1111-1111-1111-111111111119', 'Com Pagamento Em Andamento', 'comandamento@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444452', '11111111-1111-1111-1111-111111111119', " +
+            "'33333333-3333-3333-3333-333333333342', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('77777777-7777-7777-7777-777777777785', '11111111-1111-1111-1111-111111111119', 'Salão 9')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('55555555-5555-5555-5555-555555555563', '11111111-1111-1111-1111-111111111119', " +
+            "'Retiro Sem Conta Conectada', now(), '77777777-7777-7777-7777-777777777785', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('66666666-6666-6666-6666-666666666675', '11111111-1111-1111-1111-111111111119', " +
+            "'55555555-5555-5555-5555-555555555563', '33333333-3333-3333-3333-333333333342', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void recusaPixQuandoIgrejaNaoTemContaDePagamentoConectada() throws Exception {
+        // Cobrança com mpPaymentId já gravado, mas sem ContaPagamentoIgreja pra essa igreja
+        // — exercita o endpoint de ponta a ponta (controller -> MercadoPagoClient) sem
+        // precisar mockar a chamada real ao Mercado Pago.
+        UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111119");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555563");
+        UUID inscricaoId = UUID.fromString("66666666-6666-6666-6666-666666666675");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333342");
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444452");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobranca.registrarTentativaPagamento("mp-payment-sem-conta");
+        cobranca = cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(get("/cobrancas/" + cobranca.getId() + "/pix"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("IGREJA_SEM_CONTA_PAGAMENTO")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
             "('21111111-1111-1111-1111-111111111111', 'Igreja Teste 2', 'igreja2b@teste.com')",
         "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
             "('23333333-3333-3333-3333-333333333333', '21111111-1111-1111-1111-111111111111', 'Ciclana', 'ciclana@teste.com')",

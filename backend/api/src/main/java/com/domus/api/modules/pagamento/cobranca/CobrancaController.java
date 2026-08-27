@@ -204,4 +204,29 @@ public class CobrancaController {
     }
 
     public record StatusCobrancaResponse(String status) {}
+
+    /**
+     * Recupera o QR/copia-e-cola de um pagamento Pix em andamento — pro caso de a pessoa
+     * dar reload na tela de checkout enquanto o Pix está pendente (achado ao vivo,
+     * 2026-08-27): sem isto, a tela cai direto em "Confirmando pagamento…" sem nenhum jeito
+     * de voltar a mostrar o QR. Sem autenticação, mesmo motivo já documentado na classe.
+     *
+     * <p>{@code qrCode}/{@code qrCodeBase64} nulos = o pagamento em andamento é cartão, não
+     * Pix (cartão nunca tem QR). 404 = não existe nenhuma tentativa de pagamento ainda
+     * ({@code mpPaymentId} nulo) — o front só chama este endpoint quando
+     * {@code pagamentoEmAndamento} já é {@code true}, então isso não deveria acontecer no
+     * uso normal, mas fica como resposta honesta em vez de um objeto com tudo nulo.</p>
+     */
+    @GetMapping("/{id}/pix")
+    public PixResponse pix(@PathVariable UUID id) {
+        var cobranca = cobrancaRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        if (cobranca.getMpPaymentId() == null) {
+            throw new ResourceNotFoundException("Não há pagamento em andamento para esta cobrança.");
+        }
+        var qrCodePix = mercadoPagoClient.buscarQrCodePix(cobranca.getIgrejaId(), cobranca.getMpPaymentId());
+        return new PixResponse(qrCodePix.qrCode(), qrCodePix.qrCodeBase64());
+    }
+
+    public record PixResponse(String qrCode, String qrCodeBase64) {}
 }

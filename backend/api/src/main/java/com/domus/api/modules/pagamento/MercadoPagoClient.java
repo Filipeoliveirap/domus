@@ -77,6 +77,16 @@ public class MercadoPagoClient {
         return api.buscarInformacoesPagamento(accessToken, mpPaymentId);
     }
 
+    /**
+     * Usado pelo endpoint {@code GET /cobrancas/{id}/pix} — recuperar o QR de um pagamento
+     * Pix já criado (ex.: a pessoa deu reload na tela de checkout enquanto o Pix estava
+     * pendente). Mesma resolução de access token de {@link #buscarInformacoesPagamento}.
+     */
+    public MercadoPagoApi.QrCodePix buscarQrCodePix(UUID igrejaId, String mpPaymentId) {
+        String accessToken = obterAccessTokenPlano(igrejaId);
+        return api.buscarQrCodePix(accessToken, mpPaymentId);
+    }
+
     private String obterAccessTokenPlano(UUID igrejaId) {
         var conta = contaRepository.findByIgrejaId(igrejaId)
             .orElseThrow(() -> new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",

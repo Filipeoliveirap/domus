@@ -67,6 +67,21 @@ class MercadoPagoClientTest {
     }
 
     @Test
+    void buscarQrCodePixUsaTokenDescriptografadoDaIgreja() {
+        var conta = new ContaPagamentoIgreja(igrejaId, "mp-user", "access-cripto", "refresh-cripto",
+            Instant.now().plusSeconds(3600), UUID.randomUUID());
+        when(contaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.of(conta));
+        when(encryptor.descriptografar("access-cripto")).thenReturn("access-plano");
+        when(api.buscarQrCodePix("access-plano", "mp-payment-999"))
+            .thenReturn(new MercadoPagoApi.QrCodePix("codigo-copia-cola", "base64-do-qr"));
+
+        var resultado = client.buscarQrCodePix(igrejaId, "mp-payment-999");
+
+        assertThat(resultado.qrCode()).isEqualTo("codigo-copia-cola");
+        assertThat(resultado.qrCodeBase64()).isEqualTo("base64-do-qr");
+    }
+
+    @Test
     void estornarUsaTokenDescriptografadoDaIgreja() {
         var conta = new ContaPagamentoIgreja(igrejaId, "mp-user", "access-cripto", "refresh-cripto",
             Instant.now().plusSeconds(3600), UUID.randomUUID());

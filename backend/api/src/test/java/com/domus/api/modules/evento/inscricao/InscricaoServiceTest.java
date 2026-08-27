@@ -120,8 +120,11 @@ class InscricaoServiceTest {
     }
 
     private Pessoa membro(Vinculo vinculo) {
+        // E-mail obrigatório pra se inscrever em qualquer evento (2026-08-27) — presente
+        // por padrão aqui pra não confundir com EMAIL_OBRIGATORIO os testes que não são
+        // sobre isso; os que testam a regra em si constroem a Pessoa sem e-mail à parte.
         return Pessoa.builder()
-                .id(pessoaId).igreja(igreja()).nome("Maria")
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
                 .vinculo(vinculo)
                 .build();
     }
@@ -191,6 +194,22 @@ class InscricaoServiceTest {
         service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
 
         verify(inscricaoRepository).save(any(InscricaoEvento.class));
+    }
+
+    @Test
+    void inscreverRecusaPessoaSemEmailMesmoEmEventoGratuito() {
+        // Decisão do autor (2026-08-27): e-mail obrigatório pra se inscrever em qualquer
+        // evento — sem ele, não daria pra avisar se o evento gratuito virar pago depois.
+        Pessoa semEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Sem Email")
+                .vinculo(Vinculo.MEMBRO).build();
+        dado(evento(10), semEmail, 0);
+
+        assertThatThrownBy(() -> service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "EMAIL_OBRIGATORIO");
+
+        verify(inscricaoRepository, never()).save(any());
     }
 
     @Test
@@ -1582,7 +1601,7 @@ class InscricaoServiceTest {
                 .requerInscricao(true).idadeMin(12).idadeMax(17)
                 .build();
         Pessoa gestorAdulto = Pessoa.builder()
-                .id(pessoaId).igreja(igreja()).nome("Pastor da Congregação B")
+                .id(pessoaId).igreja(igreja()).nome("Pastor da Congregação B").email("pastor@email.com")
                 .vinculo(Vinculo.MEMBRO)
                 .dataNascimento(LocalDateTime.now().minusYears(40).toLocalDate())
                 .build();
@@ -1608,7 +1627,7 @@ class InscricaoServiceTest {
                 .requerInscricao(true).idadeMin(12).idadeMax(17)
                 .build();
         Pessoa gestorAdulto = Pessoa.builder()
-                .id(pessoaId).igreja(igreja()).nome("Líder")
+                .id(pessoaId).igreja(igreja()).nome("Líder").email("lider@email.com")
                 .vinculo(Vinculo.MEMBRO)
                 .dataNascimento(LocalDateTime.now().minusYears(40).toLocalDate())
                 .build();
@@ -1635,7 +1654,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora",
-                "11999998888", null, convidadoPorId, null, null, false).inscricao();
+                "11999998888", "maria@fora.com", convidadoPorId, null, null, false).inscricao();
 
         assertThat(salva.getPessoa()).isNull();
         assertThat(salva.getNomeConvidado()).isEqualTo("Maria de Fora");
@@ -1670,8 +1689,8 @@ class InscricaoServiceTest {
 
     @Test
     void inscreverConvidadoEmEventoPagoSemEmailRecusaAntesDeCriarQualquerCoisa() {
-        // E-mail é a única forma de mandar o comprovante de pagamento pra quem não tem
-        // cadastro — sem ele, evento pago recusa antes de criar inscrição ou cobrança.
+        // Em evento pago, e-mail é a única forma de mandar o comprovante de pagamento pra
+        // quem não tem cadastro — recusa antes de criar inscrição ou cobrança.
         Evento evento = evento(10);
         evento.setPreco(java.math.BigDecimal.valueOf(80));
         when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
@@ -1712,12 +1731,29 @@ class InscricaoServiceTest {
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var resultado = service.inscreverConvidado(eventoId, igrejaId, "Fulano", "11999999999",
-                null, null, usuarioId, null, false);
+                "fulano@teste.com", null, usuarioId, null, false);
 
         assertThat(resultado.inscricao().getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         assertThat(resultado.cobranca()).isNull();
         verify(cobrancaEventoService, never())
                 .criarParaTerceiro(any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void inscreverConvidadoRecusaSemEmailMesmoEmEventoGratuito() {
+        // Decisão do autor (2026-08-27): e-mail deixou de ser exigido só em evento pago —
+        // sem ele, não daria pra avisar o convidado se o evento gratuito virar pago depois
+        // (ver EventoService.aplicarEventoVirouPago).
+        Evento evento = evento(10);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Fulano",
+                "11999999999", null, null, usuarioId, null, false))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "EMAIL_OBRIGATORIO");
+
+        verify(inscricaoRepository, never()).save(any());
     }
 
     @Test
@@ -1727,7 +1763,7 @@ class InscricaoServiceTest {
                 .thenReturn(Optional.of(evento));
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(1L);
 
-        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, null, null, null, false))
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", null, null, null, false))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("esgotadas");
 
@@ -1762,7 +1798,7 @@ class InscricaoServiceTest {
 
         // Não lança NaoElegivelException mesmo sem nenhum dado de idade — prova que
         // inscreverConvidado nunca chama ElegibilidadeService.
-        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, null, null, null, false).inscricao();
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", null, null, null, false).inscricao();
 
         assertThat(salva.isConvidadoSemCadastro()).isTrue();
     }
@@ -1778,7 +1814,7 @@ class InscricaoServiceTest {
         when(membroRepository.findByIdAndIgrejaId(convidadoPorId, igrejaId)).thenReturn(Optional.of(convidante));
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, convidadoPorId, null, null, false).inscricao();
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", convidadoPorId, null, null, false).inscricao();
 
         assertThat(salva.getConvidadoPor()).isEqualTo(convidante);
     }
@@ -1798,7 +1834,7 @@ class InscricaoServiceTest {
                 .status(StatusInscricao.CONFIRMADA).build();
         when(inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId)).thenReturn(List.of(jaInscrito));
 
-        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora", "11999998888", null, null, null, null, false))
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora", "11999998888", "maria@fora.com", null, null, null, false))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Você já está inscrito");
 
@@ -1822,7 +1858,7 @@ class InscricaoServiceTest {
                 .status(StatusInscricao.CONFIRMADA).build();
         when(inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId)).thenReturn(List.of(jaInscrito));
 
-        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora", "11999998888", null, null, usuarioId, null, false))
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria de Fora", "11999998888", "maria@fora.com", null, usuarioId, null, false))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Essa pessoa já está inscrita");
 
@@ -1841,7 +1877,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, null, usuarioId, null, false).inscricao();
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", null, usuarioId, null, false).inscricao();
 
         assertThat(salva.getInscritoPorUsuarioId()).isEqualTo(usuarioId);
     }
@@ -1857,7 +1893,7 @@ class InscricaoServiceTest {
         when(visitanteRepository.findByIdAndIgrejaId(visitanteId, igrejaId)).thenReturn(Optional.of(visitante));
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, null, null, visitanteId, false).inscricao();
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", null, null, visitanteId, false).inscricao();
 
         assertThat(salva.getVisitante()).isEqualTo(visitante);
     }
@@ -1879,7 +1915,7 @@ class InscricaoServiceTest {
                 .status(StatusInscricao.CONFIRMADA).build();
         when(inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId)).thenReturn(List.of(jaInscrito));
 
-        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria Apelido", null, null, null, null, visitanteId, false))
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria Apelido", null, "maria@teste.com", null, null, visitanteId, false))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("já está inscrit");
 
@@ -1894,7 +1930,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, null, null, null, null, false).inscricao();
+        InscricaoEvento salva = service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com", null, null, null, false).inscricao();
 
         assertThat(salva.getConvidadoPor()).isNull();
         verify(membroRepository, never()).findByIdAndIgrejaId(any(), any());

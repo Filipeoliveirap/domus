@@ -136,6 +136,20 @@ public class PessoaController {
         return ResponseEntity.ok(pessoaService.atualizarMinhaFoto(id, data.fotoId(), igrejaId));
     }
 
+    /** Dá o primeiro e-mail a uma pessoa sem e-mail cadastrado — usado no fluxo de
+     *  inscrição em evento (e-mail passou a ser obrigatório, ver {@code InscricaoService}).
+     *  Self ou quem gerencia pessoas, mesmo padrão dos endpoints de foto. */
+    @PatchMapping("/{id}/email")
+    public ResponseEntity<PessoaResponse> definirEmail(
+            @PathVariable UUID id, @Valid @RequestBody com.domus.api.modules.pessoa.DTO.AtualizarEmailRequest data) {
+        boolean souEu = id.equals(usuarioAutenticado.getPessoaId());
+        if (!souEu) {
+            exigirGestaoPessoas();
+        }
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(pessoaService.definirEmailInicial(id, data.email(), igrejaId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(@PathVariable UUID id) {
         exigirGestaoPessoas();

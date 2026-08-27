@@ -1,10 +1,12 @@
 'use client'
 
 import { use, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaPublica } from '@/hooks/cobranca/useCobrancaPublica'
 import { cobrancaService } from '@/services/cobranca.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
+import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './CobrancaPublica.module.css'
 
@@ -35,6 +37,15 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
   useEffect(() => {
     if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
   }, [cobranca, resultado])
+
+  // Mesmo achado da tela irmã (`/eventos/[id]/pagamento/[cobrancaId]`, 2026-08-27): reload
+  // no meio do Pix caía direto em "confirmando" sem jeito de voltar a ver o QR.
+  const { data: pix } = useQuery({
+    queryKey: ['cobranca-pix', cobranca?.id],
+    queryFn: () => cobrancaService.pix(cobranca!.id),
+    enabled: !!cobranca && resultado === 'enviado',
+    retry: false,
+  })
 
   useEffect(() => {
     if (!cobranca || resultado !== 'enviado') return
@@ -116,11 +127,17 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
   if (resultado === 'enviado') {
     return (
       <div className={styles.pagina}>
-        <div className={styles.card}>
-          <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
-          <h1>Confirmando pagamento…</h1>
-          <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
-        </div>
+        {pix?.qrCode && pix?.qrCodeBase64 ? (
+          <div className={styles.card}>
+            <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={cobranca.expiraEm} />
+          </div>
+        ) : (
+          <div className={styles.card}>
+            <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
+            <h1>Confirmando pagamento…</h1>
+            <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
+          </div>
+        )}
       </div>
     )
   }
@@ -152,6 +169,7 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
         <PaymentBrickCheckout
           cobrancaId={cobranca.id}
           valor={cobranca.valor}
+          expiraEm={cobranca.expiraEm}
           onPagamentoCriado={() => setResultado('enviado')}
           onCobrancaIndisponivel={setIndisponivel}
         />

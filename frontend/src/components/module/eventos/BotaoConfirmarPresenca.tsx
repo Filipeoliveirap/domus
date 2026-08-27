@@ -201,7 +201,9 @@ export function BotaoConfirmarPresenca({
           <ConfirmarCancelamentoInscricao
             nome=""
             proprio
-            quantidadeConvidados={minha.acompanhantes.length}
+            // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
+            // contagem embutida não existe mais (ver Task 10/11); sem substituto por ora.
+            quantidadeConvidados={0}
             isLoading={cancelar.isPending}
             onConfirmar={() => {
               if (!minha.id) return

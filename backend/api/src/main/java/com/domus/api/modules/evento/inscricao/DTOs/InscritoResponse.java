@@ -21,8 +21,15 @@ public record InscritoResponse(
         /** Preenchido só pra convidado sem cadastro (ver {@link InscricaoEvento#isConvidadoSemCadastro}). */
         String convidadoPorNome,
         /** Preenchido só pra convidado sem cadastro — telefone que ele mesmo (ou quem o
-         *  cadastrou) informou; NULL pra pessoa com cadastro (usa o telefone do cadastro). */
+         *  cadastrou) informou; NULL pra pessoa com cadastro (usa {@link #telefonePessoa}). */
         String telefoneConvidado,
+        /** Preenchido só pra pessoa com cadastro — telefone do próprio cadastro; NULL pra
+         *  convidado sem cadastro (usa {@link #telefoneConvidado}) e pra pessoa removida. */
+        String telefonePessoa,
+        /** Preenchido só pra pessoa com cadastro; NULL pra convidado sem cadastro e pra
+         *  pessoa removida. Convidado sem cadastro não tem e-mail próprio nesta lista — só
+         *  o e-mail de comprovante de pagamento, que não é exibido aqui. */
+        String emailPessoa,
         LocalDateTime inscritoEm,
         boolean compareceu,
         EventoResponse.IgrejaResumo igrejaDaPessoa
@@ -57,6 +64,8 @@ public record InscritoResponse(
                 registrante == null ? null : registrante.fotoId(),
                 convidadoPorResolvida == null ? null : convidadoPorResolvida.getNome(),
                 i.getTelefoneConvidado(),
+                pessoaResolvida != null ? pessoaResolvida.getTelefone() : null,
+                pessoaResolvida != null ? pessoaResolvida.getEmail() : null,
                 i.getCreatedAt(),
                 i.isCompareceu(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X, Archive, XCircle, ClipboardList } from 'lucide-react'
+import { ChevronRight, Users, Ticket, Armchair, UserPlus, ArrowLeft, CheckCircle2, Check, ListChecks, X, Archive, XCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
@@ -22,7 +22,7 @@ import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/Conf
 import { PendenciaCamposBadge } from '@/components/module/eventos/PendenciaCamposBadge'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
-import { DrawerDetalhePessoa, type ContextoExtraDrawer } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
+import { ModalDetalheInscrito } from '@/components/module/eventos/ModalDetalheInscrito'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { SkeletonInscritos } from './SkeletonInscritos'
@@ -66,35 +66,9 @@ export default function InscritosPage() {
   const [confirmarMarcarTodos, setConfirmarMarcarTodos] = useState(false)
   const [confirmarDesmarcarTodos, setConfirmarDesmarcarTodos] = useState(false)
 
-  // Detalhe do participante: abre o cadastro (mesmo drawer da tela de Pessoas) com um
-  // bloco extra de contexto do evento no topo — não existe pra convidado (não tem cadastro).
-  const [pessoaDetalhe, setPessoaDetalhe] = useState<{ pessoaId: string; contexto: ContextoExtraDrawer } | null>(null)
-  // Convidado sem cadastro: não tem drawer de pessoa pra abrir, mas ainda merece um jeito
-  // de ver os detalhes (quem convidou, telefone) sem precisar cancelar pra descobrir.
-  const [convidadoDetalhe, setConvidadoDetalhe] = useState<{
-    nome: string; telefone: string | null; convidadoPorNome: string | null; inscritoEm: string
-  } | null>(null)
-
-  function abrirDetalheConvidado(nome: string, telefone: string | null, convidadoPorNome: string | null, inscritoEm: string) {
-    setConvidadoDetalhe({ nome, telefone, convidadoPorNome, inscritoEm })
-  }
-
-  function abrirDetalhe(inscrito: InscritoResponse) {
-    if (!inscrito.pessoaId || inscrito.pessoaRemovida) return
-    const linhas = [
-      `Inscrito em ${formatarData(inscrito.inscritoEm)}`,
-      inscrito.inscritoPorUsuarioId === null
-        ? 'Inscrito por ele mesmo'
-        : `Inscrito por ${inscrito.inscritoPorNome ?? 'cadastro removido'}`,
-    ]
-    if (mostraPresenca) {
-      linhas.push(inscrito.compareceu ? 'Presença confirmada neste evento' : 'Ainda não marcado presente neste evento')
-    }
-    setPessoaDetalhe({
-      pessoaId: inscrito.pessoaId,
-      contexto: { titulo: 'Neste evento', icone: ClipboardList, linhas },
-    })
-  }
+  // Detalhe de um inscrito (pessoa com cadastro ou convidado, mesma UI pros dois) — só o
+  // que é relevante pro evento, sem dado de perfil da pessoa.
+  const [inscritoDetalhe, setInscritoDetalhe] = useState<InscritoResponse | null>(null)
 
   // Modo seleção: checkboxes para marcar subconjunto.
   const [modoSelecao, setModoSelecao] = useState(false)
@@ -317,9 +291,7 @@ export default function InscritosPage() {
                     const clicavel = modoSelecao || !!inscrito.pessoaId || ehConvidadoSemCadastro
                     const aoClicarLinha = () => {
                       if (modoSelecao) alternarSelecao({ id: inscrito.id })
-                      else if (ehConvidadoSemCadastro) {
-                        abrirDetalheConvidado(inscrito.nome, inscrito.telefoneConvidado, inscrito.convidadoPorNome, inscrito.inscritoEm)
-                      } else abrirDetalhe(inscrito)
+                      else setInscritoDetalhe(inscrito)
                     }
                     return (
                     <div key={inscrito.id} className={styles.grupo}>
@@ -353,7 +325,7 @@ export default function InscritosPage() {
                             </span>
                           )}
                           {camposObrigatorios.length > 0 && (
-                            <PendenciaCamposBadge inscricaoId={inscrito.id} camposObrigatorios={camposObrigatorios} />
+                            <PendenciaCamposBadge nome={inscrito.nome} inscricaoId={inscrito.id} camposObrigatorios={camposObrigatorios} />
                           )}
                         </div>
                         <div className={styles.colData}>{formatarData(inscrito.inscritoEm)}</div>
@@ -534,36 +506,14 @@ export default function InscritosPage() {
         />
       )}
 
-      {pessoaDetalhe && (
-        <DrawerDetalhePessoa
-          pessoaId={pessoaDetalhe.pessoaId}
-          contextoExtra={pessoaDetalhe.contexto}
-          onClose={() => setPessoaDetalhe(null)}
+      {inscritoDetalhe && (
+        <ModalDetalheInscrito
+          inscrito={inscritoDetalhe}
+          ehConvidado={!inscritoDetalhe.pessoaId && !inscritoDetalhe.pessoaRemovida}
+          mostraPresenca={mostraPresenca}
+          temCamposPersonalizados={(camposPersonalizados ?? []).length > 0}
+          onClose={() => setInscritoDetalhe(null)}
         />
-      )}
-
-      {/* Convidado sem cadastro não tem drawer de pessoa (não existe Pessoa pra abrir) —
-          um resumo simples, só leitura, é o suficiente aqui. */}
-      {convidadoDetalhe && (
-        <div className={styles.confirmInlineOverlay} onMouseDown={() => setConvidadoDetalhe(null)}>
-          <div className={styles.confirmInline} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div className={styles.detalheConvidadoHeader}>
-              <span className={styles.avatarConvidado}>{iniciais(convidadoDetalhe.nome)}</span>
-              <div>
-                <p className={styles.detalheConvidadoNome}>{convidadoDetalhe.nome}</p>
-                <span className={styles.pillConvidado}>Convidado</span>
-              </div>
-            </div>
-            <ul className={styles.detalheConvidadoLista}>
-              <li>Inscrito em {formatarData(convidadoDetalhe.inscritoEm)}</li>
-              <li>{convidadoDetalhe.telefone ? `Telefone: ${convidadoDetalhe.telefone}` : 'Sem telefone informado'}</li>
-              {convidadoDetalhe.convidadoPorNome && <li>Convidado por {convidadoDetalhe.convidadoPorNome}</li>}
-            </ul>
-            <button type="button" className={styles.btnCancelar} onClick={() => setConvidadoDetalhe(null)}>
-              Fechar
-            </button>
-          </div>
-        </div>
       )}
     </div>
   )

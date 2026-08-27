@@ -1,0 +1,40 @@
+/* Este modal abre por cima de ModalDetalheInscrito (z-index var(--z-modal, 100)) —
+   precisa ficar acima dele, mesmo padrão hardcoded já usado por ModalDetalheLocal. */
+.overlaySobreposto {
+  z-index: 200;
+}
+
+.corpo {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pergunta {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.resposta {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.semResposta {
+  color: var(--color-text-muted);
+  font-style: italic;
+}

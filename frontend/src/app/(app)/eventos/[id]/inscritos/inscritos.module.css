@@ -231,8 +231,7 @@
   gap: 10px;
   min-width: 0;
 }
-.avatar,
-.avatarConvidado {
+.avatar {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,12 +244,6 @@
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
   overflow: hidden;
-}
-.avatarConvidado {
-  width: 28px;
-  height: 28px;
-  background: var(--color-bg-table-header);
-  color: var(--color-text-secondary);
 }
 .avatarFoto {
   width: 100%;
@@ -443,67 +436,6 @@
   cursor: not-allowed;
 }
 
-/* ─── Confirmação inline (remoção de convidado) ─── */
-.confirmInlineOverlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 100;
-  padding: 16px;
-}
-.confirmInline {
-  width: 100%;
-  max-width: 360px;
-  padding: 20px;
-  background: var(--color-bg-white);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.detalheConvidadoHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.detalheConvidadoNome {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-}
-.detalheConvidadoLista {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.confirmInlineTexto {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-}
-.confirmInlineAcoes {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-.btnConfirmarInline {
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-danger);
-  color: var(--color-bg-white);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-}
-.btnConfirmarInline:disabled,
 .btnCancelar:disabled {
   opacity: 0.6;
   cursor: not-allowed;

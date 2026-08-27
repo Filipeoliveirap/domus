@@ -824,6 +824,110 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void eventoVirouGratuitoEstornaCobrancaPagaEMantemInscricaoConfirmada() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+
+        int processadas = service.aplicarEventoVirouGratuito(eventoId);
+
+        assertThat(processadas).isEqualTo(1);
+        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
+        // Diferente do cancelamento: a inscrição continua CONFIRMADA, nunca vira CANCELADA —
+        // o evento é que ficou gratuito, ninguém perdeu a vaga.
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
+                eq(igrejaId), eq(new java.math.BigDecimal("50.00")),
+                org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
+
+        var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
+        assertThat(assuntoCaptor.getValue()).contains("gratuito");
+        assertThat(corpoCaptor.getValue()).contains("reembolsado");
+    }
+
+    @Test
+    void eventoVirouGratuitoConfirmaInscricaoQueEstavaAguardandoPagamentoSemRegistrarFinanceiro() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPendente()));
+
+        int processadas = service.aplicarEventoVirouGratuito(eventoId);
+
+        assertThat(processadas).isEqualTo(1);
+        verify(mercadoPagoClient, never()).estornar(any(), any());
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        // Cobrança PENDENTE cancelada nunca chegou a debitar ninguém — sem lançamento no financeiro.
+        verifyNoInteractions(movimentacaoAutomaticaService);
+
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), any(), corpoCaptor.capture());
+        assertThat(corpoCaptor.getValue()).doesNotContain("reembolsado");
+        assertThat(corpoCaptor.getValue()).contains("não precisa mais pagar");
+    }
+
+    @Test
+    void eventoVirouGratuitoIgnoraInscricoesJaCanceladas() {
+        InscricaoEvento cancelada = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CANCELADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(cancelada));
+
+        int processadas = service.aplicarEventoVirouGratuito(eventoId);
+
+        assertThat(processadas).isZero();
+        verifyNoInteractions(mercadoPagoClient, cobrancaEventoRepository);
+    }
+
+    @Test
+    void eventoVirouGratuitoContinuaProcessandoAposFalhaDeEstornoDeUmaInscricao() {
+        UUID inscricaoComFalhaId = UUID.randomUUID();
+        InscricaoEvento comFalha = InscricaoEvento.builder()
+                .id(inscricaoComFalhaId).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("Falha").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento comSucesso = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(comFalha, comSucesso));
+
+        var cobrancaComFalha = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoComFalhaId, comFalha.getPessoa().getId(),
+                new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600), usuarioId, null);
+        cobrancaComFalha.marcarComoPago("mp-payment-falha");
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoComFalhaId))
+                .thenReturn(List.of(cobrancaComFalha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-ok")));
+        doThrow(new IllegalStateException("Mercado Pago fora do ar"))
+                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+
+        int processadas = service.aplicarEventoVirouGratuito(eventoId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(comFalha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        assertThat(comSucesso.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-ok");
+    }
+
+    @Test
     void adminPodeCancelarInscricaoDeQualquerUm() {
         InscricaoEvento outra = InscricaoEvento.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento(10))

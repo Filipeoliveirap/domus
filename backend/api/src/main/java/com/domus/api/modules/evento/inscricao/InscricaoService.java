@@ -564,8 +564,29 @@ public class InscricaoService {
      * nem PENDENTE. Se uma falhar, nenhuma cobrança desta inscrição muda de estado.
      */
     private void estornarCobrancasDaInscricao(InscricaoEvento inscricao) {
+        java.math.BigDecimal valorReembolsado = estornarCobrancasERetornarValor(inscricao);
+
+        // Só existe reembolso pra avisar quando algo foi de fato cobrado e estornado — cobrança
+        // PENDENTE cancelada nunca chegou a debitar ninguém.
+        if (valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            enviarEmailCancelamento(inscricao, valorReembolsado);
+            registrarEstornoNoFinanceiro(inscricao, valorReembolsado);
+        }
+    }
+
+    /**
+     * Núcleo de {@link #estornarCobrancasDaInscricao}, extraído pra reaproveitar em
+     * {@link #aplicarEventoVirouGratuito} — que precisa do MESMO estorno fail-fast (PAGO
+     * estorna de verdade, PENDENTE só cancela), mas NÃO do e-mail de "inscrição cancelada"
+     * (a inscrição continua confirmada, só o evento é que ficou gratuito) nem do
+     * lançamento no financeiro embutido aqui (cada chamador decide se/como avisar e
+     * registrar, de acordo com o motivo do estorno).
+     *
+     * @return valor total estornado nesta inscrição (zero se não havia cobrança PAGA).
+     */
+    private java.math.BigDecimal estornarCobrancasERetornarValor(InscricaoEvento inscricao) {
         List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
-        if (cobrancas.isEmpty()) return;
+        if (cobrancas.isEmpty()) return java.math.BigDecimal.ZERO;
 
         UUID igrejaId = inscricao.getIgreja().getId();
 
@@ -594,13 +615,7 @@ public class InscricaoService {
             }
         }
         cobrancaEventoRepository.saveAll(cobrancas);
-
-        // Só existe reembolso pra avisar quando algo foi de fato cobrado e estornado — cobrança
-        // PENDENTE cancelada nunca chegou a debitar ninguém.
-        if (valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0) {
-            enviarEmailCancelamento(inscricao, valorReembolsado);
-            registrarEstornoNoFinanceiro(inscricao, valorReembolsado);
-        }
+        return valorReembolsado;
     }
 
     /** Espelha a entrada que {@code MercadoPagoWebhookService.registrarNoFinanceiro} criou
@@ -979,6 +994,124 @@ public class InscricaoService {
         if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) {
             throw new ConflitoNegocioException("INSCRICAO_NAO_CONFIRMADA",
                     "Esta inscrição está cancelada e não pode ter presença marcada.");
+        }
+    }
+
+    /**
+     * Chamado por {@code EventoService.atualizarEvento} quando um evento pago vira
+     * gratuito (preço deixa de ser nulo) — decisão do usuário (2026-08-27): ninguém perde a
+     * vaga, cada um é tratado assim:
+     * <ul>
+     *   <li>Cobrança PAGA → estorna de verdade no Mercado Pago (mesmo mecanismo fail-fast
+     *       de {@link #estornarCobrancasERetornarValor}), lança saída no financeiro, avisa
+     *       por e-mail.</li>
+     *   <li>Cobrança PENDENTE → cancela (não vai mais cobrar ninguém).</li>
+     *   <li>Inscrição {@code AGUARDANDO_PAGAMENTO} → vira {@code CONFIRMADA} (o evento
+     *       agora é de graça, não faz sentido continuar esperando pagamento).</li>
+     * </ul>
+     * Falha pontual de estorno (Mercado Pago fora do ar) não trava o lote inteiro — mesmo
+     * padrão de {@code removerInscritosNaoElegiveis}: loga pra retry manual, segue pras
+     * outras inscrições.
+     *
+     * @return quantas inscrições foram processadas com sucesso.
+     */
+    @Transactional
+    public int aplicarEventoVirouGratuito(UUID eventoId) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA
+                        || i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO)
+                .toList();
+
+        int processadas = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            boolean estavaAguardandoPagamento = inscricao.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO;
+            java.math.BigDecimal valorReembolsado;
+            try {
+                valorReembolsado = estornarCobrancasERetornarValor(inscricao);
+            } catch (BusinessException e) {
+                if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                log.error("Falha ao estornar cobrança da inscrição {} durante conversão do evento "
+                        + "pra gratuito — inscrição mantida como estava, requer retry manual",
+                        inscricao.getId(), e);
+                continue;
+            }
+
+            if (estavaAguardandoPagamento) {
+                inscricao.setStatus(StatusInscricao.CONFIRMADA);
+                inscricaoRepository.save(inscricao);
+            }
+
+            if (valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                registrarEstornoNoFinanceiro(inscricao, valorReembolsado);
+                enviarEmailEventoVirouGratuito(inscricao, valorReembolsado);
+            } else if (estavaAguardandoPagamento) {
+                // Não chegou a pagar (cobrança PENDENTE só cancelada, sem estorno) — mesmo
+                // assim é notícia boa o bastante pra avisar: não precisa mais pagar nada.
+                enviarEmailEventoVirouGratuito(inscricao, java.math.BigDecimal.ZERO);
+            }
+            processadas++;
+        }
+
+        if (processadas > 0) {
+            log.info("Evento virou gratuito, inscrições processadas. evento_id={}, processadas={}",
+                    eventoId, processadas);
+        }
+        return processadas;
+    }
+
+    /**
+     * @param valorReembolsado zero quando a pessoa nunca chegou a pagar (cobrança PENDENTE
+     *                         só cancelada) — o texto do e-mail muda de acordo.
+     */
+    private void enviarEmailEventoVirouGratuito(InscricaoEvento inscricao, java.math.BigDecimal valorReembolsado) {
+        String nomeDestinatario;
+        String email;
+
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+
+        if (email == null || email.isBlank()) {
+            log.info("Evento virou gratuito, sem e-mail pra avisar. inscricaoId={}", inscricao.getId());
+            return;
+        }
+
+        Evento evento = inscricao.getEvento();
+        boolean houveReembolso = valorReembolsado.compareTo(java.math.BigDecimal.ZERO) > 0;
+        String paragrafoValor = houveReembolso
+                ? """
+                  <p style="color: #64748b; font-size: 14px;">
+                    O valor de <strong>%s</strong> que você pagou será reembolsado de acordo com o
+                    método de pagamento que você utilizou. O prazo para o reembolso aparecer depende
+                    do seu banco ou operadora do cartão — costuma ser em poucos dias, mas pode levar
+                    até duas faturas em alguns casos.
+                  </p>
+                  """.formatted(java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                        .format(valorReembolsado))
+                : "<p style=\"color: #64748b; font-size: 14px;\">Você não precisa mais pagar nada — sua inscrição já está confirmada.</p>";
+
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">O evento passou a ser gratuito</h2>
+                  <p>Olá, %s.</p>
+                  <p>O evento abaixo, em que você está inscrito(a), deixou de ser pago.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p>Sua inscrição continua confirmada, sem nenhuma mudança além do valor.</p>
+                  %s
+                </div>
+                """.formatted(nomeDestinatario, evento.getTitulo(), paragrafoValor);
+
+        try {
+            emailService.enviar(email, "Evento passou a ser gratuito — " + evento.getTitulo(), corpo);
+            log.info("E-mail de evento-virou-gratuito enviado. inscricaoId={}", inscricao.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de evento-virou-gratuito. inscricaoId={}", inscricao.getId(), e);
         }
     }
 }

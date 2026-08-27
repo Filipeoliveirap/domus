@@ -1015,6 +1015,41 @@ public class InscricaoService {
      *
      * @return quantas inscrições foram processadas com sucesso.
      */
+    /**
+     * Prévia pura (nada gravado, nenhuma chamada ao Mercado Pago) de
+     * {@link #aplicarEventoVirouGratuito} — o front chama isso pra mostrar "isso vai
+     * estornar R$X de N pessoas" antes do admin confirmar de verdade a mudança de preço.
+     */
+    @Transactional(readOnly = true)
+    public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoEventoVirarGratuito(UUID eventoId) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA
+                        || i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO)
+                .toList();
+
+        int pessoasComPagamentoPago = 0;
+        java.math.BigDecimal valorTotalAEstornar = java.math.BigDecimal.ZERO;
+        int pessoasAguardandoPagamento = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            if (inscricao.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO) {
+                pessoasAguardandoPagamento++;
+            }
+            for (CobrancaEvento cobranca : cobrancaEventoRepository.findByInscricaoId(inscricao.getId())) {
+                if (cobranca.getStatus() == StatusCobranca.PAGO) {
+                    pessoasComPagamentoPago++;
+                    valorTotalAEstornar = valorTotalAEstornar.add(cobranca.getValor());
+                }
+            }
+        }
+
+        if (pessoasComPagamentoPago == 0 && pessoasAguardandoPagamento == 0) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        }
+        return new com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse(
+                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.PAGO_PARA_GRATUITO,
+                pessoasComPagamentoPago, valorTotalAEstornar, pessoasAguardandoPagamento);
+    }
+
     @Transactional
     public int aplicarEventoVirouGratuito(UUID eventoId) {
         List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()

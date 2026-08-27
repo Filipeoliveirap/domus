@@ -104,6 +104,7 @@ public class EventoService {
         validarDatas(data);
         validarIdades(data);
         validarControlaPresenca(data);
+        validarPreco(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -175,6 +176,7 @@ public class EventoService {
         validarDatas(data);
         validarIdades(data);
         validarControlaPresenca(data);
+        validarPreco(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -603,6 +605,17 @@ public class EventoService {
         if (controlaPresenca && !requerInscricao) {
             throw new BusinessException("CONTROLA_PRESENCA_SEM_INSCRICAO",
                     "Só é possível controlar presença em eventos que também exigem inscrição.");
+        }
+    }
+
+    /** Cobrar sem exigir inscrição não faz sentido — não haveria quem pagar. Defesa em
+     *  profundidade: o front já bloqueia isso (não deixa marcar "Pago" sem preço), mas
+     *  {@code preco} continua opcional no DTO — nada impede uma chamada direta à API. */
+    private void validarPreco(EventoRequest data) {
+        boolean requerInscricao = Boolean.TRUE.equals(data.requerInscricao());
+        if (data.preco() != null && !requerInscricao) {
+            throw new BusinessException("PRECO_SEM_INSCRICAO",
+                    "Só é possível cobrar em eventos que também exigem inscrição.");
         }
     }
 

@@ -58,10 +58,14 @@ class InscricaoRepositoryPresencaTest implements PostgresTestContainerSupport {
         // inscrição confirmada, mas não compareceu
         salvarInscricao(igreja, evento, pessoaFaltou, StatusInscricao.CONFIRMADA, false);
 
-        // decoy 1: cancelada no mesmo evento — não deve contar em nada
+        // decoy 1: cancelada no mesmo evento — não deve contar em nada. O convidado dela é
+        // cancelado EXPLICITAMENTE também: desde 2026-08-26 cada convidado é sua própria
+        // InscricaoEvento e cancelar o titular NÃO cancela em cascata quem ele convidou
+        // (decisão de produto, ver InscricaoService#cancelarInterno) — sem cancelar os dois,
+        // o convidado continuaria CONFIRMADA e contaria de verdade, não seria um decoy válido.
         InscricaoEvento inscricaoCancelada = salvarInscricao(igreja, evento, pessoaCancelada,
                 StatusInscricao.CANCELADA, true);
-        salvarConvidado(igreja, evento, pessoaCancelada, "Convidado Cancelado", true);
+        salvarConvidadoCancelado(igreja, evento, pessoaCancelada, "Convidado Cancelado");
 
         // decoy 2: confirmada, mas em OUTRO evento — não deve contar no evento alvo
         salvarInscricao(igreja, outroEvento, pessoaOutroEvento, StatusInscricao.CONFIRMADA, true);
@@ -173,6 +177,19 @@ class InscricaoRepositoryPresencaTest implements PostgresTestContainerSupport {
                 .nomeConvidado(nomeConvidado)
                 .status(StatusInscricao.CONFIRMADA)
                 .compareceu(compareceu)
+                .build());
+    }
+
+    private InscricaoEvento salvarConvidadoCancelado(Igreja igreja, Evento evento, Pessoa convidadoPor,
+                                                       String nomeConvidado) {
+        return inscricaoRepository.save(InscricaoEvento.builder()
+                .igreja(igreja)
+                .evento(evento)
+                .pessoa(null)
+                .convidadoPor(convidadoPor)
+                .nomeConvidado(nomeConvidado)
+                .status(StatusInscricao.CANCELADA)
+                .compareceu(false)
                 .build());
     }
 }

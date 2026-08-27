@@ -29,7 +29,7 @@ class RespostaCampoPersonalizadoRepositoryTest implements PostgresTestContainerS
     @Autowired IgrejaRepository igrejaRepository;
 
     @Test
-    void encontraRespostaDoTitularPorAcompanhanteIdNulo() {
+    void encontraRespostaPorCampoEInscricao() {
         Igreja igreja = new Igreja();
         igreja.setNome("Igreja Teste Resposta");
         igreja.setEmailContato("resposta@teste.com");
@@ -49,7 +49,7 @@ class RespostaCampoPersonalizadoRepositoryTest implements PostgresTestContainerS
                 .campo(campo).inscricao(inscricao).valor("Sem lactose").build());
 
         Optional<RespostaCampoPersonalizado> encontrada = respostaRepository
-                .findByCampoIdAndInscricaoIdAndAcompanhanteId(campo.getId(), inscricao.getId(), null);
+                .findByCampoIdAndInscricaoId(campo.getId(), inscricao.getId());
 
         assertThat(encontrada).isPresent();
         assertThat(encontrada.get().getValor()).isEqualTo("Sem lactose");

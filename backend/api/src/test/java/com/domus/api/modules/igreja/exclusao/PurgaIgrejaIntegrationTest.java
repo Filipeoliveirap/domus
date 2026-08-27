@@ -7,7 +7,6 @@ import com.domus.api.modules.celula.CelulaRepository;
 import com.domus.api.modules.celula.PapelCelula;
 import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
-import com.domus.api.modules.evento.inscricao.AcompanhanteInscricao;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
@@ -107,9 +106,14 @@ class PurgaIgrejaIntegrationTest implements PostgresTestContainerSupport {
 
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .igreja(igreja).evento(evento).pessoa(pessoa).status(StatusInscricao.CONFIRMADA).build();
-        inscricao.getAcompanhantes().add(AcompanhanteInscricao.builder()
-                .inscricao(inscricao).nome("Acompanhante de Teste").build());
         inscricao = inscricaoRepository.save(inscricao);
+
+        // Convidado: agora é sua própria InscricaoEvento, ligada de volta ao titular via
+        // convidadoPor — não mais uma AcompanhanteInscricao aninhada.
+        InscricaoEvento convidado = InscricaoEvento.builder()
+                .igreja(igreja).evento(evento).nomeConvidado("Convidado de Teste")
+                .convidadoPor(pessoa).status(StatusInscricao.CONFIRMADA).build();
+        inscricaoRepository.save(convidado);
 
         CategoriaFinanceira categoria = categoriaRepository.save(CategoriaFinanceira.builder()
                 .igreja(igreja).nome("Categoria de Teste").tipo(TipoCategoria.ENTRADA).build());

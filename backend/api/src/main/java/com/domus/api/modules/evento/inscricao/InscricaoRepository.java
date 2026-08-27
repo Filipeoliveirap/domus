@@ -14,11 +14,7 @@ import java.util.UUID;
 public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID> {
 
     @Query("""
-        SELECT COALESCE(COUNT(i), 0) + COALESCE(
-                   (SELECT COUNT(a) FROM AcompanhanteInscricao a
-                     WHERE a.inscricao.evento.id = :eventoId
-                       AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA), 0)
-        FROM InscricaoEvento i
+        SELECT COUNT(i) FROM InscricaoEvento i
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
     """)
@@ -56,7 +52,6 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // proxy); nunca chamar outro getter em i.getPessoa() aqui.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
-        LEFT JOIN FETCH i.acompanhantes
         WHERE i.evento.id = :eventoId AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
         ORDER BY i.createdAt ASC
     """)
@@ -88,7 +83,6 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // Sem FETCH em i.pessoa — mesmo motivo de listarPorEvento.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
-        LEFT JOIN FETCH i.acompanhantes
         WHERE i.id IN :ids
         ORDER BY i.createdAt ASC
         """)
@@ -115,9 +109,10 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     long countPessoasInscritas(@Param("eventoId") UUID eventoId);
 
     @Query("""
-        SELECT COUNT(a) FROM AcompanhanteInscricao a
-        WHERE a.inscricao.evento.id = :eventoId
-          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NOT NULL
     """)
     long countConvidadosInscritos(@Param("eventoId") UUID eventoId);
 
@@ -130,10 +125,11 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     long countPessoasCompareceram(@Param("eventoId") UUID eventoId);
 
     @Query("""
-        SELECT COUNT(a) FROM AcompanhanteInscricao a
-        WHERE a.inscricao.evento.id = :eventoId
-          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
-          AND a.compareceu = true
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NOT NULL
+          AND i.compareceu = true
     """)
     long countConvidadosCompareceram(@Param("eventoId") UUID eventoId);
 

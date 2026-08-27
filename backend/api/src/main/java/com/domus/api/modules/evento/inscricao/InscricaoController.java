@@ -73,18 +73,6 @@ public class InscricaoController {
                 .body(ConvidadoResponse.from(resultado.inscricao(), resultado.cobranca()));
     }
 
-    @PostMapping("/eventos/{eventoId}/inscricoes/{inscricaoId}/acompanhantes")
-    public ResponseEntity<AcompanhanteResponse> adicionarAcompanhante(
-            @PathVariable UUID eventoId,
-            @PathVariable UUID inscricaoId,
-            @Valid @RequestBody AcompanhanteRequest data) {
-        var usuario = usuarioAutenticado.get();
-        var response = inscricaoService.adicionarAcompanhante(
-                inscricaoId, data, usuario.getId(), usuario.getPessoa().getId(),
-                usuario.getRole().getNome(), usuario.getIgreja().getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     /** Lista de inscritos — ADMIN e LÍDER só (travado no SecurityConfig). */
     @GetMapping("/eventos/{eventoId}/inscricoes")
     public ResponseEntity<ListaInscritosResponse> listar(
@@ -107,14 +95,6 @@ public class InscricaoController {
     public ResponseEntity<Void> cancelar(@PathVariable UUID id) {
         var usuario = usuarioAutenticado.get();
         inscricaoService.cancelar(id, usuario.getId(), usuario.getPessoa().getId(),
-                usuario.getRole().getNome(), usuario.getIgreja().getId());
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/acompanhantes/{id}")
-    public ResponseEntity<Void> removerAcompanhante(@PathVariable UUID id) {
-        var usuario = usuarioAutenticado.get();
-        inscricaoService.removerAcompanhante(id, usuario.getPessoa().getId(),
                 usuario.getRole().getNome(), usuario.getIgreja().getId());
         return ResponseEntity.noContent().build();
     }
@@ -157,17 +137,6 @@ public class InscricaoController {
             @Valid @RequestBody MarcarPresencaRequest data) {
         var usuario = usuarioAutenticado.get();
         inscricaoService.marcarPresencaInscricao(eventoId, inscricaoId, data.compareceu(),
-                usuario.getIgreja().getId(), usuario.getRole().getNome());
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/eventos/{eventoId}/presenca/acompanhantes/{acompanhanteId}")
-    public ResponseEntity<Void> marcarPresencaAcompanhante(
-            @PathVariable UUID eventoId,
-            @PathVariable UUID acompanhanteId,
-            @Valid @RequestBody MarcarPresencaRequest data) {
-        var usuario = usuarioAutenticado.get();
-        inscricaoService.marcarPresencaAcompanhante(eventoId, acompanhanteId, data.compareceu(),
                 usuario.getIgreja().getId(), usuario.getRole().getNome());
         return ResponseEntity.noContent().build();
     }

@@ -4,7 +4,6 @@ import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.pessoa.Pessoa;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 /** Uma linha da lista de inscritos (ADMIN/LÍDER). */
@@ -26,7 +25,6 @@ public record InscritoResponse(
         String telefoneConvidado,
         LocalDateTime inscritoEm,
         boolean compareceu,
-        List<AcompanhanteResponse> acompanhantes,
         EventoResponse.IgrejaResumo igrejaDaPessoa
 ) {
     private static final String NOME_PESSOA_REMOVIDA = "Pessoa removida do sistema";
@@ -61,7 +59,6 @@ public record InscritoResponse(
                 i.getTelefoneConvidado(),
                 i.getCreatedAt(),
                 i.isCompareceu(),
-                i.getAcompanhantes().stream().map(AcompanhanteResponse::from).toList(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );
     }

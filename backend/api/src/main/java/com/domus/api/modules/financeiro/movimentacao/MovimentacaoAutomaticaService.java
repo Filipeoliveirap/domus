@@ -103,9 +103,9 @@ public class MovimentacaoAutomaticaService {
             .build();
 
         // Contribuinte/beneficiário sempre entra — com pessoa cadastrada quando existe, ou só
-        // o nome (convidado sem cadastro/acompanhante) quando não. Sem isso, quem paga sem
-        // cadastro só aparecia no texto da descrição, nunca na coluna dedicada nem no
-        // relatório "por contribuinte" (achado revisando com o usuário, 2026-08-26).
+        // o nome (convidado sem cadastro) quando não. Sem isso, quem paga sem cadastro só
+        // aparecia no texto da descrição, nunca na coluna dedicada nem no relatório "por
+        // contribuinte" (achado revisando com o usuário, 2026-08-26).
         mov.getContribuintes().add(pessoaId != null
             ? MovimentacaoContribuinte.builder().movimentacao(mov)
                 .pessoa(pessoaRepository.getReferenceById(pessoaId)).valor(valor).build()

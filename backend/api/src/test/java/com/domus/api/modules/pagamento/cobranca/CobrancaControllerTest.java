@@ -61,7 +61,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333333");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444444");
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, "token-valido-123");
         cobrancaEventoRepository.save(cobranca);
 
@@ -87,22 +87,19 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
             "('55555555-5555-5555-5555-555555555556', '11111111-1111-1111-1111-111111111112', " +
             "'Acampamento', now(), '77777777-7777-7777-7777-777777777778', true)",
-        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, nome_convidado, telefone_convidado, status) VALUES " +
             "('66666666-6666-6666-6666-666666666667', '11111111-1111-1111-1111-111111111112', " +
-            "'55555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-333333333334', 'CONFIRMADA')",
-        "INSERT INTO acompanhante_inscricao (id, inscricao_id, nome) VALUES " +
-            "('99999999-9999-9999-9999-999999999998', '66666666-6666-6666-6666-666666666667', 'Convidado Sem Cadastro')"
+            "'55555555-5555-5555-5555-555555555556', 'Convidado Sem Cadastro', '11988887777', 'AGUARDANDO_PAGAMENTO')"
     })
-    void retornaNomeDoAcompanhanteQuandoCobrancaEhDeTerceiroSemCadastro() throws Exception {
+    void retornaNomeDoConvidadoQuandoCobrancaEhDeTerceiroSemCadastro() throws Exception {
         UUID igrejaId = UUID.fromString("11111111-1111-1111-1111-111111111112");
         UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555556");
         UUID inscricaoId = UUID.fromString("66666666-6666-6666-6666-666666666667");
-        UUID acompanhanteId = UUID.fromString("99999999-9999-9999-9999-999999999998");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444445");
 
-        // pessoaId nulo, acompanhanteId preenchido — ramo do XOR que o controller precisa
-        // resolver via AcompanhanteRepository, não via PessoaRepository.
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null, acompanhanteId,
+        // pessoaId nulo — convidado sem cadastro (Plano 4b), resolvido só via
+        // InscricaoEvento (nomeConvidado), não mais via AcompanhanteRepository.
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
             BigDecimal.valueOf(80), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, "token-acompanhante-456");
         cobrancaEventoRepository.save(cobranca);
 
@@ -151,7 +148,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333335");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444446");
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
         cobranca = cobrancaEventoRepository.save(cobranca);
 
@@ -187,7 +184,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333336");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444447");
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
         cobranca.marcarComoPago("mp-payment-ja-existente");
         cobranca = cobrancaEventoRepository.save(cobranca);
@@ -228,7 +225,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333338");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444449");
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
         cobranca.registrarTentativaPagamento("mp-payment-1a-tentativa");
         cobranca = cobrancaEventoRepository.save(cobranca);
@@ -273,7 +270,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         var cobrancaOcupante = new CobrancaEvento(igrejaId, eventoId,
             UUID.fromString("66666666-6666-6666-6666-666666666672"),
-            UUID.fromString("33333333-3333-3333-3333-333333333339"), null,
+            UUID.fromString("33333333-3333-3333-3333-333333333339"),
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS),
             UUID.fromString("44444444-4444-4444-4444-444444444450"), null);
         cobrancaOcupante.registrarTentativaPagamento("mp-payment-ocupante");
@@ -281,7 +278,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         var cobrancaTardia = new CobrancaEvento(igrejaId, eventoId,
             UUID.fromString("66666666-6666-6666-6666-666666666673"),
-            UUID.fromString("33333333-3333-3333-3333-333333333340"), null,
+            UUID.fromString("33333333-3333-3333-3333-333333333340"),
             BigDecimal.valueOf(150), Instant.now().plus(1, ChronoUnit.DAYS),
             UUID.fromString("44444444-4444-4444-4444-444444444450"), null);
         cobrancaTardia = cobrancaEventoRepository.save(cobrancaTardia);
@@ -321,7 +318,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333337");
         UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444448");
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, null,
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), Instant.now().minus(1, ChronoUnit.HOURS), usuarioId, null);
         cobranca = cobrancaEventoRepository.save(cobranca);
 
@@ -361,7 +358,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID usuarioId = UUID.fromString("23333333-3333-3333-3333-333333333333");
 
         var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(
-            igrejaId, eventoId, inscricaoId, pessoaId, null,
+            igrejaId, eventoId, inscricaoId, pessoaId,
             new BigDecimal("75.00"), Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, null));
 
         mockMvc.perform(get("/cobrancas/id/" + cobranca.getId()))
@@ -396,7 +393,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         UUID inscricaoId = UUID.fromString("26666666-6666-6666-6666-666666666667");
 
         var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(
-            igrejaId, eventoId, inscricaoId, null, null,
+            igrejaId, eventoId, inscricaoId, null,
             new BigDecimal("40.00"), Instant.now().plus(1, ChronoUnit.HOURS), null, null));
 
         mockMvc.perform(get("/cobrancas/id/" + cobranca.getId()))

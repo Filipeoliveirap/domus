@@ -20,7 +20,6 @@ class CobrancaEventoServiceTest {
     UUID eventoId = UUID.randomUUID();
     UUID inscricaoId = UUID.randomUUID();
     UUID pessoaId = UUID.randomUUID();
-    UUID acompanhanteId = UUID.randomUUID();
     UUID usuarioId = UUID.randomUUID();
 
     @BeforeEach
@@ -42,16 +41,16 @@ class CobrancaEventoServiceTest {
 
     @Test
     void criaCobrancaParaTerceiroPagandoAgoraComPrazoCurtoESemToken() {
-        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null, acompanhanteId,
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), usuarioId, false);
 
-        assertThat(cobranca.getAcompanhanteId()).isEqualTo(acompanhanteId);
+        assertThat(cobranca.getPessoaId()).isEqualTo(pessoaId);
         assertThat(cobranca.getTokenLinkPublico()).isNull();
     }
 
     @Test
     void criaCobrancaParaTerceiroComLinkGeraTokenEPrazoLongo() {
-        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null, acompanhanteId,
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.valueOf(150), usuarioId, true);
 
         assertThat(cobranca.getTokenLinkPublico()).isNotBlank();
@@ -60,12 +59,20 @@ class CobrancaEventoServiceTest {
 
     @Test
     void tokensGeradosNaoSeRepetem() {
-        var c1 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null, acompanhanteId,
+        var c1 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, usuarioId, true);
-        var c2 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null, UUID.randomUUID(),
+        var c2 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, UUID.randomUUID(),
             BigDecimal.TEN, usuarioId, true);
 
         assertThat(c1.getTokenLinkPublico()).isNotEqualTo(c2.getTokenLinkPublico());
+    }
+
+    @Test
+    void criaCobrancaParaTerceiroConvidadoSemCadastroComPessoaIdNulo() {
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null,
+            BigDecimal.valueOf(150), usuarioId, false);
+
+        assertThat(cobranca.getPessoaId()).isNull();
     }
 
     @Test

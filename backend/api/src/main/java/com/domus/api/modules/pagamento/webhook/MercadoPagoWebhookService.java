@@ -4,7 +4,6 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
-import com.domus.api.modules.evento.inscricao.AcompanhanteRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService;
 import com.domus.api.modules.notificacao.NotificacaoService;
@@ -26,9 +25,9 @@ import org.springframework.stereotype.Service;
  * Confirma o pagamento de uma {@link CobrancaEvento} a partir do webhook do Mercado Pago,
  * depois de a assinatura já ter sido validada pelo controller.
  *
- * <p>Quando a cobrança é de um acompanhante (ver {@link CobrancaEvento#getAcompanhanteId()}),
- * quem pagou não necessariamente tem conta no Domus — quem precisa saber que "fulano pagou"
- * é quem inscreveu/gerou o link, ou seja {@link CobrancaEvento#getCriadoPorUsuarioId()}.
+ * <p>Quando a cobrança é de um convidado sem cadastro (pessoaId nulo), quem pagou não
+ * necessariamente tem conta no Domus — quem precisa saber que "fulano pagou" é quem
+ * inscreveu/gerou o link, ou seja {@link CobrancaEvento#getCriadoPorUsuarioId()}.
  * Quando a cobrança é do próprio titular ({@link CobrancaEvento#ehDoTitular()}), a pessoa que
  * pagou já está vendo o próprio status de inscrição mudar na hora — notificar o titular dele
  * mesmo seria ruído.
@@ -66,7 +65,6 @@ public class MercadoPagoWebhookService {
     private final PessoaRepository pessoaRepository;
     private final EmailService emailService;
     private final MovimentacaoAutomaticaService movimentacaoAutomaticaService;
-    private final AcompanhanteRepository acompanhanteRepository;
 
     public MercadoPagoWebhookService(CobrancaEventoRepository cobrancaRepository,
                                       InscricaoRepository inscricaoRepository,
@@ -74,8 +72,7 @@ public class MercadoPagoWebhookService {
                                       EventoRepository eventoRepository,
                                       PessoaRepository pessoaRepository,
                                       EmailService emailService,
-                                      MovimentacaoAutomaticaService movimentacaoAutomaticaService,
-                                      AcompanhanteRepository acompanhanteRepository) {
+                                      MovimentacaoAutomaticaService movimentacaoAutomaticaService) {
         this.cobrancaRepository = cobrancaRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.notificacaoService = notificacaoService;
@@ -83,7 +80,6 @@ public class MercadoPagoWebhookService {
         this.pessoaRepository = pessoaRepository;
         this.emailService = emailService;
         this.movimentacaoAutomaticaService = movimentacaoAutomaticaService;
-        this.acompanhanteRepository = acompanhanteRepository;
     }
 
     /**
@@ -170,19 +166,14 @@ public class MercadoPagoWebhookService {
                 .map(Pessoa::getNome)
                 .orElse("pagador removido");
         }
-        if (cobranca.getAcompanhanteId() != null) {
-            return acompanhanteRepository.findById(cobranca.getAcompanhanteId())
-                .map(com.domus.api.modules.evento.inscricao.AcompanhanteInscricao::getNome)
-                .orElse("acompanhante");
-        }
         return inscricao.getNomeConvidado();
     }
 
     /**
      * Confirmação de pagamento por e-mail — só pra evento pago (o único jeito de chegar
      * aqui) e só quando existe um e-mail pra mandar: pessoa cadastrada sempre tem (campo
-     * único no domínio); acompanhante nunca tem (modelo antigo, sem e-mail); convidado sem
-     * cadastro tem desde que o e-mail virou obrigatório em evento pago (ver
+     * único no domínio); convidado sem cadastro tem desde que o e-mail virou obrigatório
+     * em evento pago (ver
      * {@code InscricaoService.inscreverConvidado}). Falha de envio nunca pode quebrar a
      * confirmação do pagamento em si — só loga, mesmo padrão de
      * {@code PasswordResetService}.
@@ -198,9 +189,6 @@ public class MercadoPagoWebhookService {
             nomeDestinatario = pessoa.getNome();
             email = pessoa.getEmail();
             igrejaDaPessoaId = pessoa.getIgreja().getId();
-        } else if (cobranca.getAcompanhanteId() != null) {
-            // Acompanhante (modelo antigo, ver Plano 4b) nunca tem e-mail — nada a enviar.
-            return;
         } else {
             nomeDestinatario = inscricao.getNomeConvidado();
             email = inscricao.getEmailConvidado();

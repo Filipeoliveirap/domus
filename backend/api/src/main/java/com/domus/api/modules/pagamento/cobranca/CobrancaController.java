@@ -1,7 +1,6 @@
 package com.domus.api.modules.pagamento.cobranca;
 
 import com.domus.api.modules.evento.EventoRepository;
-import com.domus.api.modules.evento.inscricao.AcompanhanteRepository;
 import com.domus.api.modules.pagamento.MercadoPagoClient;
 import com.domus.api.modules.pagamento.PagamentoPollingService;
 import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaCheckoutDTO;
@@ -19,8 +18,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Rota pública (sem autenticação) consumida pela página de checkout do pagador —
  * ver Task 14 no front. Por ser pública, o DTO devolvido carrega estritamente o
- * necessário para montar a tela: nunca telefone/e-mail/outros campos de Pessoa ou
- * AcompanhanteInscricao além do nome.
+ * necessário para montar a tela: nunca telefone/e-mail/outros campos de Pessoa além do
+ * nome.
  *
  * <p><b>Decisão sobre {@code POST /cobrancas/{id}/pagar} (Task 14, lacuna do plano):</b>
  * o endpoint é único pros dois fluxos (titular pagando na hora, logo após se inscrever, e
@@ -49,7 +48,6 @@ public class CobrancaController {
     private final EventoRepository eventoRepository;
     private final com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
-    private final AcompanhanteRepository acompanhanteRepository;
     private final MercadoPagoClient mercadoPagoClient;
     private final PagamentoPollingService pagamentoPollingService;
 
@@ -58,7 +56,6 @@ public class CobrancaController {
                                EventoRepository eventoRepository,
                                com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
-                               AcompanhanteRepository acompanhanteRepository,
                                MercadoPagoClient mercadoPagoClient,
                                PagamentoPollingService pagamentoPollingService) {
         this.service = service;
@@ -66,7 +63,6 @@ public class CobrancaController {
         this.eventoRepository = eventoRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
-        this.acompanhanteRepository = acompanhanteRepository;
         this.mercadoPagoClient = mercadoPagoClient;
         this.pagamentoPollingService = pagamentoPollingService;
     }
@@ -84,13 +80,8 @@ public class CobrancaController {
             nomePagador = pessoaRepository.findById(cobranca.getPessoaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
-        } else if (cobranca.getAcompanhanteId() != null) {
-            nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
-                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
-                .getNome();
         } else {
-            // Convidado sem cadastro (Plano 4b) — nem pessoa nem acompanhante, resolvido só
-            // pela InscricaoEvento.
+            // Convidado sem cadastro (Plano 4b) — resolvido só pela InscricaoEvento.
             nomePagador = inscricaoRepository.findById(cobranca.getInscricaoId())
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição da cobrança não encontrada."))
                 .getNomeConvidado();
@@ -119,10 +110,6 @@ public class CobrancaController {
         String nomePagador;
         if (cobranca.getPessoaId() != null) {
             nomePagador = pessoaRepository.findById(cobranca.getPessoaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
-                .getNome();
-        } else if (cobranca.getAcompanhanteId() != null) {
-            nomePagador = acompanhanteRepository.findById(cobranca.getAcompanhanteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador da cobrança não encontrado."))
                 .getNome();
         } else {

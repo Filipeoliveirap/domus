@@ -9,6 +9,7 @@ import { useCobrancaCheckout } from '@/hooks/cobranca/useCobrancaCheckout'
 import { cobrancaService } from '@/services/cobranca.service'
 import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
+import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './PagamentoEvento.module.css'
@@ -62,6 +63,18 @@ export default function PagamentoEventoPage({
   useEffect(() => {
     if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
   }, [cobranca, resultado])
+
+  // Achado ao vivo (2026-08-27): reload/demora na tela do QR do Pix caía direto na tela
+  // genérica "Confirmando pagamento…", sem nenhum jeito de voltar a ver o QR/copia-e-cola —
+  // o dado só vinha na resposta de `pagar`, que não pode ser chamado de novo (cai em
+  // COBRANCA_JA_EM_PROCESSAMENTO). Busca uma vez, junto com "confirmando"; nulos nos dois
+  // campos = o pagamento em andamento é cartão, não Pix — mostra a tela genérica de sempre.
+  const { data: pix } = useQuery({
+    queryKey: ['cobranca-pix', cobrancaId],
+    queryFn: () => cobrancaService.pix(cobrancaId),
+    enabled: resultado === 'enviado',
+    retry: false,
+  })
 
   // Assim que o Mercado Pago recebe a tentativa de pagamento, pergunta a cada poucos
   // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
@@ -167,11 +180,17 @@ export default function PagamentoEventoPage({
         )}
 
         {resultado === 'enviado' && !indisponivel && (
-          <div className={styles.card}>
-            <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
-            <h1>Confirmando pagamento…</h1>
-            <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
-          </div>
+          pix?.qrCode && pix?.qrCodeBase64 ? (
+            <div className={styles.card}>
+              <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} />
+            </div>
+          ) : (
+            <div className={styles.card}>
+              <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
+              <h1>Confirmando pagamento…</h1>
+              <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
+            </div>
+          )
         )}
 
         {!resultado && !indisponivel && (

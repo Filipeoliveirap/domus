@@ -198,6 +198,7 @@ export const Endpoints = {
     BUSCAR_POR_ID: (id: string) => `/cobrancas/id/${id}`,
     PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
     STATUS: (id: string) => `/cobrancas/${id}/status`,
+    PIX: (id: string) => `/cobrancas/${id}/pix`,
   },
 
   celulas: {

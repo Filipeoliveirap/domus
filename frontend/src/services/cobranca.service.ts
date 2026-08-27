@@ -64,6 +64,13 @@ export interface StatusCobrancaResponse {
   status: StatusCobranca
 }
 
+/** Espelha `CobrancaController.PixResponse` (backend). Os dois campos vêm nulos quando o
+ *  pagamento em andamento acabou sendo cartão (não Pix) — cartão nunca tem QR. */
+export interface PixResponse {
+  qrCode: string | null
+  qrCodeBase64: string | null
+}
+
 export const cobrancaService = {
   buscarPorToken: (token: string): Promise<CobrancaPublica> =>
     api.get<CobrancaPublica>(Endpoints.cobrancas.BUSCAR_POR_TOKEN(token)).then((res) => res.data),
@@ -81,4 +88,10 @@ export const cobrancaService = {
   /** Poll usado enquanto o QR do Pix está na tela, esperando o webhook confirmar. */
   status: (cobrancaId: string): Promise<StatusCobrancaResponse> =>
     api.get<StatusCobrancaResponse>(Endpoints.cobrancas.STATUS(cobrancaId)).then((res) => res.data),
+
+  /** Recupera o QR/copia-e-cola de um pagamento Pix já criado — usado pra retomar a tela
+   *  do Pix depois de um reload no meio do pagamento (o QR só vinha na resposta de `pagar`,
+   *  que não pode ser chamado de novo). 404 se não há tentativa de pagamento em andamento. */
+  pix: (cobrancaId: string): Promise<PixResponse> =>
+    api.get<PixResponse>(Endpoints.cobrancas.PIX(cobrancaId)).then((res) => res.data),
 }

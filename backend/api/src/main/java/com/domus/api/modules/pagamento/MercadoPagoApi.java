@@ -217,8 +217,50 @@ public class MercadoPagoApi {
     private record RespostaPagamentoMercadoPago(
         @JsonProperty("external_reference") String externalReference,
         String status,
-        @JsonProperty("status_detail") String statusDetail
+        @JsonProperty("status_detail") String statusDetail,
+        @JsonProperty("point_of_interaction") PontoDeInteracao pointOfInteraction
     ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record PontoDeInteracao(@JsonProperty("transaction_data") DadosTransacaoPix transactionData) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record DadosTransacaoPix(
+        @JsonProperty("qr_code") String qrCode,
+        @JsonProperty("qr_code_base64") String qrCodeBase64
+    ) {}
+
+    /** Ausente (os dois campos nulos) quando o pagamento em andamento é cartão, não Pix —
+     *  cartão nunca tem {@code point_of_interaction} na resposta do Mercado Pago. */
+    public record QrCodePix(String qrCode, String qrCodeBase64) {}
+
+    /**
+     * Recupera o QR/copia-e-cola de um pagamento Pix JÁ CRIADO — pro caso de a pessoa dar
+     * reload na tela de checkout enquanto o Pix está pendente (achado ao vivo, 2026-08-27):
+     * antes disso não existia jeito de mostrar o QR de novo, porque ele só é devolvido pelo
+     * Mercado Pago no momento de {@link #criarPagamentoTokenizado}, nunca de novo depois.
+     * Mesma chamada {@code GET /v1/payments/{id}} de {@link #buscarInformacoesPagamento},
+     * só que também lendo {@code point_of_interaction.transaction_data}.
+     */
+    public QrCodePix buscarQrCodePix(String accessToken, String mpPaymentId) {
+        try {
+            var pagamento = restClient.get()
+                .uri("https://api.mercadopago.com/v1/payments/{id}", mpPaymentId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .retrieve()
+                .body(RespostaPagamentoMercadoPago.class);
+            if (pagamento == null) {
+                throw new IllegalStateException("Resposta vazia do Mercado Pago ao consultar pagamento");
+            }
+            var dados = pagamento.pointOfInteraction() != null ? pagamento.pointOfInteraction().transactionData() : null;
+            return new QrCodePix(
+                dados != null ? dados.qrCode() : null,
+                dados != null ? dados.qrCodeBase64() : null
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException("Falha ao consultar QR Pix no Mercado Pago", e);
+        }
+    }
 
     /**
      * Por {@code RestClient} direto, não {@code PaymentRefundClient.refund(Long,

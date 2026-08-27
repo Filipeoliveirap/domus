@@ -23,17 +23,9 @@ export interface ElegibilidadeResponse {
   impedimentos: Impedimento[]
 }
 
-export interface AcompanhanteResponse {
-  id: string
-  nome: string
-  telefone: string | null
-  compareceu: boolean
-}
-
 export interface MinhaInscricaoResponse {
   id: string | null
   inscrito: boolean
-  acompanhantes: AcompanhanteResponse[]
   /** Task 14 — id da CobrancaEvento pendente do TITULAR (evento pago, ainda não pago).
    *  `null` quando o evento é gratuito ou não há cobrança pendente. */
   cobrancaPendenteId: string | null
@@ -67,7 +59,6 @@ export interface InscritoResponse {
   telefoneConvidado: string | null
   inscritoEm: string
   compareceu: boolean
-  acompanhantes: AcompanhanteResponse[]
   igrejaDaPessoa: IgrejaResumo
 }
 
@@ -118,9 +109,4 @@ export interface PessoaInscritaComCobranca {
   inscricaoId: string
   cobrancaId: string | null
   tokenLinkPublico: string | null
-}
-
-export interface AcompanhanteRequest {
-  nome: string
-  telefone?: string
 }

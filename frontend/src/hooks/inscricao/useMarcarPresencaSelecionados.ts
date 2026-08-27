@@ -9,7 +9,7 @@ import type { ListaInscritosResponse } from '@/types/inscricao.type'
 
 export interface ItemSelecionado {
   id: string
-  tipo: 'inscricao' | 'acompanhante'
+  tipo: 'inscricao'
 }
 
 // Sucesso não reinvalida ['inscricoes','lista'], senão os botões piscam de volta pra "Marcar presença".
@@ -19,17 +19,14 @@ export function useMarcarPresencaSelecionados(eventoId: string) {
   return useMutation({
     mutationFn: (itens: ItemSelecionado[]) =>
       Promise.all(itens.map((item) =>
-        item.tipo === 'inscricao'
-          ? inscricoesService.marcarPresencaInscricao(eventoId, item.id, true)
-          : inscricoesService.marcarPresencaAcompanhante(eventoId, item.id, true),
+        inscricoesService.marcarPresencaInscricao(eventoId, item.id, true),
       )),
     onMutate: async (itens) => {
       await queryClient.cancelQueries({ queryKey: ['inscricoes', 'lista', eventoId] })
       const anteriores = queryClient.getQueriesData<ListaInscritosResponse>({
         queryKey: ['inscricoes', 'lista', eventoId],
       })
-      const idsInscricao = new Set(itens.filter((i) => i.tipo === 'inscricao').map((i) => i.id))
-      const idsAcompanhante = new Set(itens.filter((i) => i.tipo === 'acompanhante').map((i) => i.id))
+      const idsInscricao = new Set(itens.map((i) => i.id))
       queryClient.setQueriesData<ListaInscritosResponse>(
         { queryKey: ['inscricoes', 'lista', eventoId] },
         (atual) => atual && {
@@ -39,8 +36,6 @@ export function useMarcarPresencaSelecionados(eventoId: string) {
             content: atual.inscritos.content.map((i) => ({
               ...i,
               compareceu: idsInscricao.has(i.id) ? true : i.compareceu,
-              acompanhantes: i.acompanhantes.map((a) =>
-                idsAcompanhante.has(a.id) ? { ...a, compareceu: true } : a),
             })),
           },
         },

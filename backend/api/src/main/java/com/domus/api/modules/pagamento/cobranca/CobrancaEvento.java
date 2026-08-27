@@ -25,9 +25,6 @@ public class CobrancaEvento {
     @Column(name = "pessoa_id")
     private UUID pessoaId;
 
-    @Column(name = "acompanhante_id")
-    private UUID acompanhanteId;
-
     @Column(nullable = false)
     private BigDecimal valor;
 
@@ -56,19 +53,14 @@ public class CobrancaEvento {
     protected CobrancaEvento() {}
 
     public CobrancaEvento(UUID igrejaId, UUID eventoId, UUID inscricaoId, UUID pessoaId,
-                           UUID acompanhanteId, BigDecimal valor, Instant expiraEm,
+                           BigDecimal valor, Instant expiraEm,
                            UUID criadoPorUsuarioId, String tokenLinkPublico) {
-        // Os dois nulos = convidado sem cadastro (resolvido só por inscricaoId, ver
-        // CobrancaController) — só os dois PREENCHIDOS ao mesmo tempo é inválido.
-        if (pessoaId != null && acompanhanteId != null) {
-            throw new IllegalArgumentException(
-                "CobrancaEvento não pode ter pessoaId e acompanhanteId ao mesmo tempo");
-        }
+        // pessoaId nulo = convidado sem cadastro (resolvido só por inscricaoId, ver
+        // CobrancaController).
         this.igrejaId = igrejaId;
         this.eventoId = eventoId;
         this.inscricaoId = inscricaoId;
         this.pessoaId = pessoaId;
-        this.acompanhanteId = acompanhanteId;
         this.valor = valor;
         this.status = StatusCobranca.PENDENTE;
         this.expiraEm = expiraEm;
@@ -120,7 +112,6 @@ public class CobrancaEvento {
     public UUID getEventoId() { return eventoId; }
     public UUID getInscricaoId() { return inscricaoId; }
     public UUID getPessoaId() { return pessoaId; }
-    public UUID getAcompanhanteId() { return acompanhanteId; }
     public BigDecimal getValor() { return valor; }
     public StatusCobranca getStatus() { return status; }
     public String getMpPaymentId() { return mpPaymentId; }

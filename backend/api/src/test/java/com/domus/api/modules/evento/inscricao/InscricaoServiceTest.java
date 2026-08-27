@@ -824,6 +824,46 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void calcularImpactoEventoVirarGratuitoSomaPessoasComPagamentoEValorEAguardando() {
+        InscricaoEvento paga = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        UUID inscricaoAguardandoId = UUID.randomUUID();
+        InscricaoEvento aguardando = InscricaoEvento.builder()
+                .id(inscricaoAguardandoId).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("João").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(paga, aguardando));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoAguardandoId))
+                .thenReturn(List.of(cobrancaPendente()));
+
+        var impacto = service.calcularImpactoEventoVirarGratuito(eventoId);
+
+        assertThat(impacto.tipo()).isEqualTo(com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.PAGO_PARA_GRATUITO);
+        assertThat(impacto.pessoasComPagamentoPago()).isEqualTo(1);
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("50.00");
+        assertThat(impacto.pessoasAguardandoPagamento()).isEqualTo(1);
+        // Prévia pura — nada de mutação nem chamada externa.
+        verifyNoInteractions(mercadoPagoClient, movimentacaoAutomaticaService, emailService);
+        assertThat(paga.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        assertThat(aguardando.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+    }
+
+    @Test
+    void calcularImpactoEventoVirarGratuitoDevolveSemImpactoQuandoNaoHaConfirmadoNemAguardando() {
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of());
+
+        var impacto = service.calcularImpactoEventoVirarGratuito(eventoId);
+
+        assertThat(impacto.tipo()).isEqualTo(com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.SEM_IMPACTO);
+        assertThat(impacto.pessoasComPagamentoPago()).isZero();
+        assertThat(impacto.pessoasAguardandoPagamento()).isZero();
+    }
+
+    @Test
     void eventoVirouGratuitoEstornaCobrancaPagaEMantemInscricaoConfirmada() {
         Pessoa pessoaComEmail = Pessoa.builder()
                 .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")

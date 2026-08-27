@@ -125,6 +125,16 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.calcularImpacto(id, data, igrejaId, role));
     }
 
+    // Prévia de quanto dinheiro/gente seria afetado ao mudar o preço, sem gravar nada —
+    // o front chama isso antes de "Salvar" pra mostrar um aviso quando há impacto real.
+    @PostMapping("/{id}/impacto-mudanca-preco")
+    public ResponseEntity<com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse> impactoMudancaPreco(
+            @PathVariable UUID id, @Valid @RequestBody EventoRequest data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String role = usuarioAutenticado.getRole();
+        return ResponseEntity.ok(eventoService.calcularImpactoMudancaPreco(id, data, igrejaId, role));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> arquivar(
             @PathVariable UUID id,

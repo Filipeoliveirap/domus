@@ -564,6 +564,30 @@ public class EventoService {
                 inscricaoService.calcularImpacto(eventoId, regrasHipoteticas));
     }
 
+    /**
+     * Prévia pura (nada gravado) do impacto de mudar o preço do evento — só faz sentido
+     * pra pago virando gratuito (a única direção do toggle já implementada, ver
+     * {@code InscricaoService.aplicarEventoVirouGratuito}); qualquer outra combinação
+     * (preço continua nulo, continua não-nulo, ou vira pago) devolve SEM_IMPACTO por ora.
+     */
+    @Transactional(readOnly = true)
+    public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoMudancaPreco(
+            UUID eventoId, EventoRequest data, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarEventos(role)) {
+            throw new AccessDeniedException(
+                    "Você não tem permissão para ver o impacto desta mudança de preço.");
+        }
+
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        boolean vaiVirarGratuito = evento.getPreco() != null && data.preco() == null;
+        if (!vaiVirarGratuito) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        }
+        return inscricaoService.calcularImpactoEventoVirarGratuito(eventoId);
+    }
+
     private void validarDatas(EventoRequest data) {
         if (data.fimEm() != null && data.fimEm().isBefore(data.inicioEm())) {
             log.warn("Data de término anterior ao início. inicio={}, fim={}", data.inicioEm(), data.fimEm());

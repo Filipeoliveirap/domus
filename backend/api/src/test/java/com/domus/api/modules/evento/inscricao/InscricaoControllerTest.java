@@ -80,7 +80,7 @@ class InscricaoControllerTest implements PostgresTestContainerSupport {
         mockMvc.perform(auth.autenticado(
                         post("/eventos/" + evento.getId() + "/inscricoes/convidados"), usuarioComum)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Maria de Fora\",\"telefone\":\"11999998888\"}"))
+                        .content("{\"nome\":\"Maria de Fora\",\"telefone\":\"11999998888\",\"email\":\"maria@fora.com\"}"))
                 .andExpect(status().isCreated());
     }
 

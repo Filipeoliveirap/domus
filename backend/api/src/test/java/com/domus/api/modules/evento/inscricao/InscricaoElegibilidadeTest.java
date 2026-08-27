@@ -114,7 +114,7 @@ class InscricaoElegibilidadeTest {
 
     private Pessoa pessoaComIdade(int idade) {
         return Pessoa.builder()
-                .id(UUID.randomUUID()).igreja(igreja()).nome("Fulano")
+                .id(UUID.randomUUID()).igreja(igreja()).nome("Fulano").email("fulano@email.com")
                 .dataNascimento(LocalDate.now().minusYears(idade))
                 .vinculo(Vinculo.MEMBRO)
                 .build();

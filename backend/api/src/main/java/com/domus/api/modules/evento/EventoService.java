@@ -227,6 +227,7 @@ public class EventoService {
             }
         }
         evento.setVagas(data.vagas());
+        java.math.BigDecimal precoAntigo = evento.getPreco();
         evento.setPreco(data.preco());
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
         evento.setExclusivoMembros(exclusivoMembros);
@@ -250,6 +251,16 @@ public class EventoService {
                 case SERIE -> salvo = propagarParaSerie(salvo, igrejaId);
                 case ESTA_E_SEGUINTES -> salvo = dividirSerie(salvo, igrejaId);
             }
+        }
+
+        // Decisão do usuário (2026-08-27): mesmo com "aplicar a toda a série", o
+        // reembolso/cobrança em lote roda SÓ na ocorrência editada agora (id original) —
+        // mudar dinheiro de várias ocorrências de uma vez multiplicaria o risco financeiro
+        // sem necessidade. Se o preço deixou de ser nulo (pago -> gratuito), ninguém perde
+        // a vaga; quem pagou é estornado, quem estava esperando pagar é confirmado direto.
+        boolean virouGratuito = precoAntigo != null && data.preco() == null;
+        if (virouGratuito) {
+            inscricaoService.aplicarEventoVirouGratuito(id);
         }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())

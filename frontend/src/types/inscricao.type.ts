@@ -38,7 +38,6 @@ export interface ParticipanteResponse {
   fotoId: string | null
   /** Preenchido só pra convidado sem cadastro (inscrição própria com pessoa_id nulo). */
   convidadoPorNome: string | null
-  convidados: string[]
   /** Preenchido só quando o convidado veio de um Visitante cadastrado. */
   visitanteId: string | null
   igrejaDaPessoa: IgrejaResumo

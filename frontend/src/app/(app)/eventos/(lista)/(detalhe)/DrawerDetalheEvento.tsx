@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
 import { useEvento } from '@/hooks/evento/useEvento'
@@ -59,10 +59,9 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
-  const totalPessoas = useMemo(
-    () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
-    [participantes],
-  )
+  // Cada convidado já chega como sua própria entrada em `participantes` (InscricaoEvento
+  // unificada) — não soma mais "1 + convidados" por titular, é 1 por linha.
+  const totalPessoas = participantes.length
   const vagas = evento?.vagas ?? null
   const vagasRestantes = vagasRestantesCalc(vagas, participantes)
   const mostrarVagasAcabando = calcVagasAcabando(vagas, vagasRestantes)

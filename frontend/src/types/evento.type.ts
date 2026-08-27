@@ -115,16 +115,24 @@ export interface ImpactoRestricaoResponse {
   afetados: InscritoImpactado[]
 }
 
-/** Espelha `ImpactoMudancaPrecoResponse` (backend) — prévia de estorno ao mudar preço,
- *  sem gravar nada. `SEM_IMPACTO` = sem mudança real ou sem ninguém afetado. Por ora só
- *  `PAGO_PARA_GRATUITO` é calculado de verdade (a única direção do toggle implementada). */
-export type TipoImpactoMudancaPreco = 'SEM_IMPACTO' | 'PAGO_PARA_GRATUITO'
+/** Espelha `ImpactoMudancaPrecoResponse` (backend) — prévia de estorno/cobrança ao mudar
+ *  preço, sem gravar nada nem chamar o Mercado Pago. `SEM_IMPACTO` = sem mudança real de
+ *  direção ou sem ninguém afetado. Campos de uma direção nunca vêm preenchidos junto com
+ *  os da outra — cada mudança de preço só anda numa direção por vez. */
+export type TipoImpactoMudancaPreco = 'SEM_IMPACTO' | 'PAGO_PARA_GRATUITO' | 'GRATUITO_PARA_PAGO'
 
 export interface ImpactoMudancaPrecoResponse {
   tipo: TipoImpactoMudancaPreco
+  /** PAGO_PARA_GRATUITO: quem já pagou e seria estornado. */
   pessoasComPagamentoPago: number
+  /** PAGO_PARA_GRATUITO: soma do que seria estornado de verdade no Mercado Pago. */
   valorTotalAEstornar: number
+  /** PAGO_PARA_GRATUITO: quem estava aguardando pagamento e seria confirmado direto. */
   pessoasAguardandoPagamento: number
+  /** GRATUITO_PARA_PAGO: quantas pessoas já confirmadas ganhariam uma cobrança nova. */
+  pessoasSeraoCobradas: number
+  /** GRATUITO_PARA_PAGO: soma do que seria cobrado (pessoasSeraoCobradas × preço novo). */
+  valorTotalACobrar: number
 }
 
 export interface LocalEventoResponse {

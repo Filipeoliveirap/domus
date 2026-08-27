@@ -17,9 +17,10 @@ public record CriarConvidadoRequest(
         @NotBlank(message = "O telefone é obrigatório.")
         @Pattern(regexp = "^\\d{10,11}$", message = "O telefone deve conter 10 ou 11 dígitos numéricos.")
         String telefone,
-        /** Opcional em evento gratuito, obrigatório em evento pago (checado em
-         *  {@code InscricaoService.inscreverConvidado}, não dá pra validar aqui sem saber
-         *  se o evento é pago) — usado pra mandar o comprovante de pagamento. */
+        /** Obrigatório em qualquer evento (2026-08-27) — usado pra mandar comprovante de
+         *  pagamento em evento pago, e pra avisar se um evento gratuito virar pago depois
+         *  (ver {@code EventoService.aplicarEventoVirouPago}). */
+        @NotBlank(message = "O e-mail é obrigatório.")
         @Email(message = "E-mail inválido.")
         @Size(max = 255, message = "Máximo 255 caracteres.")
         String email,

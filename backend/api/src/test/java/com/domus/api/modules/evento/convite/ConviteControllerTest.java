@@ -95,7 +95,7 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
     void entrarComoConvidadoCriaInscricaoEOcupaVagaMesmoSemConvidanteInscrito() throws Exception {
         mockMvc.perform(post("/convites/token-teste/entrar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Maria de Fora\",\"telefone\":\"11999998888\"}"))
+                        .content("{\"nome\":\"Maria de Fora\",\"telefone\":\"11999998888\",\"email\":\"maria@fora.com\"}"))
                 .andExpect(status().isCreated());
     }
 }

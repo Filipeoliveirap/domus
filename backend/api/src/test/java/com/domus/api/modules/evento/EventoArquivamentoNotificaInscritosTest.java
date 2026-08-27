@@ -68,8 +68,10 @@ class EventoArquivamentoNotificaInscritosTest implements PostgresTestContainerSu
     }
 
     private Pessoa novaPessoa(String nome) {
+        // E-mail obrigatório pra se inscrever em qualquer evento (2026-08-27).
         return pessoaRepository.save(Pessoa.builder()
-                .igreja(igrejaDoTeste).nome(nome).vinculo(Vinculo.MEMBRO).build());
+                .igreja(igrejaDoTeste).nome(nome).email(java.util.UUID.randomUUID() + "@teste.com")
+                .vinculo(Vinculo.MEMBRO).build());
     }
 
     private Usuario novoUsuario(Pessoa pessoa) {

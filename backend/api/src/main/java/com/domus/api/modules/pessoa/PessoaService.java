@@ -239,6 +239,41 @@ public class PessoaService {
         return PessoaResponse.from(salvo, null, true);
     }
 
+    /**
+     * Dá o PRIMEIRO e-mail a uma Pessoa que ainda não tem — usado pelo fluxo de inscrição
+     * em evento (2026-08-27), quando e-mail passou a ser obrigatório pra se inscrever e a
+     * pessoa (titular ou quem o admin está inscrevendo) não tinha e-mail cadastrado. Só
+     * funciona nesse caso: se já existe e-mail, recusa — mesma regra de imutabilidade já
+     * aplicada em {@code PessoaController.atualizarMe} (e-mail é a chave de login; trocar
+     * um já existente é fluxo à parte, não este).
+     */
+    @Transactional
+    public PessoaResponse definirEmailInicial(UUID id, String emailNovo, UUID igrejaId) {
+        Pessoa membro = membroRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
+
+        if (membro.getEmail() != null) {
+            throw new BusinessException("EMAIL_JA_DEFINIDO",
+                    "Esta pessoa já tem e-mail cadastrado — não é possível trocar por aqui.");
+        }
+
+        String email = normalizarEmail(emailNovo);
+        if (membroRepository.existsByEmail(email)) {
+            throw new BusinessException("EMAIL_DUPLICADO", "E-mail já cadastrado no sistema.");
+        }
+        if (membroRepository.existsByEmailIncluindoArquivados(email)) {
+            throw new BusinessException("EMAIL_ARQUIVADO",
+                    "Este e-mail pertence a um cadastro arquivado. Use outro e-mail ou restaure o cadastro.");
+        }
+
+        membro.setEmail(email);
+        Pessoa salvo = membroRepository.save(membro);
+        cacheEvictor.evictPorIgreja("pessoas", igrejaId);
+        log.info("E-mail inicial definido. pessoa_id={}, igreja_id={}", id, igrejaId);
+
+        return PessoaResponse.from(salvo, null, true);
+    }
+
     /** Alerta (nunca erro) se outra pessoa na mesma igreja tiver o telefone idêntico. */
     private String avisoTelefoneDuplicado(String telefone, UUID pessoaId, UUID igrejaId) {
         String digitos = com.domus.api.shared.util.TextoUtil.somenteDigitos(telefone);

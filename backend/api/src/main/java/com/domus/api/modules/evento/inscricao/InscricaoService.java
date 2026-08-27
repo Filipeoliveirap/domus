@@ -124,6 +124,14 @@ public class InscricaoService {
         Pessoa membro = membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrado."));
 
+        // E-mail é obrigatório em qualquer evento (2026-08-27, decisão do autor) — mesmo
+        // motivo do convidado sem cadastro (ver inscreverConvidado): se o evento gratuito
+        // virar pago depois, precisa de um jeito de avisar quem já está inscrito.
+        if (membro.getEmail() == null || membro.getEmail().isBlank()) {
+            throw new BusinessException("EMAIL_OBRIGATORIO",
+                    "É necessário ter um e-mail cadastrado para se inscrever em eventos.");
+        }
+
         if (evento.getPreco() != null) {
             validarContaPagamentoConectada(igrejaId);
         }
@@ -456,12 +464,14 @@ public class InscricaoService {
         }
         if (evento.getPreco() != null) {
             validarContaPagamentoConectada(igrejaId);
-            // E-mail é a única forma de mandar o comprovante de pagamento pra quem não tem
-            // cadastro — sem ele, o convidado paga e nunca recebe confirmação nenhuma.
-            if (email == null || email.isBlank()) {
-                throw new BusinessException("EMAIL_OBRIGATORIO",
-                        "O e-mail é obrigatório para se inscrever em um evento pago.");
-            }
+        }
+        // E-mail é obrigatório em qualquer evento (2026-08-27, decisão do autor) — não só
+        // pra mandar o comprovante de pagamento: se o evento gratuito virar pago depois
+        // (ver EventoService.aplicarEventoVirouPago), precisa de um jeito de avisar quem
+        // já está inscrito sem cadastro.
+        if (email == null || email.isBlank()) {
+            throw new BusinessException("EMAIL_OBRIGATORIO",
+                    "O e-mail é obrigatório para se inscrever em eventos.");
         }
         validarEventoAberto(evento);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);

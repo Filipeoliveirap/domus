@@ -56,6 +56,10 @@ export interface InscritoResponse {
   convidadoPorNome: string | null
   /** Preenchido só pra convidado sem cadastro. */
   telefoneConvidado: string | null
+  /** Preenchido só pra pessoa com cadastro. */
+  telefonePessoa: string | null
+  /** Preenchido só pra pessoa com cadastro. */
+  emailPessoa: string | null
   inscritoEm: string
   compareceu: boolean
   igrejaDaPessoa: IgrejaResumo

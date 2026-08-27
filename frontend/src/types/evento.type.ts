@@ -115,6 +115,18 @@ export interface ImpactoRestricaoResponse {
   afetados: InscritoImpactado[]
 }
 
+/** Espelha `ImpactoMudancaPrecoResponse` (backend) — prévia de estorno ao mudar preço,
+ *  sem gravar nada. `SEM_IMPACTO` = sem mudança real ou sem ninguém afetado. Por ora só
+ *  `PAGO_PARA_GRATUITO` é calculado de verdade (a única direção do toggle implementada). */
+export type TipoImpactoMudancaPreco = 'SEM_IMPACTO' | 'PAGO_PARA_GRATUITO'
+
+export interface ImpactoMudancaPrecoResponse {
+  tipo: TipoImpactoMudancaPreco
+  pessoasComPagamentoPago: number
+  valorTotalAEstornar: number
+  pessoasAguardandoPagamento: number
+}
+
 export interface LocalEventoResponse {
   id: string
   nome: string

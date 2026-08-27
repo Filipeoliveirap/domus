@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
 import type {
   EventoArquivadoResponse, EventoRequest, EventoResponse, ImpactoRestricaoResponse,
+  ImpactoMudancaPrecoResponse,
   RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros, EscopoEdicaoEvento,
 } from '@/types/evento.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
@@ -59,6 +60,11 @@ export const eventosService = {
   // sem gravar nada — só chamada em edição, para decidir se abre o <ModalImpactoRestricao>.
   impactoRestricao: (id: string, data: EventoRequest): Promise<ImpactoRestricaoResponse> =>
     api.post<ImpactoRestricaoResponse>(Endpoints.eventos.IMPACTO_RESTRICAO(id), data).then(res => res.data),
+
+  // Mesma ideia de impactoRestricao, mas pra "isso vai estornar R$X de N pessoas" ao
+  // desligar o preço de um evento com gente já confirmada/aguardando pagamento.
+  impactoMudancaPreco: (id: string, data: EventoRequest): Promise<ImpactoMudancaPrecoResponse> =>
+    api.post<ImpactoMudancaPrecoResponse>(Endpoints.eventos.IMPACTO_MUDANCA_PRECO(id), data).then(res => res.data),
 
   // Tipos já usados pela igreja (mais frequentes primeiro) seguidos das sementes — a ordem
   // vem pronta do backend, o front só respeita.

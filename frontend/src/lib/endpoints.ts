@@ -62,6 +62,7 @@ export const Endpoints = {
     BY_ID: (id: string) => `/eventos/${id}`,
     TIPOS: '/eventos/tipos',
     IMPACTO_RESTRICAO: (id: string) => `/eventos/${id}/impacto-restricao`,
+    IMPACTO_MUDANCA_PRECO: (id: string) => `/eventos/${id}/impacto-mudanca-preco`,
     ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
     RELATORIO: (id: string) => `/eventos/${id}/relatorio`,
     RELATORIO_GERAL: '/eventos/relatorio-geral',

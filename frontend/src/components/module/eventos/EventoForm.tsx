@@ -17,6 +17,7 @@ import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
+import { ModalImpactoMudancaPreco } from './ModalImpactoMudancaPreco'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
 import type { CamposPersonalizadosHandle } from './CamposPersonalizadosPainel'
@@ -26,7 +27,7 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
-import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
+import type { InscritoImpactado, ImpactoMudancaPrecoResponse, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
   isFormIncomplete: boolean
@@ -41,6 +42,9 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
   onFecharImpacto: () => void
+  impactoMudancaPreco: ImpactoMudancaPrecoResponse | null
+  onConfirmarMudancaPreco: () => void
+  onFecharMudancaPreco: () => void
   aguardandoEscopoEdicao: boolean
   onEscolherEscopoEdicao: (escopo: EscopoEdicaoEvento) => void
   onFecharEscopoEdicao: () => void
@@ -64,6 +68,7 @@ export function EventoForm(props: EventoFormProps) {
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
@@ -610,6 +615,15 @@ export function EventoForm(props: EventoFormProps) {
           onManterTodos={() => onConfirmarImpacto(false)}
           onCancelarNaoElegiveis={() => onConfirmarImpacto(true)}
           onClose={onFecharImpacto}
+        />
+      )}
+
+      {impactoMudancaPreco && impactoMudancaPreco.tipo !== 'SEM_IMPACTO' && (
+        <ModalImpactoMudancaPreco
+          impacto={impactoMudancaPreco}
+          isLoading={isLoading}
+          onConfirmar={onConfirmarMudancaPreco}
+          onClose={onFecharMudancaPreco}
         />
       )}
 

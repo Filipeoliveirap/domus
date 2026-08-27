@@ -102,13 +102,10 @@ export const Endpoints = {
     INSCREVER: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     MINHA: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha`,
     INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/pessoas`,
-    ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
-      `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
     CONVIDADOS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/convidados`,
     PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
-    REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
     RESPOSTAS: (inscricaoId: string) => `/inscricoes/${inscricaoId}/respostas`,
   },
 
@@ -117,8 +114,6 @@ export const Endpoints = {
     DESMARCAR_TODOS: (eventoId: string) => `/eventos/${eventoId}/presenca/desmarcar-todos`,
     INSCRICAO: (eventoId: string, inscricaoId: string) =>
       `/eventos/${eventoId}/presenca/inscricoes/${inscricaoId}`,
-    ACOMPANHANTE: (eventoId: string, acompanhanteId: string) =>
-      `/eventos/${eventoId}/presenca/acompanhantes/${acompanhanteId}`,
   },
 
   categorias: {

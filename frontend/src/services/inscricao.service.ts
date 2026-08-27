@@ -6,8 +6,6 @@ import type {
   ListaInscritosResponse,
   InscreverPessoasRequest,
   PessoaInscritaComCobranca,
-  AcompanhanteRequest,
-  AcompanhanteResponse,
   ElegibilidadeResponse,
   CriarConvidadoRequest,
   ConvidadoResponse,
@@ -41,14 +39,6 @@ export const inscricoesService = {
   criarConvidado: (eventoId: string, data: CriarConvidadoRequest): Promise<ConvidadoResponse> =>
     api.post<ConvidadoResponse>(Endpoints.inscricoes.CONVIDADOS(eventoId), data).then(res => res.data),
 
-  adicionarAcompanhante: (
-    eventoId: string,
-    inscricaoId: string,
-    data: AcompanhanteRequest,
-  ): Promise<AcompanhanteResponse> =>
-    api.post<AcompanhanteResponse>(Endpoints.inscricoes.ACOMPANHANTES(eventoId, inscricaoId), data)
-      .then(res => res.data),
-
   participantes: (eventoId: string): Promise<ParticipanteResponse[]> =>
     api.get<ParticipanteResponse[]>(Endpoints.inscricoes.PARTICIPANTES(eventoId)).then(res => res.data),
 
@@ -60,16 +50,11 @@ export const inscricoesService = {
   cancelar: (inscricaoId: string): Promise<void> =>
     api.delete(Endpoints.inscricoes.CANCELAR(inscricaoId)).then(() => undefined),
 
-  removerAcompanhante: (acompanhanteId: string): Promise<void> =>
-    api.delete(Endpoints.inscricoes.REMOVER_ACOMPANHANTE(acompanhanteId)).then(() => undefined),
+  respostas: (inscricaoId: string): Promise<RespostaResponse[]> =>
+    api.get<RespostaResponse[]>(Endpoints.inscricoes.RESPOSTAS(inscricaoId)).then(res => res.data),
 
-  respostas: (inscricaoId: string, acompanhanteId?: string): Promise<RespostaResponse[]> =>
-    api.get<RespostaResponse[]>(Endpoints.inscricoes.RESPOSTAS(inscricaoId), { params: { acompanhanteId } })
-      .then(res => res.data),
-
-  responder: (inscricaoId: string, dados: RespostaRequest[], acompanhanteId?: string): Promise<void> =>
-    api.put(Endpoints.inscricoes.RESPOSTAS(inscricaoId), dados, { params: { acompanhanteId } })
-      .then(() => undefined),
+  responder: (inscricaoId: string, dados: RespostaRequest[]): Promise<void> =>
+    api.put(Endpoints.inscricoes.RESPOSTAS(inscricaoId), dados).then(() => undefined),
 
   marcarTodosPresentes: (eventoId: string): Promise<void> =>
     api.post(Endpoints.presenca.MARCAR_TODOS(eventoId)).then(() => undefined),
@@ -79,9 +64,5 @@ export const inscricoesService = {
 
   marcarPresencaInscricao: (eventoId: string, inscricaoId: string, compareceu: boolean): Promise<void> =>
     api.patch(Endpoints.presenca.INSCRICAO(eventoId, inscricaoId), { compareceu })
-      .then(() => undefined),
-
-  marcarPresencaAcompanhante: (eventoId: string, acompanhanteId: string, compareceu: boolean): Promise<void> =>
-    api.patch(Endpoints.presenca.ACOMPANHANTE(eventoId, acompanhanteId), { compareceu })
       .then(() => undefined),
 }

@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
-import { Copy, Check } from 'lucide-react'
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { cobrancaService } from '@/services/cobranca.service'
+import { TelaPix } from './TelaPix'
 import type { ApiError } from '@/types/api.types'
 import styles from './PaymentBrickCheckout.module.css'
 
@@ -84,7 +84,6 @@ export function PaymentBrickCheckout({ cobrancaId, valor, onPagamentoCriado, onC
   // (diferente de cartão, que resolve aprovado/recusado na hora) e a gente precisa mostrar
   // o QR/código pra pessoa pagar, em vez de fechar o checkout como se já tivesse terminado.
   const [pix, setPix] = useState<{ mpPaymentId: string; qrCode: string; qrCodeBase64: string } | null>(null)
-  const [copiado, setCopiado] = useState(false)
   // `onPagamentoCriado` chega como arrow function inline do componente pai (recriada a cada
   // render dele) — guardar só o valor mais recente numa ref evita que ela apareça nas
   // dependências de `aoEnviar` abaixo, que é o que mantém o `useEffect` do SDK estável (ver
@@ -235,30 +234,10 @@ export function PaymentBrickCheckout({ cobrancaId, valor, onPagamentoCriado, onC
   // mesmo elemento.
   const idContainer = `paymentBrick_${cobrancaId}`
 
-  function copiarCodigoPix() {
-    navigator.clipboard.writeText(pix!.qrCode)
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 2000)
-  }
-
   if (pix) {
     return (
       <div className={styles.wrapper}>
-        <div className={styles.pix}>
-          <p className={styles.pixInstrucao}>Escaneie o QR Code com o app do seu banco:</p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- imagem vem em base64 direto da API do Mercado Pago, não é um asset local pro <Image> otimizar */}
-          <img
-            src={`data:image/png;base64,${pix.qrCodeBase64}`}
-            alt="QR Code para pagamento via Pix"
-            className={styles.pixQrCode}
-          />
-          <p className={styles.pixInstrucao}>Ou copie o código Pix (copia e cola):</p>
-          <button type="button" className={styles.pixCopiar} onClick={copiarCodigoPix}>
-            {copiado ? <Check size={16} /> : <Copy size={16} />}
-            {copiado ? 'Copiado!' : 'Copiar código Pix'}
-          </button>
-          <p className={styles.pixAguardando}>Aguardando confirmação do pagamento…</p>
-        </div>
+        <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} />
       </div>
     )
   }

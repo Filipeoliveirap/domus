@@ -9,7 +9,6 @@ import type { ListaInscritosResponse } from '@/types/inscricao.type'
 
 export interface ItemSelecionado {
   id: string
-  tipo: 'inscricao'
 }
 
 // Sucesso não reinvalida ['inscricoes','lista'], senão os botões piscam de volta pra "Marcar presença".

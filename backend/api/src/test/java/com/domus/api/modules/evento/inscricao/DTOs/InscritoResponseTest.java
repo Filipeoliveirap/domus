@@ -94,4 +94,33 @@ class InscritoResponseTest {
         assertThat(resp.pessoaRemovida()).isFalse();
         assertThat(resp.convidadoPorNome()).isNull();
     }
+
+    @Test
+    void mostraTelefoneEEmailDaPessoaQuandoPessoaPreenchidaESemContatoDeConvidado() {
+        Igreja igreja = igreja();
+        InscricaoEvento i = inscricaoBase(igreja);
+        Pessoa pessoa = Pessoa.builder()
+                .id(UUID.randomUUID()).nome("Carlos Membro").igreja(igreja)
+                .telefone("11988887777").email("carlos@example.com")
+                .build();
+
+        InscritoResponse resp = InscritoResponse.from(i, pessoa, null, null);
+
+        assertThat(resp.telefonePessoa()).isEqualTo("11988887777");
+        assertThat(resp.emailPessoa()).isEqualTo("carlos@example.com");
+        assertThat(resp.telefoneConvidado()).isNull();
+    }
+
+    @Test
+    void naoMostraTelefoneNemEmailDePessoaQuandoConvidadoSemCadastro() {
+        Igreja igreja = igreja();
+        InscricaoEvento i = inscricaoBase(igreja);
+        i.setNomeConvidado("Maria de Fora");
+        i.setTelefoneConvidado("11999998888");
+
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+
+        assertThat(resp.telefonePessoa()).isNull();
+        assertThat(resp.emailPessoa()).isNull();
+    }
 }

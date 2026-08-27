@@ -258,11 +258,15 @@ public class EventoService {
         // Decisão do usuário (2026-08-27): mesmo com "aplicar a toda a série", o
         // reembolso/cobrança em lote roda SÓ na ocorrência editada agora (id original) —
         // mudar dinheiro de várias ocorrências de uma vez multiplicaria o risco financeiro
-        // sem necessidade. Se o preço deixou de ser nulo (pago -> gratuito), ninguém perde
-        // a vaga; quem pagou é estornado, quem estava esperando pagar é confirmado direto.
+        // sem necessidade. Ninguém perde a vaga em nenhuma das duas direções: pago ->
+        // gratuito estorna quem pagou e confirma quem esperava; gratuito -> pago cobra
+        // quem já estava confirmado, sem re-checar vaga (são os mesmos de antes).
         boolean virouGratuito = precoAntigo != null && data.preco() == null;
+        boolean virouPago = precoAntigo == null && data.preco() != null;
         if (virouGratuito) {
             inscricaoService.aplicarEventoVirouGratuito(id);
+        } else if (virouPago) {
+            inscricaoService.aplicarEventoVirouPago(id, data.preco(), usuarioId);
         }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
@@ -567,10 +571,9 @@ public class EventoService {
     }
 
     /**
-     * Prévia pura (nada gravado) do impacto de mudar o preço do evento — só faz sentido
-     * pra pago virando gratuito (a única direção do toggle já implementada, ver
-     * {@code InscricaoService.aplicarEventoVirouGratuito}); qualquer outra combinação
-     * (preço continua nulo, continua não-nulo, ou vira pago) devolve SEM_IMPACTO por ora.
+     * Prévia pura (nada gravado, nenhuma chamada ao Mercado Pago) do impacto de mudar o
+     * preço do evento — cobre as duas direções do toggle; mudança de preço que continua
+     * pago (ou continua gratuito) devolve SEM_IMPACTO.
      */
     @Transactional(readOnly = true)
     public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoMudancaPreco(
@@ -584,10 +587,14 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         boolean vaiVirarGratuito = evento.getPreco() != null && data.preco() == null;
-        if (!vaiVirarGratuito) {
-            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        boolean vaiVirarPago = evento.getPreco() == null && data.preco() != null;
+        if (vaiVirarGratuito) {
+            return inscricaoService.calcularImpactoEventoVirarGratuito(eventoId);
         }
-        return inscricaoService.calcularImpactoEventoVirarGratuito(eventoId);
+        if (vaiVirarPago) {
+            return inscricaoService.calcularImpactoEventoVirarPago(eventoId, data.preco());
+        }
+        return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
     }
 
     private void validarDatas(EventoRequest data) {

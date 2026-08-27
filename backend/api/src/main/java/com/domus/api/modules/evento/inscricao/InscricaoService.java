@@ -70,6 +70,12 @@ public class InscricaoService {
     private final EmailService emailService;
     private final com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService movimentacaoAutomaticaService;
 
+    /** Usado só pra montar o link de pagamento no e-mail de {@link #aplicarEventoVirouPago}
+     *  ("gerarLink", igual ao convite pra terceiro pagar) — mesmo padrão de
+     *  {@code ConviteController}/{@code PasswordResetService}. */
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url}")
+    private String frontendUrl;
+
     /**
      * Important 9 (revisão final de branch): sem isto, uma inscrição em evento pago era
      * criada com sucesso mesmo sem a igreja ter conectado uma conta Mercado Pago — só
@@ -1045,9 +1051,26 @@ public class InscricaoService {
         if (pessoasComPagamentoPago == 0 && pessoasAguardandoPagamento == 0) {
             return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
         }
-        return new com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse(
-                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.PAGO_PARA_GRATUITO,
+        return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.pagoParaGratuito(
                 pessoasComPagamentoPago, valorTotalAEstornar, pessoasAguardandoPagamento);
+    }
+
+    /**
+     * Prévia pura (nada gravado) de {@link #aplicarEventoVirouPago} — quantas pessoas já
+     * confirmadas ganhariam uma cobrança nova e quanto isso somaria no total.
+     */
+    @Transactional(readOnly = true)
+    public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoEventoVirarPago(
+            UUID eventoId, java.math.BigDecimal precoNovo) {
+        int pessoasSeraoCobradas = (int) inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA)
+                .count();
+
+        if (pessoasSeraoCobradas == 0) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        }
+        return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.gratuitoParaPago(
+                pessoasSeraoCobradas, precoNovo.multiply(java.math.BigDecimal.valueOf(pessoasSeraoCobradas)));
     }
 
     @Transactional
@@ -1147,6 +1170,88 @@ public class InscricaoService {
             log.info("E-mail de evento-virou-gratuito enviado. inscricaoId={}", inscricao.getId());
         } catch (RuntimeException e) {
             log.error("Falha ao enviar e-mail de evento-virou-gratuito. inscricaoId={}", inscricao.getId(), e);
+        }
+    }
+
+    /**
+     * Chamado por {@code EventoService.atualizarEvento} quando um evento gratuito vira
+     * pago (preço deixa de ser nulo) — decisão do usuário (2026-08-27): ninguém perde a
+     * vaga; cada inscrição CONFIRMADA ganha uma cobrança nova (PENDENTE, com link — mesmo
+     * modo "gerarLink" usado pra convidar terceiro a pagar, já que ninguém está numa tela
+     * de checkout agora) e vira AGUARDANDO_PAGAMENTO até a pessoa pagar. Igreja sem conta
+     * de pagamento conectada barra a edição inteira (mesma checagem de {@code inscrever}).
+     *
+     * @return quantas inscrições foram processadas.
+     */
+    @Transactional
+    public int aplicarEventoVirouPago(UUID eventoId, java.math.BigDecimal precoNovo, UUID usuarioId) {
+        List<InscricaoEvento> confirmadas = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA)
+                .toList();
+        if (confirmadas.isEmpty()) return 0;
+
+        validarContaPagamentoConectada(confirmadas.get(0).getIgreja().getId());
+
+        int processadas = 0;
+        for (InscricaoEvento inscricao : confirmadas) {
+            UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
+            CobrancaEvento cobranca = cobrancaEventoService.criarParaTerceiro(
+                    inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, precoNovo, usuarioId, true);
+            inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
+            inscricaoRepository.save(inscricao);
+            enviarEmailEventoVirouPago(inscricao, cobranca, precoNovo);
+            processadas++;
+        }
+
+        log.info("Evento virou pago, inscrições processadas. evento_id={}, processadas={}", eventoId, processadas);
+        return processadas;
+    }
+
+    private void enviarEmailEventoVirouPago(InscricaoEvento inscricao, CobrancaEvento cobranca, java.math.BigDecimal preco) {
+        String nomeDestinatario;
+        String email;
+
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+
+        if (email == null || email.isBlank()) {
+            log.info("Evento virou pago, sem e-mail pra avisar. inscricaoId={}", inscricao.getId());
+            return;
+        }
+
+        Evento evento = inscricao.getEvento();
+        String valorFormatado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                .format(preco);
+        String link = frontendUrl + "/cobranca/" + cobranca.getTokenLinkPublico();
+
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">O evento passou a ser pago</h2>
+                  <p>Olá, %s.</p>
+                  <p>O evento abaixo, em que você está inscrito(a), passou a cobrar inscrição.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p>
+                    Sua inscrição continua garantida, mas precisa ser paga —
+                    <strong>%s</strong> — pra ficar confirmada de vez. Pague pelo link abaixo:
+                  </p>
+                  <p style="text-align: center; margin: 24px 0;">
+                    <a href="%s" style="display: inline-block; background: #131b2e; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none;">Pagar inscrição</a>
+                  </p>
+                </div>
+                """.formatted(nomeDestinatario, evento.getTitulo(), valorFormatado, link);
+
+        try {
+            emailService.enviar(email, "Evento passou a ser pago — " + evento.getTitulo(), corpo);
+            log.info("E-mail de evento-virou-pago enviado. inscricaoId={}", inscricao.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de evento-virou-pago. inscricaoId={}", inscricao.getId(), e);
         }
     }
 }

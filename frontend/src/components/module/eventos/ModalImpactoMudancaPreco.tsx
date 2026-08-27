@@ -15,10 +15,10 @@ interface Props {
 }
 
 /**
- * Aviso antes de confirmar um evento pago virando gratuito com gente já
- * inscrita — mexe com dinheiro de verdade (estorno real no Mercado Pago), então mostra
- * os números antes do admin apertar "Salvar" de vez. Mesma linguagem visual de
- * ModalImpactoRestricao (reaproveita o CSS module dele).
+ * Aviso antes de confirmar uma mudança de preço com gente já inscrita, nas duas
+ * direções — mexe com dinheiro de verdade (estorno ou cobrança real no Mercado Pago),
+ * então mostra os números antes do admin apertar "Salvar" de vez. Mesma linguagem visual
+ * de ModalImpactoRestricao (reaproveita o CSS module dele).
  */
 export function ModalImpactoMudancaPreco({ impacto, isLoading, onConfirmar, onClose }: Props) {
   useEffect(() => {
@@ -29,7 +29,11 @@ export function ModalImpactoMudancaPreco({ impacto, isLoading, onConfirmar, onCl
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [onClose, isLoading])
 
-  const { pessoasComPagamentoPago, valorTotalAEstornar, pessoasAguardandoPagamento } = impacto
+  const {
+    tipo, pessoasComPagamentoPago, valorTotalAEstornar, pessoasAguardandoPagamento,
+    pessoasSeraoCobradas, valorTotalACobrar,
+  } = impacto
+  const vaiVirarPago = tipo === 'GRATUITO_PARA_PAGO'
 
   return (
     <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
@@ -47,20 +51,32 @@ export function ModalImpactoMudancaPreco({ impacto, isLoading, onConfirmar, onCl
             </span>
             <div>
               <h2 className={styles.titulo} id="titulo-impacto-mudanca-preco">
-                Este evento vai virar gratuito
+                {vaiVirarPago ? 'Este evento vai virar pago' : 'Este evento vai virar gratuito'}
               </h2>
               <p className={styles.subtitulo}>
-                {pessoasComPagamentoPago > 0 && (
+                {vaiVirarPago ? (
                   <>
-                    {pessoasComPagamentoPago === 1 ? '1 pessoa já pagou' : `${pessoasComPagamentoPago} pessoas já pagaram`}
-                    {' — '}<strong>{formatarMoeda(valorTotalAEstornar)}</strong> serão estornados. As inscrições permanecerão.
-                    {pessoasAguardandoPagamento > 0 && ' '}
+                    {pessoasSeraoCobradas === 1
+                      ? '1 pessoa já confirmada vai receber uma cobrança nova'
+                      : `${pessoasSeraoCobradas} pessoas já confirmadas vão receber uma cobrança nova`}
+                    {' — '}<strong>{formatarMoeda(valorTotalACobrar)}</strong> no total. A inscrição de cada uma
+                    fica pendente até pagar; ninguém perde a vaga.
                   </>
-                )}
-                {pessoasAguardandoPagamento > 0 && (
+                ) : (
                   <>
-                    {pessoasAguardandoPagamento === 1 ? '1 pessoa está' : `${pessoasAguardandoPagamento} pessoas estão`}
-                    {' '}aguardando pagamento — a inscrição será confirmada direto, sem cobrar nada.
+                    {pessoasComPagamentoPago > 0 && (
+                      <>
+                        {pessoasComPagamentoPago === 1 ? '1 pessoa já pagou' : `${pessoasComPagamentoPago} pessoas já pagaram`}
+                        {' — '}<strong>{formatarMoeda(valorTotalAEstornar)}</strong> serão estornados. As inscrições permanecerão.
+                        {pessoasAguardandoPagamento > 0 && ' '}
+                      </>
+                    )}
+                    {pessoasAguardandoPagamento > 0 && (
+                      <>
+                        {pessoasAguardandoPagamento === 1 ? '1 pessoa está' : `${pessoasAguardandoPagamento} pessoas estão`}
+                        {' '}aguardando pagamento — a inscrição será confirmada direto, sem cobrar nada.
+                      </>
+                    )}
                   </>
                 )}
               </p>

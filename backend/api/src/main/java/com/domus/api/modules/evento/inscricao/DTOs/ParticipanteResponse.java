@@ -3,7 +3,6 @@ package com.domus.api.modules.evento.inscricao.DTOs;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.inscricao.InscricaoEvento;
 import com.domus.api.modules.pessoa.Pessoa;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -16,7 +15,6 @@ public record ParticipanteResponse(
         String nome,
         UUID fotoId,
         String convidadoPorNome,
-        List<String> convidados,
         /** Preenchido só quando o convidado veio de um Visitante cadastrado (ver
          *  {@link InscricaoEvento#getVisitante()}) — usado pra bloquear, na busca de
          *  visitantes do modal "Inscrever alguém", quem já está inscrito neste evento. */
@@ -38,7 +36,6 @@ public record ParticipanteResponse(
                 nome,
                 pessoaResolvida != null && pessoaResolvida.getFoto() != null ? pessoaResolvida.getFoto().getId() : null,
                 convidadoPorResolvida == null ? null : convidadoPorResolvida.getNome(),
-                i.getAcompanhantes().stream().map(a -> a.getNome()).toList(),
                 i.getVisitante() == null ? null : i.getVisitante().getId(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja())
         );

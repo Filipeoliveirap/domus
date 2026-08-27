@@ -122,7 +122,7 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
-                        .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
+                        .requestMatchers(HttpMethod.DELETE, "/inscricoes/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/inscricoes/*/respostas")
                         .hasAnyRole(ADMIN, LIDER, COMUM)

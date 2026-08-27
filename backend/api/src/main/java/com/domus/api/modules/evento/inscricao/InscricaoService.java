@@ -15,8 +15,6 @@ import com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository;
 import com.domus.api.modules.pagamento.cobranca.CobrancaEventoService;
 import com.domus.api.modules.pagamento.cobranca.StatusCobranca;
 import com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository;
-import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteRequest;
-import com.domus.api.modules.evento.inscricao.DTOs.AcompanhanteResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.InscritoResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.ListaInscritosResponse;
 import com.domus.api.modules.evento.inscricao.DTOs.MinhaInscricaoResponse;
@@ -57,7 +55,6 @@ public class InscricaoService {
 
     private final EventoRepository eventoRepository;
     private final InscricaoRepository inscricaoRepository;
-    private final AcompanhanteRepository acompanhanteRepository;
     private final PessoaRepository membroRepository;
     private final UsuarioRepository usuarioRepository;
     private final VisitanteRepository visitanteRepository;
@@ -167,7 +164,7 @@ public class InscricaoService {
         InscricaoEvento salva = inscricaoRepository.save(inscricao);
 
         // Evento pago: titular sempre "eu pago agora" (nunca vira link, diferente do
-        // acompanhante em adicionarAcompanhante) — vaga fica reservada via CobrancaEvento
+        // convidado trazido via inscreverConvidado) — vaga fica reservada via CobrancaEvento
         // (ver validarVaga), não pela InscricaoEvento (que agora só confirma quando o
         // pagamento é aprovado, ver statusInicial acima). Quem assina como "criado por":
         // quem inscreveu (admin/líder em lote) ou, na auto-inscrição (inscritoPorOuNull
@@ -331,45 +328,30 @@ public class InscricaoService {
         }
     }
 
-    /** Compara por telefone normalizado, com fallback para nome se não houver telefone. */
-    private void validarConvidadoNaoDuplicado(UUID eventoId, AcompanhanteRequest data) {
-        String telefoneNovo = TextoUtil.somenteDigitos(data.telefone());
-        String nomeNovo = TextoUtil.normalizarParaComparacao(data.nome());
-
-        for (AcompanhanteInscricao existente : acompanhanteRepository.listarPorEvento(eventoId)) {
-            if (mesmoConvidado(telefoneNovo, nomeNovo, existente.getTelefone(), existente.getNome())) {
-                throw new BusinessException("CONVIDADO_DUPLICADO",
-                        "Este convidado já está inscrito neste evento.");
-            }
-        }
-    }
-
-    /** Mesma checagem de {@link #validarConvidadoNaoDuplicado}, mas para o convidado de topo
-     *  (sem Pessoa, sem acompanhante-pai) — antes disto, buscar o mesmo visitante/pessoa de
-     *  fora duas vezes no modal "Inscrever alguém" (ou no convite público) criava duas
-     *  inscrições separadas, ocupando duas vagas pra mesma pessoa. Checa tanto contra outros
-     *  convidados de topo quanto contra acompanhantes já cadastrados no evento. */
+    /** Antes disto, buscar o mesmo visitante/pessoa de fora duas vezes no modal "Inscrever
+     *  alguém" (ou no convite público) criava duas inscrições separadas, ocupando duas
+     *  vagas pra mesma pessoa. Checa contra qualquer outro convidado sem cadastro já
+     *  inscrito no evento (não existe mais a distinção "topo" vs. "acompanhante" — cada
+     *  convidado é sua própria {@code InscricaoEvento}). */
     /** Mesma mensagem dupla de {@link #inscrever} (JA_INSCRITO): quem preenche o próprio
      *  formulário pelo link ({@code inscritoPorUsuarioId == null}) vê "você"; quem é
      *  cadastrado por outra pessoa pelo sistema vê "essa pessoa". */
     private void validarConvidadoTopoNaoDuplicado(UUID eventoId, String nome, String telefone,
                                                    UUID visitanteId, UUID inscritoPorUsuarioId) {
-        List<InscricaoEvento> convidadosNoTopo = inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId);
+        List<InscricaoEvento> convidados = inscricaoRepository.listarConvidadosSemCadastroPorEvento(eventoId);
 
         // Com visitanteId, a checagem é exata (o mesmo Visitante já está inscrito) — não
         // depende de nome/telefone baterem, que é frágil (apelido, telefone desatualizado…).
-        boolean duplicadoPorVisitante = visitanteId != null && convidadosNoTopo.stream()
+        boolean duplicadoPorVisitante = visitanteId != null && convidados.stream()
                 .anyMatch(i -> i.getVisitante() != null && i.getVisitante().getId().equals(visitanteId));
 
         String telefoneNovo = TextoUtil.somenteDigitos(telefone);
         String nomeNovo = TextoUtil.normalizarParaComparacao(nome);
 
-        boolean duplicadoNoTopo = convidadosNoTopo.stream()
+        boolean duplicado = convidados.stream()
                 .anyMatch(i -> mesmoConvidado(telefoneNovo, nomeNovo, i.getTelefoneConvidado(), i.getNomeConvidado()));
-        boolean duplicadoComoAcompanhante = acompanhanteRepository.listarPorEvento(eventoId).stream()
-                .anyMatch(a -> mesmoConvidado(telefoneNovo, nomeNovo, a.getTelefone(), a.getNome()));
 
-        if (duplicadoPorVisitante || duplicadoNoTopo || duplicadoComoAcompanhante) {
+        if (duplicadoPorVisitante || duplicado) {
             String mensagem = inscritoPorUsuarioId == null
                     ? "Você já está inscrito neste evento."
                     : "Essa pessoa já está inscrita neste evento.";
@@ -522,87 +504,6 @@ public class InscricaoService {
         return new ResultadoConvidado(salva, cobranca);
     }
 
-    /** Convidado de fora, pendurado na inscrição de quem o trouxe. Ocupa vaga. */
-    @Transactional
-    public AcompanhanteResponse adicionarAcompanhante(UUID inscricaoId, AcompanhanteRequest data,
-                                                       UUID usuarioId, UUID meuMembroId, String role,
-                                                       UUID igrejaId) {
-        InscricaoEvento inscricao = buscarInscricao(inscricaoId, igrejaId);
-
-        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
-        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
-        boolean souODono = inscricao.getPessoa() != null && inscricao.getPessoa().getId().equals(meuMembroId);
-        if (!gestorDaMesmaIgreja && !souODono) {
-            throw new BusinessException("SEM_PERMISSAO",
-                    "Você só pode adicionar convidados à sua própria inscrição.");
-        }
-
-        validarOrganizaInscricao(inscricao.getEvento(), "Este evento não permite convidados.");
-
-        if (inscricao.getEvento().isExclusivoMembros()) {
-            throw new BusinessException("EXCLUSIVO_MEMBROS",
-                    "Este evento é exclusivo para membros — não é possível levar convidados.");
-        }
-        if (inscricao.getEvento().getPreco() != null) {
-            validarContaPagamentoConectada(igrejaId);
-        }
-        validarEventoAberto(inscricao.getEvento());
-        validarConvidadoNaoDuplicado(inscricao.getEvento().getId(), data);
-
-        var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
-        eventoRepository.buscarComLockVisivelParaFamilia(inscricao.getEvento().getId(), igrejaId, idsFamilia)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        validarVaga(inscricao.getEvento(), 1);
-
-        AcompanhanteInscricao a = AcompanhanteInscricao.builder()
-                .inscricao(inscricao)
-                .nome(TextoUtil.capitalizar(data.nome()))
-                .telefone(data.telefone())
-                .build();
-
-        AcompanhanteInscricao salvo = acompanhanteRepository.save(a);
-
-        // Terceiro (não o titular): a escolha de "pagar agora" vs. "gerar link" vem do
-        // próprio AcompanhanteRequest (campo gerarLinkPagamento) — quem está adicionando o
-        // convidado decide se cobra na hora ou manda um link pra essa pessoa pagar sozinha.
-        if (inscricao.getEvento().getPreco() != null) {
-            cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
-                    inscricaoId, null, salvo.getId(), inscricao.getEvento().getPreco(),
-                    usuarioId, data.gerarLinkPagamento());
-        }
-
-        log.info("Acompanhante adicionado. inscricao_id={}, por_usuario={}, igreja_id={}",
-                inscricaoId, usuarioId, igrejaId);
-        return AcompanhanteResponse.from(salvo);
-    }
-
-    @Transactional
-    public void removerAcompanhante(UUID acompanhanteId, UUID meuMembroId, String role, UUID igrejaId) {
-        AcompanhanteInscricao a = acompanhanteRepository.findById(acompanhanteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
-
-        InscricaoEvento inscricao = a.getInscricao();
-        if (!familiaIgrejaService.idsDaFamiliaCompleta(igrejaId).contains(inscricao.getIgreja().getId())) {
-            throw new ResourceNotFoundException("Convidado não encontrado.");
-        }
-
-        // Mesma trava de cancelar(): evento EM_ANDAMENTO/ENCERRADO reescreveria quem esteve presente.
-        validarEventoAberto(inscricao.getEvento());
-
-        // Permissão vem de ser dono da inscrição, não de quem inscreveu — inscritoPorUsuarioId é NULL na maioria dos casos.
-        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
-        boolean gestorDaMesmaIgreja = ehGestor && inscricao.getIgreja().getId().equals(igrejaId);
-        boolean souODono = inscricao.getPessoa() != null && inscricao.getPessoa().getId().equals(meuMembroId);
-
-        if (!gestorDaMesmaIgreja && !souODono) {
-            throw new BusinessException("SEM_PERMISSAO",
-                    "Você só pode remover convidados da sua própria inscrição.");
-        }
-        acompanhanteRepository.delete(a);
-        log.info("Acompanhante removido. acompanhante_id={}, por_membro={}, igreja_id={}",
-                acompanhanteId, meuMembroId, igrejaId);
-    }
-
     /** Evento EM_ANDAMENTO/ENCERRADO não permite cancelamento — presença é histórico. */
     @Transactional
     public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
@@ -620,23 +521,22 @@ public class InscricaoService {
                     + "Peça a ela ou a um líder da igreja.");
         }
 
-        int convidados = inscricao.getAcompanhantes().size();
         cancelarInterno(inscricao);
-        log.info("Inscrição cancelada. id={}, convidados_removidos={}, por_usuario={}, igreja_id={}",
-                inscricaoId, convidados, usuarioId, igrejaId);
+        log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
+                inscricaoId, usuarioId, igrejaId);
     }
 
-    /** Reusado pelo cancelamento manual e pela remoção por restrição — convidados não voltam
-     *  numa reinscrição, e as respostas de campo personalizado também não: a linha de
-     *  inscrição é reaproveitada (UNIQUE evento+pessoa), então sem isso a reinscrição
-     *  herdaria resposta velha e pareceria "já respondido" sem a pessoa ter respondido nada
-     *  desta vez. */
+    /** Reusado pelo cancelamento manual e pela remoção por restrição — as respostas de
+     *  campo personalizado não voltam numa reinscrição: a linha de inscrição é reaproveitada
+     *  (UNIQUE evento+pessoa), então sem isso a reinscrição herdaria resposta velha e
+     *  pareceria "já respondido" sem a pessoa ter respondido nada desta vez. Cancelar o
+     *  titular NÃO cancela em cascata quem ele convidou — cada convidado é sua própria
+     *  {@code InscricaoEvento} e se cancela independentemente (decisão do usuário, 2026-08-26). */
     private void cancelarInterno(InscricaoEvento inscricao) {
         // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
         // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
         // com o dinheiro ainda retido no Mercado Pago.
         estornarCobrancasDaInscricao(inscricao);
-        inscricao.getAcompanhantes().clear();   // orphanRemoval = true apaga as linhas
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
@@ -732,8 +632,8 @@ public class InscricaoService {
             nomeDestinatario = inscricao.getPessoa().getNome();
             email = inscricao.getPessoa().getEmail();
         } else {
-            // Acompanhante (modelo antigo) não tem e-mail; convidado sem cadastro em evento
-            // pago sempre tem (obrigatório desde a feature de comprovante por e-mail).
+            // Convidado sem cadastro em evento pago sempre tem e-mail (obrigatório desde a
+            // feature de comprovante por e-mail); em evento gratuito pode não ter.
             nomeDestinatario = inscricao.getNomeConvidado();
             email = inscricao.getEmailConvidado();
         }
@@ -995,7 +895,7 @@ public class InscricaoService {
 
     /**
      * Fluxo real é "quase todo mundo veio" — exceções se corrigem depois via {@link #marcarPresencaInscricao}.
-     * @return quantas pessoas físicas (inscritos + acompanhantes) foram marcadas.
+     * @return quantas inscrições (cada convidado já é a sua própria) foram marcadas.
      */
     @Transactional
     public int marcarTodosPresentes(UUID eventoId, UUID igrejaId, String role) {
@@ -1013,10 +913,6 @@ public class InscricaoService {
         for (InscricaoEvento inscricao : inscricoes) {
             inscricao.setCompareceu(true);
             marcados++;
-            for (AcompanhanteInscricao acompanhante : inscricao.getAcompanhantes()) {
-                acompanhante.setCompareceu(true);
-                marcados++;
-            }
             inscricaoRepository.save(inscricao);
         }
 
@@ -1042,10 +938,6 @@ public class InscricaoService {
         for (InscricaoEvento inscricao : inscricoes) {
             inscricao.setCompareceu(false);
             desmarcados++;
-            for (AcompanhanteInscricao acompanhante : inscricao.getAcompanhantes()) {
-                acompanhante.setCompareceu(false);
-                desmarcados++;
-            }
             inscricaoRepository.save(inscricao);
         }
 
@@ -1072,32 +964,6 @@ public class InscricaoService {
         inscricaoRepository.save(inscricao);
         log.info("Presença individual marcada. inscricao_id={}, compareceu={}, igreja_id={}",
                 inscricaoId, compareceu, igrejaId);
-    }
-
-    /** Corrige a exceção de UM convidado específico (o inscrito veio, o convidado não, ou vice-versa). */
-    @Transactional
-    public void marcarPresencaAcompanhante(UUID eventoId, UUID acompanhanteId, boolean compareceu,
-                                           UUID igrejaId, String role) {
-        if (!Permissoes.podeGerenciarInscricoes(role)) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Você não tem permissão para marcar presença.");
-        }
-
-        AcompanhanteInscricao acompanhante = acompanhanteRepository.findById(acompanhanteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado."));
-
-        // Mesmo isolamento de removerAcompanhante(): id de outra igreja é tratado como inexistente, nunca vaza.
-        if (!acompanhante.getInscricao().getIgreja().getId().equals(igrejaId)) {
-            throw new ResourceNotFoundException("Convidado não encontrado.");
-        }
-
-        validarControlaPresenca(acompanhante.getInscricao().getEvento());
-        validarInscricaoConfirmada(acompanhante.getInscricao());
-
-        acompanhante.setCompareceu(compareceu);
-        acompanhanteRepository.save(acompanhante);
-        log.info("Presença de convidado marcada. acompanhante_id={}, compareceu={}, igreja_id={}",
-                acompanhanteId, compareceu, igrejaId);
     }
 
     /** Espelha o CHECK do banco (V6): sem controlaPresenca não existe presença para marcar. */

@@ -11,11 +11,9 @@ import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrit
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
-import { useRemoverConvidado } from '@/hooks/inscricao/useRemoverConvidado'
 import { useMarcarTodosPresentes } from '@/hooks/inscricao/useMarcarTodosPresentes'
 import { useDesmarcarTodosPresentes } from '@/hooks/inscricao/useDesmarcarTodosPresentes'
 import { useMarcarPresencaInscricao } from '@/hooks/inscricao/useMarcarPresencaInscricao'
-import { useMarcarPresencaAcompanhante } from '@/hooks/inscricao/useMarcarPresencaAcompanhante'
 import { useMarcarPresencaSelecionados, type ItemSelecionado } from '@/hooks/inscricao/useMarcarPresencaSelecionados'
 import { useRelatorioEvento } from '@/hooks/evento/useRelatorioEvento'
 import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscreverAlguem'
@@ -59,14 +57,11 @@ export default function InscritosPage() {
 
   const [modalInscreverAberto, setModalInscreverAberto] = useState(false)
   const [inscritoCancelando, setInscritoCancelando] = useState<InscritoResponse | null>(null)
-  const [convidadoCancelando, setConvidadoCancelando] = useState<{ id: string; nome: string } | null>(null)
 
   const cancelarInscricao = useCancelarInscricao()
-  const removerConvidado = useRemoverConvidado()
   const marcarTodos = useMarcarTodosPresentes(eventoId)
   const desmarcarTodos = useDesmarcarTodosPresentes(eventoId)
   const marcarPresencaInscricao = useMarcarPresencaInscricao(eventoId)
-  const marcarPresencaAcompanhante = useMarcarPresencaAcompanhante(eventoId)
   const marcarPresencaSelecionados = useMarcarPresencaSelecionados(eventoId)
   const [confirmarMarcarTodos, setConfirmarMarcarTodos] = useState(false)
   const [confirmarDesmarcarTodos, setConfirmarDesmarcarTodos] = useState(false)
@@ -92,9 +87,6 @@ export default function InscritosPage() {
         ? 'Inscrito por ele mesmo'
         : `Inscrito por ${inscrito.inscritoPorNome ?? 'cadastro removido'}`,
     ]
-    if (inscrito.acompanhantes.length > 0) {
-      linhas.push(`${inscrito.acompanhantes.length} convidado(s): ${inscrito.acompanhantes.map((a) => a.nome).join(', ')}`)
-    }
     if (mostraPresenca) {
       linhas.push(inscrito.compareceu ? 'Presença confirmada neste evento' : 'Ainda não marcado presente neste evento')
     }
@@ -189,13 +181,6 @@ export default function InscritosPage() {
     if (!inscritoCancelando) return
     cancelarInscricao.mutate(inscritoCancelando.id, {
       onSuccess: () => setInscritoCancelando(null),
-    })
-  }
-
-  function aoConfirmarRemocaoConvidado() {
-    if (!convidadoCancelando) return
-    removerConvidado.mutate(convidadoCancelando.id, {
-      onSuccess: () => setConvidadoCancelando(null),
     })
   }
 
@@ -443,84 +428,6 @@ export default function InscritosPage() {
                           )}
                         </div>
                       </div>
-
-                      {inscrito.acompanhantes.map((convidado) => {
-                        const aoClicarConvidado = () => (
-                          modoSelecao
-                            ? alternarSelecao({ tipo: 'acompanhante', id: convidado.id })
-                            : abrirDetalheConvidado(convidado.nome, convidado.telefone, inscrito.nome, inscrito.inscritoEm)
-                        )
-                        return (
-                        <div
-                          key={convidado.id}
-                          className={`${styles.linhaConvidado} ${mostraPresenca ? styles.linhaComPresenca : ''} ${styles.linhaClicavel}`}
-                          onClick={aoClicarConvidado}
-                          onKeyDown={(e) => aoTeclarLinha(e, aoClicarConvidado)}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <span className={styles.conector} aria-hidden="true" />
-                          <div className={styles.colParticipante}>
-                            <span className={styles.avatarConvidado}>{iniciais(convidado.nome)}</span>
-                            <span className={styles.colParticipanteTextos}>
-                              <span className={styles.nome}>{convidado.nome}</span>
-                              <span className={styles.subtitulo}>Convidado por {inscrito.nome}</span>
-                            </span>
-                            <span className={styles.pillConvidado}>Convidado</span>
-                          </div>
-                          <div className={styles.colData} />
-                          <div className={styles.colInscritoPor} />
-                          {mostraPresenca && (
-                            <div className={styles.colPresenca}>
-                              {modoSelecao ? (
-                                <input
-                                  type="checkbox"
-                                  className={styles.checkboxSelecao}
-                                  checked={selecionados.has(chaveSelecao({ tipo: 'acompanhante', id: convidado.id }))}
-                                  aria-label={`Selecionar ${convidado.nome}`}
-                                  onChange={() => alternarSelecao({ tipo: 'acompanhante', id: convidado.id })}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={`${styles.botaoPresenca} ${convidado.compareceu ? styles.presente : ''}`}
-                                  aria-pressed={convidado.compareceu}
-                                  disabled={
-                                    marcarPresencaAcompanhante.isPending
-                                    && marcarPresencaAcompanhante.variables?.acompanhanteId === convidado.id
-                                  }
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    marcarPresencaAcompanhante.mutate({
-                                      acompanhanteId: convidado.id,
-                                      compareceu: !convidado.compareceu,
-                                    })
-                                  }}
-                                >
-                                  {convidado.compareceu
-                                    ? <><Check size={14} aria-hidden="true" /> Presente</>
-                                    : 'Marcar presença'}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          <div className={styles.colAcoes}>
-                            {podeCancelar ? (
-                              <button
-                                type="button"
-                                className={styles.btnCancelar}
-                                onClick={(e) => { e.stopPropagation(); setConvidadoCancelando({ id: convidado.id, nome: convidado.nome }) }}
-                              >
-                                Remover
-                              </button>
-                            ) : (
-                              <span className={styles.textoMuted}>{textoBloqueado}</span>
-                            )}
-                          </div>
-                        </div>
-                        )
-                      })}
                     </div>
                   )})}
                 </div>
@@ -600,39 +507,13 @@ export default function InscritosPage() {
         <ConfirmarCancelamentoInscricao
           nome={inscritoCancelando.nome}
           proprio={false}
-          quantidadeConvidados={inscritoCancelando.acompanhantes.length}
+          // Titular e convidado agora são a mesma InscricaoEvento, cada um cancelado por
+          // conta própria — cancelar um não leva mais nenhum outro junto (Task 4 Step 7).
+          quantidadeConvidados={0}
           isLoading={cancelarInscricao.isPending}
           onConfirmar={aoConfirmarCancelamento}
           onClose={() => setInscritoCancelando(null)}
         />
-      )}
-
-      {convidadoCancelando && (
-        <div className={styles.confirmInlineOverlay} onMouseDown={() => setConvidadoCancelando(null)}>
-          <div className={styles.confirmInline} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <p className={styles.confirmInlineTexto}>
-              Remover <strong>{convidadoCancelando.nome}</strong> da lista de convidados?
-            </p>
-            <div className={styles.confirmInlineAcoes}>
-              <button
-                type="button"
-                className={styles.btnCancelar}
-                onClick={() => setConvidadoCancelando(null)}
-                disabled={removerConvidado.isPending}
-              >
-                Não
-              </button>
-              <button
-                type="button"
-                className={styles.btnConfirmarInline}
-                onClick={aoConfirmarRemocaoConvidado}
-                disabled={removerConvidado.isPending}
-              >
-                {removerConvidado.isPending ? 'Removendo…' : 'Sim, remover'}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {confirmarMarcarTodos && (

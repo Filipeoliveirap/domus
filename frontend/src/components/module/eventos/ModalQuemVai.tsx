@@ -11,7 +11,6 @@ import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
-import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './ModalQuemVai.module.css'
 
@@ -35,8 +34,6 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
     eventoId, ehGestor, '', 0, 500)
   const cancelar = useCancelarInscricao()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
-  const [cancelandoComConvidados, setCancelandoComConvidados] =
-    useState<{ id: string; nome: string; quantidadeConvidados: number } | null>(null)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -46,25 +43,26 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [aoFechar])
 
-  // Normaliza as duas fontes numa só, para não ramificar a marcação por papel
+  // Normaliza as duas fontes numa só, para não ramificar a marcação por papel. Cada
+  // convidado já chega como linha própria (InscricaoEvento unificada) — sem agrupamento
+  // por titular. "Quem esse titular convidou" virou uma visão à parte, fora de escopo por
+  // ora (ver Task 10/11).
   const linhas = ehGestor
     ? (listaAdmin?.inscritos.content ?? []).map((i) => ({
         id: i.id,
         nome: i.nome,
         fotoId: i.fotoId,
-        convidados: i.acompanhantes.map((a) => a.nome),
         igrejaDaPessoa: i.igrejaDaPessoa,
       }))
     : participantes.map((p) => ({
         id: p.id,
         nome: p.nome,
         fotoId: p.fotoId,
-        convidados: p.convidados,
         igrejaDaPessoa: p.igrejaDaPessoa,
       }))
 
   const carregando = ehGestor ? carregandoAdmin : carregandoLista
-  const total = linhas.reduce((acc, l) => acc + 1 + l.convidados.length, 0)
+  const total = linhas.length
 
   const igrejasDistintas = new Set(linhas.map((l) => l.igrejaDaPessoa?.id).filter(Boolean))
   const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
@@ -149,16 +147,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
                       <button
                         type="button"
                         className={styles.cancelar}
-                        onClick={() => {
-                          // Sem convidado: confirmação inline. Com convidado: cancela junto e exige digitar o nome.
-                          if (l.convidados.length > 0) {
-                            setCancelandoComConvidados({
-                              id: l.id, nome: l.nome, quantidadeConvidados: l.convidados.length,
-                            })
-                          } else {
-                            setConfirmandoId(l.id)
-                          }
-                        }}
+                        onClick={() => setConfirmandoId(l.id)}
                         disabled={cancelar.isPending}
                       >
                         Cancelar inscrição
@@ -166,34 +155,11 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
                     )
                   )}
                 </div>
-
-                {l.convidados.map((nome, i) => (
-                  <div key={`${l.id}-${i}`} className={styles.convidado}>
-                    <span className={styles.avatarConvidado}>{iniciais(nome)}</span>
-                    <span className={styles.nomeConvidado}>{nome}</span>
-                    <span className={styles.selo}>Convidado</span>
-                  </div>
-                ))}
               </div>
             ))
           )}
         </div>
       </div>
-
-      {cancelandoComConvidados && (
-        <ConfirmarCancelamentoInscricao
-          nome={cancelandoComConvidados.nome}
-          proprio={false}
-          quantidadeConvidados={cancelandoComConvidados.quantidadeConvidados}
-          isLoading={cancelar.isPending}
-          onConfirmar={() => {
-            cancelar.mutate(cancelandoComConvidados.id, {
-              onSuccess: () => setCancelandoComConvidados(null),
-            })
-          }}
-          onClose={() => setCancelandoComConvidados(null)}
-        />
-      )}
     </div>
   )
 }

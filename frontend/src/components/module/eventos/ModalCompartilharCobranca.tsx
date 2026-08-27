@@ -19,7 +19,7 @@ interface Props {
 }
 
 /**
- * Compartilhar o link de cobrança de UM terceiro (acompanhante que escolheu "Enviar
+ * Compartilhar o link de cobrança de UM terceiro (convidado que escolheu "Enviar
  * link" em `EscolhaPagamentoPorPessoa`). Estrutura copiada de `ModalCompartilharConvite`
  * (mesmo overlay/modal de `ModalInscreverPessoas.module.css`, mesma UI de copiar/WhatsApp
  * de `ModalCompartilharConvite.module.css`) — só o texto e a rota mudam.

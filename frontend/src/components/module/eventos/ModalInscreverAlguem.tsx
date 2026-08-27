@@ -63,6 +63,14 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
   // enquanto a rota de checkout ainda está carregando.
   const [navegandoParaCheckout, setNavegandoParaCheckout] = useState(false)
 
+  // Task 11 — "trazer gente junto": depois de inscrever UM convidado (abas Visitantes/
+  // Pessoa de fora), em vez de fechar o modal na hora, mostra uma tela de confirmação
+  // que oferece "adicionar outro" (reabre o formulário limpo) ou "concluir" (fecha o
+  // modal de verdade). `convidadosInscritos` é só a lista compacta exibida nessa tela,
+  // acumulada durante esta sessão do wizard — não é persistida em lugar nenhum.
+  const [convidadosInscritos, setConvidadosInscritos] = useState<string[]>([])
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false)
+
   const isPending = criarConvidado.isPending || navegandoParaCheckout
 
   function limparFormulario() {
@@ -127,21 +135,31 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
       },
       {
         onSuccess: (resposta) => {
+          setConvidadosInscritos((atual) => [...atual, nomeConfirmado])
+
           if (!resposta.cobrancaId) {
-            // Evento gratuito — fluxo antigo, sem escolha de pagamento.
-            onClose()
+            // Evento gratuito — em vez de fechar direto, oferece o loop de "adicionar
+            // outro convidado" (desenho confirmado com o usuário, Task 11).
+            setMostrarConfirmacao(true)
             return
           }
           if (gerarLink) {
             setCompartilhandoCobranca({ nome: nomeConfirmado, token: resposta.tokenLinkPublico! })
             limparFormulario()
           } else {
+            // Pagamento direto do próprio convidado sai do wizard pra tela de checkout —
+            // não faz sentido oferecer "adicionar outro" aqui, a pessoa está saindo do modal.
             setNavegandoParaCheckout(true)
             router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaId}`)
           }
         },
       },
     )
+  }
+
+  function adicionarOutroConvidado() {
+    setMostrarConfirmacao(false)
+    limparFormulario()
   }
 
   if (compartilhandoCobranca) {
@@ -151,7 +169,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
         tituloEvento={tituloEvento}
         valor={preco ?? 0}
         token={compartilhandoCobranca.token}
-        onClose={() => setCompartilhandoCobranca(null)}
+        onClose={() => { setCompartilhandoCobranca(null); setMostrarConfirmacao(true) }}
       />
     )
   }
@@ -182,6 +200,27 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
           </button>
         </div>
 
+        {mostrarConfirmacao ? (
+          <>
+            <div className={styles.confirmacao}>
+              <p className={styles.confirmacaoTitulo}>
+                {convidadosInscritos[convidadosInscritos.length - 1]} foi inscrito(a)!
+              </p>
+              <p className={styles.confirmacaoLista}>
+                {convidadosInscritos.join(', ')} já inscrito{convidadosInscritos.length > 1 ? 's' : ''} nesta sessão.
+              </p>
+            </div>
+            <div className={styles.footer}>
+              <button type="button" className={styles.btnCancelar} onClick={onClose}>
+                Concluir
+              </button>
+              <button type="button" className={styles.btnConfirmar} onClick={adicionarOutroConvidado}>
+                Adicionar outro convidado
+              </button>
+            </div>
+          </>
+        ) : (
+        <>
         <div className={styles.abas}>
           <button type="button" className={aba === 'pessoas' ? styles.abaAtiva : styles.aba} onClick={() => trocarAba('pessoas')}>
             Pessoas da igreja
@@ -378,6 +417,8 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               )}
             </div>
           </>
+        )}
+        </>
         )}
       </div>
     </div>

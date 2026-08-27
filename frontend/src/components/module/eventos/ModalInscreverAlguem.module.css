@@ -210,6 +210,28 @@
   opacity: 0.5;
 }
 
+/* ---- Task 11: loop "adicionar outro convidado" (tela de confirmação) ---- */
+
+.confirmacao {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  min-height: 0;
+}
+
+.confirmacaoTitulo {
+  font-size: var(--font-size-md, 16px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.confirmacaoLista {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 /* ---- Plano 4b: pagamento nas abas Visitantes/Pessoa de fora ---- */
 
 .acoesPagamentoConvidado {

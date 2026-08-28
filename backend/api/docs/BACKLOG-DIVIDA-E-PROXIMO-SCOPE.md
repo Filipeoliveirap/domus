@@ -751,17 +751,17 @@ item acima: o prazo do link de pagamento passaria a acompanhar esse campo quando
 em vez do fixo de 48h. Precisa de brainstorm completo (schema, UI de cadastro, mensagem pro
 usuário quando o prazo já passou mas o evento ainda não começou) antes de virar plano.
 
-### Trocar evento entre pago↔gratuito com gente já inscrita (2026-08-26, ainda não desenhado)
+### ~~Trocar evento entre pago↔gratuito com gente já inscrita~~ (2026-08-26, **RESOLVIDO 2026-08-27**)
 
-Gap apontado pelo autor durante a sessão de endurecimento do pagamento (junto com os dois
-abaixo, achados numa revisão de segurança/gaps pedida por ele). Hoje o cadastro de evento
-deixa mudar `preco`/`requerInscricao` livremente mesmo com inscritos existentes — não há
-regra nenhuma pro caso "evento era grátis, virou pago com gente já confirmada" nem
-"evento era pago, virou grátis com cobranças pendentes/pagas em aberto". Precisa decidir
-(brainstorm): quem já está inscrito antes da mudança fica isento? cobrança pendente que
-vira "evento agora é grátis" cancela sozinha? evento pago virando grátis estorna quem já
-pagou? Não é bounded — mexe em regra de negócio de `InscricaoService`/`CobrancaEventoService`
-e provavelmente em confirmação explícita na tela de editar evento.
+Gap apontado pelo autor durante a sessão de endurecimento do pagamento. Resolvido dentro
+da mesma sessão, sem brainstorm à parte (o desenho saiu natural do resto do trabalho de
+estorno em massa): `EventoService.atualizarEvento` detecta `virouGratuito`/`virouPago`/
+`valorMudouAindaPago` e despacha pra `InscricaoService.aplicarEventoVirouGratuito`/
+`aplicarEventoVirouPago`/`aplicarMudancaValorPago`. Pago→gratuito estorna quem já pagou e
+confirma direto quem estava aguardando pagamento (ninguém perde vaga); gratuito→pago cobra
+quem já estava confirmado, sem re-checar vaga. `ModalImpactoMudancaPreco` avisa o admin com
+os números antes de confirmar a mudança. Cobre também estorno em massa que falha (tag
+"Estorno pendente" com retry, ver `CobrancaEvento.estornoPendente`).
 
 ### Escolha de meio de pagamento + parcelamento por evento, considerando a taxa do Mercado Pago (2026-08-26, ainda não desenhado)
 

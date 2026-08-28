@@ -69,3 +69,42 @@ button {
 ul, ol {
   list-style: none;
 }
+
+/* ─── View Transitions (transição entre rotas/abas) ──────── */
+/* O <NavProgress> chama document.startViewTransition() só em troca de SEÇÃO. O
+   `view-transition-name` fica no conteúdo APENAS durante a transição (via [data-vt] no
+   <html>) — fora dela seria um stacking context permanente que prenderia modais renderizados
+   inline abaixo do sidebar/header. Cai fora sozinho em quem não suporta (Firefox): lá vale
+   o keyframe do <TransicaoRota>. */
+:root[data-vt] [data-transicao-rota] {
+  view-transition-name: conteudoApp;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+/* Curto de propósito: durante a View Transition o browser mostra um snapshot ESTÁTICO —
+   qualquer spinner na tela fica congelado enquanto ela roda. 0.14s/0.2s = o congelamento
+   vira um piscar imperceptível, e a suavidade vem da curva. */
+::view-transition-old(conteudoApp) {
+  animation: domusConteudoSai 0.12s cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(conteudoApp) {
+  animation: domusConteudoEntra 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes domusConteudoSai {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes domusConteudoEntra {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-vt] [data-transicao-rota] { view-transition-name: none; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

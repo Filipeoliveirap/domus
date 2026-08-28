@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useLogin } from '@/hooks/auth/useLogin'
 import { authService } from '@/services/auth.service'
@@ -13,6 +13,10 @@ import Image from 'next/image'
 
 export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
+  // O <GoogleLogin> renderiza um iframe de largura FIXA — 340px estourava em telas de
+  // ~320px. Medimos o container e passamos a largura real (a API do Google aceita 200–400).
+  const googleWrapRef = useRef<HTMLDivElement>(null)
+  const [larguraGoogle, setLarguraGoogle] = useState(340)
   const {
     register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit,
     onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado, aplicarSessao,
@@ -30,6 +34,19 @@ export default function LoginPage() {
         // 401 (sem sessão) é o caminho normal: fica na tela de login mesmo.
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const el = googleWrapRef.current
+    if (!el) return
+    const medir = () => {
+      const w = Math.round(el.getBoundingClientRect().width)
+      setLarguraGoogle(Math.min(400, Math.max(200, w)))
+    }
+    // observe() já dispara o callback com o tamanho atual (assíncrono) — sem setState no corpo do efeito
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   return (
@@ -119,14 +136,14 @@ export default function LoginPage() {
           <span className={styles.dividerText}>OU</span>
         </div>
 
-        <div className={styles.googleWrap}>
+        <div className={styles.googleWrap} ref={googleWrapRef}>
           <GoogleLogin
             onSuccess={(cred) => {
               if (cred.credential) onGoogleLogin(cred.credential)
             }}
             onError={onGoogleError}
             text="signin_with"
-            width="340"
+            width={String(larguraGoogle)}
           />
         </div>
 

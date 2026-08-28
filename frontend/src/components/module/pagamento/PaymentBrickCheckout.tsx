@@ -85,15 +85,18 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // Só é preenchido quando o meio escolhido é Pix — nesse caso o pagamento nasce `pending`
   // (diferente de cartão, que resolve aprovado/recusado na hora) e a gente precisa mostrar
   // o QR/código pra pessoa pagar, em vez de fechar o checkout como se já tivesse terminado.
-  const [pix, setPix] = useState<{ mpPaymentId: string; qrCode: string; qrCodeBase64: string } | null>(null)
+  const [pix, setPix] = useState<{ mpPaymentId: string; qrCode: string; qrCodeBase64: string; expiraEm: string } | null>(null)
+  const [reiniciando, setReiniciando] = useState(false)
   // `onPagamentoCriado` chega como arrow function inline do componente pai (recriada a cada
   // render dele) — guardar só o valor mais recente numa ref evita que ela apareça nas
   // dependências de `aoEnviar` abaixo, que é o que mantém o `useEffect` do SDK estável (ver
   // comentário logo antes do `useCallback`).
   const onPagamentoCriadoRef = useRef(onPagamentoCriado)
-  onPagamentoCriadoRef.current = onPagamentoCriado
   const onCobrancaIndisponivelRef = useRef(onCobrancaIndisponivel)
-  onCobrancaIndisponivelRef.current = onCobrancaIndisponivel
+  useEffect(() => {
+    onPagamentoCriadoRef.current = onPagamentoCriado
+    onCobrancaIndisponivelRef.current = onCobrancaIndisponivel
+  })
 
   useEffect(() => {
     if (chaveInicializada !== publicKeyRef.current && publicKeyRef.current) {
@@ -170,7 +173,12 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
           // Pix: o pagamento nasce `pending` — mostra o QR em vez de fechar o checkout
           // como se já tivesse terminado (isso é o que o cartão faz, mas cartão resolve
           // aprovado/recusado na hora; Pix só confirma quando o webhook avisar).
-          setPix({ mpPaymentId: resposta.mpPaymentId, qrCode: resposta.qrCode, qrCodeBase64: resposta.qrCodeBase64 })
+          // `expiraEmPix` (30min) é a validade real deste Pix — nunca `expiraEm` (prop, o
+          // prazo da cobrança inteira, que pode chegar a 48h pra link compartilhado).
+          setPix({
+            mpPaymentId: resposta.mpPaymentId, qrCode: resposta.qrCode, qrCodeBase64: resposta.qrCodeBase64,
+            expiraEm: resposta.expiraEmPix ?? expiraEm,
+          })
         } else if (resposta.status === 'rejected') {
           // Achado testando o fluxo de ponta a ponta (2026-08-26): cartão recusado
           // devolve 200 com mpPaymentId igual a um aprovado — sem checar `status` aqui,
@@ -216,7 +224,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
         setEnviando(false)
       }
     },
-    [cobrancaId]
+    [cobrancaId, expiraEm]
   )
 
   // O SDK chama onError também para situações não-fatais (ex.: uma revalidação interna de
@@ -236,10 +244,29 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // mesmo elemento.
   const idContainer = `paymentBrick_${cobrancaId}`
 
+  // "QR Code não funcionou / pagar de outro jeito" (achado ao vivo, 2026-08-27): libera a
+  // cobrança no backend (cancela a tentativa presa no Mercado Pago) e volta pro formulário
+  // do Brick, onde a pessoa pode gerar um Pix novo ou escolher cartão.
+  async function aoReiniciar() {
+    setReiniciando(true)
+    try {
+      await cobrancaService.reiniciar(cobrancaId)
+      setPix(null)
+    } finally {
+      setReiniciando(false)
+    }
+  }
+
   if (pix) {
     return (
       <div className={styles.wrapper}>
-        <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={expiraEm} />
+        <TelaPix
+          qrCode={pix.qrCode}
+          qrCodeBase64={pix.qrCodeBase64}
+          expiraEm={pix.expiraEm}
+          onReiniciar={aoReiniciar}
+          reiniciando={reiniciando}
+        />
       </div>
     )
   }

@@ -37,7 +37,7 @@ class InscritoResponseTest {
         i.setNomeConvidado("Maria de Fora");
         i.setTelefoneConvidado("11999998888");
 
-        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null, false, null);
 
         assertThat(resp.nome()).isEqualTo("Maria de Fora");
         assertThat(resp.pessoaRemovida()).isFalse();
@@ -51,7 +51,7 @@ class InscritoResponseTest {
         i.setNomeConvidado("Maria de Fora");
         i.setCompareceu(true);
 
-        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null, false, null);
 
         assertThat(resp.compareceu()).isTrue();
     }
@@ -62,7 +62,7 @@ class InscritoResponseTest {
         InscricaoEvento i = inscricaoBase(igreja);
         // pessoa e nomeConvidado ambos nulos — LGPD purgou a pessoa.
 
-        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null, false, null);
 
         assertThat(resp.nome()).isEqualTo("Pessoa removida do sistema");
         assertThat(resp.pessoaRemovida()).isTrue();
@@ -76,7 +76,7 @@ class InscritoResponseTest {
 
         Pessoa convidante = Pessoa.builder().id(UUID.randomUUID()).nome("Ana Convidante").build();
 
-        InscritoResponse resp = InscritoResponse.from(i, null, null, convidante);
+        InscritoResponse resp = InscritoResponse.from(i, null, null, convidante, false, null);
 
         assertThat(resp.nome()).isEqualTo("João Visitante");
         assertThat(resp.convidadoPorNome()).isEqualTo("Ana Convidante");
@@ -88,7 +88,7 @@ class InscritoResponseTest {
         InscricaoEvento i = inscricaoBase(igreja);
         Pessoa pessoa = Pessoa.builder().id(UUID.randomUUID()).nome("Carlos Membro").igreja(igreja).build();
 
-        InscritoResponse resp = InscritoResponse.from(i, pessoa, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, pessoa, null, null, false, null);
 
         assertThat(resp.nome()).isEqualTo("Carlos Membro");
         assertThat(resp.pessoaRemovida()).isFalse();
@@ -104,7 +104,7 @@ class InscritoResponseTest {
                 .telefone("11988887777").email("carlos@example.com")
                 .build();
 
-        InscritoResponse resp = InscritoResponse.from(i, pessoa, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, pessoa, null, null, false, null);
 
         assertThat(resp.telefonePessoa()).isEqualTo("11988887777");
         assertThat(resp.emailPessoa()).isEqualTo("carlos@example.com");
@@ -118,9 +118,23 @@ class InscritoResponseTest {
         i.setNomeConvidado("Maria de Fora");
         i.setTelefoneConvidado("11999998888");
 
-        InscritoResponse resp = InscritoResponse.from(i, null, null, null);
+        InscritoResponse resp = InscritoResponse.from(i, null, null, null, false, null);
 
         assertThat(resp.telefonePessoa()).isNull();
         assertThat(resp.emailPessoa()).isNull();
+    }
+
+    @Test
+    void pagamentoParcialSoEhTrueQuandoAguardandoPagamentoComCobrancaPagaAnterior() {
+        Igreja igreja = igreja();
+        InscricaoEvento aguardando = inscricaoBase(igreja);
+        aguardando.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
+
+        assertThat(InscritoResponse.from(aguardando, null, null, null, true, null).pagamentoParcial()).isTrue();
+        // Sem cobrança paga anterior — "pagamento pendente" comum, nunca pagou nada.
+        assertThat(InscritoResponse.from(aguardando, null, null, null, false, null).pagamentoParcial()).isFalse();
+        // CONFIRMADA nunca é "pagamento parcial", mesmo se o parâmetro vier true por engano.
+        InscricaoEvento confirmada = inscricaoBase(igreja);
+        assertThat(InscritoResponse.from(confirmada, null, null, null, true, null).pagamentoParcial()).isFalse();
     }
 }

@@ -520,6 +520,29 @@ public class InscricaoService {
         return new ResultadoConvidado(salva, cobranca);
     }
 
+    /**
+     * Cancelamento pelo link "Cancelar inscrição" do e-mail de lembrete de pagamento
+     * pendente (2026-08-27) — sem sessão, pela mesma garantia de posse do resto do módulo
+     * de cobrança (o {@code id} da {@link CobrancaEvento}, UUIDv4, já é a prova de posse;
+     * ver {@code CobrancaController}). Só cancela quem ainda está AGUARDANDO_PAGAMENTO — um
+     * link velho (a pessoa já pagou, ou já foi cancelada por outro caminho) não faz nada.
+     */
+    @Transactional
+    public void cancelarPorCobranca(UUID cobrancaId) {
+        CobrancaEvento cobranca = cobrancaEventoRepository.findById(cobrancaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        InscricaoEvento inscricao = inscricaoRepository.findById(cobranca.getInscricaoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+        if (inscricao.getStatus() != StatusInscricao.AGUARDANDO_PAGAMENTO) {
+            throw new ConflitoNegocioException("INSCRICAO_NAO_AGUARDA_PAGAMENTO",
+                    "Esta inscrição não está mais aguardando pagamento.");
+        }
+        validarEventoAberto(inscricao.getEvento());
+        cancelarInterno(inscricao);
+        log.info("Inscrição cancelada via link do e-mail de lembrete. inscricaoId={}, cobrancaId={}",
+                inscricao.getId(), cobrancaId);
+    }
+
     /** Evento EM_ANDAMENTO/ENCERRADO não permite cancelamento — presença é histórico. */
     @Transactional
     public void cancelar(UUID inscricaoId, UUID usuarioId, UUID meuMembroId,
@@ -607,16 +630,27 @@ public class InscricaoService {
         UUID igrejaId = inscricao.getIgreja().getId();
 
         // 1ª passada: só chamadas externas (podem falhar), NENHUMA mutação de status ainda.
+        // Estorna só o RESTANTE (valor - já estornado antes) — achado ao vivo, 2026-08-27:
+        // uma cobrança que já tinha recebido estorno parcial (reajuste de preço pra baixo,
+        // ver aplicarMudancaValorPago) fazia o cancelamento tentar estornar o valor CHEIO
+        // de novo, e o Mercado Pago recusava por falta de saldo pra devolver.
         for (CobrancaEvento cobranca : cobrancas) {
-            if (cobranca.getStatus() == StatusCobranca.PAGO) {
-                try {
-                    mercadoPagoClient.estornar(igrejaId, cobranca.getMpPaymentId());
-                } catch (Exception e) {
-                    log.error("Falha ao estornar pagamento no Mercado Pago. cobrancaId={} mpPaymentId={}",
-                            cobranca.getId(), cobranca.getMpPaymentId(), e);
-                    throw new BusinessException("FALHA_ESTORNO",
-                            "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
-                }
+            if (cobranca.getStatus() != StatusCobranca.PAGO) continue;
+            java.math.BigDecimal restante = cobranca.valorRestanteParaEstornar();
+            if (restante.signum() == 0) continue; // já foi estornada por completo antes
+            try {
+                mercadoPagoClient.estornarParcial(igrejaId, cobranca.getMpPaymentId(), restante);
+            } catch (Exception e) {
+                log.error("Falha ao estornar pagamento no Mercado Pago. cobrancaId={} mpPaymentId={}",
+                        cobranca.getId(), cobranca.getMpPaymentId(), e);
+                // Marca ANTES de lançar — quem chama isso em lote (aplicarEventoVirouGratuito,
+                // cancelamento em massa) captura essa exceção e segue pro próximo item, então
+                // sem marcar aqui dentro a pendência nunca ficava visível pra ninguém retentar
+                // depois (2026-08-27).
+                cobranca.marcarEstornoPendente();
+                cobrancaEventoRepository.save(cobranca);
+                throw new BusinessException("FALHA_ESTORNO",
+                        "FALHA_ESTORNO: não foi possível estornar o pagamento. Tente novamente em instantes.");
             }
         }
 
@@ -624,8 +658,11 @@ public class InscricaoService {
         java.math.BigDecimal valorReembolsado = java.math.BigDecimal.ZERO;
         for (CobrancaEvento cobranca : cobrancas) {
             if (cobranca.getStatus() == StatusCobranca.PAGO) {
-                cobranca.marcarComoReembolsado();
-                valorReembolsado = valorReembolsado.add(cobranca.getValor());
+                java.math.BigDecimal restante = cobranca.valorRestanteParaEstornar();
+                if (restante.signum() > 0) {
+                    cobranca.registrarEstorno(restante);
+                    valorReembolsado = valorReembolsado.add(restante);
+                }
             } else if (cobranca.getStatus() == StatusCobranca.PENDENTE) {
                 cobranca.marcarComoCancelado();
             }
@@ -648,6 +685,55 @@ public class InscricaoService {
         } catch (RuntimeException e) {
             log.error("Falha ao registrar estorno na movimentação financeira. inscricaoId={}", inscricao.getId(), e);
         }
+    }
+
+    /**
+     * Retry de "Estorno pendente" (2026-08-27) — o admin vê a tag na lista de inscritos
+     * (ver {@code estorno_pendente} em {@link CobrancaEvento}) e tenta de novo o MESMO
+     * estorno que falhou em algum fluxo de estorno em massa (evento virou gratuito, preço
+     * baixou, arquivamento de evento, remoção de não-elegível...). Só mexe no dinheiro
+     * desta cobrança específica: não tenta adivinhar nem refazer a mudança de status que o
+     * fluxo original faria (ex.: cancelar a inscrição de vez) — uma vez que o "restante a
+     * estornar" chega a zero, o próprio botão "Cancelar inscrição" (ou uma nova tentativa
+     * do fluxo original) resolve o resto sem tentar estornar de novo, porque
+     * {@link CobrancaEvento#valorRestanteParaEstornar()} já dá zero.
+     */
+    @Transactional
+    public void tentarEstornoNovamente(UUID cobrancaId, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new BusinessException("SEM_PERMISSAO", "Você não pode gerenciar estornos.");
+        }
+        CobrancaEvento cobranca = cobrancaEventoRepository.findById(cobrancaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        if (!cobranca.getIgrejaId().equals(igrejaId)) {
+            throw new ResourceNotFoundException("Cobrança não encontrada.");
+        }
+        if (!cobranca.isEstornoPendente()) {
+            return; // nada pendente — botão pode ter sido clicado duas vezes
+        }
+        java.math.BigDecimal restante = cobranca.valorRestanteParaEstornar();
+        if (restante.signum() == 0) {
+            // resolvido por outro caminho enquanto isso — só limpa a tag
+            cobranca.registrarEstorno(java.math.BigDecimal.ZERO);
+            cobrancaEventoRepository.save(cobranca);
+            return;
+        }
+        try {
+            mercadoPagoClient.estornarParcial(igrejaId, cobranca.getMpPaymentId(), restante);
+        } catch (Exception e) {
+            log.error("Nova tentativa de estorno falhou de novo. cobrancaId={} mpPaymentId={}",
+                    cobranca.getId(), cobranca.getMpPaymentId(), e);
+            throw new BusinessException("FALHA_ESTORNO",
+                    "Não foi possível estornar. Tente novamente mais tarde.");
+        }
+        cobranca.registrarEstorno(restante);
+        cobrancaEventoRepository.save(cobranca);
+
+        InscricaoEvento inscricao = inscricaoRepository.findById(cobranca.getInscricaoId()).orElse(null);
+        if (inscricao != null) {
+            registrarEstornoNoFinanceiro(inscricao, restante);
+        }
+        log.info("Estorno pendente resolvido manualmente. cobrancaId={}, valor={}", cobrancaId, restante);
     }
 
     /**
@@ -723,6 +809,48 @@ public class InscricaoService {
                 }
             }
         }
+    }
+
+    /**
+     * Chamado por {@code EventoService.arquivarEvento} (2026-08-27) — arquivar um evento
+     * pago com gente já confirmada/paga precisa devolver o dinheiro de quem pagou, do
+     * mesmo jeito que virar gratuito faz; sem isto, arquivar um evento pago simplesmente
+     * sumia com a cobrança sem avisar nem devolver nada. Mesmo padrão fail-fast por item
+     * dos outros cancelamentos em lote — uma falha de estorno não trava o arquivamento
+     * inteiro, só marca a cobrança como "estorno pendente" pra retry manual depois.
+     *
+     * @return quantas inscrições foram canceladas com sucesso.
+     */
+    @Transactional
+    public int cancelarTodasInscricoesDoEventoComEstorno(UUID eventoId) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA
+                        || i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO)
+                .toList();
+        int canceladas = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            try {
+                cancelarInterno(inscricao);
+                canceladas++;
+            } catch (BusinessException e) {
+                if (!"FALHA_ESTORNO".equals(e.getCodigo())) throw e;
+                log.error("Falha ao estornar cobrança da inscrição {} durante arquivamento do evento "
+                        + "— pessoa mantida como estava, requer retry manual", inscricao.getId(), e);
+            }
+        }
+        if (canceladas > 0) {
+            log.info("Inscrições canceladas por arquivamento do evento. evento_id={}, canceladas={}",
+                    eventoId, canceladas);
+        }
+        // Flush explícito: EventoService.arquivarEvento chama eventoRepository.delete(evento)
+        // logo em seguida, na MESMA transação — sem isto, as InscricaoEvento cujo status mudou
+        // aqui ainda ficam pendentes de flush quando o Evento (que elas referenciam) é
+        // removido da sessão, e o autoflush seguinte lançava TransientObjectException
+        // ("unsaved transient instance of Evento") — regressão do MESMO bug que
+        // EventoArquivamentoNotificaInscritosTest já cobria pra notificarInscritos
+        // (achado ao vivo, 2026-08-27).
+        inscricaoRepository.flush();
+        return canceladas;
     }
 
     /** Só roda com escolha explícita do admin ({@code cancelarNaoElegiveis}); pula exceções deliberadas. */
@@ -823,12 +951,25 @@ public class InscricaoService {
         // Resolve "quem inscreveu" em UMA query (evita N+1); id ausente no mapa (conta arquivada) vira null explícito.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
         Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
+        // Quem já pagou algo (diferencia a tag "Pagamento pendente" de "Falta
+        // complementar" — ver InscritoResponse.pagamentoParcial).
+        List<UUID> idsDaPagina = inscricoes.stream().map(InscricaoEvento::getId).toList();
+        java.util.Set<UUID> comCobrancaPaga = new java.util.HashSet<>(
+                cobrancaEventoRepository.findInscricaoIdsComCobrancaPaga(idsDaPagina));
+        // Tag "Estorno pendente" (2026-08-27) — mapeia inscrição -> id da cobrança pendente
+        // de retry (nunca mais de uma cobrança com estorno pendente por inscrição na prática).
+        Map<UUID, UUID> comEstornoPendente = cobrancaEventoRepository
+                .findByInscricaoIdInAndEstornoPendenteTrue(idsDaPagina).stream()
+                .collect(java.util.stream.Collectors.toMap(CobrancaEvento::getInscricaoId, CobrancaEvento::getId,
+                        (a, b) -> a));
 
         List<InscritoResponse> inscritosDaPagina = inscricoes.stream()
                 .map(i -> InscritoResponse.from(i,
                         resolverPessoa(i, pessoas),
                         registrantes.get(i.getInscritoPorUsuarioId()),
-                        resolverConvidadoPor(i, pessoas)))
+                        resolverConvidadoPor(i, pessoas),
+                        comCobrancaPaga.contains(i.getId()),
+                        comEstornoPendente.get(i.getId())))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
@@ -1181,6 +1322,8 @@ public class InscricaoService {
         } catch (RuntimeException e) {
             log.error("Falha ao enviar e-mail de evento-virou-gratuito. inscricaoId={}", inscricao.getId(), e);
         }
+        notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_VIROU_GRATUITO,
+                "\"" + evento.getTitulo() + "\" passou a ser gratuito." + (houveReembolso ? " O valor pago será reembolsado." : ""));
     }
 
     /**
@@ -1263,5 +1406,420 @@ public class InscricaoService {
         } catch (RuntimeException e) {
             log.error("Falha ao enviar e-mail de evento-virou-pago. inscricaoId={}", inscricao.getId(), e);
         }
+        notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_VIROU_PAGO,
+                "\"" + evento.getTitulo() + "\" passou a ser pago — falta pagar " + valorFormatado + " pra confirmar sua vaga.");
+    }
+
+    /** Notifica dentro do próprio Domus, além do e-mail — só quando a pessoa tem conta
+     *  (usuario), mesmo padrão de {@code CampoPersonalizadoService.notificarInscritosSobrePendencia}. */
+    private void notificarPessoaSeForUsuario(InscricaoEvento inscricao, com.domus.api.modules.notificacao.TipoNotificacao tipo, String texto) {
+        if (inscricao.getPessoa() == null) return; // convidado sem cadastro não tem conta pra notificar
+        usuarioRepository.findByPessoaId(inscricao.getPessoa().getId())
+                .ifPresent(usuario -> notificacaoService.criar(
+                        tipo, inscricao.getIgreja().getId(), usuario.getId(), texto,
+                        "/eventos?detalhe=" + inscricao.getEvento().getId()));
+    }
+
+    /**
+     * Prévia pura (nada gravado, nenhuma chamada ao Mercado Pago) de
+     * {@link #aplicarMudancaValorPago} — evento continua pago, só o valor mudou.
+     */
+    @Transactional(readOnly = true)
+    public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoMudancaValorPago(
+            UUID eventoId, java.math.BigDecimal precoAntigo, java.math.BigDecimal precoNovo) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA
+                        || i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO)
+                .toList();
+        if (inscricoes.isEmpty()) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        }
+        Map<UUID, List<CobrancaEvento>> cobrancasPorInscricao = cobrancaEventoRepository.findByEventoId(eventoId).stream()
+                .collect(java.util.stream.Collectors.groupingBy(CobrancaEvento::getInscricaoId));
+
+        int pessoasComDiferencaAPagar = 0;
+        java.math.BigDecimal valorTotalACobrar = java.math.BigDecimal.ZERO;
+        int pessoasComDiferencaAEstornar = 0;
+        java.math.BigDecimal valorTotalAEstornar = java.math.BigDecimal.ZERO;
+        int pessoasNuncaPagaram = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            // valorJaPago (não o status) é quem realmente decide o quanto falta — status
+            // sozinho não distingue "nunca pagou nada" de "já pagou e está esperando pagar
+            // só um complemento de um reajuste anterior" (achado ao vivo, 2026-08-27: essa
+            // confusão fazia a prévia de estorno não contar quem tinha um complemento
+            // pendente, e fazia a cobrança nova ser calculada com o preço antigo do EVENTO
+            // em vez de com o que a pessoa realmente já pagou).
+            java.math.BigDecimal valorJaPago = valorJaPago(cobrancasPorInscricao.getOrDefault(inscricao.getId(), List.of()));
+            if (valorJaPago.compareTo(java.math.BigDecimal.ZERO) == 0) {
+                pessoasNuncaPagaram++;
+                continue;
+            }
+            java.math.BigDecimal novoValorDevido = precoNovo.subtract(valorJaPago);
+            if (novoValorDevido.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                pessoasComDiferencaAPagar++;
+                valorTotalACobrar = valorTotalACobrar.add(novoValorDevido);
+            } else if (novoValorDevido.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                pessoasComDiferencaAEstornar++;
+                valorTotalAEstornar = valorTotalAEstornar.add(novoValorDevido.abs());
+            }
+        }
+
+        if (pessoasComDiferencaAPagar == 0 && pessoasComDiferencaAEstornar == 0 && pessoasNuncaPagaram == 0) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+        }
+        // Achado ao vivo (2026-08-27): as duas direções podem coexistir quando o evento já
+        // teve reajustes diferentes pra pessoas diferentes antes — a prévia antiga só
+        // mostrava a direção "principal" (pela variação do preço do EVENTO) e escondia
+        // completamente quem estava na direção oposta, mesmo o backend já calculando os
+        // dois valores certinho por trás.
+        if (pessoasComDiferencaAPagar > 0 && pessoasComDiferencaAEstornar > 0) {
+            return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.valorMisto(
+                    pessoasComDiferencaAEstornar, valorTotalAEstornar,
+                    pessoasComDiferencaAPagar, valorTotalACobrar, pessoasNuncaPagaram);
+        }
+        return precoNovo.compareTo(precoAntigo) > 0
+                ? com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.valorAumentou(
+                        pessoasComDiferencaAPagar, valorTotalACobrar, pessoasNuncaPagaram)
+                : com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.valorDiminuiu(
+                        pessoasComDiferencaAEstornar, valorTotalAEstornar, pessoasNuncaPagaram);
+    }
+
+    /** Quanto a pessoa REALMENTE ainda tem retido (pago menos o que já foi estornado dela) —
+     *  nunca o valor bruto pago, porque um estorno parcial anterior (reajuste de preço pra
+     *  baixo) reduz o quanto ela efetivamente "tem pago" pra fins de um próximo reajuste. */
+    private java.math.BigDecimal valorJaPago(List<CobrancaEvento> cobrancasDaInscricao) {
+        return cobrancasDaInscricao.stream()
+                .filter(c -> c.getStatus() == StatusCobranca.PAGO)
+                .map(CobrancaEvento::valorRestanteParaEstornar)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
+
+    /**
+     * Chamado por {@code EventoService.atualizarEvento} quando um evento continua pago mas
+     * o valor muda — decisão do usuário (2026-08-27): ninguém perde a vaga. A diferença é
+     * calculada por PESSOA (quanto ela já pagou de verdade, somando todas as cobranças
+     * PAGO dela — inclusive complementos de reajustes anteriores), nunca pelo preço antigo
+     * do evento sozinho: duas pessoas confirmadas no mesmo evento podem ter pago valores
+     * diferentes se já passaram por outro reajuste antes (achado ao vivo, 2026-08-27 — um
+     * segundo reajuste cobrava o valor cheio de novo em vez de só a diferença restante).
+     *
+     * <p>Quem já tem uma cobrança PENDENTE em aberto (aguardando um complemento anterior)
+     * tem ELA reaproveitada/atualizada — nunca cria uma segunda cobrança de complemento
+     * pra mesma inscrição. Quem nunca pagou nada (aguardando o valor cheio desde o início,
+     * como em {@link #aplicarEventoVirouPago}) só tem esse valor cheio atualizado.</p>
+     *
+     * @return quantas inscrições foram processadas.
+     */
+    @Transactional
+    public int aplicarMudancaValorPago(UUID eventoId, java.math.BigDecimal precoAntigo,
+                                        java.math.BigDecimal precoNovo, UUID usuarioId) {
+        List<InscricaoEvento> inscricoes = inscricaoRepository.findByEventoId(eventoId).stream()
+                .filter(i -> i.getStatus() == StatusInscricao.CONFIRMADA
+                        || i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO)
+                .toList();
+        if (inscricoes.isEmpty()) return 0;
+
+        Map<UUID, List<CobrancaEvento>> cobrancasPorInscricao = cobrancaEventoRepository.findByEventoId(eventoId).stream()
+                .collect(java.util.stream.Collectors.groupingBy(CobrancaEvento::getInscricaoId));
+
+        boolean vaiPrecisarDeContaConectada = false;
+        for (InscricaoEvento inscricao : inscricoes) {
+            List<CobrancaEvento> cobrancas = cobrancasPorInscricao.getOrDefault(inscricao.getId(), List.of());
+            boolean temPendenteAberta = cobrancas.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PENDENTE);
+            java.math.BigDecimal valorJaPago = valorJaPago(cobrancas);
+            boolean precisaCriarCobrancaNova = valorJaPago.compareTo(java.math.BigDecimal.ZERO) > 0 && !temPendenteAberta
+                    && precoNovo.compareTo(valorJaPago) > 0;
+            if (precisaCriarCobrancaNova) { vaiPrecisarDeContaConectada = true; break; }
+        }
+        if (vaiPrecisarDeContaConectada) {
+            validarContaPagamentoConectada(inscricoes.get(0).getIgreja().getId());
+        }
+
+        int processadas = 0;
+        for (InscricaoEvento inscricao : inscricoes) {
+            List<CobrancaEvento> cobrancas = cobrancasPorInscricao.getOrDefault(inscricao.getId(), List.of());
+            java.math.BigDecimal valorJaPago = valorJaPago(cobrancas);
+            var cobrancaPendenteOpt = cobrancas.stream().filter(c -> c.getStatus() == StatusCobranca.PENDENTE).findFirst();
+
+            // Nunca pagou nada ainda (nem o valor original) — só atualiza o valor cheio que
+            // falta pagar, igual sempre foi (nenhuma cobrança nova, nenhum estorno).
+            if (valorJaPago.compareTo(java.math.BigDecimal.ZERO) == 0) {
+                cobrancaPendenteOpt.ifPresent(c -> { c.atualizarValor(precoNovo); cobrancaEventoRepository.save(c); });
+                processadas++;
+                continue;
+            }
+
+            java.math.BigDecimal novoValorDevido = precoNovo.subtract(valorJaPago);
+            if (novoValorDevido.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                // Falta pagar (ou falta pagar MAIS do que já estava pendente).
+                if (cobrancaPendenteOpt.isPresent()) {
+                    // Já tinha um complemento pendente de um reajuste anterior — só
+                    // atualiza o valor dele, nunca duplica a cobrança.
+                    var c = cobrancaPendenteOpt.get();
+                    c.atualizarValor(novoValorDevido);
+                    cobrancaEventoRepository.save(c);
+                    enviarEmailComplementoPagamento(inscricao, c, novoValorDevido);
+                } else {
+                    try {
+                        UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
+                        CobrancaEvento complemento = cobrancaEventoService.criarParaTerceiro(
+                                inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, novoValorDevido, usuarioId, true);
+                        // Decisão do usuário (2026-08-27): tratar exatamente como
+                        // aplicarEventoVirouPago — a inscrição vira AGUARDANDO_PAGAMENTO até
+                        // a diferença ser paga (mesma pendência, mesma tag "Pagamento
+                        // pendente" na lista de inscritos, mesmo lembrete/cancelamento por
+                        // link — só o texto do e-mail muda).
+                        inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
+                        inscricaoRepository.save(inscricao);
+                        enviarEmailComplementoPagamento(inscricao, complemento, novoValorDevido);
+                    } catch (RuntimeException e) {
+                        log.error("Falha ao gerar cobrança de complemento. inscricaoId={}", inscricao.getId(), e);
+                        continue;
+                    }
+                }
+            } else {
+                // novoValorDevido <= 0: já pagou o suficiente (ou mais) pro novo preço. Se
+                // havia um complemento pendente aberto (de um reajuste anterior que subiu o
+                // preço), ele não faz mais sentido de jeito nenhum — cancela e confirma de
+                // volta, MESMO quando o excedente é zero (achado ao vivo, 2026-08-27: sem
+                // isto, um reajuste que zerasse a diferença exatamente deixava a pessoa
+                // travada em AGUARDANDO_PAGAMENTO com uma cobrança pendente de um valor que
+                // já não era mais devido).
+                java.math.BigDecimal excedente = novoValorDevido.abs();
+                if (excedente.signum() > 0) {
+                    var cobrancaPagaMaisRecente = cobrancas.stream()
+                            .filter(c -> c.getStatus() == StatusCobranca.PAGO)
+                            .reduce((a, b) -> b); // a mais recente é a última da lista (ordem de criação)
+                    if (cobrancaPagaMaisRecente.isEmpty()) continue; // defesa: valorJaPago > 0 implica ter uma
+                    var cobrancaParaEstornar = cobrancaPagaMaisRecente.get();
+                    try {
+                        mercadoPagoClient.estornarParcial(
+                                inscricao.getIgreja().getId(), cobrancaParaEstornar.getMpPaymentId(), excedente);
+                    } catch (RuntimeException e) {
+                        log.error("Falha ao estornar parcialmente. inscricaoId={} mpPaymentId={}",
+                                inscricao.getId(), cobrancaParaEstornar.getMpPaymentId(), e);
+                        cobrancaParaEstornar.marcarEstornoPendente();
+                        cobrancaEventoRepository.save(cobrancaParaEstornar);
+                        continue;
+                    }
+                    cobrancaParaEstornar.registrarEstorno(excedente);
+                    cobrancaEventoRepository.save(cobrancaParaEstornar);
+                    registrarEstornoNoFinanceiro(inscricao, excedente);
+                    enviarEmailEstornoParcial(inscricao, excedente);
+                }
+                if (cobrancaPendenteOpt.isPresent()) {
+                    var c = cobrancaPendenteOpt.get();
+                    c.marcarComoCancelado();
+                    cobrancaEventoRepository.save(c);
+                    inscricao.setStatus(StatusInscricao.CONFIRMADA);
+                    inscricaoRepository.save(inscricao);
+                } else if (excedente.signum() == 0) {
+                    // Nem excedente pra estornar, nem complemento pendente pra cancelar —
+                    // já estava exatamente em dia, nada mudou de verdade pra essa pessoa.
+                    continue;
+                }
+            }
+            processadas++;
+        }
+
+        if (processadas > 0) {
+            log.info("Valor do evento pago mudou, inscrições processadas. evento_id={}, processadas={}",
+                    eventoId, processadas);
+        }
+        return processadas;
+    }
+
+    private String formatarMoeda(java.math.BigDecimal valor) {
+        return java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR")).format(valor);
+    }
+
+    private void enviarEmailComplementoPagamento(InscricaoEvento inscricao, CobrancaEvento complemento, java.math.BigDecimal diferenca) {
+        String nomeDestinatario;
+        String email;
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+        if (email == null || email.isBlank()) {
+            log.info("Valor do evento aumentou, sem e-mail pra avisar do complemento. inscricaoId={}", inscricao.getId());
+            return;
+        }
+
+        Evento evento = inscricao.getEvento();
+        String link = frontendUrl + "/cobranca/" + complemento.getTokenLinkPublico();
+        // Mesmo tratamento de aplicarEventoVirouPago (2026-08-27): a inscrição já virou
+        // AGUARDANDO_PAGAMENTO, então este e-mail ganha o mesmo botão de cancelar do
+        // lembrete de pagamento pendente comum — cancelar aqui cancela a inscrição de
+        // verdade (consistente com o resto do sistema tratando essa pendência igual).
+        String linkCancelar = frontendUrl + "/eventos/" + evento.getId() + "/pagamento/" + complemento.getId() + "/cancelar";
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">O valor da inscrição aumentou</h2>
+                  <p>Olá, %s.</p>
+                  <p>O evento abaixo, em que você está inscrito(a), teve o valor da inscrição reajustado.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p>
+                    Sua inscrição continua garantida, mas precisa complementar
+                    <strong>%s</strong> — pra ficar confirmada de vez. Pague pelo link abaixo:
+                  </p>
+                  <p style="text-align: center; margin: 24px 0;">
+                    <a href="%s" style="display: inline-block; background: #131b2e; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none;">Pagar complemento</a>
+                  </p>
+                  <p style="text-align: center; margin: 8px 0 0;">
+                    <a href="%s" style="color: #64748b; font-size: 13px; text-decoration: underline;">Não vou mais — cancelar inscrição</a>
+                  </p>
+                </div>
+                """.formatted(nomeDestinatario, evento.getTitulo(), formatarMoeda(diferenca), link, linkCancelar);
+
+        try {
+            emailService.enviar(email, "Valor da inscrição aumentou — " + evento.getTitulo(), corpo);
+            log.info("E-mail de complemento de pagamento enviado. inscricaoId={}", inscricao.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de complemento de pagamento. inscricaoId={}", inscricao.getId(), e);
+        }
+        notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.COMPLEMENTO_PAGAMENTO_PENDENTE,
+                "O valor de \"" + evento.getTitulo() + "\" aumentou — falta pagar " + formatarMoeda(diferenca) + " a mais.");
+    }
+
+    private void enviarEmailEstornoParcial(InscricaoEvento inscricao, java.math.BigDecimal valorEstornado) {
+        String nomeDestinatario;
+        String email;
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+        if (email == null || email.isBlank()) {
+            log.info("Valor do evento baixou, sem e-mail pra avisar do estorno parcial. inscricaoId={}", inscricao.getId());
+            return;
+        }
+
+        Evento evento = inscricao.getEvento();
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">O valor da inscrição mudou</h2>
+                  <p>Olá, %s.</p>
+                  <p>O evento abaixo, em que você já está confirmado(a), teve o valor da inscrição reduzido.</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p>
+                    A diferença de <strong>%s</strong> será estornada de acordo com o método de
+                    pagamento que você utilizou. O prazo depende do seu banco ou operadora do
+                    cartão. Sua inscrição continua confirmada normalmente.
+                  </p>
+                </div>
+                """.formatted(nomeDestinatario, evento.getTitulo(), formatarMoeda(valorEstornado));
+
+        try {
+            emailService.enviar(email, "Parte do valor foi estornado — " + evento.getTitulo(), corpo);
+            log.info("E-mail de estorno parcial enviado. inscricaoId={}", inscricao.getId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao enviar e-mail de estorno parcial. inscricaoId={}", inscricao.getId(), e);
+        }
+        notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.ESTORNO_PARCIAL_VALOR_EVENTO,
+                "O valor de \"" + inscricao.getEvento().getTitulo() + "\" baixou — " + formatarMoeda(valorEstornado) + " será estornado.");
+    }
+
+    /**
+     * Lembrete de pagamento pendente (2026-08-27) — o gestor pede, a pedido próprio, um
+     * empurrão pra quem está com a inscrição em AGUARDANDO_PAGAMENTO há tempo demais.
+     * Deliberadamente nunca chamado de "cobrança" no texto/rótulo — é um lembrete, não uma
+     * régua de cobrança automática. A inscrição SEMPRE tem uma {@link CobrancaEvento}
+     * PENDENTE em aberto enquanto está AGUARDANDO_PAGAMENTO ({@link
+     * com.domus.api.modules.pagamento.job.CobrancaEventoExpiracaoJob} cancela a inscrição
+     * assim que a cobrança vence) — então não precisa criar uma nova.
+     */
+    @Transactional
+    public void enviarLembretePagamento(UUID inscricaoId, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarInscricoes(role)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para enviar lembretes de pagamento.");
+        }
+
+        InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+        if (!inscricao.estaAguardandoPagamento()) {
+            throw new ConflitoNegocioException("INSCRICAO_NAO_AGUARDA_PAGAMENTO",
+                    "Esta inscrição não está com pagamento pendente.");
+        }
+
+        List<CobrancaEvento> cobrancasDaInscricao = cobrancaEventoRepository.findByInscricaoId(inscricaoId);
+        CobrancaEvento cobranca = cobrancasDaInscricao.stream()
+                .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
+                .findFirst()
+                .orElseThrow(() -> new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",
+                        "Não foi encontrada uma cobrança em aberto para esta inscrição."));
+        // Diferencia "nunca pagou nada" de "já pagou o valor original, só falta o
+        // complemento de um reajuste" — mesma distinção da tag "Falta complementar" na
+        // lista de inscritos (2026-08-27), agora também no texto do lembrete.
+        boolean pagamentoParcial = cobrancasDaInscricao.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PAGO);
+
+        String nomeDestinatario;
+        String email;
+        if (inscricao.getPessoa() != null) {
+            nomeDestinatario = inscricao.getPessoa().getNome();
+            email = inscricao.getPessoa().getEmail();
+        } else {
+            nomeDestinatario = inscricao.getNomeConvidado();
+            email = inscricao.getEmailConvidado();
+        }
+        if (email == null || email.isBlank()) {
+            throw new ConflitoNegocioException("SEM_EMAIL_PARA_LEMBRETE",
+                    "Esta pessoa não tem e-mail cadastrado para receber o lembrete.");
+        }
+
+        Evento evento = inscricao.getEvento();
+        String valorFormatado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                .format(cobranca.getValor());
+        // Cobrança do próprio titular (self-checkout, sem link público) usa a tela
+        // autenticada — quem se auto-inscreveu já tem conta no Domus, então faz login pra
+        // ver o checkout. As demais (convidado, ou link gerado por terceiro) usam o link
+        // público por token, sem exigir login.
+        String link = cobranca.getTokenLinkPublico() != null
+                ? frontendUrl + "/cobranca/" + cobranca.getTokenLinkPublico()
+                : frontendUrl + "/eventos/" + evento.getId() + "/pagamento/" + cobranca.getId();
+        // O cancelamento é sempre por cobrancaId (não pelo token) — funciona igual pro
+        // titular e pra quem paga por terceiro, ver CobrancaController.cancelarInscricao.
+        String linkCancelar = frontendUrl + "/eventos/" + evento.getId() + "/pagamento/" + cobranca.getId() + "/cancelar";
+
+        String paragrafoSituacao = pagamentoParcial
+                ? "Você já pagou o valor original da sua inscrição no evento abaixo — só falta a "
+                    + "diferença de um reajuste de preço, sua vaga já está garantida."
+                : "Sua inscrição no evento abaixo ainda está aguardando pagamento.";
+        String paragrafoValor = pagamentoParcial
+                ? "Falta complementar <strong>%s</strong>. Pague pelo link abaixo:".formatted(valorFormatado)
+                : "Pra garantir sua vaga de vez, falta pagar <strong>%s</strong>. Pague pelo link abaixo:".formatted(valorFormatado);
+        String corpo = """
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h2 style="text-align: center; color: #131b2e;">Lembrete de pagamento pendente</h2>
+                  <p>Olá, %s.</p>
+                  <p>%s</p>
+                  <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #131b2e;">%s</p>
+                  </div>
+                  <p>
+                    %s
+                  </p>
+                  <p style="text-align: center; margin: 24px 0;">
+                    <a href="%s" style="display: inline-block; background: #131b2e; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none;">Efetuar pagamento</a>
+                  </p>
+                  <p style="text-align: center; margin: 8px 0 0;">
+                    <a href="%s" style="color: #64748b; font-size: 13px; text-decoration: underline;">Não vou mais — cancelar inscrição</a>
+                  </p>
+                </div>
+                """.formatted(nomeDestinatario, paragrafoSituacao, evento.getTitulo(), paragrafoValor, link, linkCancelar);
+
+        emailService.enviar(email, "Lembrete de pagamento pendente — " + evento.getTitulo(), corpo);
+        log.info("Lembrete de pagamento enviado. inscricaoId={}, igrejaId={}", inscricaoId, igrejaId);
+        notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.LEMBRETE_PAGAMENTO_PENDENTE,
+                "Lembrete: falta pagar " + valorFormatado + " pra confirmar sua inscrição em \"" + evento.getTitulo() + "\".");
     }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, RefreshCw } from 'lucide-react'
 import styles from './TelaPix.module.css'
 
 function segundosRestantes(expiraEm: string): number {
@@ -24,7 +24,19 @@ function formatarContagem(segundos: number): string {
  * quando a cobrança vence) — o contador nunca passa de 00:00, mesmo que o relógio do
  * navegador esteja um pouco atrasado em relação ao servidor.
  */
-export function TelaPix({ qrCode, qrCodeBase64, expiraEm }: { qrCode: string; qrCodeBase64: string; expiraEm: string }) {
+interface Props {
+  qrCode: string
+  qrCodeBase64: string
+  expiraEm: string
+  /** "Gerar novo QR code" / "Pagar com outro método" — achado ao vivo (2026-08-27): sem
+   *  isto, um QR que não funciona (escaneado errado, banco travou, ou a pessoa quer trocar
+   *  pra cartão) prendia a pessoa nesta tela até a cobrança expirar sozinha (até 30min),
+   *  sem opção nenhuma. Omitido = tela sem essa opção (ex.: onde ainda não foi ligada). */
+  onReiniciar?: () => void
+  reiniciando?: boolean
+}
+
+export function TelaPix({ qrCode, qrCodeBase64, expiraEm, onReiniciar, reiniciando }: Props) {
   const [copiado, setCopiado] = useState(false)
   const [restante, setRestante] = useState(() => segundosRestantes(expiraEm))
 
@@ -53,10 +65,22 @@ export function TelaPix({ qrCode, qrCodeBase64, expiraEm }: { qrCode: string; qr
         {copiado ? <Check size={16} /> : <Copy size={16} />}
         {copiado ? 'Copiado!' : 'Copiar código Pix'}
       </button>
+      <p className={styles.pixAviso}>
+        Cuidado ao pagar: escolha a opção <strong>&quot;pagamento&quot;/&quot;Pix Copia e
+        Cola&quot;</strong> no seu banco, nunca <strong>&quot;transferência&quot;</strong>. Só
+        no modo pagamento a confirmação é automática aqui — uma transferência não é
+        reconhecida.
+      </p>
       <p className={`${styles.pixContagem} ${restante <= 60 ? styles.pixContagemUrgente : ''}`}>
         {restante > 0 ? <>Você tem <strong>{formatarContagem(restante)}</strong> para pagar</> : 'O tempo para pagar acabou'}
       </p>
       <p className={styles.pixAguardando}>Aguardando confirmação do pagamento…</p>
+      {onReiniciar && (
+        <button type="button" className={styles.pixReiniciar} onClick={onReiniciar} disabled={reiniciando}>
+          <RefreshCw size={14} aria-hidden="true" />
+          {reiniciando ? 'Preparando…' : 'QR Code não funcionou? Gerar novo ou pagar de outro jeito'}
+        </button>
+      )}
     </div>
   )
 }

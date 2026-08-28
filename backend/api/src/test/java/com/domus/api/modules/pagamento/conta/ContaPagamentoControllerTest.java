@@ -156,17 +156,32 @@ class ContaPagamentoControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
-    void conectar_desconectar_status_recusamAcessoComumComForbidden() throws Exception {
-        // Critical 3b (revisão final de branch): /pagamentos/conta/** precisa exigir
-        // ADMIN_IGREJA — antes desta correção, caía em anyRequest().authenticated() e
-        // qualquer perfil (inclusive ACESSO_COMUM) podia conectar/desconectar a conta de
-        // recebimento da igreja inteira.
+    void conectar_desconectar_recusamAcessoComumComForbidden() throws Exception {
+        // Critical 3b (revisão final de branch): conectar/desconectar a conta de recebimento
+        // da igreja precisa exigir ADMIN_IGREJA — antes desta correção, caía em
+        // anyRequest().authenticated() e qualquer perfil (inclusive ACESSO_COMUM) podia
+        // mexer na conta de pagamento da igreja inteira.
         Usuario acessoComum = usuarioComRole(igrejaA, "ACESSO_COMUM");
 
         mockMvc.perform(auth.autenticado(get("/pagamentos/conta/conectar"), acessoComum))
                 .andExpect(status().isForbidden());
         mockMvc.perform(auth.autenticado(delete("/pagamentos/conta"), acessoComum))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void status_qualquerPerfilAutenticadoRespondeOk() throws Exception {
+        // Achado ao vivo (2026-08-27): GET /status só devolve um booleano ("conectada") —
+        // sem dado sensível. Restringi-lo a ADMIN fazia o front tratar 403 como "não
+        // conectada" e bloquear/avisar errado quem não é admin tentando se inscrever ou
+        // pagar num evento pago com a conta JÁ conectada.
+        Usuario lider = usuarioComRole(igrejaA, "LIDER");
+        Usuario acessoComum = usuarioComRole(igrejaA, "ACESSO_COMUM");
+
+        mockMvc.perform(auth.autenticado(get("/pagamentos/conta/status"), lider))
+                .andExpect(status().isOk());
+        mockMvc.perform(auth.autenticado(get("/pagamentos/conta/status"), acessoComum))
+                .andExpect(status().isOk());
     }
 
     /** Chama o endpoint real de conectar (autenticado como {@code usuario}) e extrai o `state` da URL devolvida. */

@@ -20,8 +20,9 @@ import styles from './arquivados.module.css'
 export default function MinisteriosArquivadosPage() {
   const { data: ministerios, isLoading, isError, refetch } = useMinisteriosArquivados()
   const role = useAuthStore((s) => s.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const router = useRouter()
-  const podeGerenciar = podeGerenciarCadastroMinisterios(role)
+  const podeGerenciar = podeGerenciarCadastroMinisterios(role, capacidadesExtras)
   const { restaurar, isLoading: restaurando } = useRestaurarMinisterio()
   const [excluindo, setExcluindo] = useState<MinisterioResponse | null>(null)
   const { ministerio: rotuloMinisterio, concordar } = useRotulos()

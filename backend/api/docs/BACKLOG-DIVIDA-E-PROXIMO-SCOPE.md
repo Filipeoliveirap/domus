@@ -718,4 +718,96 @@ travar a entrega da feature pra montar a infra primeiro. Escopo inicial sugerido
 mutation (`useCriarConvidado`, `useGerarConvite`, etc.) e componentes com mais estado
 condicional (`ModalInscreverAlguem`, com a pergunta "você também vai participar?"), não a
 base de código inteira de uma vez.
+
+### ~~Desconectar conta Mercado Pago: sem confirmação nem aviso do que isso implica~~ (**RESOLVIDO 2026-08-27**)
+
+Achado testando o fluxo de pagamento contra o sandbox do Mercado Pago (2026-08-25): o
+botão de desconectar a conta de recebimento (`useDesconectarMercadoPago` /
+`DELETE /pagamentos/conta`) executava na hora, sem `ModalConfirmacao` nem explicar a
+consequência prática. Corrigido em `SecaoRecebimentos.tsx`: clicar "Desconectar" agora
+abre `ModalConfirmacao` (`perigo`) avisando que eventos pagos deixam de conseguir cobrar
+até reconectar, e que inscrições já pagas não são afetadas.
 `/login`) conforme esse campo.
+
+### Prazo do link de pagamento ("enviar link") fixo em 48h — devia acompanhar o evento
+
+Levantado pelo autor testando o Plano 4b (2026-08-26): o link de pagamento gerado por
+"Enviar link pra pagar" (`CobrancaEventoService.PRAZO_LINK_COMPARTILHADO`, 48h fixas) não
+tem relação nenhuma com o evento em si — ideal seria valer até não dar mais pra se
+inscrever (hoje, na prática, até o evento começar). Depende da feature abaixo pra fazer
+sentido de verdade.
+
+### Prazo de inscrição opcional no evento (nova feature)
+
+Ideia do autor (2026-08-26), ainda não desenhada: eventos com inscrição já fecham
+naturalmente quando o evento começa (`situacao !== 'AGENDADO'` bloqueia — ver
+`BotaoConfirmarPresenca`), mas alguns eventos precisam de um prazo de inscrição **anterior**
+ao início (ex.: acampamento, evento que exige logística prévia). Em vez de um botão manual
+"encerrar inscrições", a ideia é um campo opcional na `EVENTO` (algo como
+`inscricao_ate`/`prazo_inscricao`, nulável) que, quando preenchido, some com a exigência
+`situacao === AGENDADO` como segunda trava de "pode se inscrever". Isso também resolveria o
+item acima: o prazo do link de pagamento passaria a acompanhar esse campo quando presente,
+em vez do fixo de 48h. Precisa de brainstorm completo (schema, UI de cadastro, mensagem pro
+usuário quando o prazo já passou mas o evento ainda não começou) antes de virar plano.
+
+### ~~Trocar evento entre pago↔gratuito com gente já inscrita~~ (2026-08-26, **RESOLVIDO 2026-08-27**)
+
+Gap apontado pelo autor durante a sessão de endurecimento do pagamento. Resolvido dentro
+da mesma sessão, sem brainstorm à parte (o desenho saiu natural do resto do trabalho de
+estorno em massa): `EventoService.atualizarEvento` detecta `virouGratuito`/`virouPago`/
+`valorMudouAindaPago` e despacha pra `InscricaoService.aplicarEventoVirouGratuito`/
+`aplicarEventoVirouPago`/`aplicarMudancaValorPago`. Pago→gratuito estorna quem já pagou e
+confirma direto quem estava aguardando pagamento (ninguém perde vaga); gratuito→pago cobra
+quem já estava confirmado, sem re-checar vaga. `ModalImpactoMudancaPreco` avisa o admin com
+os números antes de confirmar a mudança. Cobre também estorno em massa que falha (tag
+"Estorno pendente" com retry, ver `CobrancaEvento.estornoPendente`).
+
+### Escolha de meio de pagamento + parcelamento por evento, considerando a taxa do Mercado Pago (2026-08-26, ainda não desenhado)
+
+Ideia do autor: no cadastro de evento pago, deixar a igreja escolher quais meios de
+pagamento aceitar (cartão/Pix) e, se cartão, quantas parcelas — hoje o Payment Brick libera
+tudo sem nenhuma configuração por evento. Puxa consigo uma decisão de produto real: quem
+absorve a taxa do Mercado Pago (~4-5% no cartão, menor no Pix, e sobe com parcelamento)? A
+igreja embute no preço na hora de cadastrar, ou repassa pro pagador? Avaliado como feature
+grande de verdade (mexe em cadastro de evento, `PaymentBrickCheckout`, e características de
+UX/produto que só o autor decide) — **precisa de brainstorm/spec própria antes de
+implementar**, não é uma mudança bounded.
+
+### Taxa do Mercado Pago não aparece separada no financeiro (2026-08-26, recomendação dada, não implementada)
+
+Consequência de a `MovimentacaoAutomaticaService` registrar o valor **bruto** da inscrição
+como entrada — o que realmente cai na conta da igreja no Mercado Pago é menor (desconta a
+taxa por transação). Recomendação já discutida com o autor: criar uma categoria própria
+**"Taxas de pagamento"** (separada de "Eventos" — taxa é despesa operacional, não parte do
+valor do evento) e registrar uma SAÍDA com o valor exato da taxa, usando o `fee_details` que
+a API do Mercado Pago já devolve na mesma consulta que o webhook faz hoje
+(`MercadoPagoApi.buscarInformacoesPagamento`) — só falta ler esse campo e persistir. Bounded
+o suficiente pra implementar direto quando entrar na fila, sem brainstorm — mas faz mais
+sentido resolver junto do item acima (a decisão de quem absorve a taxa muda o que "registrar
+a taxa" significa na prática).
+
+### `PagarCobrancaRequest` sem validação de bean nos campos (2026-08-26, decisão consciente de não mexer)
+
+Achado na revisão de segurança do fluxo de pagamento: `token`/`paymentMethodId`/
+`payerEmail`/`issuerId`/`installments` chegam no `POST /cobrancas/{id}/pagar` sem
+`@NotBlank`/`@Size`/validação nenhuma antes de ir pro Mercado Pago. Não é explorável (o
+valor cobrado sempre vem de `cobranca.getValor()` no servidor, nunca do request do
+cliente) — decidido não mexer por ora. Se algum dia sobrar tempo de polimento: o único
+ganho real é uma mensagem de erro mais amigável em vez do erro genérico que o Mercado
+Pago devolve pra input malformado.
+
+### ~~Unificar "acompanhante" e "convidado sem cadastro" — dois modelos pro mesmo conceito~~ (2026-08-26, **RESOLVIDO**)
+
+Ao longo da sessão de pagamento + financeiro, toda lógica que precisa resolver "quem é o
+pagador/contribuinte de uma inscrição" tinha virado uma ramificação de 3 caminhos —
+`pessoa` / `acompanhante` / `convidado sem cadastro` — espalhada em `CobrancaController`,
+`MercadoPagoWebhookService`, `InscricaoService` e `MovimentacaoAutomaticaService`.
+`AcompanhanteInscricao` (entidade própria, aninhada em `InscricaoEvento.getAcompanhantes()`)
+era o modelo mais antigo e não tinha e-mail — nunca recebia comprovante de pagamento nem
+aparecia como contribuinte cadastrado em nada.
+
+Resolvido: `AcompanhanteInscricao` foi eliminada (migration V33, commit `c511c2e`) — todo
+acompanhante agora é sua própria `InscricaoEvento` independente, no mesmo formato de
+convidado sem cadastro (`nomeConvidado`/`emailConvidado`/`telefoneConvidado` +
+`convidadoPorPessoaId`). A ramificação de 3 caminhos virou 2 (`pessoa` ou convidado sem
+cadastro), e acompanhante ganhou e-mail de comprovante de graça.

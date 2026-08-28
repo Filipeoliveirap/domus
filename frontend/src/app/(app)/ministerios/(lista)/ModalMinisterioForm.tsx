@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useCriarMinisterio, useAtualizarMinisterio } from '@/hooks/ministerio/useMinisterioForm'
+import { useCriarMinisterio, useAtualizarMinisterio, useAtualizarFotoMinisterio } from '@/hooks/ministerio/useMinisterioForm'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ModalMinisterioForm.module.css'
 
@@ -23,6 +24,7 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const [erro, setErro] = useState<string | undefined>(undefined)
   const criar = useCriarMinisterio()
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
+  const atualizarFoto = useAtualizarFotoMinisterio(ministerio?.id ?? '')
   const salvando = criar.isPending || atualizar.isPending
 
   async function salvar() {
@@ -47,7 +49,23 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
         <div className={styles.fotoWrap}>
           <UploadFoto
             valor={fotoId}
-            onChange={(id) => setFotoId(id)}
+            onChange={(id) => {
+              setFotoId(id)
+              // Em criação, o ministério ainda não existe (sem id) — a foto só é
+              // enviada junto do "Salvar". Em edição, salva sozinha ao confirmar o recorte.
+              if (!ministerio) return
+              const fotoAnterior = fotoId
+              atualizarFoto.mutate(id, {
+                onSuccess: () => notificar.sucesso(id ? 'Foto atualizada.' : 'Foto removida.'),
+                onError: (erro: unknown) => {
+                  setFotoId(fotoAnterior)
+                  const mensagem =
+                    (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                    'Tente novamente em alguns instantes.'
+                  notificar.erro('Não foi possível salvar a foto', mensagem)
+                },
+              })
+            }}
             formato="circulo"
             nomeFallback={nome}
           />

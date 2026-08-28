@@ -235,4 +235,49 @@ class PessoaServiceTest {
         assertThat(resposta.endereco().cidade()).isEqualTo("São Paulo");
         assertThat(resposta.observacoes()).isEqualTo("Passou por acompanhamento pastoral em 2025.");
     }
+
+    @Test
+    void definirEmailInicialGravaQuandoPessoaAindaNaoTemEmail() {
+        Pessoa semEmail = Pessoa.builder()
+                .id(pessoaId).igreja(new Igreja() {{ setId(igrejaId); }}).nome("Sem Email")
+                .vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(semEmail));
+        when(pessoaRepository.existsByEmail("novo@email.com")).thenReturn(false);
+        when(pessoaRepository.existsByEmailIncluindoArquivados("novo@email.com")).thenReturn(false);
+
+        PessoaResponse resposta = service.definirEmailInicial(pessoaId, "novo@email.com", igrejaId);
+
+        assertThat(resposta.email()).isEqualTo("novo@email.com");
+        assertThat(semEmail.getEmail()).isEqualTo("novo@email.com");
+    }
+
+    @Test
+    void definirEmailInicialRecusaQuandoPessoaJaTemEmail() {
+        Pessoa comEmail = Pessoa.builder()
+                .id(pessoaId).igreja(new Igreja() {{ setId(igrejaId); }}).nome("Com Email")
+                .email("ja-tenho@email.com").vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(comEmail));
+
+        assertThatThrownBy(() -> service.definirEmailInicial(pessoaId, "outro@email.com", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "EMAIL_JA_DEFINIDO");
+
+        assertThat(comEmail.getEmail()).isEqualTo("ja-tenho@email.com");
+        verify(pessoaRepository, never()).save(any());
+    }
+
+    @Test
+    void definirEmailInicialRecusaEmailJaUsadoPorOutraPessoa() {
+        Pessoa semEmail = Pessoa.builder()
+                .id(pessoaId).igreja(new Igreja() {{ setId(igrejaId); }}).nome("Sem Email")
+                .vinculo(Vinculo.MEMBRO).build();
+        when(pessoaRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(semEmail));
+        when(pessoaRepository.existsByEmail("duplicado@email.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.definirEmailInicial(pessoaId, "duplicado@email.com", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "EMAIL_DUPLICADO");
+
+        verify(pessoaRepository, never()).save(any());
+    }
 }

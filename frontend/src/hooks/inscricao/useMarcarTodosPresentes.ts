@@ -27,7 +27,6 @@ export function useMarcarTodosPresentes(eventoId: string) {
             content: atual.inscritos.content.map((i) => ({
               ...i,
               compareceu: true,
-              acompanhantes: i.acompanhantes.map((a) => ({ ...a, compareceu: true })),
             })),
           },
         },

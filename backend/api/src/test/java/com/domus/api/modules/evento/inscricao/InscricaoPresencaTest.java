@@ -27,7 +27,6 @@ class InscricaoPresencaTest {
 
     EventoRepository eventoRepository;
     InscricaoRepository inscricaoRepository;
-    AcompanhanteRepository acompanhanteRepository;
     PessoaRepository pessoaRepository;
     UsuarioRepository usuarioRepository;
     VisitanteRepository visitanteRepository;
@@ -46,7 +45,6 @@ class InscricaoPresencaTest {
     void setup() {
         eventoRepository = mock(EventoRepository.class);
         inscricaoRepository = mock(InscricaoRepository.class);
-        acompanhanteRepository = mock(AcompanhanteRepository.class);
         pessoaRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
@@ -57,9 +55,25 @@ class InscricaoPresencaTest {
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, pessoaRepository, usuarioRepository, visitanteRepository,
+                pessoaRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
-                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
+                mock(com.domus.api.modules.pagamento.MercadoPagoClient.class),
+                contaPagamentoIgrejaRepositoryComContaConectada(),
+                mock(com.domus.api.shared.email.EmailService.class),
+                mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class));
+    }
+
+    // Este teste não é sobre a regra de conta de pagamento conectada (Important 9) — todos
+    // os cenários assumem igreja com conta conectada, pra não misturar a asserção.
+    private static com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository
+            contaPagamentoIgrejaRepositoryComContaConectada() {
+        var repo = mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository.class);
+        when(repo.findByIgrejaId(any())).thenReturn(java.util.Optional.of(
+                mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
+        return repo;
     }
 
     private Igreja igreja() {
@@ -102,23 +116,25 @@ class InscricaoPresencaTest {
     }
 
     @Test
-    void marcarTodosPresentes_marcaInscritoEAcompanhantes_quandoControlaPresenca() {
+    void marcarTodosPresentes_marcaInscritoEConvidados_quandoControlaPresenca() {
         Evento evento = evento(true);
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));
 
         InscricaoEvento inscricao = inscricao(evento);
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
-        inscricao.setAcompanhantes(new java.util.ArrayList<>(List.of(acompanhante)));
+        InscricaoEvento convidado = InscricaoEvento.builder()
+                .id(acompanhanteId).igreja(igreja()).evento(evento)
+                .nomeConvidado("Convidado").convidadoPor(inscricao.getPessoa())
+                .status(StatusInscricao.CONFIRMADA).build();
 
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(inscricao));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(inscricao, convidado));
 
         int marcados = service.marcarTodosPresentes(eventoId, igrejaId, "ADMIN_IGREJA");
 
-        assertThat(marcados).isEqualTo(2); // 1 inscrito + 1 acompanhante
+        assertThat(marcados).isEqualTo(2); // 1 inscrito + 1 convidado, cada um sua própria InscricaoEvento
         assertThat(inscricao.isCompareceu()).isTrue();
-        assertThat(acompanhante.isCompareceu()).isTrue();
+        assertThat(convidado.isCompareceu()).isTrue();
         verify(inscricaoRepository).save(inscricao);
+        verify(inscricaoRepository).save(convidado);
     }
 
     @Test
@@ -133,24 +149,26 @@ class InscricaoPresencaTest {
     }
 
     @Test
-    void desmarcarTodosPresentes_desmarcaInscritoEAcompanhantes_quandoControlaPresenca() {
+    void desmarcarTodosPresentes_desmarcaInscritoEConvidados_quandoControlaPresenca() {
         Evento evento = evento(true);
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));
 
         InscricaoEvento inscricao = inscricao(evento);
         inscricao.setCompareceu(true);
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").compareceu(true).build();
-        inscricao.setAcompanhantes(new java.util.ArrayList<>(List.of(acompanhante)));
+        InscricaoEvento convidado = InscricaoEvento.builder()
+                .id(acompanhanteId).igreja(igreja()).evento(evento)
+                .nomeConvidado("Convidado").convidadoPor(inscricao.getPessoa())
+                .status(StatusInscricao.CONFIRMADA).compareceu(true).build();
 
-        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(inscricao));
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(inscricao, convidado));
 
         int desmarcados = service.desmarcarTodosPresentes(eventoId, igrejaId, "ADMIN_IGREJA");
 
-        assertThat(desmarcados).isEqualTo(2); // 1 inscrito + 1 acompanhante
+        assertThat(desmarcados).isEqualTo(2); // 1 inscrito + 1 convidado
         assertThat(inscricao.isCompareceu()).isFalse();
-        assertThat(acompanhante.isCompareceu()).isFalse();
+        assertThat(convidado.isCompareceu()).isFalse();
         verify(inscricaoRepository).save(inscricao);
+        verify(inscricaoRepository).save(convidado);
     }
 
     @Test
@@ -228,62 +246,7 @@ class InscricaoPresencaTest {
         verify(inscricaoRepository, never()).save(any());
     }
 
-    @Test
-    void marcarPresencaAcompanhante_recusa409_quandoInscricaoCancelada() {
-        Evento evento = evento(true);
-        InscricaoEvento inscricao = inscricaoCancelada(evento);
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
-        when(acompanhanteRepository.findById(acompanhanteId)).thenReturn(Optional.of(acompanhante));
 
-        assertThatThrownBy(() ->
-                service.marcarPresencaAcompanhante(eventoId, acompanhanteId, true, igrejaId, "ADMIN_IGREJA"))
-                .isInstanceOf(ConflitoNegocioException.class);
 
-        assertThat(acompanhante.isCompareceu()).isFalse();
-        verify(acompanhanteRepository, never()).save(any());
-    }
 
-    @Test
-    void marcarPresencaAcompanhante_recusa409_quandoEventoNaoControlaPresenca() {
-        Evento evento = evento(false);
-        InscricaoEvento inscricao = inscricao(evento);
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
-        when(acompanhanteRepository.findById(acompanhanteId)).thenReturn(Optional.of(acompanhante));
-
-        assertThatThrownBy(() ->
-                service.marcarPresencaAcompanhante(eventoId, acompanhanteId, true, igrejaId, "ADMIN_IGREJA"))
-                .isInstanceOf(ConflitoNegocioException.class);
-    }
-
-    @Test
-    void marcarPresencaAcompanhante_marcaEDesmarca() {
-        Evento evento = evento(true);
-        InscricaoEvento inscricao = inscricao(evento);
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
-        when(acompanhanteRepository.findById(acompanhanteId)).thenReturn(Optional.of(acompanhante));
-
-        service.marcarPresencaAcompanhante(eventoId, acompanhanteId, true, igrejaId, "ADMIN_IGREJA");
-        assertThat(acompanhante.isCompareceu()).isTrue();
-    }
-
-    @Test
-    void marcarPresencaAcompanhante_naoEncontrado_deOutraIgreja() {
-        Evento evento = evento(true);
-        Igreja outraIgreja = new Igreja();
-        outraIgreja.setId(UUID.randomUUID());
-        InscricaoEvento inscricao = InscricaoEvento.builder()
-                .id(inscricaoId).igreja(outraIgreja).evento(evento)
-                .pessoa(Pessoa.builder().id(UUID.randomUUID()).igreja(outraIgreja).nome("Maria").build())
-                .status(StatusInscricao.CONFIRMADA).build();
-        AcompanhanteInscricao acompanhante = AcompanhanteInscricao.builder()
-                .id(acompanhanteId).inscricao(inscricao).nome("Convidado").build();
-        when(acompanhanteRepository.findById(acompanhanteId)).thenReturn(Optional.of(acompanhante));
-
-        assertThatThrownBy(() ->
-                service.marcarPresencaAcompanhante(eventoId, acompanhanteId, true, igrejaId, "ADMIN_IGREJA"))
-                .isInstanceOf(ResourceNotFoundException.class);
-    }
 }

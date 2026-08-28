@@ -21,10 +21,14 @@ export interface ConvitePublico {
   vagasRestantes: number | null
   preco: number | null
   campos: CampoPersonalizadoResponse[]
+  requerInscricao: boolean
 }
 
 export interface EntrarConviteRequest {
   nome: string
   telefone?: string
+  /** Opcional em evento gratuito, obrigatório em evento pago (usado pra mandar o
+   *  comprovante de pagamento) — o backend recusa sem isso quando o evento tem preço. */
+  email?: string
   respostas?: RespostaRequest[]
 }

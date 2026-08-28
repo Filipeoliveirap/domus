@@ -1,6 +1,8 @@
 /* PÁGINA — fundo claro com decorações blur*/
 .page {
   min-height: 100vh;
+
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,6 +77,8 @@
 /* PAGE 2 — fundo gradiente colorido, sem card outer*/
 .page2 {
   min-height: 100vh;
+
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -166,6 +170,8 @@
 
 .pageSucesso {
   min-height: 100vh;
+
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

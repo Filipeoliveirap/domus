@@ -11,12 +11,12 @@ export function useResponderCampos() {
   const [isLoading, setIsLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  async function responder(inscricaoId: string, dados: RespostaRequest[], acompanhanteId?: string) {
+  async function responder(inscricaoId: string, dados: RespostaRequest[]) {
     setIsLoading(true)
     setErro(null)
     try {
-      await inscricoesService.responder(inscricaoId, dados, acompanhanteId)
-      queryClient.invalidateQueries({ queryKey: ['respostas-campos', inscricaoId, acompanhanteId ?? null] })
+      await inscricoesService.responder(inscricaoId, dados)
+      queryClient.invalidateQueries({ queryKey: ['respostas-campos', inscricaoId] })
       notificar.sucesso('Respostas salvas.')
       return true
     } catch (error: unknown) {

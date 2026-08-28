@@ -55,7 +55,7 @@ class ProcessadorImagemTest {
 
     @Test
     void recusaImagemAcimaDoLimiteDePixels() throws IOException {
-        // Bomba de descompressao: o limite de 5MB do multipart NAO protege contra isto —
+        // Bomba de descompressao: o limite de 15MB do multipart NAO protege contra isto —
         // o perigo nao e o tamanho do arquivo, e o do bitmap depois de decodificado.
         assertThatThrownBy(() -> processador.validarEProcessar(jpegDe(9000, 9000)))
                 .isInstanceOf(BusinessException.class)
@@ -87,5 +87,79 @@ class ProcessadorImagemTest {
             if ((jpeg[i] & 0xFF) == 0xFF && (jpeg[i + 1] & 0xFF) == 0xE1) return true;
         }
         return false;
+    }
+
+    @Test
+    void aceitaWebpComoEntrada() throws IOException {
+        byte[] webpBytes = gerarWebpDe(3000, 2000);
+
+        var r = processador.validarEProcessar(webpBytes);
+
+        assertThat(r.original()).isEqualTo(webpBytes);
+        assertThat(r.display()).isNotEmpty();
+        assertThat(r.thumb()).isNotEmpty();
+        assertThat(r.tipoOriginal()).isEqualTo("image/webp");
+    }
+
+    @Test
+    void saidaESempreWebp() throws IOException {
+        byte[] jpegBytes = jpegDe(1500, 1000);
+        var r = processador.validarEProcessar(jpegBytes);
+
+        // Verifica magic bytes do WebP: "RIFF....WEBP" (bytes 0-3 e 8-11)
+        assertThat(ehWebp(r.display()))
+                .as("display deveria ser WebP independente da entrada")
+                .isTrue();
+        assertThat(ehWebp(r.thumb()))
+                .as("thumb deveria ser WebP independente da entrada")
+                .isTrue();
+    }
+
+    @Test
+    void areaTransparenteViraFundoBrancoNaoPreto() throws IOException {
+        // PNG 100x100 totalmente transparente (alpha=0) — se a composicao falhar, o
+        // BufferedImage TYPE_INT_RGB novo nasce preto (0,0,0) e o alpha e so descartado
+        // por cima do preto, em vez de composto sobre branco.
+        byte[] pngTransparente = pngTransparenteDe(100, 100);
+
+        var r = processador.validarEProcessar(pngTransparente);
+
+        BufferedImage thumb = ler(r.thumb());
+        int pixelCentral = thumb.getRGB(thumb.getWidth() / 2, thumb.getHeight() / 2);
+        assertThat(new java.awt.Color(pixelCentral, false))
+                .as("area transparente deveria virar branco, nao preto")
+                .isEqualTo(java.awt.Color.WHITE);
+    }
+
+    private byte[] pngTransparenteDe(int largura, int altura) throws IOException {
+        BufferedImage img = new BufferedImage(largura, altura, BufferedImage.TYPE_INT_ARGB);
+        // Já nasce com alpha=0 (transparente) em todos os pixels — não precisa desenhar nada.
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", out);
+        return out.toByteArray();
+    }
+
+    private byte[] gerarWebpDe(int largura, int altura) throws IOException {
+        BufferedImage img = new BufferedImage(largura, altura, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        java.util.Iterator<javax.imageio.ImageWriter> writers = ImageIO.getImageWritersByFormatName("webp");
+        javax.imageio.ImageWriter writer = writers.next();
+        try (javax.imageio.stream.ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
+            writer.setOutput(ios);
+            javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionType("Lossy");
+            param.setCompressionQuality(0.85f);
+            writer.write(null, new javax.imageio.IIOImage(img, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        return out.toByteArray();
+    }
+
+    private boolean ehWebp(byte[] bytes) {
+        if (bytes == null || bytes.length < 12) return false;
+        return bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
     }
 }

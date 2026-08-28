@@ -419,6 +419,30 @@
 
 .contribuintePessoa { min-width: 0; }
 
+.contribuinteExternoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.inputNomeExterno {
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  width: 100%;
+}
+
+.linkAlternarModo {
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+.linkAlternarModo:hover { text-decoration: underline; }
+
 .pessoaRemovida {
   display: flex;
   align-items: center;

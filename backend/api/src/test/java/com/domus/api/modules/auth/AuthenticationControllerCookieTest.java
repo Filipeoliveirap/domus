@@ -54,6 +54,10 @@ class AuthenticationControllerCookieTest {
         when(authService.login(entrada)).thenReturn(new LoginResponseDTO(
                 id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", null, null, null, null,
                 "jwt-abc", "refresh-xyz", List.of()));
+        // O corpo é montado por authService.sessaoDe (mesma via do GET /auth/me) — carrega
+        // rótulos da igreja, capacidades e termos, não só o que o LoginResponseDTO tinha.
+        when(authService.sessaoDe(id)).thenReturn(new SessaoDTO(
+                id, "Ana", "ADMIN_IGREJA", igrejaId, "Igreja Central", null, null, null, null));
 
         ResponseEntity<SessaoDTO> resposta = controller().login(entrada);
 
@@ -75,9 +79,12 @@ class AuthenticationControllerCookieTest {
     @Test
     void googleLoginTambemEmiteCookies() {
         UUID id = UUID.randomUUID();
+        UUID igrejaId = UUID.randomUUID();
         when(googleAuthService.login("id-token-do-google")).thenReturn(new LoginResponseDTO(
-                id, "Bia", "ACESSO_COMUM", UUID.randomUUID(), "Igreja Central", null, null, null, null,
+                id, "Bia", "ACESSO_COMUM", igrejaId, "Igreja Central", null, null, null, null,
                 "jwt-g", "refresh-g", List.of()));
+        when(authService.sessaoDe(id)).thenReturn(new SessaoDTO(
+                id, "Bia", "ACESSO_COMUM", igrejaId, "Igreja Central", null, null, null, null));
 
         ResponseEntity<SessaoDTO> resposta =
                 controller().googleLogin(new GoogleLoginDTO("id-token-do-google"));

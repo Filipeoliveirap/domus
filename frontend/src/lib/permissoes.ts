@@ -43,7 +43,12 @@ export function podeVerUsuariosEFinanceiroNaBuscaGlobal(r: Role | null | undefin
 }
 
 export const podeGerenciarUsuarios = (r: Role | null | undefined) => tem(r, SO_ADMIN)
-export const podeGerenciarCadastroMinisterios = (r: Role | null | undefined) => tem(r, SO_ADMIN)
+
+export function podeGerenciarCadastroMinisterios(r: Role | null | undefined): boolean
+export function podeGerenciarCadastroMinisterios(r: Role | null | undefined, c: string[] | null | undefined): boolean
+export function podeGerenciarCadastroMinisterios(r: Role | null | undefined, c?: string[] | null | undefined): boolean {
+  return c !== undefined ? temCapacidade(r, c, SO_ADMIN, 'SECRETARIO') : tem(r, SO_ADMIN)
+}
 
 export function podeGerenciarVisitantes(r: Role | null | undefined): boolean
 export function podeGerenciarVisitantes(r: Role | null | undefined, c: string[] | null | undefined): boolean
@@ -51,4 +56,10 @@ export function podeGerenciarVisitantes(r: Role | null | undefined, c?: string[]
   return c !== undefined ? temCapacidade(r, c, SO_ADMIN, 'SECRETARIO') : tem(r, SO_ADMIN)
 }
 
-export const podeGerenciarCelulas = (r: Role | null | undefined) => tem(r, SO_ADMIN)
+export function podeGerenciarCelulas(r: Role | null | undefined): boolean
+export function podeGerenciarCelulas(r: Role | null | undefined, c: string[] | null | undefined): boolean
+export function podeGerenciarCelulas(r: Role | null | undefined, c?: string[] | null | undefined): boolean {
+  return c !== undefined ? temCapacidade(r, c, SO_ADMIN, 'SECRETARIO') : tem(r, SO_ADMIN)
+}
+
+export const podeConectarContaPagamento = (r: Role | null | undefined) => tem(r, SO_ADMIN)

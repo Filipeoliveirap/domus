@@ -254,3 +254,19 @@
     padding: 0 12px;
   }
 }
+
+/* ---- Tela de "Cancelar inscrição" ---- */
+
+.avisoErro {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+}
+
+.acoesCancelar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}

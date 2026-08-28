@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaPublica } from '@/hooks/cobranca/useCobrancaPublica'
 import { cobrancaService } from '@/services/cobranca.service'
@@ -24,8 +24,18 @@ type Resultado = 'enviado' | 'aprovado'
  */
 export default function CobrancaPublicaPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
+  // Achado ao vivo (2026-08-27): abrir um link de cobrança diferente troca só o token da
+  // rota — o Next reaproveita a MESMA instância desta página. `key` força remontar o
+  // conteúdo inteiro a cada token diferente, resetando `resultado`/`indisponivel`/o `pix`
+  // do PaymentBrickCheckout — sem isto, o estado do link anterior vazava pro novo.
+  return <ConteudoCobranca key={token} token={token} />
+}
+
+function ConteudoCobranca({ token }: { token: string }) {
+  const queryClient = useQueryClient()
   const { data: cobranca, isLoading, isError } = useCobrancaPublica(token)
   const [resultado, setResultado] = useState<Resultado | null>(null)
+  const [reiniciando, setReiniciando] = useState(false)
   // Preenchido quando a cobrança em si não tem mais como ser paga (expirou, vagas
   // esgotadas, já foi paga/cancelada) — vindo tanto do backend na hora de pagar quanto do
   // poll abaixo.
@@ -33,22 +43,22 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
   const resolvidoRef = useRef(false)
 
   // Reload no meio de um pagamento em voo não pode voltar pro formulário — reenviar
-  // esbarraria em COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando".
-  useEffect(() => {
-    if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
-  }, [cobranca, resultado])
+  // esbarraria em COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando". Derivado
+  // em vez de sincronizado via effect (setState síncrono no corpo do effect é o padrão que
+  // causava o vazamento de estado do parágrafo acima).
+  const resultadoEfetivo: Resultado | null = resultado ?? (cobranca?.pagamentoEmAndamento ? 'enviado' : null)
 
   // Mesmo achado da tela irmã (`/eventos/[id]/pagamento/[cobrancaId]`, 2026-08-27): reload
   // no meio do Pix caía direto em "confirmando" sem jeito de voltar a ver o QR.
   const { data: pix } = useQuery({
     queryKey: ['cobranca-pix', cobranca?.id],
     queryFn: () => cobrancaService.pix(cobranca!.id),
-    enabled: !!cobranca && resultado === 'enviado',
+    enabled: !!cobranca && resultadoEfetivo === 'enviado',
     retry: false,
   })
 
   useEffect(() => {
-    if (!cobranca || resultado !== 'enviado') return
+    if (!cobranca || resultadoEfetivo !== 'enviado') return
     resolvidoRef.current = false
 
     const intervalo = setInterval(async () => {
@@ -73,7 +83,21 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
     }, 4000)
 
     return () => clearInterval(intervalo)
-  }, [resultado, cobranca])
+  }, [resultadoEfetivo, cobranca])
+
+  // "QR Code não funcionou / pagar de outro jeito" (achado ao vivo, 2026-08-27): mesma
+  // lógica da tela irmã (`/eventos/[id]/pagamento/[cobrancaId]`).
+  async function aoReiniciar() {
+    if (!cobranca) return
+    setReiniciando(true)
+    try {
+      await cobrancaService.reiniciar(cobranca.id)
+      await queryClient.invalidateQueries({ queryKey: ['cobranca-publica', token] })
+      setResultado(null)
+    } finally {
+      setReiniciando(false)
+    }
+  }
 
   if (isLoading) {
     return <div className={styles.pagina}><p className={styles.estado}>Carregando…</p></div>
@@ -90,7 +114,7 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
     )
   }
 
-  if (cobranca.status === 'PAGO' || resultado === 'aprovado') {
+  if (cobranca.status === 'PAGO' || resultadoEfetivo === 'aprovado') {
     return (
       <div className={styles.pagina}>
         <div className={styles.cardAprovado}>
@@ -100,7 +124,7 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
           </div>
           <h1 className={styles.aprovadoTitulo}>Pagamento confirmado</h1>
           <p className={styles.aprovadoTexto}>
-            Obrigado! Sua parte em &quot;{cobranca.tituloEvento}&quot; já está paga.
+            Obrigado! Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está paga.
           </p>
           <div className={styles.aprovadoResumo}>
             <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
@@ -124,12 +148,18 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
     )
   }
 
-  if (resultado === 'enviado') {
+  if (resultadoEfetivo === 'enviado') {
     return (
       <div className={styles.pagina}>
         {pix?.qrCode && pix?.qrCodeBase64 ? (
           <div className={styles.card}>
-            <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={cobranca.expiraEm} />
+            <TelaPix
+              qrCode={pix.qrCode}
+              qrCodeBase64={pix.qrCodeBase64}
+              expiraEm={pix.expiraEm ?? cobranca.expiraEm}
+              onReiniciar={aoReiniciar}
+              reiniciando={reiniciando}
+            />
           </div>
         ) : (
           <div className={styles.card}>
@@ -167,6 +197,7 @@ export default function CobrancaPublicaPage({ params }: { params: Promise<{ toke
         </div>
 
         <PaymentBrickCheckout
+          key={cobranca.id}
           cobrancaId={cobranca.id}
           valor={cobranca.valor}
           expiraEm={cobranca.expiraEm}

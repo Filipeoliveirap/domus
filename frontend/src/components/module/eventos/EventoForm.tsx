@@ -3,7 +3,11 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
+import Link from 'next/link'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
+import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { useAuthStore } from '@/store/authStore'
+import { podeConectarContaPagamento } from '@/lib/permissoes'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
@@ -73,6 +77,9 @@ export function EventoForm(props: EventoFormProps) {
   } = props
 
   const { congregacao, concordar } = useRotulos()
+  const { data: contaPagamento } = useContaPagamento()
+  const role = useAuthStore((s) => s.role)
+  const podeConectar = podeConectarContaPagamento(role)
   const repetir = watch('repetir')
   const recorrenciaFrequencia = watch('recorrenciaFrequencia')
   const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
@@ -85,6 +92,8 @@ export function EventoForm(props: EventoFormProps) {
   const inicioData = (watch('inicioData') as string) ?? ''
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
+  const precisaConectarContaPagamento = requerInscricao && tipoInscricao === 'PAGO'
+    && !!contaPagamento && !contaPagamento.conectada
   const fotoIdAtual = watch('fotoId') as string | null | undefined
   const localIdAtual = watch('localId') as string | undefined
   const localTextoAtual = watch('localTexto') as string | undefined
@@ -560,11 +569,28 @@ export function EventoForm(props: EventoFormProps) {
                         })
                       }}
                     />
-                    <span className={styles.campoHint}>
-                      Cobrado automaticamente na inscrição, se a igreja tiver uma conta de
-                      recebimento conectada. Sem conta conectada, o pagamento precisa ser
-                      combinado por fora (informe o PIX ou um contato na descrição do evento).
-                    </span>
+                    {contaPagamento && !contaPagamento.conectada ? (
+                      <div className={styles.avisoContaPagamento}>
+                        {podeConectar ? (
+                          <>
+                            A igreja ainda não conectou uma conta pra receber pagamentos —
+                            sem isso, ninguém consegue se inscrever neste evento.{' '}
+                            <Link href="/configuracoes/igreja">Conectar agora</Link>
+                          </>
+                        ) : (
+                          <>
+                            A igreja ainda não conectou uma conta pra receber pagamentos —
+                            sem isso, ninguém consegue se inscrever neste evento. Consulte o
+                            administrador ou responsável pela igreja pra conectar.
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <span className={styles.campoHint}>
+                        Cobrado automaticamente na inscrição, através da conta de recebimento
+                        conectada pela igreja.
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -599,7 +625,7 @@ export function EventoForm(props: EventoFormProps) {
             variant="primary"
             size="lg"
             isLoading={isLoading || isVerificandoImpacto}
-            disabled={isFormIncomplete || isLoading || isVerificandoImpacto}
+            disabled={isFormIncomplete || isLoading || isVerificandoImpacto || precisaConectarContaPagamento}
             style={{ width: '100%' }}
           >
             {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}

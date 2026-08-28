@@ -1,5 +1,6 @@
 package com.domus.api.modules.pagamento.cobranca;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -474,5 +475,50 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.nomePagador", is("Convidado Sem Cadastro")))
             .andExpect(jsonPath("$.emailPagador").doesNotExist());
+    }
+
+    @Test
+    void retorna404AoReiniciarCobrancaInexistenteSemPrecisarDeAutenticacao() throws Exception {
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/reiniciar"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('31111111-1111-1111-1111-111111111112', 'Igreja Teste Reiniciar', 'igrejareiniciar@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('33333333-3333-3333-3333-333333333336', '31111111-1111-1111-1111-111111111112', 'Titular Reiniciar', 'titular-reiniciar@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('44444444-4444-4444-4444-444444444447', '31111111-1111-1111-1111-111111111112', " +
+            "'33333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('37777777-7777-7777-7777-777777777778', '31111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('35555555-5555-5555-5555-555555555556', '31111111-1111-1111-1111-111111111112', " +
+            "'Retiro Reiniciar', now(), '37777777-7777-7777-7777-777777777778', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('36666666-6666-6666-6666-666666666667', '31111111-1111-1111-1111-111111111112', " +
+            "'35555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void reiniciarNaoFazNadaQuandoNaoHaTentativaEmAndamento() throws Exception {
+        // Sem mpPaymentId (nenhuma tentativa de pagamento em voo) — não deveria nem tentar
+        // falar com o Mercado Pago, só confirmar que não havia nada a liberar.
+        UUID igrejaId = UUID.fromString("31111111-1111-1111-1111-111111111112");
+        UUID eventoId = UUID.fromString("35555555-5555-5555-5555-555555555556");
+        UUID inscricaoId = UUID.fromString("36666666-6666-6666-6666-666666666667");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-333333333336");
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-4444-444444444447");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            BigDecimal.valueOf(50), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/reiniciar"))
+            .andExpect(status().isOk());
+
+        var atualizada = cobrancaEventoRepository.findById(cobranca.getId()).orElseThrow();
+        assertThat(atualizada.getStatus()).isEqualTo(StatusCobranca.PENDENTE);
+        assertThat(atualizada.getMpPaymentId()).isNull();
     }
 }

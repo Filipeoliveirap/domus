@@ -113,8 +113,10 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
     return digitos.length === 10 || digitos.length === 11
   }
 
-  // Evento pago: e-mail vira obrigatório (é como a pessoa recebe o comprovante de
-  // pagamento) — o backend recusa sem ele nesse caso, mas validar aqui evita a viagem.
+  // E-mail é obrigatório pra se inscrever em qualquer evento (2026-08-27) — é como a
+  // pessoa recebe o comprovante/lembrete, e se um evento gratuito virar pago depois é a
+  // única forma de avisar quem já estava inscrito. O backend recusa sem ele; validar
+  // aqui evita a viagem.
   function emailValido(): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   }
@@ -123,15 +125,14 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
    *  duas vezes possíveis, uma por botão ("Pagar inscrição"/"Enviar link"). */
   function confirmar(gerarLink: boolean) {
     setTentouConfirmar(true)
-    if (!nome.trim() || !telefoneValido() || camposObrigatoriosPendentes()) return
-    if (preco && !emailValido()) return
+    if (!nome.trim() || !telefoneValido() || !emailValido() || camposObrigatoriosPendentes()) return
 
     const visitanteId = aba === 'visitantes' ? visitanteSelecionadoId ?? undefined : undefined
     const nomeConfirmado = nome.trim()
     criarConvidado.mutate(
       {
         nome: nomeConfirmado, telefone: telefone.replace(/\D/g, ''),
-        email: email.trim() || undefined, visitanteId, respostas: montarRespostas(), gerarLink,
+        email: email.trim(), visitanteId, respostas: montarRespostas(), gerarLink,
       },
       {
         onSuccess: (resposta) => {
@@ -315,26 +316,26 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                 )}
               </label>
 
-              {!!preco && (
-                <label className={styles.campo}>
-                  <span>E-mail*</span>
-                  <input
-                    type="email"
-                    placeholder="Ex.: maria@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <span className={styles.avisoCamposExtra}>
-                    Evento pago — o comprovante de pagamento é enviado pra esse e-mail.
-                  </span>
-                  {tentouConfirmar && !email.trim() && (
-                    <span className={styles.avisoErro}>O e-mail é obrigatório em evento pago.</span>
-                  )}
-                  {tentouConfirmar && email.trim() && !emailValido() && (
-                    <span className={styles.avisoErro}>E-mail inválido.</span>
-                  )}
-                </label>
-              )}
+              <label className={styles.campo}>
+                <span>E-mail*</span>
+                <input
+                  type="email"
+                  placeholder="Ex.: maria@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <span className={styles.avisoCamposExtra}>
+                  {preco
+                    ? 'Evento pago — o comprovante de pagamento é enviado pra esse e-mail.'
+                    : 'É pra onde vão avisos sobre a inscrição neste evento.'}
+                </span>
+                {tentouConfirmar && !email.trim() && (
+                  <span className={styles.avisoErro}>O e-mail é obrigatório.</span>
+                )}
+                {tentouConfirmar && email.trim() && !emailValido() && (
+                  <span className={styles.avisoErro}>E-mail inválido.</span>
+                )}
+              </label>
 
               {campos.length > 0 && (
                 <p className={styles.avisoCamposExtra}>

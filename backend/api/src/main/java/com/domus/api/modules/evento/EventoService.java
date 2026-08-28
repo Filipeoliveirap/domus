@@ -263,10 +263,14 @@ public class EventoService {
         // quem já estava confirmado, sem re-checar vaga (são os mesmos de antes).
         boolean virouGratuito = precoAntigo != null && data.preco() == null;
         boolean virouPago = precoAntigo == null && data.preco() != null;
+        boolean valorMudouAindaPago = precoAntigo != null && data.preco() != null
+                && precoAntigo.compareTo(data.preco()) != 0;
         if (virouGratuito) {
             inscricaoService.aplicarEventoVirouGratuito(id);
         } else if (virouPago) {
             inscricaoService.aplicarEventoVirouPago(id, data.preco(), usuarioId);
+        } else if (valorMudouAindaPago) {
+            inscricaoService.aplicarMudancaValorPago(id, precoAntigo, data.preco(), usuarioId);
         }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
@@ -358,7 +362,22 @@ public class EventoService {
             if (ocorrencia.getSituacao() == SituacaoEvento.EM_ANDAMENTO) continue;
             notificarInscritos(ocorrencia, igrejaId, usuarioId,
                     "O evento \"" + ocorrencia.getTitulo() + "\" foi cancelado.", "/eventos");
+            // Arquivar um evento pago com gente já confirmada/paga precisa devolver o
+            // dinheiro — sem isto, a cobrança simplesmente sumia junto com o evento sem
+            // ninguém ser reembolsado (achado ao vivo, 2026-08-27).
             eventoRepository.delete(ocorrencia);
+            // Flush explícito ANTES de estornar/cancelar as inscrições (2026-08-27, achado
+            // ao vivo): o UPDATE de deleted_at (SQLDelete) e o carregamento/gravação de
+            // InscricaoEvento (que referencia este Evento, FK não-nula) na MESMA sessão
+            // Hibernate disparavam TransientObjectException num autoflush — mesma classe de
+            // bug que EventoArquivamentoNotificaInscritosTest já cobria pra
+            // notificarInscritos. Fechando o delete (e seu flush) ANTES de tocar em
+            // InscricaoEvento evita as duas mutações concorrerem no mesmo ciclo de flush.
+            eventoRepository.flush();
+            // Arquivar um evento pago com gente já confirmada/paga precisa devolver o
+            // dinheiro — sem isto, a cobrança simplesmente sumia junto com o evento sem
+            // ninguém ser reembolsado (achado ao vivo, 2026-08-27).
+            inscricaoService.cancelarTodasInscricoesDoEventoComEstorno(ocorrencia.getId());
             outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.REMOVIDO,
                     ocorrencia.getId(), igrejaId);
         }
@@ -588,11 +607,16 @@ public class EventoService {
 
         boolean vaiVirarGratuito = evento.getPreco() != null && data.preco() == null;
         boolean vaiVirarPago = evento.getPreco() == null && data.preco() != null;
+        boolean valorMudouAindaPago = evento.getPreco() != null && data.preco() != null
+                && evento.getPreco().compareTo(data.preco()) != 0;
         if (vaiVirarGratuito) {
             return inscricaoService.calcularImpactoEventoVirarGratuito(eventoId);
         }
         if (vaiVirarPago) {
             return inscricaoService.calcularImpactoEventoVirarPago(eventoId, data.preco());
+        }
+        if (valorMudouAindaPago) {
+            return inscricaoService.calcularImpactoMudancaValorPago(eventoId, evento.getPreco(), data.preco());
         }
         return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
     }

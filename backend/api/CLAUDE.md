@@ -291,7 +291,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V3**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V32**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -310,18 +310,24 @@ erDiagram
     PESSOA ||--o{ INSCRICAO_EVENTO : "se inscreve em"
     ROLE   ||--o{ USUARIO : define
     CATEGORIA_FINANCEIRA ||--o{ MOVIMENTACAO_FINANCEIRA : classifica
-    PESSOA ||--o{ MOVIMENTACAO_FINANCEIRA : "atribuída a"
+    MOVIMENTACAO_FINANCEIRA ||--o{ MOVIMENTACAO_CONTRIBUINTE : "V15 - um ou mais contribuintes"
+    PESSOA ||--o{ MOVIMENTACAO_CONTRIBUINTE : "atribuída a (ou nome_externo sem cadastro)"
     USUARIO ||--o{ MOVIMENTACAO_FINANCEIRA : "criou/atualizou"
     USUARIO ||--o{ INSCRICAO_EVENTO : "inscreveu"
     USUARIO ||--o{ IGREJA : "atualizou/vinculou"
     EVENTO ||--o{ INSCRICAO_EVENTO : "tem"
-    INSCRICAO_EVENTO ||--o{ ACOMPANHANTE_INSCRICAO : "pode ter"
+    INSCRICAO_EVENTO ||--o{ ACOMPANHANTE_INSCRICAO : "pode ter (modelo antigo, sem e-mail)"
+    VISITANTE ||--o| INSCRICAO_EVENTO : "V28 - convidado vinculado de volta"
     PESSOA }o--o| FOTO : tem
     EVENTO }o--o| FOTO : tem
     IGREJA }o--o| FOTO : "tem (logo)"
     LOCAL_EVENTO ||--o{ EVENTO : "V3 - local cadastrado (ou local_texto ad-hoc)"
     PESSOA ||--o{ EVENTO : "V3 - responsável"
     USUARIO ||--o{ EVENTO : "V3 - criou/atualizou"
+    IGREJA ||--o| CONTA_PAGAMENTO_IGREJA : "V29 - conta Mercado Pago conectada"
+    INSCRICAO_EVENTO ||--o{ COBRANCA_EVENTO : "V29 - evento pago gera cobrança"
+    PESSOA ||--o{ COBRANCA_EVENTO : "paga (ou acompanhante/convidado, V29-V30)"
+    ACOMPANHANTE_INSCRICAO ||--o| COBRANCA_EVENTO : "V29 - paga por acompanhante"
 
     IGREJA {
         uuid      id PK
@@ -419,9 +425,14 @@ erDiagram
         uuid      id PK
         uuid      igreja_id FK "isolamento multi-tenant"
         uuid      evento_id FK
-        uuid      pessoa_id FK
+        uuid      pessoa_id FK "nulável - convidado sem cadastro não tem, ou pessoa já excluída de vez"
         uuid      inscrito_por_usuario_id FK "V15 - NULL = auto-inscrição"
-        varchar   status "CONFIRMADA|CANCELADA"
+        varchar   status "AGUARDANDO_PAGAMENTO|CONFIRMADA|CANCELADA (V29 - 1º valor novo p/ evento pago)"
+        varchar   nome_convidado "V26 - convidado sem cadastro (convite público)"
+        varchar   telefone_convidado "V26"
+        varchar   email_convidado "V31 - obrigatório quando o evento é pago"
+        uuid      convidado_por_pessoa_id FK "V26 - quem gerou o convite"
+        uuid      visitante_id FK "V28 - liga de volta ao registro de Visitante, ON DELETE SET NULL"
     }
 
     ACOMPANHANTE_INSCRICAO {
@@ -443,14 +454,50 @@ erDiagram
         uuid      id PK
         uuid      igreja_id FK
         uuid      categoria_id FK
-        uuid      pessoa_id FK "opcional - atribuinte"
-        uuid      criado_por_usuario_id FK
-        uuid      atualizado_por_usuario_id FK
+        uuid      criado_por_usuario_id FK "nulável - ver criado_por_texto"
+        varchar   criado_por_texto "usuário excluído (LGPD) ou lançamento automático do sistema"
+        uuid      atualizado_por_usuario_id FK "nulável"
+        varchar   atualizado_por_texto
         varchar   tipo "ENTRADA|SAIDA"
         numeric   valor "CHECK > 0"
         date      data_movimentacao
         text      descricao
         timestamp deleted_at "soft delete"
+    }
+
+    MOVIMENTACAO_CONTRIBUINTE {
+        uuid      id PK
+        uuid      movimentacao_id FK "ON DELETE CASCADE"
+        uuid      pessoa_id FK "nulável - XOR com nome_externo"
+        varchar   nome_externo "V32 - contribuinte/beneficiário sem cadastro (ex.: doação avulsa)"
+        numeric   valor "CHECK > 0; soma dos contribuintes = valor da movimentação"
+    }
+
+    CONTA_PAGAMENTO_IGREJA {
+        uuid      id PK
+        uuid      igreja_id FK,UK "1-1 - uma conta MP conectada por igreja"
+        varchar   mp_user_id "id da conta no Mercado Pago"
+        text      access_token "V29 - criptografado em repouso (AES-GCM)"
+        text      refresh_token "V29 - idem; renovado sozinho antes de vencer"
+        timestamp expira_em
+        timestamp conectado_em
+        uuid      conectado_por_usuario_id FK
+    }
+
+    COBRANCA_EVENTO {
+        uuid      id PK
+        uuid      igreja_id FK "isolamento multi-tenant"
+        uuid      evento_id FK
+        uuid      inscricao_id FK "ON DELETE CASCADE"
+        uuid      pessoa_id FK "nulável - XOR com acompanhante_id; os dois nulos = convidado sem cadastro (V30)"
+        uuid      acompanhante_id FK "ON DELETE CASCADE"
+        numeric   valor "CHECK > 0"
+        varchar   status "PENDENTE|PAGO|EXPIRADO|CANCELADO|REEMBOLSADO"
+        varchar   mp_payment_id "nulável até a 1ª tentativa de pagamento"
+        varchar   token_link_publico UK "V29 - link 'enviar pra pagar' compartilhável"
+        timestamp expira_em
+        timestamp pago_em
+        uuid      criado_por_usuario_id FK "nulável (V30) - NULL = auto-registro anônimo via convite"
     }
 
     OUTBOX {
@@ -493,7 +540,12 @@ erDiagram
   igreja e servem para saber "de onde essa pessoa veio". Cancelamento é mudança de status
   (preserva histórico de quem inscreveu quem); reinscricão reaproveita a mesma linha
   graças ao `UNIQUE (evento_id, pessoa_id)`. O `requer_inscricao` é o master toggle
-  que separa evento que se organiza de evento que só acontece.
+  que separa evento que se organiza de evento que só acontece. Convidado sem cadastro
+  (V26, via convite público) não tem `pessoa_id` — usa `nome_convidado`/
+  `telefone_convidado`/`email_convidado` direto na própria linha; `email_convidado` é
+  obrigatório quando o evento é pago (comprovante). Em evento pago, a inscrição nasce
+  `AGUARDANDO_PAGAMENTO` e só vira `CONFIRMADA` quando o pagamento é aprovado de verdade
+  (ver `COBRANCA_EVENTO` abaixo).
 
 - **Cadastro de evento enriquecido (V3):** `local_texto` é o antigo `local` (RENAME, não
   ADD, para preservar dado); `local_id` aponta para `LOCAL_EVENTO`, um local cadastrado
@@ -509,6 +561,24 @@ erDiagram
   inscrição: quatro regras independentes, avaliadas no momento de inscrever — não somam
   automaticamente, cada uma bloqueia por conta própria quando o dado da pessoa falta
   (idade sem `data_nascimento`, sexo sem `pessoa.sexo`).
+- **Pagamento de evento (V29-V32):** `CONTA_PAGAMENTO_IGREJA` é a conta Mercado Pago
+  conectada (1-por-igreja); token renovado sozinho antes de vencer, sem intervenção
+  manual (job diário). `COBRANCA_EVENTO` nasce quando alguém escolhe pagar (ou "enviar
+  link pra pagar") uma inscrição em evento pago — o pagador é **um destes três**, nunca
+  mais de um: `pessoa_id` (tem cadastro), `acompanhante_id` (modelo antigo, sem e-mail),
+  ou os dois nulos (convidado sem cadastro via convite público, resolvido só por
+  `inscricao_id`). Confirmação de pagamento é sempre assíncrona (webhook do Mercado Pago
+  **e** um poll ativo correndo em paralelo, idempotentes entre si) — nunca na resposta do
+  `POST .../pagar`. Pagamento aprovado e estorno em cancelamento entram automaticamente
+  no financeiro da igreja (`MOVIMENTACAO_FINANCEIRA`, categoria "Eventos" auto-criada na
+  1ª vez).
+- **`MOVIMENTACAO_CONTRIBUINTE` (V15, ganhou `nome_externo` em V32):** uma movimentação
+  pode ter **zero, um ou vários** contribuintes/beneficiários — cada linha soma pro valor
+  total da movimentação (`CHECK` de que a soma bate, aplicado em código, não em SQL).
+  Contribuinte é uma pessoa cadastrada (`pessoa_id`) **ou** um nome livre sem cadastro
+  (`nome_externo`, ex.: doação de visitante avulso) — nunca os dois ao mesmo tempo; os
+  dois nulos é o estado legítimo de "pessoa foi excluída definitivamente" (LGPD), exibido
+  como "Pessoa removida do sistema".
 - **`FOTO`** (V2) é metadado apenas — os bytes vivem num bucket **privado** do Cloudflare
   R2, servido pela própria API (`GET /fotos/{id}`), nunca por URL pública. `pessoa.foto`,
   `evento.foto` e `igreja.logo_url` deixaram de ser `varchar` de URL e viraram
@@ -759,11 +829,21 @@ erDiagram
 
 ### Fase 6 — Estudo (não é build)
 
-- **Estudo de pagamento.** Não é construir do zero — é **decidir provedor e entender o
-  modelo**. Pesquisar Stripe / Mercado Pago / Asaas / Pagar.me: taxas, se há custo
-  fixo/mensalidade, tier gratuito, e como funciona para dois casos distintos:
-  (a) cobrança de **eventos pagos** e (b) cobrança das **igrejas pelos planos do Domus**.
-  *Saída do estudo:* uma recomendação de provedor + modelo, **não** código.
+- [x] **Estudo de pagamento (a: cobrança de eventos pagos)** — **FEITO E JÁ EM PRODUÇÃO**
+  (V29-V32, 2026-08-25/26): provedor escolhido foi **Mercado Pago**, via OAuth
+  (`ContaPagamentoIgreja`) — cada igreja conecta a própria conta, o Domus nunca guarda
+  dinheiro de ninguém. Payment Brick embutido (cartão + Pix), webhook + poll ativo pra
+  confirmação, estorno automático no cancelamento, token renovado sozinho antes de
+  vencer, pagamento/estorno entrando no financeiro da igreja. Superou o texto original
+  desta fase (que previa só uma recomendação, sem código) — decisão validada com uso real
+  no piloto, não só estudo de mesa. *Ainda em aberto, ver `docs/BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`:*
+  escolha de meio de pagamento/parcelamento por evento, quem absorve a taxa do Mercado
+  Pago, taxa aparecer separada no financeiro.
+- [ ] **Estudo de pagamento (b: cobrança das igrejas pelos planos do Domus)** — ainda não
+  feito, só o item (a) foi resolvido. Continua exatamente como descrito originalmente:
+  decidir provedor/modelo pra cobrar a própria assinatura da igreja no Domus (distinto de
+  cobrar o evento pago *dela* dos membros dela) — depende da Fase 5 (camada comercial)
+  fazer sentido de verdade.
 
 ---
 
@@ -771,8 +851,11 @@ erDiagram
 
 Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
 
-- Filtros extras em movimentação financeira (ex.: por atribuinte/pessoa).
-- Múltiplos atribuintes numa mesma movimentação financeira.
+- ~~Filtros extras em movimentação financeira (ex.: por atribuinte/pessoa).~~ **FEITO**
+  (`pessoaId` em `MovimentacaoFinanceiraController.listar`/`totais`).
+- ~~Múltiplos atribuintes numa mesma movimentação financeira.~~ **FEITO** (V15,
+  `MOVIMENTACAO_CONTRIBUINTE` — ver diagrama ER acima; ganhou contribuinte sem cadastro
+  em V32).
 - Verificação de **posse** de telefone via SMS (pago, com atrito — só se houver
   necessidade real de antifraude).
 - Expansão de campos de pessoa dirigida por uso real (YAGNI).
@@ -801,8 +884,9 @@ Deixado para o **fim deste scope** ("versão pra minha igreja") ou depois:
   filtro por bairro sem over-engineering). Regra geral: tabela nova é para N-para-N ou
   dado repetido/compartilhado — não para 1-para-1.
 - Telefone e e-mail = **validação de formato** apenas; SMS de posse fica fora por ora.
-- Pagamento = **integrar provedor existente**, nunca construir do zero; e agora é só
-  **estudo**.
+- Pagamento de eventos = **integrado (Mercado Pago), não é mais só estudo** — feito e em
+  produção (V29-V32, ver Fase 6 e diagrama ER). Cobrança das igrejas pelos planos do
+  Domus (o outro caso do estudo original) continua em aberto.
 - Auditoria de evento = **reusar o padrão de `movimentacao_financeira`**.
 
 ---
@@ -820,3 +904,30 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+---
+
+## Session Start Protocol ⚡
+
+**MANDATORY** at start of each session:
+
+```bash
+# Load essential docs (~800 tokens - 2 min read)
+✓ .claude/COMMON_MISTAKES.md      # ⚠️ CRITICAL - Read FIRST
+✓ .claude/QUICK_START.md          # Essential commands
+✓ .claude/ARCHITECTURE_MAP.md     # File locations
+```
+
+**At task completion:**
+- Create completion doc in `.claude/completions/YYYY-MM-DD-task-name.md`
+- Move session file to `.claude/sessions/archive/` (if created)
+
+**⚠️ NEVER auto-load:**
+- Files in `.claude/completions/` (0 token cost)
+- Files in `.claude/sessions/` (0 token cost)
+- Files in `docs/archive/` (0 token cost)
+
+---
+
+**Last Updated**: 2026-08-26
+**Optimized with**: [Claude Token Optimizer](https://github.com/nadimtuhin/claude-token-optimizer)

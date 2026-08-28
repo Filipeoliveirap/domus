@@ -61,11 +61,15 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // parâmetro é null e lower(bytea) não existe.
     // LEFT JOIN: pessoa excluída definitivamente não pode sumir da paginação, só não bate
     // busca por nome (não tem nome pra buscar).
+    // A tela de gerenciar inscritos precisa mostrar quem está com pagamento pendente
+    // (não só CONFIRMADA) — senão um evento que virou pago (ou que nasceu pago) some da
+    // lista pra todo mundo que ainda não pagou.
     @Query(value = """
         SELECT i.id FROM InscricaoEvento i
         LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
-          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.status IN (com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA,
+                            com.domus.api.modules.evento.inscricao.StatusInscricao.AGUARDANDO_PAGAMENTO)
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
         ORDER BY i.createdAt ASC
         """,
@@ -73,7 +77,8 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         SELECT COUNT(i) FROM InscricaoEvento i
         LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
-          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.status IN (com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA,
+                            com.domus.api.modules.evento.inscricao.StatusInscricao.AGUARDANDO_PAGAMENTO)
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
         """)
     Page<UUID> listarIdsPaginadoPorEvento(@Param("eventoId") UUID eventoId,

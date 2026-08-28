@@ -246,8 +246,17 @@ public class CampoPersonalizadoService {
         inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
+        // A resposta guarda um snapshot da pergunta (ver comentário em salvar()) — o campo
+        // pode já ter sido removido pelo admin depois que a pessoa respondeu. Resolver via
+        // findByIdAndIgrejaIdIncluindoArquivados (nativa, bypassa @SQLRestriction) em vez de
+        // r.getCampo() direto: acessar um campo arquivado pela associação lazy normal
+        // estoura EntityNotFoundException (Hibernate filtra ele da query de resolução).
         return respostaRepository.findByInscricaoId(inscricaoId).stream()
-                .map(com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse::from)
+                .map(r -> campoRepository.findByIdAndIgrejaIdIncluindoArquivados(r.getCampo().getId(), igrejaId)
+                        .map(campo -> new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                                campo.getId(), campo.getLabel(), campo.getTipo(), r.getValor()))
+                        .orElse(null))
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 }

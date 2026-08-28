@@ -750,3 +750,71 @@ ao início (ex.: acampamento, evento que exige logística prévia). Em vez de um
 item acima: o prazo do link de pagamento passaria a acompanhar esse campo quando presente,
 em vez do fixo de 48h. Precisa de brainstorm completo (schema, UI de cadastro, mensagem pro
 usuário quando o prazo já passou mas o evento ainda não começou) antes de virar plano.
+
+### Trocar evento entre pago↔gratuito com gente já inscrita (2026-08-26, ainda não desenhado)
+
+Gap apontado pelo autor durante a sessão de endurecimento do pagamento (junto com os dois
+abaixo, achados numa revisão de segurança/gaps pedida por ele). Hoje o cadastro de evento
+deixa mudar `preco`/`requerInscricao` livremente mesmo com inscritos existentes — não há
+regra nenhuma pro caso "evento era grátis, virou pago com gente já confirmada" nem
+"evento era pago, virou grátis com cobranças pendentes/pagas em aberto". Precisa decidir
+(brainstorm): quem já está inscrito antes da mudança fica isento? cobrança pendente que
+vira "evento agora é grátis" cancela sozinha? evento pago virando grátis estorna quem já
+pagou? Não é bounded — mexe em regra de negócio de `InscricaoService`/`CobrancaEventoService`
+e provavelmente em confirmação explícita na tela de editar evento.
+
+### Escolha de meio de pagamento + parcelamento por evento, considerando a taxa do Mercado Pago (2026-08-26, ainda não desenhado)
+
+Ideia do autor: no cadastro de evento pago, deixar a igreja escolher quais meios de
+pagamento aceitar (cartão/Pix) e, se cartão, quantas parcelas — hoje o Payment Brick libera
+tudo sem nenhuma configuração por evento. Puxa consigo uma decisão de produto real: quem
+absorve a taxa do Mercado Pago (~4-5% no cartão, menor no Pix, e sobe com parcelamento)? A
+igreja embute no preço na hora de cadastrar, ou repassa pro pagador? Avaliado como feature
+grande de verdade (mexe em cadastro de evento, `PaymentBrickCheckout`, e características de
+UX/produto que só o autor decide) — **precisa de brainstorm/spec própria antes de
+implementar**, não é uma mudança bounded.
+
+### Taxa do Mercado Pago não aparece separada no financeiro (2026-08-26, recomendação dada, não implementada)
+
+Consequência de a `MovimentacaoAutomaticaService` registrar o valor **bruto** da inscrição
+como entrada — o que realmente cai na conta da igreja no Mercado Pago é menor (desconta a
+taxa por transação). Recomendação já discutida com o autor: criar uma categoria própria
+**"Taxas de pagamento"** (separada de "Eventos" — taxa é despesa operacional, não parte do
+valor do evento) e registrar uma SAÍDA com o valor exato da taxa, usando o `fee_details` que
+a API do Mercado Pago já devolve na mesma consulta que o webhook faz hoje
+(`MercadoPagoApi.buscarInformacoesPagamento`) — só falta ler esse campo e persistir. Bounded
+o suficiente pra implementar direto quando entrar na fila, sem brainstorm — mas faz mais
+sentido resolver junto do item acima (a decisão de quem absorve a taxa muda o que "registrar
+a taxa" significa na prática).
+
+### `PagarCobrancaRequest` sem validação de bean nos campos (2026-08-26, decisão consciente de não mexer)
+
+Achado na revisão de segurança do fluxo de pagamento: `token`/`paymentMethodId`/
+`payerEmail`/`issuerId`/`installments` chegam no `POST /cobrancas/{id}/pagar` sem
+`@NotBlank`/`@Size`/validação nenhuma antes de ir pro Mercado Pago. Não é explorável (o
+valor cobrado sempre vem de `cobranca.getValor()` no servidor, nunca do request do
+cliente) — decidido não mexer por ora. Se algum dia sobrar tempo de polimento: o único
+ganho real é uma mensagem de erro mais amigável em vez do erro genérico que o Mercado
+Pago devolve pra input malformado.
+
+### Unificar "acompanhante" e "convidado sem cadastro" — dois modelos pro mesmo conceito (2026-08-26, ainda não desenhado)
+
+Ao longo desta sessão (feature de pagamento + financeiro), toda lógica que precisa
+resolver "quem é o pagador/contribuinte de uma inscrição" acabou com uma ramificação de
+3 caminhos — `pessoa` / `acompanhante` / `convidado sem cadastro` — espalhada em
+`CobrancaController`, `MercadoPagoWebhookService`, `InscricaoService` e
+`MovimentacaoAutomaticaService`. `acompanhante` (`AcompanhanteInscricao`, entidade própria
+aninhada em `InscricaoEvento.getAcompanhantes()`) é o modelo mais antigo do projeto e
+**não tem campo de e-mail** — por isso nunca recebe comprovante de pagamento nem aparece
+como contribuinte cadastrado em nada. `convidado sem cadastro` (`nomeConvidado`/
+`emailConvidado`/`telefoneConvidado`, direto em `InscricaoEvento`, criado no Plano 4b)
+resolve o mesmo problema — "alguém sem conta no Domus participando do evento" — só que
+com e-mail desde o início. Os comentários `// Acompanhante (modelo antigo, ...)` espalhados
+pelo código (`MercadoPagoWebhookService`, `InscricaoService`, `InscricaoEvento`) já
+sinalizavam a divergência mesmo antes desta sessão.
+
+Unificar os dois eliminaria essa ramificação de 3 caminhos em tudo que resolve "quem pagou"
+e destravaria e-mail de comprovante pra quem hoje entra como acompanhante. Não é bounded:
+mexe em modelo de dados (`AcompanhanteInscricao` provavelmente vira campos em
+`InscricaoEvento`, ou o inverso), sem falar em todo código/frontend que já assume os dois
+modelos separados — precisa de brainstorm completo antes de qualquer código.

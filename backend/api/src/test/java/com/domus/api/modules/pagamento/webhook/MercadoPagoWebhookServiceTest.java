@@ -430,6 +430,45 @@ class MercadoPagoWebhookServiceTest {
         verify(inscricaoRepository).save(inscricao);
     }
 
+    // Achado ao vivo (2026-08-27): pagamento aprovado no Mercado Pago DEPOIS que
+    // CobrancaEventoExpiracaoJob já marcou a cobrança EXPIRADO (e cancelou a inscrição) não
+    // pode ser descartado — dinheiro real já mudou de mãos. Reabre em vez de ignorar.
+    @Test
+    void reabreCobrancaExpiradaQuandoPagamentoAprovadoChegaAtrasado() {
+        UUID cobrancaId = UUID.randomUUID();
+        UUID inscricaoId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
+            UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(600), UUID.randomUUID(), null);
+        cobranca.marcarComoExpirado();
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.CANCELADA).build();
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        assertThatCobrancaFoiMarcadaPaga(cobranca);
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(cobrancaRepository).save(cobranca);
+        verify(inscricaoRepository).save(inscricao);
+    }
+
+    @Test
+    void ignoraCobrancaCanceladaMesmoComPagamentoAprovado() {
+        // Diferente de EXPIRADO (prazo vencido sozinho): CANCELADO é decisão explícita
+        // (ex.: admin cancelou o evento) — continua ignorado mesmo com "approved" chegando.
+        UUID cobrancaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(600), UUID.randomUUID(), null);
+        cobranca.marcarComoCancelado();
+        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+
+        verify(cobrancaRepository, never()).save(any());
+        verify(inscricaoRepository, never()).findById(any());
+    }
+
     private void assertThatCobrancaFoiMarcadaPaga(CobrancaEvento cobranca) {
         org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
             .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);

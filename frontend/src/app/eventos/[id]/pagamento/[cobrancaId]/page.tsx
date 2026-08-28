@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaCheckout } from '@/hooks/cobranca/useCobrancaCheckout'
 import { cobrancaService } from '@/services/cobranca.service'
@@ -31,7 +31,19 @@ export default function PagamentoEventoPage({
   params: Promise<{ id: string; cobrancaId: string }>
 }) {
   const { id: eventoId, cobrancaId } = use(params)
+  // Achado ao vivo (2026-08-27): navegar de um pagamento pra outro (ex.: pagar o seu, voltar
+  // e pagar de outra pessoa) troca só o parâmetro da rota — o Next reaproveita a MESMA
+  // instância desta página. `key` força remontar o conteúdo inteiro a cada cobrancaId
+  // diferente, resetando `resultado`/`indisponivel`/o `pix` do PaymentBrickCheckout — sem
+  // isto, o estado da cobrança anterior vazava pra nova (pulava direto pra "confirmando
+  // pagamento" mesmo sem nenhuma tentativa ainda).
+  return <ConteudoPagamento key={cobrancaId} eventoId={eventoId} cobrancaId={cobrancaId} />
+}
+
+function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobrancaId: string }) {
+  const queryClient = useQueryClient()
   const { data: cobranca, isLoading, isError } = useCobrancaCheckout(cobrancaId)
+  const [reiniciando, setReiniciando] = useState(false)
 
   // Esta página é usada tanto pelo titular logado (fluxo normal) quanto por convidado sem
   // cadastro pagando pelo link público (Plano 4b, sem sessão nenhuma) — "Voltar para o
@@ -59,10 +71,11 @@ export default function PagamentoEventoPage({
 
   // Reload no meio de um pagamento em voo (mpPaymentId já gravado, webhook ainda não
   // confirmou) não pode voltar pro formulário — reenviar esbarraria em
-  // COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando", que já dispara o poll abaixo.
-  useEffect(() => {
-    if (cobranca?.pagamentoEmAndamento && !resultado) setResultado('enviado')
-  }, [cobranca, resultado])
+  // COBRANCA_JA_EM_PROCESSAMENTO. Retoma direto em "confirmando". Derivado em vez de
+  // sincronizado via effect (setState síncrono no corpo de um effect é o padrão que
+  // causava o vazamento de estado do parágrafo acima) — `resultado` (state) manda quando
+  // preenchido; a cobrança "em andamento" só serve de valor inicial antes da 1ª transição.
+  const resultadoEfetivo: Resultado | null = resultado ?? (cobranca?.pagamentoEmAndamento ? 'enviado' : null)
 
   // Achado ao vivo (2026-08-27): reload/demora na tela do QR do Pix caía direto na tela
   // genérica "Confirmando pagamento…", sem nenhum jeito de voltar a ver o QR/copia-e-cola —
@@ -72,7 +85,7 @@ export default function PagamentoEventoPage({
   const { data: pix } = useQuery({
     queryKey: ['cobranca-pix', cobrancaId],
     queryFn: () => cobrancaService.pix(cobrancaId),
-    enabled: resultado === 'enviado',
+    enabled: resultadoEfetivo === 'enviado',
     retry: false,
   })
 
@@ -80,7 +93,7 @@ export default function PagamentoEventoPage({
   // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
   // callback nenhum do lado do Mercado Pago). Some sozinho quando chega numa resposta final.
   useEffect(() => {
-    if (!resultado || resultado !== 'enviado') return
+    if (resultadoEfetivo !== 'enviado') return
     resolvidoRef.current = false
 
     const intervalo = setInterval(async () => {
@@ -105,7 +118,22 @@ export default function PagamentoEventoPage({
     }, 4000)
 
     return () => clearInterval(intervalo)
-  }, [resultado, cobrancaId])
+  }, [resultadoEfetivo, cobrancaId])
+
+  // "QR Code não funcionou / pagar de outro jeito" (achado ao vivo, 2026-08-27): libera a
+  // cobrança no backend (cancela a tentativa presa no Mercado Pago) e volta pro formulário
+  // — invalida a query da cobrança pra `pagamentoEmAndamento` refletir que já foi liberada
+  // (senão `resultadoEfetivo` continuaria caindo de volta em "enviado" pelo fallback).
+  async function aoReiniciar() {
+    setReiniciando(true)
+    try {
+      await cobrancaService.reiniciar(cobrancaId)
+      await queryClient.invalidateQueries({ queryKey: ['cobranca-checkout', cobrancaId] })
+      setResultado(null)
+    } finally {
+      setReiniciando(false)
+    }
+  }
 
   if (isLoading) {
     return <div className={styles.pagina}><p className={styles.estado}>Carregando…</p></div>
@@ -122,7 +150,7 @@ export default function PagamentoEventoPage({
     )
   }
 
-  if (cobranca.status !== 'PENDENTE' && !resultado) {
+  if (cobranca.status !== 'PENDENTE' && !resultadoEfetivo) {
     return (
       <div className={styles.pagina}>
         <div className={styles.card}>
@@ -145,9 +173,9 @@ export default function PagamentoEventoPage({
       </header>
 
       <div className={styles.conteudo}>
-        <StepperPagamento etapaAtual={resultado || indisponivel ? 'confirmado' : 'pagamento'} />
+        <StepperPagamento etapaAtual={resultadoEfetivo || indisponivel ? 'confirmado' : 'pagamento'} />
 
-        {resultado === 'aprovado' && (
+        {resultadoEfetivo === 'aprovado' && (
           <div className={styles.cardAprovado}>
             <div className={styles.aneisAprovado}>
               <span className={styles.anelAprovado} aria-hidden="true" />
@@ -179,10 +207,16 @@ export default function PagamentoEventoPage({
           </div>
         )}
 
-        {resultado === 'enviado' && !indisponivel && (
+        {resultadoEfetivo === 'enviado' && !indisponivel && (
           pix?.qrCode && pix?.qrCodeBase64 ? (
             <div className={styles.card}>
-              <TelaPix qrCode={pix.qrCode} qrCodeBase64={pix.qrCodeBase64} expiraEm={cobranca.expiraEm} />
+              <TelaPix
+                qrCode={pix.qrCode}
+                qrCodeBase64={pix.qrCodeBase64}
+                expiraEm={pix.expiraEm ?? cobranca.expiraEm}
+                onReiniciar={aoReiniciar}
+                reiniciando={reiniciando}
+              />
             </div>
           ) : (
             <div className={styles.card}>
@@ -193,7 +227,7 @@ export default function PagamentoEventoPage({
           )
         )}
 
-        {!resultado && !indisponivel && (
+        {!resultadoEfetivo && !indisponivel && (
           <>
             <div className={styles.card}>
               <p className={styles.saudacao}>Valor da inscrição de {cobranca.nomePagador}:</p>
@@ -201,6 +235,7 @@ export default function PagamentoEventoPage({
             </div>
 
             <PaymentBrickCheckout
+              key={cobranca.id}
               cobrancaId={cobranca.id}
               valor={cobranca.valor}
               expiraEm={cobranca.expiraEm}

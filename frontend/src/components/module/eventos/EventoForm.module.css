@@ -342,6 +342,22 @@
   color: var(--color-text-muted);
 }
 
+.avisoContaPagamento {
+  display: block;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--color-warning-text, #92400E);
+}
+.avisoContaPagamento a {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warning-text, #92400E);
+  text-decoration: underline;
+}
+
 /* ─── Info box ─── */
 .infoBox {
   display: flex;

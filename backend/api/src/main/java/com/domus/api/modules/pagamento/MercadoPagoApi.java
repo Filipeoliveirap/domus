@@ -8,6 +8,9 @@ import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.core.MPRequestOptions;
 import com.mercadopago.exceptions.MPApiException;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -121,13 +124,23 @@ public class MercadoPagoApi {
      * {@code PaymentTransactionData.getQrCode()}/{@code getQrCodeBase64()} existem com essa
      * assinatura exata.
      */
-    public record ResultadoPagamento(String mpPaymentId, String status, String statusDetail, String qrCode, String qrCodeBase64) {}
+    public record ResultadoPagamento(String mpPaymentId, String status, String statusDetail, String qrCode,
+                                      String qrCodeBase64, Instant expiraEmPix) {}
+
+    /** Prazo real de validade do QR/copia-e-cola Pix — independente do prazo da
+     *  {@code CobrancaEvento} em si (que pode ser de até 48h pra link compartilhado, ver
+     *  {@code CobrancaEventoService.PRAZO_LINK_COMPARTILHADO}). Achado ao vivo (2026-08-27):
+     *  sem mandar {@code date_of_expiration} explícito, o Mercado Pago aplicava o próprio
+     *  padrão dele — e o front, sem saber a validade real, mostrava o prazo da cobrança
+     *  inteira (até 48h) como se fosse o tempo pra pagar o Pix, um contador sem sentido. */
+    private static final int MINUTOS_EXPIRACAO_PIX = 30;
 
     public ResultadoPagamento criarPagamentoTokenizado(String accessToken, String externalReference, BigDecimal valor,
                                             String token, String paymentMethodId, Integer installments,
                                             String payerEmail, String issuerId) {
         try {
             PaymentClient client = new PaymentClient();
+            OffsetDateTime expiracaoPix = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(MINUTOS_EXPIRACAO_PIX);
             PaymentCreateRequest request = PaymentCreateRequest.builder()
                 .transactionAmount(valor)
                 .description("Inscrição em evento — Domus")
@@ -137,6 +150,10 @@ public class MercadoPagoApi {
                 .installments(installments)
                 .issuerId(issuerId)
                 .payer(PaymentPayerRequest.builder().email(payerEmail).build())
+                // "pix" é o único paymentMethodId que o Brick manda sem token — os demais
+                // (cartão) ignoram este campo, mas só definir quando é Pix evita qualquer
+                // efeito colateral não documentado em outro meio de pagamento.
+                .dateOfExpiration("pix".equals(paymentMethodId) ? expiracaoPix : null)
                 .build();
             MPRequestOptions options = MPRequestOptions.builder()
                 .accessToken(accessToken)
@@ -150,7 +167,8 @@ public class MercadoPagoApi {
                 pagamento.getStatus(),
                 pagamento.getStatusDetail(),
                 transactionData != null ? transactionData.getQrCode() : null,
-                transactionData != null ? transactionData.getQrCodeBase64() : null
+                transactionData != null ? transactionData.getQrCodeBase64() : null,
+                "pix".equals(paymentMethodId) ? expiracaoPix.toInstant() : null
             );
         } catch (Exception e) {
             logarDetalheSeApiException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
@@ -218,7 +236,8 @@ public class MercadoPagoApi {
         @JsonProperty("external_reference") String externalReference,
         String status,
         @JsonProperty("status_detail") String statusDetail,
-        @JsonProperty("point_of_interaction") PontoDeInteracao pointOfInteraction
+        @JsonProperty("point_of_interaction") PontoDeInteracao pointOfInteraction,
+        @JsonProperty("date_of_expiration") String dateOfExpiration
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -230,9 +249,11 @@ public class MercadoPagoApi {
         @JsonProperty("qr_code_base64") String qrCodeBase64
     ) {}
 
-    /** Ausente (os dois campos nulos) quando o pagamento em andamento é cartão, não Pix —
-     *  cartão nunca tem {@code point_of_interaction} na resposta do Mercado Pago. */
-    public record QrCodePix(String qrCode, String qrCodeBase64) {}
+    /** {@code qrCode}/{@code qrCodeBase64} nulos quando o pagamento em andamento é cartão,
+     *  não Pix — cartão nunca tem {@code point_of_interaction} na resposta do Mercado Pago.
+     *  {@code expiraEm} é a validade real deste Pix específico (ver {@link #MINUTOS_EXPIRACAO_PIX}),
+     *  não o prazo da cobrança inteira. */
+    public record QrCodePix(String qrCode, String qrCodeBase64, Instant expiraEm) {}
 
     /**
      * Recupera o QR/copia-e-cola de um pagamento Pix JÁ CRIADO — pro caso de a pessoa dar
@@ -255,7 +276,10 @@ public class MercadoPagoApi {
             var dados = pagamento.pointOfInteraction() != null ? pagamento.pointOfInteraction().transactionData() : null;
             return new QrCodePix(
                 dados != null ? dados.qrCode() : null,
-                dados != null ? dados.qrCodeBase64() : null
+                dados != null ? dados.qrCodeBase64() : null,
+                pagamento.dateOfExpiration() != null
+                    ? java.time.OffsetDateTime.parse(pagamento.dateOfExpiration()).toInstant()
+                    : null
             );
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar QR Pix no Mercado Pago", e);
@@ -263,23 +287,64 @@ public class MercadoPagoApi {
     }
 
     /**
-     * Por {@code RestClient} direto, não {@code PaymentRefundClient.refund(Long,
+     * Sempre com {@code amount} explícito — nunca um "estorno cheio" sem valor (2026-08-27):
+     * cancelar uma inscrição que já tinha recebido um estorno parcial antes (reajuste de
+     * preço pra baixo) e mandar estornar sem valor tentaria devolver o total original de
+     * novo, e o Mercado Pago recusa por falta de saldo. Todo chamador calcula o quanto
+     * ainda falta devolver ({@link com.domus.api.modules.pagamento.cobranca.CobrancaEvento
+     * #valorRestanteParaEstornar()}) e manda exatamente isso.
+     *
+     * <p>Por {@code RestClient} direto, não {@code PaymentRefundClient.refund(Long,
      * MPRequestOptions)} do SDK — mesmo bug de classe já documentado em
      * {@link #buscarInformacoesPagamento}: confirmado ao vivo (2026-08-26) testando um
      * cancelamento de inscrição paga, o SDK devolve 401 {@code "authorization value not
      * present"} mesmo com {@code accessToken} válido (o mesmo token funciona em
      * {@link #criarPagamentoTokenizado}) — {@code MPRequestOptions} não propaga o header
-     * {@code Authorization} nesta versão (2.1.16) em várias chamadas do SDK.
+     * {@code Authorization} nesta versão (2.1.16) em várias chamadas do SDK.</p>
      */
-    public void estornar(String accessToken, String mpPaymentId) {
+    public void estornarParcial(String accessToken, String mpPaymentId, BigDecimal valor) {
         try {
             restClient.post()
                 .uri("https://api.mercadopago.com/v1/payments/{id}/refunds", mpPaymentId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("amount", valor))
                 .retrieve()
                 .toBodilessEntity();
         } catch (Exception e) {
-            throw new IllegalStateException("Falha ao estornar pagamento no Mercado Pago", e);
+            throw new IllegalStateException("Falha ao estornar parcialmente pagamento no Mercado Pago", e);
+        }
+    }
+
+    /**
+     * Cancela uma tentativa de pagamento ainda pendente (Pix escaneado mas nunca pago, ou
+     * cartão em análise) — achado ao vivo (2026-08-27): sem isto, uma tentativa presa (QR
+     * antigo que já não serve, ou o meio errado escolhido) travava a cobrança em
+     * {@code COBRANCA_JA_EM_PROCESSAMENTO} até expirar sozinha, sem forma de tentar de novo
+     * na hora. {@code PUT /v1/payments/{id}} com {@code status=cancelled} é o único jeito
+     * documentado do Mercado Pago pra isso — {@code PaymentClient} do SDK não expõe um
+     * método de cancelamento com essa assinatura (só {@code cancel(String)}, que tem o
+     * mesmo bug de header de autorização ausente já documentado em
+     * {@link #buscarInformacoesPagamento} e {@link #buscarQrCodePix} — por isso, mesma
+     * solução: RestClient direto).
+     *
+     * <p>Best-effort: um pagamento que já saiu de pending/in_process (aprovado, recusado,
+     * ou já cancelado) recusa o PUT — não é erro nosso, só ignora e segue, porque o objetivo
+     * real (liberar a cobrança pra nova tentativa) já está garantido pelo chamador.</p>
+     */
+    public void cancelarPagamento(String accessToken, String mpPaymentId) {
+        try {
+            restClient.put()
+                .uri("https://api.mercadopago.com/v1/payments/{id}", mpPaymentId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("status", "cancelled"))
+                .retrieve()
+                .toBodilessEntity();
+        } catch (Exception e) {
+            log.info("Não foi possível cancelar a tentativa de pagamento no Mercado Pago "
+                + "(pode já ter saído de pending/in_process) — seguindo mesmo assim. mpPaymentId={}",
+                mpPaymentId, e);
         }
     }
 }

@@ -11,6 +11,7 @@ import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useResponderCampos } from '@/hooks/inscricao/useResponderCampos'
+import { useDefinirEmailInicial } from '@/hooks/pessoa/useDefinirEmailInicial'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
@@ -18,8 +19,10 @@ import { iniciais, rotuloVinculo } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
+import { Input } from '@/components/common/input/Input'
 import { CamposExtrasForm } from './CamposExtrasForm'
 import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
+import { ModalCompletarDadosInscricao } from './ModalCompletarDadosInscricao'
 import type { PessoaResponse } from '@/types/pessoa.type'
 import type { Impedimento } from '@/types/inscricao.type'
 import styles from './ModalInscreverPessoas.module.css'
@@ -55,11 +58,20 @@ export function ModalInscreverPessoas({
 }: Props) {
   const router = useRouter()
   const [busca, setBusca] = useState('')
-  // Evento gratuito: seleção múltipla por checkbox (Map pra guardar o nome no momento da
-  // seleção — a lista de busca pode mudar de página/termo depois).
-  const [selecionados, setSelecionados] = useState<Map<string, string>>(new Map())
+  // Evento gratuito: seleção múltipla por checkbox (Map pra guardar nome/e-mail no momento
+  // da seleção — a lista de busca pode mudar de página/termo depois, e precisamos saber
+  // quem tem e-mail na hora de confirmar, sem depender da pessoa ainda estar na lista).
+  const [selecionados, setSelecionados] = useState<Map<string, { nome: string; email: string | null }>>(new Map())
+  // Selecionados sem e-mail (ou com campo personalizado obrigatório do evento pra
+  // responder) passam um de cada vez por aqui, depois que os "simples" já foram em lote —
+  // mesmo padrão do wizard "um de cada vez" usado pro convidado sem cadastro.
+  const [filaPendencias, setFilaPendencias] = useState<{ id: string; nome: string; email: string | null }[]>([])
   // Evento pago: uma pessoa por vez.
-  const [pessoaClicada, setPessoaClicada] = useState<{ id: string; nome: string } | null>(null)
+  const [pessoaClicada, setPessoaClicada] = useState<{ id: string; nome: string; email: string | null } | null>(null)
+  // E-mail digitado no painel pago quando a pessoa selecionada ainda não tem um cadastrado
+  // (obrigatório pra se inscrever — ver definirEmail abaixo).
+  const [emailPago, setEmailPago] = useState('')
+  const [tentouConfirmarEmailPago, setTentouConfirmarEmailPago] = useState(false)
   // Guarda qual ação foi tentada, pra o retry de "inscrever mesmo assim" (422 contornável)
   // refazer a MESMA escolha — sem isto, o retry sempre viraria "pagar agora".
   const [acaoPendente, setAcaoPendente] = useState<'pagar' | 'link' | null>(null)
@@ -95,6 +107,7 @@ export function ModalInscreverPessoas({
   const { data: contaPagamento } = useContaPagamento()
   const { data: campos = [] } = useCamposPersonalizados(eventoId)
   const { responder: responderCampos } = useResponderCampos()
+  const definirEmail = useDefinirEmailInicial()
 
   const inscreverPessoas = useInscreverPessoas(eventoId, {
     onContornavel: ehGestor
@@ -118,7 +131,7 @@ export function ModalInscreverPessoas({
     setSelecionados((atual) => {
       const novo = new Map(atual)
       if (novo.has(p.id)) novo.delete(p.id)
-      else novo.set(p.id, p.nome)
+      else novo.set(p.id, { nome: p.nome, email: p.email })
       return novo
     })
   }
@@ -132,15 +145,30 @@ export function ModalInscreverPessoas({
     setCamposValores({})
     setTentouConfirmarCampos(false)
     setAcaoPendente(null)
+    setEmailPago('')
+    setTentouConfirmarEmailPago(false)
   }
 
+  const emailPagoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPago.trim())
+
   /** Núcleo do fluxo pago pessoa-a-pessoa: cria a inscrição (com ou sem link), anexa
-   *  respostas de campos adicionais se houver, e decide o próximo passo. */
-  function confirmarPessoa(gerarLink: boolean, confirmado = false) {
+   *  respostas de campos adicionais se houver, e decide o próximo passo. E-mail é
+   *  obrigatório pra se inscrever (2026-08-27) — quem ainda não tem cadastra aqui mesmo,
+   *  junto dos campos personalizados, antes de seguir. */
+  async function confirmarPessoa(gerarLink: boolean, confirmado = false) {
     if (!pessoaClicada) return
-    if (!confirmado && camposObrigatoriosPendentes()) {
+    const precisaEmail = !pessoaClicada.email
+    if (!confirmado && ((precisaEmail && !emailPagoValido) || camposObrigatoriosPendentes())) {
       setTentouConfirmarCampos(true)
+      setTentouConfirmarEmailPago(true)
       return
+    }
+    if (!confirmado && precisaEmail) {
+      try {
+        await definirEmail.mutateAsync({ pessoaId: pessoaClicada.id, email: emailPago.trim() })
+      } catch {
+        return // erro já notificado pelo hook
+      }
     }
     setAcaoPendente(gerarLink ? 'link' : 'pagar')
 
@@ -173,14 +201,53 @@ export function ModalInscreverPessoas({
     )
   }
 
+  // E-mail obrigatório pra se inscrever (2026-08-27) + campos personalizados do evento:
+  // quem já tem e-mail e não precisa responder nada vai em lote, como sempre foi; o resto
+  // (sem e-mail, ou o evento tem campos pra responder) passa pela fila um de cada vez.
   function aoConfirmarSelecaoGratuita() {
-    const pessoaIds = Array.from(selecionados.keys())
-    inscreverPessoas.mutate({ pessoaIds }, {
+    const todasSelecionadas = Array.from(selecionados.entries()).map(([id, dados]) => ({ id, ...dados }))
+    const precisaDeAlgo = (p: { email: string | null }) => !p.email || campos.length > 0
+    const simples = todasSelecionadas.filter((p) => !precisaDeAlgo(p))
+    const comPendencia = todasSelecionadas.filter(precisaDeAlgo)
+
+    if (simples.length === 0) {
+      setFilaPendencias(comPendencia)
+      return
+    }
+    inscreverPessoas.mutate({ pessoaIds: simples.map((p) => p.id) }, {
       onSuccess: () => {
         setImpedimentosParaConfirmar(null)
-        onClose()
+        if (comPendencia.length > 0) setFilaPendencias(comPendencia)
+        else onClose()
       },
       onError: () => setImpedimentosParaConfirmar(null),
+    })
+  }
+
+  async function aoConfirmarPendenciaAtual({ email, respostas }: { email: string | null; respostas: Record<string, string> }) {
+    const atual = filaPendencias[0]
+    if (!atual) return
+    if (email) {
+      try {
+        await definirEmail.mutateAsync({ pessoaId: atual.id, email })
+      } catch {
+        return // erro já notificado pelo hook
+      }
+    }
+    inscreverPessoas.mutate({ pessoaIds: [atual.id] }, {
+      onSuccess: async (lista) => {
+        const item = lista[0]
+        if (campos.length > 0 && item) {
+          const dados = campos.map((c) => ({ campoId: c.id, valor: respostas[c.id] ?? '' }))
+          await responderCampos(item.inscricaoId, dados)
+        }
+        // `onClose` mexe em estado do componente pai — nunca dentro do updater de
+        // setState (isso roda na fase de render e disparava o aviso do React de
+        // "setState durante o render de outro componente").
+        const eraUltimo = filaPendencias.length === 1
+        setFilaPendencias((fila) => fila.slice(1))
+        if (eraUltimo) onClose()
+      },
     })
   }
 
@@ -192,6 +259,16 @@ export function ModalInscreverPessoas({
       onConfirmar={() => {
         if (pessoaClicada) {
           confirmarPessoa(acaoPendente === 'link', true)
+        } else if (filaPendencias.length > 0) {
+          const atual = filaPendencias[0]
+          inscreverPessoas.mutate({ pessoaIds: [atual.id], confirmado: true }, {
+            onSuccess: () => {
+              setImpedimentosParaConfirmar(null)
+              const eraUltimo = filaPendencias.length === 1
+              setFilaPendencias((fila) => fila.slice(1))
+              if (eraUltimo) onClose()
+            },
+          })
         } else {
           inscreverPessoas.mutate({ pessoaIds: Array.from(selecionados.keys()), confirmado: true }, {
             onSuccess: () => { setImpedimentosParaConfirmar(null); onClose() },
@@ -202,7 +279,7 @@ export function ModalInscreverPessoas({
       mensagem={
         <>
           <p>
-            {(pessoaClicada ? 1 : selecionados.size) === 1
+            {(pessoaClicada ? 1 : (filaPendencias.length > 0 ? 1 : selecionados.size)) === 1
               ? 'Esta pessoa não atende'
               : 'Uma ou mais pessoas selecionadas não atendem'}
             {' '}a todos os requisitos deste evento:
@@ -216,6 +293,26 @@ export function ModalInscreverPessoas({
       }
     />
   )
+
+  // ---- Evento gratuito: fila de quem falta e-mail e/ou responder campos personalizados ----
+  if (!preco && filaPendencias.length > 0) {
+    const atual = filaPendencias[0]
+    return (
+      <>
+        <ModalCompletarDadosInscricao
+          key={atual.id}
+          nome={atual.nome}
+          pedeEmail={!atual.email}
+          campos={campos}
+          isLoading={inscreverPessoas.isPending || definirEmail.isPending}
+          onConfirmar={aoConfirmarPendenciaAtual}
+          onClose={() => setFilaPendencias((fila) => fila.slice(1))}
+          onFecharTudo={() => { setFilaPendencias([]); onClose() }}
+        />
+        {modalContorno}
+      </>
+    )
+  }
 
   // ---- Evento pago: sem conta MP conectada ----
   if (preco && !contaPagamento?.conectada) {
@@ -269,6 +366,18 @@ export function ModalInscreverPessoas({
         <div className={styles.painelPessoa}>
           <h3 className={styles.painelTitulo}>Inscrever {pessoaClicada.nome}</h3>
 
+          {!pessoaClicada.email && (
+            <Input
+              id="email-pago"
+              type="email"
+              label="E-mail"
+              placeholder="nome@exemplo.com"
+              value={emailPago}
+              onChange={(e) => setEmailPago(e.target.value)}
+              error={tentouConfirmarEmailPago && !emailPagoValido ? 'Informe um e-mail válido.' : undefined}
+            />
+          )}
+
           {campos.length > 0 && (
             <CamposExtrasForm
               campos={campos}
@@ -284,15 +393,15 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoPagar}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
               onClick={() => confirmarPessoa(false)}
             >
-              {inscreverPessoas.isPending || navegandoParaCheckout ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
+              {inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
             </button>
             <button
               type="button"
               className={styles.botaoLink}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
               onClick={() => confirmarPessoa(true)}
             >
               Enviar link pra {pessoaClicada.nome} pagar
@@ -346,7 +455,7 @@ export function ModalInscreverPessoas({
               onClick={(e) => {
                 if (preco && !bloqueado) {
                   e.preventDefault()
-                  setPessoaClicada({ id: p.id, nome: p.nome })
+                  setPessoaClicada({ id: p.id, nome: p.nome, email: p.email })
                 }
               }}
             >

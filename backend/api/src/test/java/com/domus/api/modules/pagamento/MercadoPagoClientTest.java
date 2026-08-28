@@ -73,7 +73,7 @@ class MercadoPagoClientTest {
         when(contaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.of(conta));
         when(encryptor.descriptografar("access-cripto")).thenReturn("access-plano");
         when(api.buscarQrCodePix("access-plano", "mp-payment-999"))
-            .thenReturn(new MercadoPagoApi.QrCodePix("codigo-copia-cola", "base64-do-qr"));
+            .thenReturn(new MercadoPagoApi.QrCodePix("codigo-copia-cola", "base64-do-qr", java.time.Instant.now().plusSeconds(1800)));
 
         var resultado = client.buscarQrCodePix(igrejaId, "mp-payment-999");
 
@@ -82,14 +82,14 @@ class MercadoPagoClientTest {
     }
 
     @Test
-    void estornarUsaTokenDescriptografadoDaIgreja() {
+    void estornarParcialUsaTokenDescriptografadoDaIgreja() {
         var conta = new ContaPagamentoIgreja(igrejaId, "mp-user", "access-cripto", "refresh-cripto",
             Instant.now().plusSeconds(3600), UUID.randomUUID());
         when(contaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.of(conta));
         when(encryptor.descriptografar("access-cripto")).thenReturn("access-plano");
 
-        client.estornar(igrejaId, "mp-payment-999");
+        client.estornarParcial(igrejaId, "mp-payment-999", new java.math.BigDecimal("30.00"));
 
-        verify(api).estornar("access-plano", "mp-payment-999");
+        verify(api).estornarParcial("access-plano", "mp-payment-999", new java.math.BigDecimal("30.00"));
     }
 }

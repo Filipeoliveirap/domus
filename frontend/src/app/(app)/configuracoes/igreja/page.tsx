@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -57,6 +58,27 @@ export default function DadosDaIgrejaPage() {
   const atualizar = useAtualizarIgreja()
   const atualizarLogo = useAtualizarLogoIgreja()
   const { buscar: buscarCep, carregando: buscandoCep } = useBuscaCep()
+
+  // O callback do OAuth do Mercado Pago (ContaPagamentoController.callback) redireciona pra
+  // cá com ?mpConectado=1 no sucesso ou ?mpErro=<codigo> na falha. Mostra o toast e limpa a
+  // URL pra o aviso não repetir num reload.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const conectado = searchParams.get('mpConectado')
+    const erro = searchParams.get('mpErro')
+    if (!conectado && !erro) return
+
+    if (conectado) {
+      notificar.sucesso('Conta conectada!', 'Sua igreja já pode receber pagamentos de eventos pelo Mercado Pago.')
+    } else if (erro === 'OAUTH_STATE_INVALIDO') {
+      notificar.erro('Não foi possível conectar', 'A sessão de conexão expirou. Tente conectar de novo.')
+    } else {
+      notificar.erro('Não foi possível conectar', 'O Mercado Pago recusou a conexão. Tente de novo em alguns instantes.')
+    }
+    router.replace(pathname)
+  }, [searchParams, router, pathname])
 
   const role = useAuthStore((s) => s.role)
   const exclusaoAgendadaEm = useAuthStore((s) => s.exclusaoAgendadaEm)

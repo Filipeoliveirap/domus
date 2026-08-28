@@ -462,6 +462,15 @@ Duas camadas, no mesmo `<TransicaoRota>` (client, envolve `{children}` no `(app)
 - `<html data-scroll-behavior="smooth">` — o Next para de brigar com o smooth-scroll
   durante troca de rota.
 
+### Limpeza (Task 11 — feita)
+
+O autor validou em produção e decidiu: só o que está em uso fica. Removidos:
+- 11 das 12 variantes de `<Loader>` (fica só `circular` — a única usada). `Loader.tsx` e
+  `Loader.module.css` enxugados.
+- Rota `demo/loaders` inteira (`src/app/demo/`).
+- `<ItemAnimado>` + `useListaComSaida` (só o demo usava). `<Transicao>` fica (movimentações,
+  relatórios).
+
 ---
 
 ## Fluxo ponta a ponta (peça B)

@@ -28,16 +28,20 @@
   box-shadow: 8px 0 30px rgba(19, 27, 46, 0.18);
 }
 
-/* Overlay escuro por trás do drawer (só no mobile, só quando aberto). */
+/* Overlay escuro por trás do drawer (só no mobile, só quando aberto). Fade de verdade —
+   opacity + visibility em vez de display, pra acompanhar o deslize do <aside>. */
 .overlay {
-  display: none;
   position: fixed;
   inset: 0;
   background: rgba(19, 27, 46, 0.4);
   z-index: 35;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
 }
 .overlayVisivel {
-  display: block;
+  opacity: 1;
+  visibility: visible;
 }
 
 @media (min-width: 768px) {
@@ -48,7 +52,7 @@
     z-index: 20;
   }
   .overlay {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -101,25 +105,46 @@
   border-top: 1px solid #e2e8f0;
 }
 
+/* Pílula que desliza pro item ativo. Fica atrás dos links (z-index 0); a posição/tamanho
+   vêm medidos em JS do elemento com [data-ativo="true"] dentro do <aside>. */
+.indicadorAtivo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .link {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.1s ease;
   -webkit-tap-highlight-color: transparent;
 }
-/* feedback de toque nativo — o link "afunda" de leve ao pressionar */
+/* feedback de toque nativo — o link "afunda" e o ícone encolhe de leve ao pressionar */
 .link:active {
   transform: scale(0.98);
   background-color: #e0e7ff;
 }
+.link:active svg {
+  transform: scale(0.92);
+  transition: transform 0.1s ease;
+}
 
 .linkActive {
-  background-color: #ffffff;
   color: #1d4ed8;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .linkInactive {
@@ -237,9 +262,12 @@
   .submenuWrap,
   .seta,
   .link,
-  .subLink {
+  .subLink,
+  .indicadorAtivo,
+  .overlay {
     transition: none;
   }
+  .subLink { opacity: 1; transform: none; }
 }
 
 /* O link vira botão de abrir/fechar, então precisa do mesmo alinhamento + a seta na ponta. */
@@ -257,7 +285,7 @@
 
 .seta {
   flex-shrink: 0;
-  transition: transform 150ms ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .setaAberta {
@@ -274,10 +302,13 @@
 .submenuWrap {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transition: grid-template-rows 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.24s ease;
 }
 .submenuAberto {
   grid-template-rows: 1fr;
+  opacity: 1;
 }
 
 .submenu {
@@ -301,8 +332,17 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: #64748b;
-  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: background-color 0.15s ease, color 0.15s ease,
+              transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
 }
+/* cascata quando o submenu abre */
+.submenuAberto .subLink { opacity: 1; transform: translateX(0); }
+.submenuAberto .subLink:nth-child(1) { transition-delay: 0.08s; }
+.submenuAberto .subLink:nth-child(2) { transition-delay: 0.13s; }
+.submenuAberto .subLink:nth-child(3) { transition-delay: 0.18s; }
+.submenuAberto .subLink:nth-child(4) { transition-delay: 0.23s; }
 .subLink:active {
   transform: scale(0.98);
   background-color: #e0e7ff;

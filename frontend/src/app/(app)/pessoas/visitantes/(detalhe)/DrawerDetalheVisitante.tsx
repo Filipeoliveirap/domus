@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { clsx } from 'clsx'
 import { X, Phone, Cake, Heart, MapPin, FileText, CalendarClock, Baby } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useVisitante } from '@/hooks/visitante/useVisitante'
 import {
   iniciaisVisitante, formatarTelefoneExibicao, rotuloEstadoCivil,
@@ -18,28 +20,29 @@ interface DrawerDetalheVisitanteProps {
 
 export function DrawerDetalheVisitante({ visitanteId, onClose }: DrawerDetalheVisitanteProps) {
   const { data: visitante, isPending, isError, refetch } = useVisitante(visitanteId)
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [fechar])
 
   const endereco = visitante ? formatarEndereco(visitante.endereco) : null
   const nascimento = visitante ? formatarDataNascimento(visitante.dataNascimento) : null
   const idade = visitante ? calcularIdade(visitante.dataNascimento) : null
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <aside
         className={styles.drawer}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+        <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

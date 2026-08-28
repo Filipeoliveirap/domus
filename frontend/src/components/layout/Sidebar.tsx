@@ -107,7 +107,7 @@ export function Sidebar() {
       <Link
         key={item.href}
         href={item.href}
-        onClick={fecharNav}
+        onClick={(e) => { fecharNav(); medirPilula(e.currentTarget) }}
         data-ativo={ativo}
         className={ativo ? `${styles.link} ${styles.linkActive}` : `${styles.link} ${styles.linkInactive}`}
       >
@@ -151,18 +151,19 @@ export function Sidebar() {
   const [comTransicao, setComTransicao] = useState(false)
   const [pilula, setPilula] = useState<Pilula>({ top: 0, left: 0, width: 0, height: 0, estado: 'inicial' })
 
-  const medirPilula = useCallback(() => {
+  // Posiciona a pílula sobre `alvo` (ou sobre o item [data-ativo] atual, se omitido). Rect
+  // relativo ao <aside> + scroll: robusto a padding/safe-area/scroll da sidebar, ao
+  // contrário de offsetTop (que depende de qual ancestral é o offsetParent).
+  const medirPilula = useCallback((alvo?: HTMLElement) => {
     const aside = asideRef.current
     if (!aside) return
-    const ativo = aside.querySelector<HTMLElement>('[data-ativo="true"]')
-    if (!ativo) {
+    const el = alvo ?? aside.querySelector<HTMLElement>('[data-ativo="true"]')
+    if (!el) {
       setPilula((p) => (p.estado === 'inicial' ? p : { ...p, estado: 'oculto' }))
       return
     }
-    // Rect relativo ao <aside> + scroll: robusto a padding/safe-area/scroll da sidebar,
-    // ao contrário de offsetTop (que depende de qual ancestral é o offsetParent).
     const ar = aside.getBoundingClientRect()
-    const er = ativo.getBoundingClientRect()
+    const er = el.getBoundingClientRect()
     setPilula({
       top: er.top - ar.top + aside.scrollTop,
       left: er.left - ar.left + aside.scrollLeft,
@@ -179,8 +180,9 @@ export function Sidebar() {
   }, [medirPilula, pathname, role])
 
   useEffect(() => {
-    window.addEventListener('resize', medirPilula)
-    return () => window.removeEventListener('resize', medirPilula)
+    const aoRedimensionar = () => medirPilula()
+    window.addEventListener('resize', aoRedimensionar)
+    return () => window.removeEventListener('resize', aoRedimensionar)
   }, [medirPilula])
 
   // Abrir/fechar submenu empurra o botão "Configurações" do rodapé por ~360ms — re-mede a

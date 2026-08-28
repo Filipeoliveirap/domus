@@ -17,6 +17,8 @@ import type { MovimentacaoResponse, TipoMovimentacao } from '@/types/financeiro/
 import styles from './movimentacoes.module.css'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
@@ -159,29 +161,27 @@ function MovimentacoesConteudo() {
       <div className={styles.filtros}>
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>TIPO</label>
-          <select
-            className={styles.filtroSelect}
+          <SelectMenu
             value={filtros.tipo}
-            onChange={(e) => { setFiltro('tipo', e.target.value); resetarPagina() }}
-          >
-            <option value="">Todos os tipos</option>
-            <option value="ENTRADA">Entrada</option>
-            <option value="SAIDA">Saída</option>
-          </select>
+            onChange={(v) => { setFiltro('tipo', v); resetarPagina() }}
+            placeholder="Todos os tipos"
+            ariaLabel="Filtrar por tipo"
+            options={[
+              { value: 'ENTRADA', label: 'Entrada' },
+              { value: 'SAIDA', label: 'Saída' },
+            ]}
+          />
         </div>
 
         <div className={styles.filtroCampo}>
           <label className={styles.filtroLabel}>CATEGORIA</label>
-          <select
-            className={styles.filtroSelect}
+          <SelectMenu
             value={filtros.categoriaId}
-            onChange={(e) => { setFiltro('categoriaId', e.target.value); resetarPagina() }}
-          >
-            <option value="">Todas as categorias</option>
-            {categorias?.map((c: CategoriaResponse) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+            onChange={(v) => { setFiltro('categoriaId', v); resetarPagina() }}
+            placeholder="Todas as categorias"
+            ariaLabel="Filtrar por categoria"
+            options={(categorias ?? []).map((c: CategoriaResponse) => ({ value: c.id, label: c.nome }))}
+          />
         </div>
 
         <div className={styles.filtroCampo}>
@@ -233,7 +233,7 @@ function MovimentacoesConteudo() {
       </div>
 
       {temFiltro && totais && (
-        <div className={styles.totais}>
+        <Transicao modo="subir" className={styles.totais}>
           <div className={styles.totalItem}>
             <span className={styles.totalLabel}>Entradas</span>
             <span className={`${styles.totalValor} ${styles.entrada}`}>{formatarMoeda(totais.totalEntradas)}</span>
@@ -248,11 +248,15 @@ function MovimentacoesConteudo() {
               {formatarMoeda(String(parseFloat(totais.totalEntradas) - parseFloat(totais.totalSaidas)))}
             </span>
           </div>
-        </div>
+        </Transicao>
       )}
 
       {/* Tabela */}
       <div className={styles.painel}>
+       <Transicao
+         key={`${filtros.tipo}|${filtros.categoriaId}|${filtros.dataInicio}|${filtros.dataFim}|${filtros.pessoaId}|${pagina}`}
+         modo="fade"
+       >
         {isLoading ? (
           <>
             <CabecalhoTabela />
@@ -320,6 +324,7 @@ function MovimentacoesConteudo() {
             </footer>
           </>
         )}
+       </Transicao>
       </div>
 
       {detalheId && (

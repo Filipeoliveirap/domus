@@ -5,6 +5,7 @@ import { FaixaOffline } from '@/components/common/FaixaOffline/FaixaOffline'
 import { BannerExclusaoAgendada } from '@/components/common/BannerExclusaoAgendada/BannerExclusaoAgendada'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { NavProgress } from '@/components/layout/NavProgress/NavProgress'
+import { TransicaoRota } from '@/components/common/Transicao/TransicaoRota'
 
 export default function AppLayout({
   children,
@@ -19,7 +20,7 @@ export default function AppLayout({
       <Sidebar />
       <TopBar />
       <main className={styles.main}>
-        {children}
+        <TransicaoRota>{children}</TransicaoRota>
       </main>
     </AuthGuard>
   )

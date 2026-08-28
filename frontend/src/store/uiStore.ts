@@ -7,13 +7,13 @@ interface UiState {
   fecharNav: () => void
   alternarNav: () => void
 
-  // Navegação em andamento — alimenta o <NavProgress>. Contador (não booleano) porque
-  // dois cliques rápidos podem encavalar duas navegações; só zera quando todas terminam.
-  navsPendentes: number
+  // Navegação de rota em andamento — alimenta a barra do <NavProgress>. Booleano puro:
+  // `iniciar` = começou uma navegação, `finalizar` = a rota nova renderizou (ou o timeout
+  // de segurança estourou). Sem contador — `iniciar`/`finalizar` não são 1:1 (o Next pode
+  // chamar pushState+replaceState numa nav só, e navegação rápida pula rotas intermediárias).
   navegando: boolean
   iniciarNav: () => void
   finalizarNav: () => void
-  resetarNav: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -22,17 +22,7 @@ export const useUiStore = create<UiState>((set) => ({
   fecharNav: () => set({ navAberta: false }),
   alternarNav: () => set((s) => ({ navAberta: !s.navAberta })),
 
-  navsPendentes: 0,
   navegando: false,
-  iniciarNav: () =>
-    set((s) => {
-      const n = s.navsPendentes + 1
-      return { navsPendentes: n, navegando: n > 0 }
-    }),
-  finalizarNav: () =>
-    set((s) => {
-      const n = Math.max(0, s.navsPendentes - 1)
-      return { navsPendentes: n, navegando: n > 0 }
-    }),
-  resetarNav: () => set({ navsPendentes: 0, navegando: false }),
+  iniciarNav: () => set((s) => (s.navegando ? s : { navegando: true })),
+  finalizarNav: () => set((s) => (s.navegando ? { navegando: false } : s)),
 }))

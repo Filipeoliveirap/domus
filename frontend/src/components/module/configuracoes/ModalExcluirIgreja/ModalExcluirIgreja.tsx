@@ -9,7 +9,9 @@ import { Endpoints } from '@/lib/endpoints'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { ApiError } from '@/types/api.types'
 import type { ResumoExclusao } from '@/types/exclusaoIgreja.types'
+import { clsx } from 'clsx'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import styles from './ModalExcluirIgreja.module.css'
 
 interface Props {
@@ -37,6 +39,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
+  const { saindo, fechar } = useFecharAnimado(onClose)
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string
   const { celula, ministerio, congregacao, concordar } = useRotulos()
 
@@ -52,11 +55,11 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !carregando) onClose()
+      if (e.key === 'Escape' && !carregando) fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose, carregando])
+  }, [fechar, carregando])
 
   // Compara ignorando acento e caixa, no mesmo padrão de ModalConfirmacaoCritica.
   const normalizar = (v: string) =>
@@ -101,7 +104,10 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
   }
 
   return (
-    <div className={styles.overlay} onMouseDown={() => !carregando && onClose()}>
+    <div
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      onMouseDown={() => !carregando && fechar()}
+    >
       <form
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -118,7 +124,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
           <button
             type="button"
             className={styles.btnFechar}
-            onClick={onClose}
+            onClick={fechar}
             disabled={carregando}
             aria-label="Fechar"
           >
@@ -213,7 +219,7 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
         {erro && <p className={styles.erro}>{erro}</p>}
 
         <div className={styles.rodape}>
-          <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={carregando}>
+          <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={carregando}>
             Cancelar
           </button>
           <button type="submit" className={styles.btnConfirmar} disabled={!confere || !reautenticado || carregando}>

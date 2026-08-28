@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { notFound } from 'next/navigation'
 import Link, { useLinkStatus } from 'next/link'
 import { Home } from 'lucide-react'
 import { Loader, type LoaderVariant } from '@/components/common/Loader/Loader'
 import { BarraProgresso } from '@/components/layout/NavProgress/BarraProgresso'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { ItemAnimado } from '@/components/common/Transicao/ItemAnimado'
+import { useListaComSaida } from '@/hooks/useListaComSaida'
 import styles from './page.module.css'
 
 /** Reproduz o comportamento do modo 'barra-e-link' do sidebar: o ícone vira spinner
@@ -38,6 +41,20 @@ export default function DemoLoadersPage() {
   const [tamanho, setTamanho] = useState<(typeof TAMANHOS)[number]>('md')
   const [simBarra, setSimBarra] = useState(false)
   const [simOverlay, setSimOverlay] = useState(false)
+  const [blocoVisivel, setBlocoVisivel] = useState(true)
+  const [itens, setItens] = useState<{ id: number; texto: string }[]>([
+    { id: 1, texto: 'Primeiro item' },
+    { id: 2, texto: 'Segundo item' },
+  ])
+  const proximoId = useRef(3)
+  const lista = useListaComSaida(itens, (i) => String(i.id))
+
+  function addItem() {
+    setItens((s) => [...s, { id: proximoId.current, texto: `Item ${proximoId.current++}` }])
+  }
+  function removeItem(id: number) {
+    setItens((s) => s.filter((i) => i.id !== id))
+  }
 
   function dispararBarra() {
     setSimBarra(true)
@@ -92,6 +109,36 @@ export default function DemoLoadersPage() {
         </p>
         <div className={styles.simulador}>
           <button onClick={dispararOverlay}>Simular overlay (2s)</button>
+        </div>
+      </section>
+
+      <section className={styles.secao}>
+        <h2 className={styles.secaoTitulo}>Transições (peça D)</h2>
+        <p className={styles.aviso} style={{ marginBottom: '0.5rem' }}>
+          O conteúdo de rota/abas já entra animado no app todo. Aqui: bloco fora de rota e lista com entrada/saída.
+        </p>
+        <div className={styles.simulador}>
+          <button onClick={() => setBlocoVisivel((v) => !v)}>
+            {blocoVisivel ? 'Esconder bloco' : 'Mostrar bloco'}
+          </button>
+          <button onClick={addItem}>Adicionar item</button>
+        </div>
+        {blocoVisivel && (
+          <Transicao modo="subir">
+            <div className={styles.celula} style={{ marginTop: '0.75rem', minHeight: 80 }}>
+              Bloco que entra com <code>&lt;Transicao modo=&quot;subir&quot;&gt;</code>
+            </div>
+          </Transicao>
+        )}
+        <div className={styles.linkSimLista} style={{ marginTop: '0.75rem', maxWidth: 320 }}>
+          {lista.map(({ item, chave, saindo }) => (
+            <ItemAnimado key={chave} saindo={saindo}>
+              <div className={styles.linkSim} style={{ justifyContent: 'space-between' }}>
+                <span>{item.texto}</span>
+                <button onClick={() => removeItem(item.id)} disabled={saindo} aria-label="Remover">✕</button>
+              </div>
+            </ItemAnimado>
+          ))}
         </div>
       </section>
 

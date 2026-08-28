@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { clsx } from 'clsx'
 import { X, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, History, Archive } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './DrawerDetalheMovimentacao.module.css'
@@ -16,24 +18,25 @@ interface DrawerDetalheMovimentacaoProps {
 
 export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDetalheMovimentacaoProps) {
   const { data: mov, isPending, isError, refetch } = useMovimentacao(movimentacaoId)
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [fechar])
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <aside
         className={styles.drawer}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+        <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

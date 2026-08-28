@@ -229,6 +229,16 @@
   to { transform: translateX(0); }
 }
 
+/* saída (useFecharAnimado marca .saindo antes de desmontar) */
+.saindo { animation: fadeOut 0.24s ease forwards; }
+.saindo .drawer { animation: slideOut 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes slideOut { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .drawer, .saindo, .saindo .drawer { animation: none; }
+}
+
 @media (max-width: 480px) {
   .conteudo { padding: 40px 20px 20px; }
 }

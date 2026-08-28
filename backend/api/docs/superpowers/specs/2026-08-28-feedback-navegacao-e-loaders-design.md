@@ -434,10 +434,33 @@ Duas camadas, no mesmo `<TransicaoRota>` (client, envolve `{children}` no `(app)
 ### Arquivos tocados na peça D
 
 - Novos: `components/common/Transicao/{TransicaoRota,Transicao,ItemAnimado}.tsx` +
-  `Transicao.module.css` + `hooks/useListaComSaida.ts`.
+  `Transicao.module.css` + `hooks/useListaComSaida.ts` + `hooks/useFecharAnimado.ts` +
+  `components/common/SelectMenu/` + `app/(app)/AvisoRotaCarregando.tsx`.
 - `frontend/src/app/(app)/layout.tsx` — envolve `{children}` no `<TransicaoRota>`.
-- 2–3 formulários/builders pra `<ItemAnimado>` (identificados no plano).
-- `demo/loaders` (renomear mentalmente pra "demo") ganha uma seção mostrando D1/D2/D3.
+- `MovimentacaoForm.tsx` — `<Transicao>` nas linhas de contribuinte.
+- `demo/loaders` ganha seção D1/D2/D3.
+
+### Estado final (após rodadas de teste do autor)
+
+- **View Transitions API SÓ em troca de tela** (pathname). Filtro/`?query` **não** dispara
+  VT — o autor achou o crossfade da tela inteira "pulsado" nesse caso.
+- **VT aborta** (`skipTransition`) se a navegação demora >200ms ou a rota nova cai em
+  `loading.tsx` (sinal via evento `domus:rota-carregando` disparado pelo
+  `<AvisoRotaCarregando>`). Sem isso o spinner do `loading.tsx` congelava no snapshot da
+  transição. `vt.finished.catch()` engole o AbortError esperado.
+- **Suavização de troca de dado = escopada no conteúdo**, via `<Transicao key={...}>`:
+  - `movimentacoes` — painel de totais (`modo="subir"`) + tabela (`modo="fade"`, key =
+    filtros+página, exclui `q` pra não re-animar a cada tecla).
+  - `relatorios` — cada seção (`modo="subir"`, key = `chaveRelatorio + isLoading`), então
+    cada uma entra quando o dado dela chega (cascata) e reanima ao trocar período/aba/filtro.
+- **Saída de modal/drawer animada** via `useFecharAnimado(onClose)`: `ModalConfirmacao`,
+  `ModalConfirmacaoCritica`, `ModalExcluirIgreja`, e os 4 drawers de detalhe (pessoa,
+  evento, movimentação, visitante). X / clique fora / Esc → `.saindo` roda fade+zoom (modal)
+  ou fade+slide (drawer) antes de desmontar.
+- **`<SelectMenu>`** substitui os `<select>` nativos de TIPO/CATEGORIA em movimentações
+  (visual do site, popup animado com `@starting-style`).
+- `<html data-scroll-behavior="smooth">` — o Next para de brigar com o smooth-scroll
+  durante troca de rota.
 
 ---
 

@@ -42,7 +42,7 @@ export default function CelulasPage() {
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
-  const podeGerenciar = podeGerenciarCelulas(role)
+  const podeGerenciar = podeGerenciarCelulas(role, capacidadesExtras)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<CelulaResponse | null>(null)
   const [fotoId, setFotoId] = useState<string | null>(null)

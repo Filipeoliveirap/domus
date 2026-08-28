@@ -346,12 +346,9 @@ public class CelulaService {
 
     @Transactional
     public void atualizarPapel(UUID celulaId, UUID membroId, AtualizarPapelCelulaRequest data,
-                                UUID igrejaId, boolean isAdmin, UUID usuarioIdAtor) {
+                                UUID igrejaId, UUID atorPessoaId, boolean isAdmin, UUID usuarioIdAtor) {
         Celula celula = buscarDaIgrejaOuFalhar(celulaId, igrejaId);
-        if (!isAdmin) {
-            throw new AccessDeniedException(
-                    "Só um administrador pode promover ou rebaixar líder de célula.");
-        }
+        exigirAdminOuLider(celulaId, atorPessoaId, isAdmin);
 
         CelulaMembro membro = membroRepository.findById(membroId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));

@@ -28,30 +28,10 @@
   @starting-style { opacity: 0; transform: scale(0.96); }
 }
 
-/* D3 — item de lista: entra via @starting-style, sai via classe .itemSaindo (colapsa) */
-.item {
-  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-              max-height 0.24s ease, margin 0.24s ease, padding 0.24s ease;
-  overflow: hidden;
-  opacity: 1;
-
-  @starting-style { opacity: 0; transform: translateX(-6px); }
-}
-.itemSaindo {
-  opacity: 0;
-  transform: translateX(-6px);
-  max-height: 0 !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .rota { animation: none; }
-  .bloco, .item { transition: opacity 0.15s ease; }
+  .bloco { transition: opacity 0.15s ease; }
   .fade { @starting-style { opacity: 0; } }
   .subir { @starting-style { opacity: 0; transform: none; } }
   .escala { @starting-style { opacity: 0; transform: none; } }
-  .itemSaindo { transform: none; }
 }

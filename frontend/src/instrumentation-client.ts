@@ -11,10 +11,16 @@ if (dsn) {
         tracesSampleRate: 0,
         // Não enviar PII automaticamente (IP, etc.) — LGPD.
         sendDefaultPii: false,
-        // Ruído não acionável: promise rejeitada sem valor (ex.: fetch cancelado pelo
-        // react-query ao trocar de tela). Sem stack, "value: undefined" — nada a corrigir.
+        // Ruído não acionável:
+        // - promise rejeitada sem valor (ex.: fetch cancelado pelo react-query ao trocar de tela)
+        // - o SDK do Mercado Pago tenta buscar o script de antifraude em www.mercadolibre.com;
+        //   ad-blocker / proteção contra rastreamento do navegador (comum no Firefox) bloqueia,
+        //   o SDK não trata, e vira unhandledrejection. O pagamento em si continua funcionando.
         ignoreErrors: [
             'Non-Error promise rejection captured',
+            /NetworkError when attempting to fetch resource/,
+            /Failed to fetch/,
+            'mercadolibre.com',
         ],
         beforeSend(event) {
             // Reforço de scrubbing: nunca vazar credenciais/sessão para terceiro.

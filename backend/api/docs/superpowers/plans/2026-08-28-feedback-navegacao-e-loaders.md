@@ -10,6 +10,16 @@
 
 **Spec:** `backend/api/docs/superpowers/specs/2026-08-28-feedback-navegacao-e-loaders-design.md`
 
+> **Revisão 2026-08-28 (durante execução, após o autor testar a Peça B):** separados dois
+> problemas. (1) Navegação de rota nunca bloqueia — `MODO_INDICADOR_NAV` passa a ser
+> `'barra' | 'barra-e-link'` (default `'barra-e-link'`); o modo `overlay` sai. (2) Overlay
+> vira componente genérico `<OverlayCarregando>` (ex-`OverlayNav`), em
+> `components/common/OverlayCarregando/`, para operação bloqueante. Task 4 usa a union nova;
+> Task 5 não renderiza mais overlay; a Task 5 Step 3 (`OverlayNav`) migra pra **Task 6B**;
+> **Task 6C** aplica o overlay. Aplicação: reiniciar do checkout (NÃO o botão pagar — a
+> animação nativa do MP fica), `ModalConfirmacaoCritica`, `ModalExcluirIgreja`, e submit
+> dos forms de pessoa/evento/movimentação.
+
 ## Global Constraints
 
 - **Sem dependência nova.** Nada de `npm install`. Barra de progresso é código nosso.
@@ -1112,6 +1122,46 @@ git commit -m "feat(front): indicador de navegacao global com modo configuravel 
 ```
 
 - [ ] **Step 6: Atualizar graphify** — `graphify update .`
+
+---
+
+## Task 6B: `<OverlayCarregando>` (componente de operação bloqueante)
+
+> Feito na revisão. Substitui o `OverlayNav.tsx` (Task 5 Step 3), que foi removido.
+
+**Files:**
+- Create: `frontend/src/components/common/OverlayCarregando/OverlayCarregando.tsx`
+- Create: `frontend/src/components/common/OverlayCarregando/OverlayCarregando.module.css`
+- Modify: `frontend/src/components/layout/NavProgress/NavProgress.tsx` (remove branch de overlay)
+- Modify: `frontend/src/components/layout/NavProgress/NavProgress.module.css` (tira estilos de overlay)
+- Modify: `frontend/src/config/navIndicator.ts` (union `'barra' | 'barra-e-link'`, default `'barra-e-link'`)
+- Modify: `frontend/src/app/demo/loaders/page.tsx` (seção "operação bloqueante" com `<OverlayCarregando>`)
+
+**Interface produzida:**
+- `OverlayCarregando({ ativo, texto?, cobertura? }: { ativo: boolean; texto?: string; cobertura?: 'fixed' | 'absolute' }): JSX.Element` — véu + `<Loader variant="circular" size="lg">` + texto opcional. `'fixed'` (default) cobre a viewport; `'absolute'` cobre o container-pai posicionado.
+
+- [ ] Verificar: `npx tsc --noEmit && npx eslint src/components/common/OverlayCarregando/ src/components/layout/NavProgress/ src/app/demo/`
+
+---
+
+## Task 6C: Aplicar `<OverlayCarregando>` nas operações bloqueantes
+
+**Files:**
+- Modify: `PaymentBrickCheckout.tsx` + `.module.css` — overlay `cobertura="absolute"` no `reiniciando` (tela do Pix). **NÃO** no `enviando` do botão pagar (animação nativa do MP fica). `.wrapper` ganha `position: relative`.
+- Modify: `ModalConfirmacaoCritica.tsx` + `.module.css` — overlay `cobertura="absolute"` no `isLoading`. `.modal` ganha `position: relative`.
+- Modify: `ModalExcluirIgreja.tsx` + `.module.css` — overlay `cobertura="absolute"` no `carregando`. `.modal` ganha `position: relative`.
+- Modify: `PessoaForm.tsx`, `EventoForm.tsx`, `MovimentacaoForm.tsx` — overlay `cobertura="fixed"` (default) no `isLoading`, texto `"Salvando…"` / `"Salvando alterações…"`.
+
+- [ ] Verificar: `npx tsc --noEmit`, `npx eslint` nos arquivos (comparar com `git stash` — `BuscaGlobal.tsx` e `PessoaForm.tsx:cargoAtual` são erros pré-existentes, não novos), `npm run build`.
+
+- [ ] **CHECKPOINT — pedaços B + B2.** Avisar o autor, esperar teste, então commit único:
+
+```bash
+git add frontend/src/store/uiStore.ts frontend/src/config/ frontend/src/components/layout/NavProgress/ frontend/src/components/common/OverlayCarregando/ "frontend/src/app/(app)/layout.tsx" frontend/src/components/layout/Sidebar.tsx frontend/src/app/demo/ frontend/src/components/common/ModalConfirmacaoCritica/ frontend/src/components/module/configuracoes/ModalExcluirIgreja/ frontend/src/components/module/pagamento/ frontend/src/components/module/pessoas/PessoaForm.tsx frontend/src/components/module/eventos/EventoForm.tsx frontend/src/components/module/movimentacoes/MovimentacaoForm.tsx
+git commit -m "feat(front): indicador de navegacao (barra/link) + OverlayCarregando pra operacao bloqueante"
+```
+
+- [ ] `graphify update .`
 
 ---
 

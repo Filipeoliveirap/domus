@@ -161,26 +161,36 @@ const PainelEditor = forwardRef<
             </div>
 
             <div>
-              <Input
-                id={`campo-placeholder-${indice}`}
-                label="Exemplo de resposta (opcional)"
-                placeholder="Ex.: Digite P, M ou G"
-                value={campo.placeholder ?? ''}
-                onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
-              />
-              <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
-            </div>
-
-            <div>
               <Select
                 id={`campo-tipo-${indice}`}
                 label="Como a pessoa vai responder"
                 options={TIPOS}
                 value={campo.tipo}
-                onChange={(e) => atualizarCampo(indice, { tipo: e.target.value as TipoCampoPersonalizado })}
+                onChange={(e) => {
+                  const novoTipo = e.target.value as TipoCampoPersonalizado
+                  // "Exemplo de resposta" só faz sentido em texto livre — ao sair dele,
+                  // descarta o exemplo pra não ficar preso num campo que nem aparece mais.
+                  atualizarCampo(indice, {
+                    tipo: novoTipo,
+                    ...(novoTipo !== 'TEXTO_CURTO' ? { placeholder: null } : {}),
+                  })
+                }}
               />
               <span className={styles.dica}>{ajudaDoTipo(campo.tipo)}</span>
             </div>
+
+            {campo.tipo === 'TEXTO_CURTO' && (
+              <div>
+                <Input
+                  id={`campo-placeholder-${indice}`}
+                  label="Exemplo de resposta (opcional)"
+                  placeholder="Ex.: Digite P, M ou G"
+                  value={campo.placeholder ?? ''}
+                  onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
+                />
+                <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
+              </div>
+            )}
 
             {(campo.tipo === 'OPCAO_UNICA' || campo.tipo === 'MULTIPLA_ESCOLHA') && (
               <div className={styles.campoOpcoes}>
@@ -255,9 +265,9 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
       </div>
 
       {/* Interativos igual aos outros campos (prévia de verdade, nunca disabled — ver
-          CLAUDE.md), mas nunca viram CampoPersonalizadoRequest de verdade: nome/telefone já
-          são sempre coletados automaticamente (titular/convidado). Só pra quem está montando
-          o formulário sentir como fica completo, digitando algo real se quiser. */}
+          CLAUDE.md), mas nunca viram CampoPersonalizadoRequest de verdade: nome, telefone e
+          e-mail já são sempre coletados automaticamente (titular/convidado). Só pra quem
+          está montando o formulário sentir como fica completo, digitando algo real se quiser. */}
       <div className={styles.previewCampo}>
         <label className={styles.previewLabel}>Nome</label>
         <input
@@ -273,6 +283,16 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
           placeholder="(00) 00000-0000"
           value={valorTexto('__telefone')}
           onChange={(e) => setValores((v) => ({ ...v, __telefone: e.target.value }))}
+        />
+        <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
+      </div>
+      <div className={styles.previewCampo}>
+        <label className={styles.previewLabel}>E-mail</label>
+        <input
+          type="email"
+          placeholder="Ex.: maria@email.com"
+          value={valorTexto('__email')}
+          onChange={(e) => setValores((v) => ({ ...v, __email: e.target.value }))}
         />
         <span className={styles.dica}>Sempre coletado automaticamente — aqui é só pra você testar.</span>
       </div>

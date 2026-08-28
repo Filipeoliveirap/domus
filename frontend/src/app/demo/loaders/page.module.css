@@ -50,3 +50,14 @@
   background: var(--color-bg-white);
   font-size: 0.875rem;
 }
+.linkSimLista { display: flex; flex-direction: column; gap: 0.25rem; max-width: 260px; }
+.linkSim {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-sidebar);
+  font-size: 0.875rem;
+  background: var(--color-bg-sidebar);
+}

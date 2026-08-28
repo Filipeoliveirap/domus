@@ -5,6 +5,7 @@ import axios from 'axios'
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { Loader } from '@/components/common/Loader/Loader'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import { cobrancaService } from '@/services/cobranca.service'
 import { TelaPix } from './TelaPix'
 import type { ApiError } from '@/types/api.types'
@@ -292,6 +293,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
           onReiniciar={aoReiniciar}
           reiniciando={reiniciando}
         />
+        <OverlayCarregando ativo={reiniciando} cobertura="absolute" texto="Preparando novo pagamento…" />
       </div>
     )
   }

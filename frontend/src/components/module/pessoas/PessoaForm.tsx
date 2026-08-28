@@ -13,6 +13,7 @@ import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { SeletorRedes } from './SeletorRedes'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './PessoaForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { PessoaFormInput, PessoaFormData } from '@/lib/validators'
@@ -234,6 +235,8 @@ export function PessoaForm(props: PessoaFormProps) {
           </div>
         </div>
       </div>
+
+      <OverlayCarregando ativo={isLoading} texto={ehEdicao ? 'Salvando alterações…' : 'Salvando…'} />
     </form>
   )
 }

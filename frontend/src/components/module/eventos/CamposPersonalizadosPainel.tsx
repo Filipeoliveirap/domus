@@ -289,7 +289,6 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
       <div className={styles.previewCampo}>
         <label className={styles.previewLabel}>E-mail</label>
         <input
-          type="email"
           placeholder="Ex.: maria@email.com"
           value={valorTexto('__email')}
           onChange={(e) => setValores((v) => ({ ...v, __email: e.target.value }))}

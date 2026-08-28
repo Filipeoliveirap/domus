@@ -2,6 +2,13 @@
 
 > Spec de design. Data: 2026-08-28. Frontend (Next.js 16, App Router, CSS Modules).
 
+> **Revisão 2026-08-28 (durante execução):** separados dois problemas distintos que antes
+> eram um "modo" só. (1) **Navegação de rota** nunca bloqueia — o indicador é sempre a
+> barra do topo (+ spinner no link do sidebar). O modo `overlay` saiu do
+> `MODO_INDICADOR_NAV`, que agora é `'barra' | 'barra-e-link'` (default `'barra-e-link'`).
+> (2) **Operação bloqueante** (pagar, excluir, submeter form) ganha um componente próprio
+> `<OverlayCarregando>` (ex-`OverlayNav`), opt-in caso a caso — ver **Peça B2**.
+
 ## Problema
 
 O app dá feedback de "carregando" de forma esparsa e inconsistente:
@@ -166,16 +173,20 @@ resetarNav: () => void         // navsPendentes = 0 (timeout de segurança)
 
 ```ts
 // Modo do indicador de navegação. Trocar aqui, subir, testar. Sem reescrever nada.
-export const MODO_INDICADOR_NAV: 'barra' | 'overlay' | 'barra-e-link' = 'barra'
+export const MODO_INDICADOR_NAV: 'barra' | 'barra-e-link' = 'barra-e-link'
 ```
+
+> Revisão: o modo `overlay` saiu daqui. Navegação de rota nunca bloqueia — quem clica pode
+> ir pra outro canto enquanto a página nova monta. Overlay é só pra operação bloqueante
+> (Peça B2).
 
 Uma constante literal (não env) — é decisão de produto, fica versionada e o `tsc` cobre os
 três valores.
 
 ### Componente — `frontend/src/components/layout/NavProgress/`
 
-Arquivos: `NavProgress.tsx`, `NavProgress.module.css`, `BarraProgresso.tsx`,
-`OverlayNav.tsx` (mesmo módulo CSS).
+Arquivos: `NavProgress.tsx`, `NavProgress.module.css`, `BarraProgresso.tsx` (mesmo módulo
+CSS). O overlay não vive mais aqui — virou `<OverlayCarregando>` genérico na Peça B2.
 
 `NavProgress.tsx` (client):
 
@@ -193,11 +204,9 @@ Arquivos: `NavProgress.tsx`, `NavProgress.module.css`, `BarraProgresso.tsx`,
   **150ms** (nav instantânea não pisca); uma vez visível, fica no mínimo **400ms** (não
   treme em nav rápida). Lógica encapsulada num hook interno `useIndicadorVisivel(navegando)`
   que retorna um boolean já com esse debounce/hold.
-- **Render conforme `MODO_INDICADOR_NAV`:**
-  - `'barra'` → `<BarraProgresso ativo={visivel} />`
-  - `'overlay'` → `<OverlayNav ativo={visivel} />`
-  - `'barra-e-link'` → `<BarraProgresso ativo={visivel} />` (o "link" é responsabilidade
-    do Sidebar, ver abaixo)
+- **Render:** sempre `<BarraProgresso ativo={visivel} />`. Nos dois modos a barra é igual;
+  `'barra-e-link'` acrescenta o spinner no ícone do sidebar (responsabilidade do Sidebar,
+  ver abaixo). Navegação nunca renderiza overlay.
 
 `BarraProgresso.tsx`:
 
@@ -208,14 +217,6 @@ Arquivos: `NavProgress.tsx`, `NavProgress.module.css`, `BarraProgresso.tsx`,
 - Implementado com um `<div>` interno cuja `width`/`opacity` são controladas por classe +
   um pequeno `useState` de fase (`carregando` | `finalizando` | `oculto`).
 - `prefers-reduced-motion`: sem trickle — aparece em ~70%, salta pra 100% no fim.
-
-`OverlayNav.tsx`:
-
-- `position: fixed; inset: 0; z-index: 100`.
-- Véu `var(--color-bg-overlay)` (rgba(0,0,0,.5)) + `backdrop-filter: blur(2px)`.
-- `<Loader variant="circular" size="lg" />` centralizado, cor clara (branco) pra contraste.
-- Bloqueia clique (`pointer-events` no overlay).
-- Fade in/out de 150ms.
 
 ### Modo `'barra-e-link'` — Sidebar
 
@@ -235,6 +236,57 @@ Só neste modo, e só no `Sidebar.tsx` (arquivo único):
 - `frontend/src/app/(app)/layout.tsx` — uma linha: `<NavProgress />` dentro do `AuthGuard`.
 - `frontend/src/components/layout/Sidebar.tsx` — só o `<IconePendente>` (modo link).
 - Novos: `config/navIndicator.ts`, `components/layout/NavProgress/*`.
+
+---
+
+## Peça B2 — `<OverlayCarregando>` (operação bloqueante)
+
+Para ações em que clicar em outro lugar no meio quebra a operação: pagar, excluir,
+arquivar, submeter cadastro. Diferente da navegação, **aqui o overlay faz sentido** —
+segura a tela enquanto a ação resolve.
+
+### Componente — `frontend/src/components/common/OverlayCarregando/`
+
+Arquivos: `OverlayCarregando.tsx`, `OverlayCarregando.module.css`. É a evolução do que
+seria o `OverlayNav`: mesmo visual (véu + spinner), mas genérico e com texto opcional.
+
+```ts
+interface OverlayCarregandoProps {
+  ativo: boolean
+  texto?: string        // ex.: "Processando pagamento…" — opcional
+  /** 'fixed' cobre a viewport toda (default); 'absolute' cobre só o container-pai
+   *  posicionado (ex.: dentro de um modal). */
+  cobertura?: 'fixed' | 'absolute'
+}
+```
+
+- `position: fixed` (ou `absolute`) `inset: 0; z-index` alto.
+- Véu `var(--color-bg-overlay)` + `backdrop-filter: blur(2px)`.
+- `<Loader variant="circular" size="lg" />` centralizado (branco, `filter` pra contraste)
+  + `texto` embaixo, se houver.
+- `pointer-events` no overlay bloqueia clique.
+- Fade in/out 150ms; `role="status"` `aria-live="polite"`.
+- `prefers-reduced-motion`: sem fade.
+
+### Onde aplicar agora
+
+1. **Checkout de pagamento (`PaymentBrickCheckout`):** só na ação **reiniciar** (`reiniciando`
+   — "QR não funcionou / pagar de outro jeito", que chama o backend e hoje não tem feedback
+   forte). **NÃO** no `enviando` do botão pagar — essa parte já tem a animação nativa do
+   Payment Brick do Mercado Pago e fica como está.
+2. **Modais de confirmação crítica:** `ModalConfirmacaoCritica` e `ModalExcluirIgreja` —
+   `<OverlayCarregando cobertura="absolute" ativo={acaoEmAndamento} />` dentro do modal
+   enquanto a ação roda.
+3. **Submit de cadastro:** formulários de pessoa, evento e movimentação financeira —
+   `<OverlayCarregando ativo={isSubmitting} texto="Salvando…" />` no submit.
+
+### Arquivos tocados na peça B2
+
+- Novos: `components/common/OverlayCarregando/*`.
+- `PaymentBrickCheckout.tsx` — overlay no `reiniciando`.
+- `ModalConfirmacaoCritica.tsx`, `ModalExcluirIgreja.tsx` — overlay na ação.
+- Forms de pessoa/evento/movimentação — overlay no submit (identificar os arquivos exatos
+  no plano).
 
 ---
 
@@ -346,8 +398,10 @@ conhecida, documentada no CLAUDE.md). Validação de cada peça:
 - **Manual, peça A:** abrir `demo/loaders`, ver as 12 variantes nos 3 tamanhos; conferir
   `(app)/loading` e o checkout do Mercado Pago ainda mostram spinner.
 - **Manual, peça B:** navegar entre telas (sidebar, cards, botões que fazem `router.push`),
-  ver a barra; voltar/avançar do navegador; testar os 3 modos trocando a constante;
-  simular no `demo/loaders`.
+  ver a barra; voltar/avançar do navegador; testar `'barra'` e `'barra-e-link'` trocando a
+  constante; simular no `demo/loaders`.
+- **Manual, peça B2:** disparar reiniciar no checkout, excluir/arquivar num modal crítico,
+  submeter um cadastro — o overlay aparece e some; clicar por baixo não passa.
 - **Manual, peça C:** viewport mobile (Chrome DevTools, 390×844) — abrir/fechar drawer,
   arrastar pra fechar, abrir submenus, trocar de rota e ver a pílula deslizar; repetir no
   desktop; ativar "reduce motion" no SO e reconferir.
@@ -359,11 +413,13 @@ Entregar um, esperar o autor testar, commit, próximo.
 1. **Peça A** — `Loader` + `Loader.module.css` + rota `demo/loaders` + trocas em
    `(app)/loading.tsx` e `PaymentBrickCheckout`.
 2. **Peça B** — `uiStore` + `config/navIndicator.ts` + `NavProgress/*` + linha no
-   `(app)/layout.tsx` + `<IconePendente>` no Sidebar. Default `'barra'`; autor testa os 3.
-3. **Peça C** — sidebar c1 → c2 → c3 → c4 (podem vir juntos ou em 2 sub-entregas:
+   `(app)/layout.tsx` + `<IconePendente>` no Sidebar. Default `'barra-e-link'`.
+3. **Peça B2** — `<OverlayCarregando>` + aplicar no reiniciar do checkout, nos modais
+   críticos e no submit dos cadastros.
+4. **Peça C** — sidebar c1 → c2 → c3 → c4 (podem vir juntos ou em 2 sub-entregas:
    c1+c2, depois c3+c4).
 
-Depois das 3: commit de limpeza removendo as variantes de loader não escolhidas.
+Depois: commit de limpeza removendo as variantes de loader não escolhidas.
 
 ## Arquivos — resumo
 
@@ -376,7 +432,7 @@ Depois das 3: commit de limpeza removendo as variantes de loader não escolhidas
 - `frontend/src/components/layout/NavProgress/NavProgress.tsx`
 - `frontend/src/components/layout/NavProgress/NavProgress.module.css`
 - `frontend/src/components/layout/NavProgress/BarraProgresso.tsx`
-- `frontend/src/components/layout/NavProgress/OverlayNav.tsx`
+- `frontend/src/components/common/OverlayCarregando/OverlayCarregando.tsx` + `.module.css`
 - `frontend/src/hooks/useArrastarParaFechar.ts`
 
 **Modificados:**
@@ -385,5 +441,8 @@ Depois das 3: commit de limpeza removendo as variantes de loader não escolhidas
 - `frontend/src/store/uiStore.ts`
 - `frontend/src/app/(app)/layout.tsx`
 - `frontend/src/components/layout/Sidebar.tsx` + `Sidebar.module.css`
+- `frontend/src/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica.tsx`
+- `frontend/src/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja.tsx`
+- Forms de cadastro de pessoa / evento / movimentação (submit)
 
 **Sem dependência nova. Sem mudança de backend.**

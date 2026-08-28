@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
@@ -37,28 +39,29 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
   const { data: ministerios = [] } = usePessoaMinisterios(pessoaId)
   const { ministerio: rotuloMinisterio } = useRotulos()
   const [ampliada, setAmpliada] = useState(false)
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [fechar])
 
   const endereco = pessoa ? formatarEndereco(pessoa.endereco) : null
   const nascimento = pessoa ? formatarDataNascimento(pessoa.dataNascimento) : null
 
   return (
     <>
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <aside
         className={styles.drawer}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+        <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

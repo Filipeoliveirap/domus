@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react'
 import { notificar } from '@/components/common/Notificacao/notificar'
+import { Loader } from '@/components/common/Loader/Loader'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import { cobrancaService } from '@/services/cobranca.service'
 import { TelaPix } from './TelaPix'
 import type { ApiError } from '@/types/api.types'
@@ -87,6 +89,15 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // o QR/código pra pessoa pagar, em vez de fechar o checkout como se já tivesse terminado.
   const [pix, setPix] = useState<{ mpPaymentId: string; qrCode: string; qrCodeBase64: string; expiraEm: string } | null>(null)
   const [reiniciando, setReiniciando] = useState(false)
+  // O Brick do Mercado Pago carrega o próprio SDK (script de sdk.mercadopago.com) de forma
+  // assíncrona e só monta o formulário depois. Nesse meio-tempo o `<Payment>` renderiza
+  // vazio — foi o "checkout em branco" visto logo após um deploy (janela de propagação de
+  // CSP/CDN, ou uma falha pontual ao baixar o script). `onReady` do SDK avisa quando o
+  // formulário está de fato na tela; até lá mostramos um spinner por cima. `demorando`
+  // liga um aviso discreto depois de 15s parado (script travou/rede ruim) — sem botão e
+  // sem tela de erro, só orienta a recarregar a página.
+  const [brickPronto, setBrickPronto] = useState(false)
+  const [demorando, setDemorando] = useState(false)
   // `onPagamentoCriado` chega como arrow function inline do componente pai (recriada a cada
   // render dele) — guardar só o valor mais recente numa ref evita que ela apareça nas
   // dependências de `aoEnviar` abaixo, que é o que mantém o `useEffect` do SDK estável (ver
@@ -103,6 +114,19 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
       initMercadoPago(publicKeyRef.current, { locale: 'pt-BR' })
       chaveInicializada = publicKeyRef.current
     }
+  }, [])
+
+  // Conta 15s a partir do momento em que o formulário ainda não ficou pronto. Some assim
+  // que `brickPronto` vira true (o cleanup limpa o timer).
+  useEffect(() => {
+    if (brickPronto) return
+    const timer = setTimeout(() => setDemorando(true), 15000)
+    return () => clearTimeout(timer)
+  }, [brickPronto])
+
+  const aoFicarPronto = useCallback(() => {
+    setBrickPronto(true)
+    setDemorando(false)
   }, [])
 
   // Enquanto o QR do Pix está na tela, o único jeito de saber que a pessoa pagou é
@@ -251,6 +275,8 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
     setReiniciando(true)
     try {
       await cobrancaService.reiniciar(cobrancaId)
+      // O Brick é montado do zero ao voltar pro formulário — espera o `onReady` de novo.
+      setBrickPronto(false)
       setPix(null)
     } finally {
       setReiniciando(false)
@@ -267,6 +293,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
           onReiniciar={aoReiniciar}
           reiniciando={reiniciando}
         />
+        <OverlayCarregando ativo={reiniciando} cobertura="absolute" texto="Preparando novo pagamento…" />
       </div>
     )
   }
@@ -279,13 +306,26 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
     // recusa uma segunda submissão que já esteja "em voo" (o SDK poderia disparar de novo
     // antes do clique ser bloqueado visualmente).
     <div className={styles.wrapper} style={enviando ? { pointerEvents: 'none', opacity: 0.6 } : undefined}>
-      <Payment
-        id={idContainer}
-        initialization={initialization}
-        customization={customization}
-        onSubmit={aoEnviar}
-        onError={aoErrar}
-      />
+      <div className={styles.brickArea}>
+        {!brickPronto && (
+          <div className={styles.carregando} role="status" aria-live="polite">
+            <Loader variant="circular" size="lg" />
+            <p>
+              {demorando
+                ? 'Está demorando mais que o normal. Se o formulário não aparecer, recarregue a página.'
+                : 'Carregando formulário de pagamento…'}
+            </p>
+          </div>
+        )}
+        <Payment
+          id={idContainer}
+          initialization={initialization}
+          customization={customization}
+          onSubmit={aoEnviar}
+          onReady={aoFicarPronto}
+          onError={aoErrar}
+        />
+      </div>
       {enviando && <p className={styles.processando}>Processando pagamento…</p>}
     </div>
   )

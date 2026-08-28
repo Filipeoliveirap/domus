@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { clsx } from 'clsx'
 import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -69,26 +71,28 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
   // F15: fora de AGENDADO o backend recusa qualquer nova inscrição/convidado — os botões somem.
   const inscricaoBloqueadaPelaSituacao = evento ? evento.situacao !== 'AGENDADO' : false
 
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [fechar])
 
   const selo = evento ? seloEvento(evento) : null
 
   return (
     <>
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <aside
         className={styles.drawer}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+        <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

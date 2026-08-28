@@ -7,6 +7,7 @@
   z-index: 100;
   display: flex;
   justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .drawer {
@@ -19,6 +20,20 @@
   flex-direction: column;
   position: relative;
   box-shadow: -8px 0 30px rgba(0, 0, 0, 0.08);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* saída (useFecharAnimado marca .saindo antes de desmontar) */
+.saindo { animation: fadeOut 0.24s ease forwards; }
+.saindo .drawer { animation: slideOut 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes slideOut { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .drawer, .saindo, .saindo .drawer { animation: none; }
 }
 
 @media (max-width: 440px) {

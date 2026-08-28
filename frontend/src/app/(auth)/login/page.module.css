@@ -1,6 +1,5 @@
 .page {
   min-height: 100vh;
-
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -38,7 +37,7 @@
 
 .logoImg {
   width: 280px;
-  height: auto;    
+  height: auto;
 }
 
 .subtitulo {
@@ -47,7 +46,7 @@
   letter-spacing: 0.35px;
   color: var(--color-text-secondary);
   opacity: 0.8;
-  text-align: center;;
+  text-align: center;
 }
 
 .form {
@@ -77,6 +76,8 @@
 .googleWrap {
   display: flex;
   justify-content: center;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .avisoGoogle {
@@ -196,17 +197,50 @@
   text-align: center;
 }
 
-/* ---- Mobile ---- */
-@media (max-width: 480px) {
+/* ---- Mobile: tela cheia estilo app ---- */
+@media (max-width: 600px) {
   .page {
-    padding: 16px;
+    padding: 0;
+    background: white;
+    background-image: none;
+    justify-content: flex-start;
   }
+
   .card {
-    padding: 28px 20px;
+    /* ocupa a tela toda, sem "flutuar" — vira a própria tela.
+       flex:1 empurra o copyright pro rodapé quando o conteúdo é curto; quando é longo,
+       a .page cresce além de 100dvh e a rolagem aparece (sem clipping do topo). */
+    flex: 1 0 auto;
+    max-width: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     gap: 24px;
+    padding: calc(env(safe-area-inset-top) + 40px)
+             max(20px, env(safe-area-inset-right))
+             calc(env(safe-area-inset-bottom) + 24px)
+             max(20px, env(safe-area-inset-left));
   }
+
+  .header {
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
   .logoImg {
     width: 100%;
-    max-width: 240px;
+    max-width: 150px;
+  }
+
+  .form {
+    gap: 16px;
+  }
+
+  /* copyright encostado no rodapé (o flex:1 do card já empurra), acima da área segura */
+  .copyright {
+    margin-top: 0;
+    padding: 24px 20px calc(env(safe-area-inset-bottom) + 20px);
   }
 }

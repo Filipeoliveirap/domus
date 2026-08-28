@@ -1,6 +1,7 @@
 import { loginSchema, type LoginFormData } from "@/lib/validators";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
+import { queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from 'next/navigation'
 import { useState } from "react";
@@ -52,6 +53,10 @@ export function useLogin() {
     // Grava a sessão no store e redireciona. Compartilhado entre login nativo e Google.
     // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.
     function aplicarSessao(sessao: Sessao) {
+        // Zera o cache do React Query antes de trocar de identidade: numa SPA, entrar em
+        // outra conta sem recarregar a página mantinha as queries (pessoas, eventos,
+        // financeiro…) da conta anterior visíveis até um Ctrl+Shift+R.
+        queryClient.clear()
         login(sessao)
         const next = new URLSearchParams(window.location.search).get('next')
         router.push(destinoSeguro(next))

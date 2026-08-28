@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, CalendarDays, MapPin, Users, Share2, Ticket, Flame, Pencil, Building2, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -59,12 +59,10 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
 
-  // Vagas contam PESSOAS: cada inscrito mais os convidados que ele trouxe. Contar só os
-  // inscritos daria um "restam N" otimista, e a pessoa levaria "esgotado" na cara ao clicar.
-  const totalPessoas = useMemo(
-    () => participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0),
-    [participantes],
-  )
+  // Vagas contam PESSOAS: cada convidado já chega como sua própria entrada em
+  // `participantes` (InscricaoEvento unificada) — não soma mais "1 + convidados" por
+  // titular, é 1 por linha.
+  const totalPessoas = participantes.length
   const vagas = evento?.vagas ?? null
   const vagasRestantes = vagasRestantesCalc(vagas, participantes)
   const mostrarVagasAcabando = calcVagasAcabando(vagas, vagasRestantes)
@@ -266,18 +264,23 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
-              {evento.requerInscricao && !inscricaoBloqueadaPelaSituacao && (
+              {!inscricaoBloqueadaPelaSituacao && (
                 <>
-                  <button
-                    type="button"
-                    className={styles.acaoSecundaria}
-                    onClick={() => setModalAberto('inscrever-alguem')}
-                    disabled={esgotado}
-                  >
-                    <Users size={16} aria-hidden="true" />
-                    {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
-                  </button>
+                  {evento.requerInscricao && (
+                    <button
+                      type="button"
+                      className={styles.acaoSecundaria}
+                      onClick={() => setModalAberto('inscrever-alguem')}
+                      disabled={esgotado}
+                    >
+                      <Users size={16} aria-hidden="true" />
+                      {esgotado ? 'Vagas esgotadas' : 'Inscrever alguém'}
+                    </button>
+                  )}
 
+                  {/* Sem inscrição, o convite é só informativo (local/hora/data) — ver
+                     /convite/[token]/page.tsx, que esconde o formulário quando
+                     !requerInscricao. */}
                   <button
                     type="button"
                     className={styles.acaoSecundaria}
@@ -313,6 +316,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
           eventoId={eventoId}
           tituloEvento={evento?.titulo ?? ''}
           exclusivoMembros={evento?.exclusivoMembros ?? false}
+          preco={evento?.preco}
           onClose={() => setModalAberto(null)}
         />
       )}

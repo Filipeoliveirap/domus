@@ -3,6 +3,7 @@ package com.domus.api.modules.foto;
 import com.domus.api.modules.foto.DTOs.FotoResponse;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.shared.armazenamento.ArmazenamentoFotos;
+import com.domus.api.shared.armazenamento.ArmazenamentoObjetoNaoEncontradoException;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -36,8 +37,8 @@ public class FotoService {
         String chave = "fotos/" + igrejaId + "/" + UUID.randomUUID();
 
         armazenamentoFotos.guardar(chave + "/original", imagem.original(), imagem.tipoOriginal());
-        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.DISPLAY.sufixo(), imagem.display(), "image/jpeg");
-        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.THUMB.sufixo(), imagem.thumb(), "image/jpeg");
+        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.DISPLAY.sufixo(), imagem.display(), "image/webp");
+        armazenamentoFotos.guardar(chave + "/" + TamanhoFoto.THUMB.sufixo(), imagem.thumb(), "image/webp");
 
         Foto foto = Foto.builder()
                 .igreja(Igreja.builder().id(igrejaId).build())
@@ -57,6 +58,33 @@ public class FotoService {
         Foto foto = fotoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Foto não encontrada."));
         return armazenamentoFotos.ler(foto.getChave() + "/" + tamanho.sufixo());
+    }
+
+    /**
+     * Lê a foto tentando .webp primeiro (novo), cai pra .jpg (fotos antigas pré-mudança).
+     * Retorna null se nenhum dos dois existir.
+     */
+    @Transactional(readOnly = true)
+    public byte[] lerComFallback(UUID id, TamanhoFoto tamanho, UUID igrejaId) {
+        Foto foto = fotoRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Foto não encontrada."));
+
+        String chaveWebp = foto.getChave() + "/" + tamanho.sufixo();
+        String chaveJpg = foto.getChave() + "/" + tamanho.name().toLowerCase() + ".jpg";
+
+        try {
+            return armazenamentoFotos.ler(chaveWebp);
+        } catch (ArmazenamentoObjetoNaoEncontradoException e) {
+            log.debug("WebP não encontrado, tentando JPEG: {}", chaveWebp);
+            try {
+                return armazenamentoFotos.ler(chaveJpg);
+            } catch (ArmazenamentoObjetoNaoEncontradoException e2) {
+                throw new ResourceNotFoundException("Foto não encontrada.");
+            }
+            // Falha real de infra (rede, autenticação) na tentativa do .jpg propaga como está —
+            // não vira 404 falso.
+        }
+        // Falha real de infra na tentativa do .webp propaga como está — não vira 404 falso.
     }
 
     /** Retorna {@code null} quando o id é {@code null} — "sem foto" é uma escolha válida. */

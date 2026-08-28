@@ -201,8 +201,7 @@
   gap: 4px;
 }
 
-.linha,
-.linhaConvidado {
+.linha {
   display: grid;
   grid-template-columns: 2fr 1fr 1.2fr 100px;
   gap: 16px;
@@ -210,14 +209,6 @@
   padding: 14px 16px;
   background: var(--color-bg-white);
   border-radius: var(--radius-md);
-}
-
-.linhaConvidado {
-  position: relative;
-  margin-left: 28px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  background: var(--color-bg-page);
 }
 
 /* Card inteiro clicável: modo seleção (seleciona em qualquer ponto) ou detalhe da pessoa.
@@ -232,21 +223,6 @@
 .linhaClicavel:hover {
   background: var(--color-bg-page);
 }
-.linhaConvidado.linhaClicavel:hover {
-  background: var(--color-bg-table-head);
-}
-
-/* Conector visual: mostra que o convidado pertence à linha acima */
-.conector {
-  position: absolute;
-  top: -6px;
-  left: -16px;
-  width: 16px;
-  height: calc(50% + 6px);
-  border-left: 2px solid var(--color-border);
-  border-bottom: 2px solid var(--color-border);
-  border-bottom-left-radius: 8px;
-}
 
 /* ─── Colunas ─── */
 .colParticipante {
@@ -255,8 +231,7 @@
   gap: 10px;
   min-width: 0;
 }
-.avatar,
-.avatarConvidado {
+.avatar {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -269,12 +244,6 @@
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
   overflow: hidden;
-}
-.avatarConvidado {
-  width: 28px;
-  height: 28px;
-  background: var(--color-bg-table-header);
-  color: var(--color-text-secondary);
 }
 .avatarFoto {
   width: 100%;
@@ -467,67 +436,6 @@
   cursor: not-allowed;
 }
 
-/* ─── Confirmação inline (remoção de convidado) ─── */
-.confirmInlineOverlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 100;
-  padding: 16px;
-}
-.confirmInline {
-  width: 100%;
-  max-width: 360px;
-  padding: 20px;
-  background: var(--color-bg-white);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.detalheConvidadoHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.detalheConvidadoNome {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-}
-.detalheConvidadoLista {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.confirmInlineTexto {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-}
-.confirmInlineAcoes {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-.btnConfirmarInline {
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-danger);
-  color: var(--color-bg-white);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-}
-.btnConfirmarInline:disabled,
 .btnCancelar:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -577,13 +485,6 @@
   .colInscritoPor {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
-  }
-
-  .linhaConvidado {
-    margin-left: 20px;
-  }
-  .conector {
-    left: -12px;
   }
 }
 

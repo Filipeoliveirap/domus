@@ -135,6 +135,26 @@ public class CelulaService {
         return response;
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @Transactional
+    public void atualizarFoto(UUID id, UUID igrejaId, UUID usuarioId, UUID atorPessoaId, boolean isAdmin, UUID fotoId) {
+        Celula celula = buscarDaIgrejaOuFalhar(id, igrejaId);
+        exigirAdminOuLider(id, atorPessoaId, isAdmin);
+
+        Foto fotoAntiga = celula.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        celula.setFoto(fotoNova);
+        if (usuarioId != null) {
+            usuarioRepository.findById(usuarioId).ifPresent(celula::setAtualizadoPor);
+        }
+        celulaRepository.save(celula);
+
+        if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null,
+                fotoNova != null ? fotoNova.getId() : null) && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+    }
+
     /** Notifica todo mundo que está na célula (exceto quem fez a mudança) quando dia/horário muda. */
     private void notificarCelulaAlterada(Celula celula, UUID igrejaId, UUID pessoaIdAtor) {
         List<CelulaMembro> membros = membroRepository.findByCelulaIdAndPessoaIdIsNotNull(celula.getId());
@@ -326,12 +346,9 @@ public class CelulaService {
 
     @Transactional
     public void atualizarPapel(UUID celulaId, UUID membroId, AtualizarPapelCelulaRequest data,
-                                UUID igrejaId, boolean isAdmin, UUID usuarioIdAtor) {
+                                UUID igrejaId, UUID atorPessoaId, boolean isAdmin, UUID usuarioIdAtor) {
         Celula celula = buscarDaIgrejaOuFalhar(celulaId, igrejaId);
-        if (!isAdmin) {
-            throw new AccessDeniedException(
-                    "Só um administrador pode promover ou rebaixar líder de célula.");
-        }
+        exigirAdminOuLider(celulaId, atorPessoaId, isAdmin);
 
         CelulaMembro membro = membroRepository.findById(membroId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));

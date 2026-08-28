@@ -1,6 +1,8 @@
 .overlay {
   position: fixed;
   inset: 0;
+  /* Conteudo do drawer (botao fechar, cabecalho) fora da area do notch/barra inferior. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) 0;
   z-index: var(--z-modal, 100);
   background: rgba(19, 27, 46, 0.20);
   backdrop-filter: blur(4px);

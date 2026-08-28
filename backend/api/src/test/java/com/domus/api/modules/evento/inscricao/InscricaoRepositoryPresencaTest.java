@@ -48,29 +48,45 @@ class InscricaoRepositoryPresencaTest implements PostgresTestContainerSupport {
         Pessoa pessoaOutroEvento = salvarPessoa(igreja, "Outro Evento Pessoa");
 
         // inscrição confirmada, compareceu = true, com 2 convidados (1 compareceu, 1 não)
+        // — desde a Task 1, cada convidado é sua própria InscricaoEvento (pessoa=null,
+        // convidadoPor=quem convidou), não mais uma AcompanhanteInscricao à parte.
         InscricaoEvento inscricaoCompareceu = salvarInscricao(igreja, evento, pessoaCompareceu,
                 StatusInscricao.CONFIRMADA, true);
-        salvarAcompanhante(inscricaoCompareceu, "Convidado Compareceu", true);
-        salvarAcompanhante(inscricaoCompareceu, "Convidado Faltou", false);
+        salvarConvidado(igreja, evento, pessoaCompareceu, "Convidado Compareceu", true);
+        salvarConvidado(igreja, evento, pessoaCompareceu, "Convidado Faltou", false);
 
         // inscrição confirmada, mas não compareceu
         salvarInscricao(igreja, evento, pessoaFaltou, StatusInscricao.CONFIRMADA, false);
 
-        // decoy 1: cancelada no mesmo evento — não deve contar em nada
+        // decoy 1: cancelada no mesmo evento — não deve contar em nada. O convidado dela é
+        // cancelado EXPLICITAMENTE também: desde 2026-08-26 cada convidado é sua própria
+        // InscricaoEvento e cancelar o titular NÃO cancela em cascata quem ele convidou
+        // (decisão de produto, ver InscricaoService#cancelarInterno) — sem cancelar os dois,
+        // o convidado continuaria CONFIRMADA e contaria de verdade, não seria um decoy válido.
         InscricaoEvento inscricaoCancelada = salvarInscricao(igreja, evento, pessoaCancelada,
                 StatusInscricao.CANCELADA, true);
-        salvarAcompanhante(inscricaoCancelada, "Convidado Cancelado", true);
+        salvarConvidadoCancelado(igreja, evento, pessoaCancelada, "Convidado Cancelado");
 
         // decoy 2: confirmada, mas em OUTRO evento — não deve contar no evento alvo
         salvarInscricao(igreja, outroEvento, pessoaOutroEvento, StatusInscricao.CONFIRMADA, true);
 
         // -- inscritos (confirmados, independente de presença) --
+        // countPessoasInscritas conta só titulares (convidadoPor IS NULL); countConvidadosInscritos
+        // conta só convidados (convidadoPor IS NOT NULL) — grupos disjuntos, a soma dá o total real
+        // sem duplicar (bug corrigido: antes da correção, countPessoasInscritas incluía os
+        // convidados de novo, porque sem filtro ela conta toda InscricaoEvento confirmada).
         assertThat(inscricaoRepository.countPessoasInscritas(evento.getId())).isEqualTo(2);
         assertThat(inscricaoRepository.countConvidadosInscritos(evento.getId())).isEqualTo(2);
+        assertThat(inscricaoRepository.countPessoasInscritas(evento.getId())
+                + inscricaoRepository.countConvidadosInscritos(evento.getId()))
+                .isEqualTo(4); // pessoaCompareceu + pessoaFaltou + 2 convidados de pessoaCompareceu
 
         // -- compareceram de fato --
         assertThat(inscricaoRepository.countPessoasCompareceram(evento.getId())).isEqualTo(1);
         assertThat(inscricaoRepository.countConvidadosCompareceram(evento.getId())).isEqualTo(1);
+        assertThat(inscricaoRepository.countPessoasCompareceram(evento.getId())
+                + inscricaoRepository.countConvidadosCompareceram(evento.getId()))
+                .isEqualTo(2); // pessoaCompareceu + 1 dos 2 convidados dela
 
         // -- outro evento não é afetado pelas inscrições do evento alvo --
         assertThat(inscricaoRepository.countPessoasInscritas(outroEvento.getId())).isEqualTo(1);
@@ -151,12 +167,29 @@ class InscricaoRepositoryPresencaTest implements PostgresTestContainerSupport {
                 .build());
     }
 
-    private void salvarAcompanhante(InscricaoEvento inscricao, String nome, boolean compareceu) {
-        inscricao.getAcompanhantes().add(AcompanhanteInscricao.builder()
-                .inscricao(inscricao)
-                .nome(nome)
+    private InscricaoEvento salvarConvidado(Igreja igreja, Evento evento, Pessoa convidadoPor,
+                                             String nomeConvidado, boolean compareceu) {
+        return inscricaoRepository.save(InscricaoEvento.builder()
+                .igreja(igreja)
+                .evento(evento)
+                .pessoa(null)
+                .convidadoPor(convidadoPor)
+                .nomeConvidado(nomeConvidado)
+                .status(StatusInscricao.CONFIRMADA)
                 .compareceu(compareceu)
                 .build());
-        inscricaoRepository.save(inscricao);
+    }
+
+    private InscricaoEvento salvarConvidadoCancelado(Igreja igreja, Evento evento, Pessoa convidadoPor,
+                                                       String nomeConvidado) {
+        return inscricaoRepository.save(InscricaoEvento.builder()
+                .igreja(igreja)
+                .evento(evento)
+                .pessoa(null)
+                .convidadoPor(convidadoPor)
+                .nomeConvidado(nomeConvidado)
+                .status(StatusInscricao.CANCELADA)
+                .compareceu(false)
+                .build());
     }
 }

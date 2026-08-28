@@ -1,5 +1,6 @@
 package com.domus.api.modules.pessoa;
 
+import com.domus.api.modules.pessoa.DTO.AtualizarFotoRequest;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
 import com.domus.api.shared.DTO.PagedResponse;
@@ -116,6 +117,37 @@ public class PessoaController {
         }
 
         return ResponseEntity.ok(resposta);
+    }
+
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/me/foto")
+    public ResponseEntity<PessoaResponse> atualizarMinhaFoto(@RequestBody AtualizarFotoRequest data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID pessoaId = usuarioAutenticado.getPessoaId();
+        return ResponseEntity.ok(pessoaService.atualizarMinhaFoto(pessoaId, data.fotoId(), igrejaId));
+    }
+
+    /** Mesma ideia de {@link #atualizarMinhaFoto}, mas para quem gerencia pessoas editando outra. */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<PessoaResponse> atualizarFotoDePessoa(
+            @PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        exigirGestaoPessoas();
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(pessoaService.atualizarMinhaFoto(id, data.fotoId(), igrejaId));
+    }
+
+    /** Dá o primeiro e-mail a uma pessoa sem e-mail cadastrado — usado no fluxo de
+     *  inscrição em evento (e-mail passou a ser obrigatório, ver {@code InscricaoService}).
+     *  Self ou quem gerencia pessoas, mesmo padrão dos endpoints de foto. */
+    @PatchMapping("/{id}/email")
+    public ResponseEntity<PessoaResponse> definirEmail(
+            @PathVariable UUID id, @Valid @RequestBody com.domus.api.modules.pessoa.DTO.AtualizarEmailRequest data) {
+        boolean souEu = id.equals(usuarioAutenticado.getPessoaId());
+        if (!souEu) {
+            exigirGestaoPessoas();
+        }
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        return ResponseEntity.ok(pessoaService.definirEmailInicial(id, data.email(), igrejaId));
     }
 
     @DeleteMapping("/{id}")

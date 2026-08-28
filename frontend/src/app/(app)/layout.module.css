@@ -1,13 +1,18 @@
 .main {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 1rem;
-  padding-top: calc(72px + 1rem);
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  /* 72px do header + respiro + a área segura do topo que o header agora ocupa. */
+  padding-top: calc(72px + 1rem + env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 @media (min-width: 768px) {
   .main {
     margin-left: 16rem;
     padding: 2rem;
-    padding-top: calc(72px + 2rem);
+    padding-top: calc(72px + 2rem + env(safe-area-inset-top));
   }
 }

@@ -115,6 +115,39 @@ export interface ImpactoRestricaoResponse {
   afetados: InscritoImpactado[]
 }
 
+/** Espelha `ImpactoMudancaPrecoResponse` (backend) — prévia de estorno/cobrança ao mudar
+ *  preço, sem gravar nada nem chamar o Mercado Pago. `SEM_IMPACTO` = sem mudança real de
+ *  direção ou sem ninguém afetado. Campos de uma direção nunca vêm preenchidos junto com
+ *  os da outra — cada mudança de preço só anda numa direção por vez. */
+export type TipoImpactoMudancaPreco =
+  | 'SEM_IMPACTO' | 'PAGO_PARA_GRATUITO' | 'GRATUITO_PARA_PAGO'
+  /** Evento continua pago, só o valor mudou (2026-08-27). VALOR_AUMENTOU reaproveita os
+   *  campos de GRATUITO_PARA_PAGO (mas é a DIFERENÇA, não o valor cheio); VALOR_DIMINUIU
+   *  reaproveita os de PAGO_PARA_GRATUITO (idem). `pessoasAguardandoPagamento` nos dois só
+   *  tem o valor da cobrança pendente atualizado, sem gerar cobrança nova nem estornar. */
+  | 'VALOR_AUMENTOU' | 'VALOR_DIMINUIU'
+  /** Achado ao vivo (2026-08-27): quando o evento já passou por reajustes diferentes pra
+   *  pessoas diferentes, um novo reajuste pode fazer ALGUMAS pessoas deverem mais e
+   *  OUTRAS precisarem de estorno ao mesmo tempo — os dois grupos de campos vêm
+   *  preenchidos juntos aqui (única exceção à regra acima). */
+  | 'VALOR_MISTO'
+
+export interface ImpactoMudancaPrecoResponse {
+  tipo: TipoImpactoMudancaPreco
+  /** PAGO_PARA_GRATUITO/VALOR_DIMINUIU: quem já pagou e seria (parcialmente) estornado. */
+  pessoasComPagamentoPago: number
+  /** PAGO_PARA_GRATUITO/VALOR_DIMINUIU: soma do que seria estornado de verdade no Mercado Pago. */
+  valorTotalAEstornar: number
+  /** PAGO_PARA_GRATUITO: quem estava aguardando pagamento e seria confirmado direto.
+   *  VALOR_AUMENTOU/VALOR_DIMINUIU: quem está aguardando pagamento e só teria o valor da
+   *  cobrança pendente atualizado. */
+  pessoasAguardandoPagamento: number
+  /** GRATUITO_PARA_PAGO/VALOR_AUMENTOU: quantas pessoas já confirmadas ganhariam uma cobrança nova. */
+  pessoasSeraoCobradas: number
+  /** GRATUITO_PARA_PAGO/VALOR_AUMENTOU: soma do que seria cobrado. */
+  valorTotalACobrar: number
+}
+
 export interface LocalEventoResponse {
   id: string
   nome: string

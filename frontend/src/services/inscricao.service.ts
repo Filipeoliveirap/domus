@@ -5,8 +5,7 @@ import type {
   ParticipanteResponse,
   ListaInscritosResponse,
   InscreverPessoasRequest,
-  AcompanhanteRequest,
-  AcompanhanteResponse,
+  PessoaInscritaComCobranca,
   ElegibilidadeResponse,
   CriarConvidadoRequest,
   ConvidadoResponse,
@@ -31,20 +30,14 @@ export const inscricoesService = {
    * `confirmado=true` só tem efeito para quem `podeGerenciarInscricoes` — de quem não
    * gerencia o backend ignora o parâmetro (Regra 2 do InscricaoService).
    */
-  inscreverPessoas: (eventoId: string, data: InscreverPessoasRequest, confirmado = false): Promise<void> =>
-    api.post(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data, { params: { confirmado } })
-      .then(() => undefined),
+  inscreverPessoas: (
+    eventoId: string, data: InscreverPessoasRequest, confirmado = false,
+  ): Promise<PessoaInscritaComCobranca[]> =>
+    api.post<PessoaInscritaComCobranca[]>(Endpoints.inscricoes.INSCREVER_MEMBROS(eventoId), data, { params: { confirmado } })
+      .then(res => res.data),
 
   criarConvidado: (eventoId: string, data: CriarConvidadoRequest): Promise<ConvidadoResponse> =>
     api.post<ConvidadoResponse>(Endpoints.inscricoes.CONVIDADOS(eventoId), data).then(res => res.data),
-
-  adicionarAcompanhante: (
-    eventoId: string,
-    inscricaoId: string,
-    data: AcompanhanteRequest,
-  ): Promise<AcompanhanteResponse> =>
-    api.post<AcompanhanteResponse>(Endpoints.inscricoes.ACOMPANHANTES(eventoId, inscricaoId), data)
-      .then(res => res.data),
 
   participantes: (eventoId: string): Promise<ParticipanteResponse[]> =>
     api.get<ParticipanteResponse[]>(Endpoints.inscricoes.PARTICIPANTES(eventoId)).then(res => res.data),
@@ -57,16 +50,11 @@ export const inscricoesService = {
   cancelar: (inscricaoId: string): Promise<void> =>
     api.delete(Endpoints.inscricoes.CANCELAR(inscricaoId)).then(() => undefined),
 
-  removerAcompanhante: (acompanhanteId: string): Promise<void> =>
-    api.delete(Endpoints.inscricoes.REMOVER_ACOMPANHANTE(acompanhanteId)).then(() => undefined),
+  respostas: (inscricaoId: string): Promise<RespostaResponse[]> =>
+    api.get<RespostaResponse[]>(Endpoints.inscricoes.RESPOSTAS(inscricaoId)).then(res => res.data),
 
-  respostas: (inscricaoId: string, acompanhanteId?: string): Promise<RespostaResponse[]> =>
-    api.get<RespostaResponse[]>(Endpoints.inscricoes.RESPOSTAS(inscricaoId), { params: { acompanhanteId } })
-      .then(res => res.data),
-
-  responder: (inscricaoId: string, dados: RespostaRequest[], acompanhanteId?: string): Promise<void> =>
-    api.put(Endpoints.inscricoes.RESPOSTAS(inscricaoId), dados, { params: { acompanhanteId } })
-      .then(() => undefined),
+  responder: (inscricaoId: string, dados: RespostaRequest[]): Promise<void> =>
+    api.put(Endpoints.inscricoes.RESPOSTAS(inscricaoId), dados).then(() => undefined),
 
   marcarTodosPresentes: (eventoId: string): Promise<void> =>
     api.post(Endpoints.presenca.MARCAR_TODOS(eventoId)).then(() => undefined),
@@ -78,7 +66,6 @@ export const inscricoesService = {
     api.patch(Endpoints.presenca.INSCRICAO(eventoId, inscricaoId), { compareceu })
       .then(() => undefined),
 
-  marcarPresencaAcompanhante: (eventoId: string, acompanhanteId: string, compareceu: boolean): Promise<void> =>
-    api.patch(Endpoints.presenca.ACOMPANHANTE(eventoId, acompanhanteId), { compareceu })
-      .then(() => undefined),
+  enviarLembretePagamento: (eventoId: string, inscricaoId: string): Promise<void> =>
+    api.post(Endpoints.inscricoes.LEMBRETE_PAGAMENTO(eventoId, inscricaoId)).then(() => undefined),
 }

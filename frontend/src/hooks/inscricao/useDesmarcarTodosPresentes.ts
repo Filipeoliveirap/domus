@@ -27,7 +27,6 @@ export function useDesmarcarTodosPresentes(eventoId: string) {
             content: atual.inscritos.content.map((i) => ({
               ...i,
               compareceu: false,
-              acompanhantes: i.acompanhantes.map((a) => ({ ...a, compareceu: false })),
             })),
           },
         },

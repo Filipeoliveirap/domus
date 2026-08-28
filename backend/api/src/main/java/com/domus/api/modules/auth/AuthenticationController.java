@@ -124,9 +124,13 @@ public class AuthenticationController {
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(refresh).toString());
     }
 
+    /**
+     * Reusa {@link AuthService#sessaoDe(java.util.UUID)} — a mesma montagem do {@code GET /auth/me},
+     * que já carrega rótulos customizados da igreja, capacidades extras e estado dos termos.
+     * A versão antiga montava à mão a partir do {@link LoginResponseDTO} e passava {@code rotulos = null},
+     * o que deixava a nomenclatura da igreja no padrão até um refresh cheio (bug de troca de conta na SPA).
+     */
     private SessaoDTO sessaoDe(LoginResponseDTO r) {
-        return new SessaoDTO(r.id(), r.nome(), r.role(), r.igrejaId(), r.igrejaNome(),
-                r.fotoId(), r.cargo(), r.igrejaSigla(), r.igrejaLogoId(), r.capacidadesExtras(),
-                termoAceiteService.precisaAceitar(r.id()), termoAceiteService.dataUltimoAceite(r.id()), null);
+        return authService.sessaoDe(r.id());
     }
 }

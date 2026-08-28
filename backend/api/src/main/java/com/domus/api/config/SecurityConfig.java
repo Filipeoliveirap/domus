@@ -53,7 +53,19 @@ public class SecurityConfig {
                         // Convite público: quem abre o link nunca teve sessão nenhuma (não faz
                         // sentido exigir cookie XSRF-TOKEN de um estranho vindo do WhatsApp) —
                         // CSRF protege sessão autenticada de forjadura, e aqui não existe sessão.
-                        .ignoringRequestMatchers("/convites/**"))
+                        // Webhook do Mercado Pago: chamado pelo próprio Mercado Pago, sem
+                        // sessão nossa — a validação de autenticidade é feita à parte, pela
+                        // assinatura HMAC do header x-signature (MercadoPagoAssinaturaValidator).
+                        // Cobrança pública: pagador abre o link (WhatsApp/e-mail) sem nunca
+                        // ter tido sessão — mesma lógica de /convites/**.
+                        // /cobrancas/*/tentar-estorno-novamente (2026-08-27) EXIGE sessão (ver
+                        // matcher hasAnyRole abaixo) — por isso NÃO entra aqui: precisa do CSRF
+                        // normal, como qualquer outra rota autenticada. O resto de /cobrancas/**
+                        // continua sem CSRF por não ter sessão (prova de posse pelo UUID do id).
+                        .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook",
+                                "/cobrancas/id/**", "/cobrancas/*/pagar", "/cobrancas/*/status",
+                                "/cobrancas/*/pix", "/cobrancas/*/reiniciar", "/cobrancas/*/cancelar-inscricao",
+                                "/cobrancas/*"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -69,7 +81,29 @@ public class SecurityConfig {
                                 "/auth/reset-password"
                         ).permitAll()
                         .requestMatchers("/convites/**").permitAll()
+                        .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
+                        // Retry de "Estorno pendente" (2026-08-27) é ação de gestão, não do
+                        // pagador — precisa vir ANTES do permitAll de /cobrancas/** abaixo.
+                        .requestMatchers(HttpMethod.POST, "/cobrancas/*/tentar-estorno-novamente")
+                        .hasAnyRole(ADMIN, LIDER)
+                        .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
+                        // "/igrejas/minha" acima só casa o path exato — /minha/logo é outro path e,
+                        // sem matcher próprio, caía em anyRequest().authenticated() (qualquer perfil
+                        // logado trocava a logo da igreja). Mesma classe de bug do comentário abaixo.
+                        .requestMatchers("/igrejas/minha/logo").hasRole(ADMIN)
+                        // Consultar (GET /status, só devolve um booleano "conectada") é liberado
+                        // pra QUALQUER perfil logado, não só admin — sem isso, o front tratava
+                        // 403/sem-dado como "não conectada" e bloqueava/avisava errado quem não é
+                        // admin tentando se inscrever ou pagar num evento pago com a conta JÁ
+                        // conectada (achado ao vivo, 2026-08-27; afetava LIDER e ACESSO_COMUM).
+                        .requestMatchers(HttpMethod.GET, "/pagamentos/conta/status")
+                        .authenticated()
+                        // Critical 3b (revisão final de branch): conectar/desconectar a conta de
+                        // recebimento da igreja é decisão de admin — sem este matcher, caía em
+                        // anyRequest().authenticated() e qualquer perfil (ACESSO_COMUM incluso)
+                        // podia mexer na conta de pagamento da igreja inteira.
+                        .requestMatchers("/pagamentos/conta/**").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/igrejas/*").authenticated()
 
                         .requestMatchers("/usuarios/**")
@@ -89,7 +123,14 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/busca/usuarios").hasAnyRole(ADMIN, LIDER, COMUM)
 
+                        // PATCH não é coberto pelos matchers de PUT/DELETE "/eventos/**" abaixo
+                        // (são específicos de método) — sem isto caía em anyRequest().authenticated().
+                        .requestMatchers(HttpMethod.PATCH, "/eventos/*/foto")
+                        .hasAnyRole(ADMIN, LIDER)
+
                         .requestMatchers(HttpMethod.POST, "/eventos/*/presenca/marcar-todos")
+                        .hasAnyRole(ADMIN, LIDER)
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes/*/lembrete-pagamento")
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers(HttpMethod.PATCH, "/eventos/*/presenca/**")
                         .hasAnyRole(ADMIN, LIDER)
@@ -101,7 +142,7 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
-                        .requestMatchers(HttpMethod.DELETE, "/inscricoes/**", "/acompanhantes/**")
+                        .requestMatchers(HttpMethod.DELETE, "/inscricoes/**")
                         .hasAnyRole(ADMIN, LIDER, COMUM)
                         .requestMatchers(HttpMethod.GET, "/inscricoes/*/respostas")
                         .hasAnyRole(ADMIN, LIDER, COMUM)

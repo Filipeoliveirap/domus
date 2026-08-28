@@ -76,12 +76,12 @@ public class MinisterioService {
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
     @Transactional(readOnly = true)
-    public List<MinisterioResponse> listar(UUID igrejaId) {
+    public List<MinisterioResponse> listar(UUID igrejaId, UUID pessoaLogadaId) {
         // N+1 deliberado: uma igreja tem dezenas de ministérios, não milhares — uma query de
         // membros por ministério na tela de listagem é aceitável (YAGNI evita otimizar cedo
         // demais). Se a lista crescer muito, trocar por uma query agregada única.
         return ministerioRepository.findByIgrejaIdOrderByNomeAsc(igrejaId).stream()
-                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId())))
+                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId()), pessoaLogadaId))
                 .toList();
     }
 
@@ -116,8 +116,10 @@ public class MinisterioService {
     }
 
     @Transactional
-    public MinisterioResponse atualizar(UUID id, MinisterioRequest data, UUID igrejaId, UUID usuarioId) {
+    public MinisterioResponse atualizar(UUID id, MinisterioRequest data, UUID igrejaId, UUID usuarioId,
+                                        UUID atorPessoaId, boolean isAdmin) {
         Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
+        exigirAdminOuLider(id, atorPessoaId, isAdmin);
 
         String nome = TextoUtil.capitalizar(data.nome());
         validarNaoDuplicado(nome, igrejaId, id);
@@ -138,6 +140,26 @@ public class MinisterioService {
         return response;
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @Transactional
+    public void atualizarFoto(UUID id, UUID igrejaId, UUID usuarioId, UUID atorPessoaId, boolean isAdmin, UUID fotoId) {
+        Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
+        exigirAdminOuLider(id, atorPessoaId, isAdmin);
+
+        Foto fotoAntiga = ministerio.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        ministerio.setFoto(fotoNova);
+        if (usuarioId != null) {
+            usuarioRepository.findById(usuarioId).ifPresent(ministerio::setAtualizadoPor);
+        }
+        ministerioRepository.save(ministerio);
+
+        if (!Objects.equals(fotoAntiga != null ? fotoAntiga.getId() : null, fotoNova != null ? fotoNova.getId() : null)
+                && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+    }
+
     @Transactional
     public void arquivar(UUID id, UUID igrejaId) {
         Ministerio ministerio = buscarDaIgrejaOuFalhar(id, igrejaId);
@@ -148,7 +170,7 @@ public class MinisterioService {
     @Transactional(readOnly = true)
     public List<MinisterioResponse> listarArquivadas(UUID igrejaId) {
         return ministerioRepository.findArquivadasPorIgreja(igrejaId).stream()
-                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId())))
+                .map(m -> MinisterioResponse.comResumo(m, membrosAtivosDe(m.getId()), null))
                 .toList();
     }
 
@@ -290,11 +312,9 @@ public class MinisterioService {
 
     @Transactional
     public void atualizarPapel(UUID ministerioId, UUID pessoaId, AtualizarPapelRequest data, UUID igrejaId,
-                                boolean isAdmin) {
+                                UUID atorPessoaId, boolean isAdmin) {
         buscarDaIgrejaOuFalhar(ministerioId, igrejaId);
-        if (!isAdmin) {
-            throw new AccessDeniedException("Só um administrador pode promover ou rebaixar líder de ministério.");
-        }
+        exigirAdminOuLider(ministerioId, atorPessoaId, isAdmin);
 
         MinisterioMembro membro = membroRepository.findByMinisterioIdAndPessoaId(ministerioId, pessoaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vínculo não encontrado."));

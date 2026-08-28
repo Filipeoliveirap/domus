@@ -95,8 +95,8 @@ class MovimentacaoFinanceiraServiceTest {
     @Test
     void cadastrarRecusaQuandoSomaDosContribuintesDivergeDoValor() {
         var contribuintes = List.of(
-                new ContribuinteDTO(pessoaId1, new BigDecimal("30.00")),
-                new ContribuinteDTO(pessoaId2, new BigDecimal("30.00")));
+                new ContribuinteDTO(pessoaId1, null, new BigDecimal("30.00")),
+                new ContribuinteDTO(pessoaId2, null, new BigDecimal("30.00")));
 
         assertThatThrownBy(() -> service.cadastrar(dto(new BigDecimal("100.00"), contribuintes), igrejaId, usuarioId))
                 .isInstanceOf(BusinessException.class)
@@ -107,8 +107,8 @@ class MovimentacaoFinanceiraServiceTest {
     @Test
     void cadastrarRecusaContribuinteDuplicado() {
         var contribuintes = List.of(
-                new ContribuinteDTO(pessoaId1, new BigDecimal("50.00")),
-                new ContribuinteDTO(pessoaId1, new BigDecimal("50.00")));
+                new ContribuinteDTO(pessoaId1, null, new BigDecimal("50.00")),
+                new ContribuinteDTO(pessoaId1, null, new BigDecimal("50.00")));
 
         assertThatThrownBy(() -> service.cadastrar(dto(new BigDecimal("100.00"), contribuintes), igrejaId, usuarioId))
                 .isInstanceOf(BusinessException.class)
@@ -126,8 +126,8 @@ class MovimentacaoFinanceiraServiceTest {
     @Test
     void cadastrarAceitaSomaExataDosContribuintes() {
         var contribuintes = List.of(
-                new ContribuinteDTO(pessoaId1, new BigDecimal("40.00")),
-                new ContribuinteDTO(pessoaId2, new BigDecimal("60.00")));
+                new ContribuinteDTO(pessoaId1, null, new BigDecimal("40.00")),
+                new ContribuinteDTO(pessoaId2, null, new BigDecimal("60.00")));
 
         service.cadastrar(dto(new BigDecimal("100.00"), contribuintes), igrejaId, usuarioId);
 
@@ -137,8 +137,8 @@ class MovimentacaoFinanceiraServiceTest {
     @Test
     void cadastrarGravaOsContribuintesNaMovimentacao() {
         var contribuintes = List.of(
-                new ContribuinteDTO(pessoaId1, new BigDecimal("40.00")),
-                new ContribuinteDTO(pessoaId2, new BigDecimal("60.00")));
+                new ContribuinteDTO(pessoaId1, null, new BigDecimal("40.00")),
+                new ContribuinteDTO(pessoaId2, null, new BigDecimal("60.00")));
 
         service.cadastrar(dto(new BigDecimal("100.00"), contribuintes), igrejaId, usuarioId);
 

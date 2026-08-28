@@ -40,6 +40,37 @@
   color: var(--color-warning, #d97706);
 }
 
+/* ---- Task 14: aviso de igreja sem conta de pagamento conectada ---- */
+
+.avisoSemConta {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  line-height: 1.4;
+}
+
+.avisoSemConta svg {
+  flex-shrink: 0;
+  color: var(--color-warning, #d97706);
+  margin-top: 2px;
+}
+
+.avisoSemConta a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.avisoSemConta a:hover {
+  text-decoration: underline;
+}
+
 .euVouWrap {
   display: flex;
   flex-direction: column;
@@ -176,4 +207,37 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+}
+
+/* ---- Plano 3: retomar pagamento pendente (AGUARDANDO_PAGAMENTO) ---- */
+
+.pagamentoPendente {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning, #d97706);
+  background: var(--color-bg-page);
+  color: var(--color-warning, #d97706);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+}
+
+.pagamentoPendente:hover {
+  opacity: 0.85;
+}
+
+.pagamentoPendenteBloco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagamentoPendenteBloco .cancelarLink {
+  align-self: center;
 }

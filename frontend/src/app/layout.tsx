@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={cn(inter.variable, geist.variable)}>
+    <html lang="pt-BR" data-scroll-behavior="smooth" className={cn(inter.variable, geist.variable)}>
       <body>
         <Providers>
           {children}

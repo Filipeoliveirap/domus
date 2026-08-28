@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import styles from './ModalConfirmacao.module.css'
 
 interface Props {
@@ -20,6 +22,7 @@ export function ModalConfirmacao({
   perigo = false, isLoading = false, onConfirmar, onClose,
 }: Props) {
   const confirmarRef = useRef<HTMLButtonElement>(null)
+  const { saindo, fechar } = useFecharAnimado(onClose)
 
   useEffect(() => {
     confirmarRef.current?.focus()
@@ -27,14 +30,17 @@ export function ModalConfirmacao({
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) onClose()
+      if (e.key === 'Escape' && !isLoading) fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose, isLoading])
+  }, [fechar, isLoading])
 
   return (
-    <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
+    <div
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      onMouseDown={() => !isLoading && fechar()}
+    >
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -55,7 +61,7 @@ export function ModalConfirmacao({
           <button
             type="button"
             className={styles.btnCancelar}
-            onClick={onClose}
+            onClick={fechar}
             disabled={isLoading}
           >
             {textoCancelar}

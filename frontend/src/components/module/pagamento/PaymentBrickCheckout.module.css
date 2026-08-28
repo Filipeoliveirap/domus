@@ -1,4 +1,5 @@
 .wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -11,3 +12,27 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
+
+/* Segura a altura enquanto o spinner está por cima, pra o layout não "pular" quando o
+   formulário do Mercado Pago finalmente montar. */
+.brickArea {
+  position: relative;
+  min-height: 220px;
+}
+
+.carregando {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: var(--color-surface, #fff);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+

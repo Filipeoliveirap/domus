@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { CampoData } from '@/components/common/CampoData/CampoData'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useResumo } from '@/hooks/financeiro/relatorio/useResumo'
 import { usePorCategoria } from '@/hooks/financeiro/relatorio/usePorCategoria'
 import { useEvolucaoMensal } from '@/hooks/financeiro/relatorio/useEvolucaoMensal'
@@ -106,6 +107,10 @@ export default function RelatoriosPage() {
 
   // Na aba Congregações sem igreja escolhida, mostramos a visão geral — não os 4 relatórios.
   const mostrandoRelatoriosFinanceiros = abaEfetiva === 'MINHA_IGREJA' || !!selecao
+
+  // Muda quando período/aba/igreja/filtro muda → força as seções a reanimar a entrada
+  // (crossfade suave em vez de troca seca dos dados).
+  const chaveRelatorio = `${JSON.stringify(periodo)}|${vinculoFiltro}|${abaEfetiva}|${igrejaDoRelatorio ?? ''}`
   const habilitado = autorizado && mostrandoRelatoriosFinanceiros
 
   const resumo = useResumo(periodo, habilitado, igrejaDoRelatorio, vinculoFiltro)
@@ -174,33 +179,45 @@ export default function RelatoriosPage() {
 
       {mostrandoRelatoriosFinanceiros && (
         <>
-          <CardsResumo data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
+          <Transicao key={`resumo|${chaveRelatorio}|${resumo.isLoading}`} modo="subir">
+            <CardsResumo data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
+          </Transicao>
 
-          <BarraProporcao data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
+          <Transicao key={`proporcao|${chaveRelatorio}|${resumo.isLoading}`} modo="subir">
+            <BarraProporcao data={resumo.data} isLoading={resumo.isLoading} isError={resumo.isError} aoTentarNovamente={() => resumo.refetch()} />
+          </Transicao>
 
-          <Destaques
-            resumo={resumo.data}
-            categorias={categorias.data}
-            maiorLancamento={maiorLanc.data}
-            isLoading={resumo.isLoading || categorias.isLoading}
-            isError={resumo.isError}
-            aoTentarNovamente={() => resumo.refetch()}
-          />
+          <Transicao key={`destaques|${chaveRelatorio}|${resumo.isLoading || categorias.isLoading}`} modo="subir">
+            <Destaques
+              resumo={resumo.data}
+              categorias={categorias.data}
+              maiorLancamento={maiorLanc.data}
+              isLoading={resumo.isLoading || categorias.isLoading}
+              isError={resumo.isError}
+              aoTentarNovamente={() => resumo.refetch()}
+            />
+          </Transicao>
 
-          <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => categorias.refetch()} />
+          <Transicao key={`categoria|${chaveRelatorio}|${categorias.isLoading}`} modo="subir">
+            <BreakdownCategoria data={categorias.data} isLoading={categorias.isLoading} isError={categorias.isError} aoTentarNovamente={() => categorias.refetch()} />
+          </Transicao>
 
-          <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => evolucao.refetch()} />
+          <Transicao key={`evolucao|${chaveRelatorio}|${evolucao.isLoading}`} modo="subir">
+            <GraficoEvolucao data={evolucao.data} isLoading={evolucao.isLoading} isError={evolucao.isError} aoTentarNovamente={() => evolucao.refetch()} />
+          </Transicao>
 
           <Link href="/financeiro/relatorios/balancete" className={styles.linkBalancete}>
             Ver balancete anual →
           </Link>
 
-          <BreakdownContribuinte
-            data={porContribuinte.data}
-            isLoading={porContribuinte.isLoading}
-            isError={porContribuinte.isError}
-            aoTentarNovamente={() => porContribuinte.refetch()}
-          />
+          <Transicao key={`contribuinte|${chaveRelatorio}|${porContribuinte.isLoading}`} modo="subir">
+            <BreakdownContribuinte
+              data={porContribuinte.data}
+              isLoading={porContribuinte.isLoading}
+              isError={porContribuinte.isError}
+              aoTentarNovamente={() => porContribuinte.refetch()}
+            />
+          </Transicao>
         </>
       )}
     </>
@@ -286,6 +303,7 @@ export default function RelatoriosPage() {
           role="tabpanel"
           id={ID_PAINEL_ABAS}
           aria-labelledby={idAba(abaEfetiva)}
+          className={styles.pagina}
           // tabIndex 0: um painel de aba precisa ser alcançável por teclado mesmo quando
           // não tem nenhum elemento focável dentro (ex.: só texto/gráfico, sem botão).
           tabIndex={0}
@@ -293,7 +311,7 @@ export default function RelatoriosPage() {
           {conteudoDaAba}
         </div>
       ) : (
-        conteudoDaAba
+        <div className={styles.pagina}>{conteudoDaAba}</div>
       )}
     </div>
   )

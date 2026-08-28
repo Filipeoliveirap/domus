@@ -1,9 +1,9 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut, ChevronDown, UsersRound, Grid3x3,
 } from 'lucide-react'
@@ -15,9 +15,24 @@ import type { Role } from '@/types/usuario.types'
 import { urlFoto } from '@/lib/urlFoto'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { podeGerenciarVisitantes, podeVerFinanceiro } from '@/lib/permissoes'
+import { MODO_INDICADOR_NAV } from '@/config/navIndicator'
+import { Loader } from '@/components/common/Loader/Loader'
+import { useArrastarParaFechar } from '@/hooks/useArrastarParaFechar'
 import styles from './Sidebar.module.css'
 
-type NavItem = { href: string; label: string; icon: typeof Home; roles: Role[]; visivel?: (role: Role | null, caps: string[]) => boolean }
+type Pilula = { top: number; left: number; width: number; height: number; estado: 'inicial' | 'oculto' | 'visivel' }
+
+type NavItem = {
+  href: string
+  label: string
+  icon: typeof Home
+  roles: Role[]
+  visivel?: (role: Role | null, caps: string[]) => boolean
+  /** Prefixo que também marca o item como ativo — pra seções cujo link aponta pra uma
+   *  subrota específica (ex.: Financeiro aponta pra /financeiro/movimentacoes, mas
+   *  /financeiro/categorias e /financeiro/relatorios também são "Financeiro"). */
+  matchPrefix?: string
+}
 
 const pessoasSubItems: { href: string; label: string; roles: Role[]; visivel?: (r: Role | null, c: string[]) => boolean }[] = [
   { href: '/pessoas', label: 'Pessoas', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
@@ -42,6 +57,17 @@ const roleStyles: Record<string, string> = {
   ACESSO_COMUM: styles.roleComum,
 }
 
+/** Renderiza o ícone do item; no modo 'barra-e-link', troca por um spinner enquanto a
+ *  navegação disparada por este link está pendente. `useLinkStatus` só funciona como
+ *  descendente de um <Link> do next. */
+function IconePendente({ icon: Icon }: { icon: typeof Home }) {
+  const { pending } = useLinkStatus()
+  if (MODO_INDICADOR_NAV === 'barra-e-link' && pending) {
+    return <Loader variant="circular" size="sm" />
+  }
+  return <Icon size={20} />
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -61,7 +87,7 @@ export function Sidebar() {
     { href: '/eventos',    label: 'Eventos',   icon: Calendar,        roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
     { href: '/ministerios', label: ministerio.plural, icon: UsersRound, roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
     { href: '/celulas',    label: celula.plural,  icon: Grid3x3,          roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
-    { href: '/financeiro/movimentacoes', label: 'Financeiro',  icon: Wallet,          roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeVerFinanceiro(r, c) },
+    { href: '/financeiro/movimentacoes', label: 'Financeiro',  icon: Wallet,          roles: ['ADMIN_IGREJA'], visivel: (r, c) => podeVerFinanceiro(r, c), matchPrefix: '/financeiro' },
     { href: '/usuarios',   label: 'Usuários',  icon: UserCog,         roles: ['ADMIN_IGREJA'] },
   ]
 
@@ -71,18 +97,21 @@ export function Sidebar() {
       return role ? item.roles.includes(role) : false
     })
 
-  const renderLink = (item: { href: string; label: string; icon: typeof Home }) => {
-    const ativo = pathname === item.href
-    const Icon = item.icon
+  // Marca o item da sidebar como ativo também nas subrotas (/eventos/123, /celulas/x/...).
+  const rotaAtiva = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  const renderLink = (item: { href: string; label: string; icon: typeof Home; matchPrefix?: string }) => {
+    const ativo = item.matchPrefix ? pathname.startsWith(item.matchPrefix) : rotaAtiva(item.href)
 
     return (
       <Link
         key={item.href}
         href={item.href}
-        onClick={fecharNav}
+        onClick={(e) => { fecharNav(); medirPilula(e.currentTarget) }}
+        data-ativo={ativo}
         className={ativo ? `${styles.link} ${styles.linkActive}` : `${styles.link} ${styles.linkInactive}`}
       >
-        <Icon size={20} />
+        <IconePendente icon={item.icon} />
         <span className={styles.label}>{item.label}</span>
       </Link>
     )
@@ -107,6 +136,68 @@ export function Sidebar() {
     () => pathname.startsWith('/pessoas'),
   )
 
+  // ── Drawer mobile: arrastar pra fechar + trava de scroll do body ──
+  const { handlers, estiloArraste } = useArrastarParaFechar({ aberta: navAberta, aoFechar: fecharNav })
+
+  useEffect(() => {
+    if (!navAberta) return
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [navAberta])
+
+  // ── Pílula deslizante do item ativo ──
+  const asideRef = useRef<HTMLElement | null>(null)
+  const [comTransicao, setComTransicao] = useState(false)
+  const [pilula, setPilula] = useState<Pilula>({ top: 0, left: 0, width: 0, height: 0, estado: 'inicial' })
+
+  // Posiciona a pílula sobre `alvo` (ou sobre o item [data-ativo] atual, se omitido). Rect
+  // relativo ao <aside> + scroll: robusto a padding/safe-area/scroll da sidebar, ao
+  // contrário de offsetTop (que depende de qual ancestral é o offsetParent).
+  const medirPilula = useCallback((alvo?: HTMLElement) => {
+    const aside = asideRef.current
+    if (!aside) return
+    const el = alvo ?? aside.querySelector<HTMLElement>('[data-ativo="true"]')
+    if (!el) {
+      setPilula((p) => (p.estado === 'inicial' ? p : { ...p, estado: 'oculto' }))
+      return
+    }
+    const ar = aside.getBoundingClientRect()
+    const er = el.getBoundingClientRect()
+    setPilula({
+      top: er.top - ar.top + aside.scrollTop,
+      left: er.left - ar.left + aside.scrollLeft,
+      width: er.width,
+      height: er.height,
+      estado: 'visivel',
+    })
+    // habilita a animação só depois do primeiro posicionamento (senão desliza do topo no load)
+    requestAnimationFrame(() => setComTransicao(true))
+  }, [])
+
+  useEffect(() => {
+    medirPilula()
+  }, [medirPilula, pathname, role])
+
+  useEffect(() => {
+    const aoRedimensionar = () => medirPilula()
+    window.addEventListener('resize', aoRedimensionar)
+    return () => window.removeEventListener('resize', aoRedimensionar)
+  }, [medirPilula])
+
+  // Abrir/fechar submenu empurra o botão "Configurações" do rodapé por ~360ms — re-mede a
+  // pílula quadro a quadro durante a animação pra ela acompanhar em vez de saltar.
+  useEffect(() => {
+    let raf = 0
+    const inicio = performance.now()
+    const tick = () => {
+      medirPilula()
+      if (performance.now() - inicio < 420) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [pessoasAberto, configAberto, medirPilula])
+
   return (
     <>
     <div
@@ -114,7 +205,24 @@ export function Sidebar() {
       onClick={fecharNav}
       aria-hidden="true"
     />
-    <aside className={`${styles.sidebar} ${navAberta ? styles.sidebarAberta : ''}`}>
+    <aside
+      ref={asideRef}
+      className={`${styles.sidebar} ${navAberta ? styles.sidebarAberta : ''}`}
+      style={estiloArraste}
+      {...handlers}
+    >
+      <span
+        className={styles.indicadorAtivo}
+        style={{
+          transform: `translateY(${pilula.top}px)`,
+          left: pilula.left,
+          width: pilula.width,
+          height: pilula.height,
+          opacity: pilula.estado === 'visivel' ? 1 : 0,
+          transition: comTransicao ? undefined : 'none',
+        }}
+        aria-hidden="true"
+      />
       <Link href="/inicio" className={styles.header}>
         <Image src="/images/logo2.png" alt="Domus" width={28} height={47} className={styles.logo} />
         <span>
@@ -131,6 +239,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setPessoasAberto((v) => !v)}
               aria-expanded={pessoasAberto}
+              data-ativo={pathname.startsWith('/pessoas')}
               className={`${styles.link} ${styles.grupoBotao} ${
                 pathname.startsWith('/pessoas')
                   ? styles.linkActive
@@ -179,6 +288,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setConfigAberto((v) => !v)}
               aria-expanded={configAberto}
+              data-ativo={pathname.startsWith('/configuracoes') || pathname === '/perfil'}
               className={`${styles.link} ${styles.grupoBotao} ${
                 pathname.startsWith('/configuracoes') || pathname === '/perfil'
                   ? styles.linkActive

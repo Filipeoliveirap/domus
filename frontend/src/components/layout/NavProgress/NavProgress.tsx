@@ -68,25 +68,27 @@ export function NavProgress() {
       seguranca.current = setTimeout(() => resetarNav(), TIMEOUT_SEGURANCA)
     }
 
-    history.pushState = function (data, unused, url) {
-      if (mudouRota(url)) {
+    // O Next chama history.pushState de dentro de um useInsertionEffect durante a
+    // transição de rota; disparar um set() do zustand ali estoura
+    // "useInsertionEffect must not schedule updates". queueMicrotask joga a atualização
+    // do store pro fim do tick, fora dessa fase.
+    const marcarNavegando = () => {
+      queueMicrotask(() => {
         iniciarNav()
         armarSeguranca()
-      }
+      })
+    }
+
+    history.pushState = function (data, unused, url) {
+      if (mudouRota(url)) marcarNavegando()
       return pushOriginal(data, unused, url)
     }
     history.replaceState = function (data, unused, url) {
-      if (mudouRota(url)) {
-        iniciarNav()
-        armarSeguranca()
-      }
+      if (mudouRota(url)) marcarNavegando()
       return replaceOriginal(data, unused, url)
     }
 
-    const aoVoltar = () => {
-      iniciarNav()
-      armarSeguranca()
-    }
+    const aoVoltar = () => marcarNavegando()
     window.addEventListener('popstate', aoVoltar)
 
     return () => {

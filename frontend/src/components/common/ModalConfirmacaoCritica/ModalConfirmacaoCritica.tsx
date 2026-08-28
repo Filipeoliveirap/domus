@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle, X, Check } from 'lucide-react'
+import { clsx } from 'clsx'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import styles from './ModalConfirmacaoCritica.module.css'
 
 export interface Consequencia {
@@ -46,6 +48,7 @@ export function ModalConfirmacaoCritica({
   const inputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const inputId = useId()
+  const { saindo, fechar } = useFecharAnimado(onClose)
 
   // Compara ignorando acento e caixa ("retiro de jovens" bate com "Retiro de Jovens") —
   // a exigência de digitar o nome continua, só a rigidez da comparação afrouxa.
@@ -61,7 +64,7 @@ export function ModalConfirmacaoCritica({
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLoading) {
-        onClose()
+        fechar()
         return
       }
       if (e.key !== 'Tab' || !formRef.current) return
@@ -85,7 +88,7 @@ export function ModalConfirmacaoCritica({
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose, isLoading])
+  }, [fechar, isLoading])
 
   function aoEnviar(e: React.FormEvent) {
     e.preventDefault()
@@ -93,7 +96,10 @@ export function ModalConfirmacaoCritica({
   }
 
   return (
-    <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
+    <div
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      onMouseDown={() => !isLoading && fechar()}
+    >
       <form
         ref={formRef}
         className={styles.modal}
@@ -152,7 +158,7 @@ export function ModalConfirmacaoCritica({
           <button
             type="button"
             className={styles.btnCancelar}
-            onClick={onClose}
+            onClick={fechar}
             disabled={isLoading}
           >
             Cancelar

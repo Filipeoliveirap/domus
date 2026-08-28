@@ -38,8 +38,14 @@
 }
 
 /* Quem prefere menos movimento não leva animação nenhuma. */
+/* saída (useFecharAnimado marca .saindo antes de desmontar) */
+.saindo { animation: fadeOut 0.18s ease forwards; }
+.saindo .modal { animation: zoomOut 0.18s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes zoomOut { to { opacity: 0; transform: scale(0.97); } }
+
 @media (prefers-reduced-motion: reduce) {
-  .overlay, .modal { animation: none; }
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
 }
 
 .cabecalho {

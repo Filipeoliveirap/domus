@@ -1,6 +1,7 @@
 .stepper {
   display: flex;
   align-items: center;
+  justify-content: center;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -18,11 +19,12 @@
 
 .etapa:not(:last-child)::after {
   content: '';
-  flex: 1;
+  /* traço de largura fixa (não estica) — o stepper fica compacto e centralizado
+     em vez de esparramado de ponta a ponta */
+  flex: 0 0 32px;
   height: 1px;
   background: var(--color-border, #e2e8f0);
   margin: 0 8px;
-  min-width: 16px;
 }
 
 .bolinha {
@@ -60,11 +62,10 @@
 }
 
 @media (max-width: 480px) {
-  .rotulo {
-    display: none;
-  }
-
+  /* rótulos continuam visíveis no mobile (antes sumiam e sobrava só a bolinha
+     desalinhada no canto) — só encolhe o traço e o espaçamento pra caber */
   .etapa:not(:last-child)::after {
+    flex-basis: 20px;
     margin: 0 4px;
   }
 }

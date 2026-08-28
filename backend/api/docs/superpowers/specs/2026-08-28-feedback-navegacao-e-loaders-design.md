@@ -395,6 +395,18 @@ Duas camadas, no mesmo `<TransicaoRota>` (client, envolve `{children}` no `(app)
 - `prefers-reduced-motion`: `::view-transition-*` com `animation: none !important`,
   `view-transition-name: none`, keyframe `none`.
 
+> **Ajuste 2026-08-28 (2ª rodada de teste):** a VT estava larga demais. Agora:
+> - **Só troca de seção** dispara VT — `deveAnimarVT` exige pathname irmão/não relacionado.
+>   Mudança só de `search` (modal, filtro) e drill parent↔filho (drawer routeado) **não**
+>   animam: o deslize próprio do modal/drawer cuida, e o crossfade ali piscava
+>   sidebar/header. `popstate` só liga barra/VT se o pathname realmente mudou (voltar que
+>   só fecha modal não anima).
+> - VT **curta** (saída 0.14s, entrada 0.22s): durante a VT o browser mostra snapshot
+>   estático, então spinner na tela congela — curto = piscar imperceptível.
+> - `uiStore.navegando` virou **booleano** (era contador): `iniciar`/`finalizar` não são
+>   1:1 (Next chama pushState+replaceState; navegação rápida pula rotas). O efeito
+>   `[pathname]` cancela `iniciar` pendente e seta `false` — mata a barra presa.
+
 ### D2 — `<Transicao>` (primitiva pra blocos fora de rota)
 
 - `frontend/src/components/common/Transicao/Transicao.tsx` + reusa o mesmo `.module.css`.

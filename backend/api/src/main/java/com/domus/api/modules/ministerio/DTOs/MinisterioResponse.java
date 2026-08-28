@@ -7,25 +7,29 @@ import java.util.List;
 import java.util.UUID;
 
 public record MinisterioResponse(UUID id, String nome, UUID fotoId, List<String> lideres, int totalMembros,
-                                  boolean temVinculo) {
+                                  boolean souLiderDesteMinisterio, boolean temVinculo) {
     /** Usado onde só o cadastro básico importa (ex.: `GET /pessoas/{id}/ministerios`) — sem
      * consultar membros, então líderes/contagem vêm zerados. */
     public static MinisterioResponse from(Ministerio ministerio) {
         return new MinisterioResponse(ministerio.getId(), ministerio.getNome(),
                 ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
-                List.of(), 0, false);
+                List.of(), 0, false, false);
     }
 
     /** Usado na listagem (`GET /ministerios`), onde o card mostra líder(es) e quantidade de
      * membros — resumo visual pedido no mockup do Stitch (sem descrição nem frequência: fora
      * do escopo do cadastro, que é só nome). */
-    public static MinisterioResponse comResumo(Ministerio ministerio, List<MinisterioMembro> membrosAtivos) {
+    public static MinisterioResponse comResumo(Ministerio ministerio, List<MinisterioMembro> membrosAtivos,
+                                                UUID pessoaLogadaId) {
         List<String> lideres = membrosAtivos.stream()
                 .filter(m -> m.getPapel() == Papel.LIDER)
                 .map(m -> m.getPessoa().getNome())
                 .toList();
+        boolean souLider = pessoaLogadaId != null && membrosAtivos.stream()
+                .anyMatch(m -> m.getPapel() == Papel.LIDER
+                        && pessoaLogadaId.equals(m.getPessoa().getId()));
         return new MinisterioResponse(ministerio.getId(), ministerio.getNome(),
                 ministerio.getFoto() != null ? ministerio.getFoto().getId() : null,
-                lideres, membrosAtivos.size(), !membrosAtivos.isEmpty());
+                lideres, membrosAtivos.size(), souLider, !membrosAtivos.isEmpty());
     }
 }

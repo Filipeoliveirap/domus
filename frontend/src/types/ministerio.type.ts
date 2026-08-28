@@ -12,6 +12,8 @@ export interface MinisterioResponse {
   /** Vazio em respostas que não consultam membros (ex.: GET /pessoas/{id}/ministerios). */
   lideres: string[]
   totalMembros: number
+  /** true quando a pessoa logada é líder desta rede — habilita o menu de ação no card. */
+  souLiderDesteMinisterio: boolean
   temVinculo: boolean
 }
 

@@ -71,6 +71,22 @@ class PermissoesTest {
     }
 
     @Test
+    void secretarioEstendeGerenciarCelulas() {
+        assertThat(Permissoes.podeGerenciarCelulas("LIDER", Set.of("SECRETARIO"))).isTrue();
+        assertThat(Permissoes.podeGerenciarCelulas("LIDER", Set.of("TESOUREIRO"))).isFalse();
+        assertThat(Permissoes.podeGerenciarCelulas("LIDER", Set.of())).isFalse();
+        assertThat(Permissoes.podeGerenciarCelulas("ADMIN_IGREJA", Set.of())).isTrue();
+    }
+
+    @Test
+    void secretarioEstendeGerenciarCadastroMinisterios() {
+        assertThat(Permissoes.podeGerenciarCadastroMinisterios("LIDER", Set.of("SECRETARIO"))).isTrue();
+        assertThat(Permissoes.podeGerenciarCadastroMinisterios("LIDER", Set.of("TESOUREIRO"))).isFalse();
+        assertThat(Permissoes.podeGerenciarCadastroMinisterios("LIDER", Set.of())).isFalse();
+        assertThat(Permissoes.podeGerenciarCadastroMinisterios("ADMIN_IGREJA", Set.of())).isTrue();
+    }
+
+    @Test
     void capacidadeExtraNulaNaoQuebraENaoLibera() {
         assertThat(Permissoes.podeGerenciarPessoas("ACESSO_COMUM", null)).isFalse();
         assertThat(Permissoes.podeVerFinanceiro("ACESSO_COMUM", null)).isFalse();

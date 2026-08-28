@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft, Pencil } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
 import { useRemoverMembro, useAtualizarPapel } from '@/hooks/ministerio/useMembroMinisterio'
 import { usePedirEntrada, useAceitarPedido, useRecusarPedido } from '@/hooks/ministerio/usePedidoMinisterio'
+import { ModalMinisterioForm } from '@/app/(app)/ministerios/(lista)/ModalMinisterioForm'
+import type { MinisterioResponse } from '@/types/ministerio.type'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
@@ -25,7 +27,8 @@ import styles from './detalhe.module.css'
 export default function MinisterioDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const role = useAuthStore((s) => s.role)
-  const isAdmin = podeGerenciarCadastroMinisterios(role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
+  const podeGerenciarCadastro = podeGerenciarCadastroMinisterios(role, capacidadesExtras)
 
   const { data: ministerio, isLoading } = useMinisterioDetalhe(id)
   const removerMembro = useRemoverMembro(id)
@@ -36,6 +39,7 @@ export default function MinisterioDetalhePage() {
   const { ministerio: rotuloMinisterio, concordar } = useRotulos()
 
   const [adicionarAberto, setAdicionarAberto] = useState(false)
+  const [editarAberto, setEditarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
 
@@ -61,7 +65,10 @@ export default function MinisterioDetalhePage() {
   // service (MinisterioService.detalhe), que já sabe a pessoa logada via UsuarioAutenticado.
   const souMembro = ministerio.souMembroAtivo
   const jaTemPedido = ministerio.tenhoPedidoPendente
-  const podeGerenciarMembros = ministerio.souLiderDesteMinisterio
+  // Espelha o padrão de Célula: admin/secretário (cadastro) OU líder desta rede.
+  // O backend já resolve os dois em souLiderDesteMinisterio, mas o OR local mantém
+  // a UI correta caso o cálculo do backend mude.
+  const podeGerenciar = podeGerenciarCadastro || ministerio.souLiderDesteMinisterio
 
   return (
     <div className={styles.pagina}>
@@ -92,25 +99,31 @@ export default function MinisterioDetalhePage() {
             </div>
           )}
         </div>
-        <div>
+        <div className={styles.tituloLinha}>
           <h1 className={styles.titulo}>{ministerio.nome}</h1>
+          {podeGerenciar && !ministerio.arquivada && (
+            <button type="button" className={styles.btnEditar} onClick={() => setEditarAberto(true)}
+              title={`Editar ${rotuloMinisterio.singular.toLowerCase()}`}>
+              <Pencil size={16} />
+            </button>
+          )}
         </div>
-        {podeGerenciarMembros && (
+        {podeGerenciar && (
           <button type="button" className={styles.botaoPrimario} onClick={() => setAdicionarAberto(true)}>
             <UserPlus size={16} /> Adicionar pessoa
           </button>
         )}
-        {!podeGerenciarMembros && !souMembro && !jaTemPedido && (
+        {!podeGerenciar && !souMembro && !jaTemPedido && (
           <button type="button" className={styles.botaoPrimario} onClick={() => pedirEntrada.mutate()}>
             Pedir para entrar
           </button>
         )}
-        {!podeGerenciarMembros && jaTemPedido && (
+        {!podeGerenciar && jaTemPedido && (
           <span className={styles.tagPendente}>Pedido enviado — aguardando aprovação</span>
         )}
       </header>
 
-      {podeGerenciarMembros && ministerio.pedidosPendentes.length > 0 && (
+      {podeGerenciar && ministerio.pedidosPendentes.length > 0 && (
         <section className={styles.secao}>
           <h2 className={styles.subtitulo}>Pedidos pendentes</h2>
           <ul className={styles.lista}>
@@ -159,7 +172,7 @@ export default function MinisterioDetalhePage() {
                   )}
                 </div>
                 <div className={styles.itemMembroAcoes}>
-                  {isAdmin && (
+                  {podeGerenciar && (
                     <button type="button" className={styles.botaoPromover}
                       onClick={(e) => {
                         e.stopPropagation()
@@ -171,7 +184,7 @@ export default function MinisterioDetalhePage() {
                       {membro.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder'}
                     </button>
                   )}
-                  {podeGerenciarMembros && (
+                  {podeGerenciar && (
                     <button type="button" className={styles.botaoRemover}
                       onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
                       <UserMinus size={16} />
@@ -189,6 +202,20 @@ export default function MinisterioDetalhePage() {
           ministerioId={id}
           membrosAtuaisIds={new Set(ministerio.membros.map((m) => m.pessoaId))}
           onClose={() => setAdicionarAberto(false)}
+        />
+      )}
+      {editarAberto && (
+        <ModalMinisterioForm
+          ministerio={{
+            id: ministerio.id,
+            nome: ministerio.nome,
+            fotoId: ministerio.fotoId,
+            lideres: [],
+            totalMembros: ministerio.membros.length,
+            souLiderDesteMinisterio: ministerio.souLiderDesteMinisterio,
+            temVinculo: true,
+          } satisfies MinisterioResponse}
+          onClose={() => setEditarAberto(false)}
         />
       )}
       {pessoaDetalheId && (

@@ -482,7 +482,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID()))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("visitante");
     }
@@ -498,7 +498,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
     }
@@ -517,7 +517,7 @@ class CelulaServiceTest {
                 .thenReturn(Optional.of(Usuario.builder().id(usuarioIdPromovido).build()));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         verify(notificacaoService).criar(
                 eq(TipoNotificacao.PROMOVIDO_LIDER_CELULA), eq(igrejaId), eq(usuarioIdPromovido),
@@ -538,7 +538,7 @@ class CelulaServiceTest {
                 .thenReturn(Optional.of(Usuario.builder().id(usuarioIdAtor).build()));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, usuarioIdAtor);
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, usuarioIdAtor);
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
@@ -554,18 +554,36 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test
-    void atualizarPapelRecusaQuemNaoEAdmin() {
+    void atualizarPapelRecusaQuemNaoEAdminNemLider() {
         dadoQueExiste();
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, UUID.randomUUID(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, false, UUID.randomUUID()))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, false, UUID.randomUUID()))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void liderDaCelulaPromoveCoLider() {
+        dadoQueExiste();
+        UUID pessoaIdLiderAtor = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaIdLiderAtor, "LIDER"))
+                .thenReturn(true);
+        Pessoa alvo = Pessoa.builder().id(UUID.randomUUID()).nome("Novo co-líder").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(alvo).papel(PapelCelula.MEMBRO)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, pessoaIdLiderAtor, false, UUID.randomUUID());
+
+        assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
     }
 
     @Test

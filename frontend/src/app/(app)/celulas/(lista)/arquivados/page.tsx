@@ -21,8 +21,9 @@ import styles from './arquivados.module.css'
 export default function CelulasArquivadasPage() {
   const { data: celulas, isLoading, isError, refetch } = useCelulasArquivadas()
   const role = useAuthStore((s) => s.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const router = useRouter()
-  const podeGerenciar = podeGerenciarCelulas(role)
+  const podeGerenciar = podeGerenciarCelulas(role, capacidadesExtras)
   const { restaurar, isLoading: restaurando } = useRestaurarCelula()
   const [excluindo, setExcluindo] = useState<CelulaResponse | null>(null)
   const { celula: rotuloCelula, concordar } = useRotulos()

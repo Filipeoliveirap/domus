@@ -53,7 +53,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const queryClient = useQueryClient()
   const role = useAuthStore(s => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
-  const isAdmin = podeGerenciarCelulas(role)
+  const isAdmin = podeGerenciarCelulas(role, capacidadesExtras)
   const podeGerenciarCelula = isAdmin || !!celula?.souLiderDestaCelula
   const { celula: rotuloCelula, concordar } = useRotulos()
   const [filtro, setFiltro] = useState<'TODOS' | 'PESSOA' | 'VISITANTE'>('TODOS')
@@ -261,7 +261,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
               const podeGerenciar = podeGerenciarCelula
 
               const acoes: ItemAcao[] = []
-              if (isAdmin && m.tipo === 'PESSOA') {
+              if (podeGerenciarCelula && m.tipo === 'PESSOA') {
                 acoes.push({
                   label: m.papel === 'LIDER' ? 'Remover liderança' : 'Tornar líder',
                   icone: m.papel === 'LIDER' ? TrendingUp : Crown,

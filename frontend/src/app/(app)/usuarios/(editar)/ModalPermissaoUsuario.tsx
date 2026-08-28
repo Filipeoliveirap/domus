@@ -6,6 +6,7 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { usuarioService } from '@/services/usuarios.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
 import axios from 'axios'
 import type { ApiError } from '@/types/api.types'
 import { UsuarioResponse, Role } from '@/types/usuario.types'
@@ -21,6 +22,7 @@ export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioRe
   const queryClient = useQueryClient()
   const idLogado = useAuthStore((s) => s.id)
   const atualizarUsuarioLogado = useAuthStore((s) => s.atualizarUsuarioLogado)
+  const { celula, ministerio } = useRotulos()
 
   const capacidadesIniciais = usuario.capacidadesExtras ?? []
   const [roleSelecionada, setRoleSelecionada] = useState<Role>(usuario.role as Role)
@@ -113,7 +115,7 @@ export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioRe
             <label className={styles.checkbox}>
               <input type="checkbox" checked={secretario}
                 onChange={e => setSecretario(e.target.checked)} />
-              <span>Secretário — gerencia pessoas e visitantes</span>
+              <span>Secretário — gerencia pessoas, visitantes, {celula.plural.toLowerCase()} e {ministerio.plural.toLowerCase()}</span>
             </label>
             <label className={styles.checkbox}>
               <input type="checkbox" checked={tesoureiro}

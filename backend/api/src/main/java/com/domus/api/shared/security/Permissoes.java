@@ -56,6 +56,9 @@ public final class Permissoes {
 
     /** Criar, renomear, arquivar ministério e promover/rebaixar líder. */
     public static boolean podeGerenciarCadastroMinisterios(String role) { return tem(role, SO_ADMIN); }
+    public static boolean podeGerenciarCadastroMinisterios(String role, Set<String> capacidadesExtras) {
+        return temCapacidade(role, capacidadesExtras, SO_ADMIN, "SECRETARIO");
+    }
 
     /** Cadastrar, editar, apagar e gerenciar toggles de visitantes. */
     public static boolean podeGerenciarVisitantes(String role) { return tem(role, SO_ADMIN); }
@@ -65,6 +68,9 @@ public final class Permissoes {
 
     /** Criar, arquivar células e promover líderes de célula. */
     public static boolean podeGerenciarCelulas(String role) { return tem(role, SO_ADMIN); }
+    public static boolean podeGerenciarCelulas(String role, Set<String> capacidadesExtras) {
+        return temCapacidade(role, capacidadesExtras, SO_ADMIN, "SECRETARIO");
+    }
 
     /** Agendar ou cancelar a exclusão definitiva da igreja — a ação de maior risco do sistema. */
     public static boolean podeExcluirIgreja(String role) { return tem(role, SO_ADMIN); }

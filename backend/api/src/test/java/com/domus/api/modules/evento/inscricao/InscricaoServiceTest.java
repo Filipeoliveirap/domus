@@ -695,7 +695,50 @@ class InscricaoServiceTest {
 
         service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
-        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
+        verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-1", new java.math.BigDecimal("50.00"));
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    // Achado ao vivo (2026-08-27): cancelar uma inscrição que já tinha recebido um estorno
+    // PARCIAL antes (reajuste de preço pra baixo) tentava estornar o valor CHEIO de novo —
+    // o Mercado Pago recusa por falta de saldo, e a pessoa nunca conseguia cancelar.
+    @Test
+    void cancelarInscricaoComEstornoParcialAnteriorSoEstornaORestante() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobrancaComEstornoParcial = cobrancaPagaComId("mp-payment-1"); // valor = 50.00
+        cobrancaComEstornoParcial.registrarEstorno(new java.math.BigDecimal("20.00")); // já devolveu 20 antes
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaComEstornoParcial));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        // Só o RESTANTE (50 - 20 = 30), nunca o valor cheio de novo.
+        verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-1", new java.math.BigDecimal("30.00"));
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        assertThat(cobrancaComEstornoParcial.getStatus()).isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.REEMBOLSADO);
+    }
+
+    @Test
+    void cancelarInscricaoJaTotalmenteEstornadaAntesNaoTentaEstornarDeNovo() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobrancaJaTotalmenteEstornada = cobrancaPagaComId("mp-payment-1"); // valor = 50.00
+        cobrancaJaTotalmenteEstornada.registrarEstorno(new java.math.BigDecimal("50.00"));
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaJaTotalmenteEstornada));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
     }
 
@@ -785,7 +828,7 @@ class InscricaoServiceTest {
 
         service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
-        verify(mercadoPagoClient, never()).estornar(any(), any());
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
     }
 
@@ -800,7 +843,7 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), any());
+                .when(mercadoPagoClient).estornarParcial(any(), any(), any());
 
         assertThatThrownBy(() -> service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
@@ -828,7 +871,7 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPendente, cobrancaPaga));
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+                .when(mercadoPagoClient).estornarParcial(any(), eq("mp-payment-falha"), any());
 
         assertThatThrownBy(() -> service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId))
                 .isInstanceOf(BusinessException.class)
@@ -932,6 +975,9 @@ class InscricaoServiceTest {
         when(cobrancaEventoService.criarParaTerceiro(
                 igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true))
                 .thenReturn(cobrancaCriada);
+        UUID usuarioDaPessoaId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioDaPessoaId).build()));
 
         int processadas = service.aplicarEventoVirouPago(eventoId, new java.math.BigDecimal("30.00"), usuarioId);
 
@@ -945,6 +991,12 @@ class InscricaoServiceTest {
         verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
         assertThat(assuntoCaptor.getValue()).contains("pago");
         assertThat(corpoCaptor.getValue()).contains("token-gerado");
+
+        // Além do e-mail, notifica dentro do próprio Domus quem tem conta (achado da
+        // sessão: alguns fluxos só mandavam e-mail, sem notificação in-app).
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_VIROU_PAGO),
+                eq(igrejaId), eq(usuarioDaPessoaId), any(), any());
     }
 
     @Test
@@ -994,11 +1046,14 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+        UUID usuarioDaPessoaId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioDaPessoaId).build()));
 
         int processadas = service.aplicarEventoVirouGratuito(eventoId);
 
         assertThat(processadas).isEqualTo(1);
-        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-1");
+        verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-1", new java.math.BigDecimal("50.00"));
         // Diferente do cancelamento: a inscrição continua CONFIRMADA, nunca vira CANCELADA —
         // o evento é que ficou gratuito, ninguém perdeu a vaga.
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
@@ -1011,6 +1066,10 @@ class InscricaoServiceTest {
         verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
         assertThat(assuntoCaptor.getValue()).contains("gratuito");
         assertThat(corpoCaptor.getValue()).contains("reembolsado");
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.EVENTO_VIROU_GRATUITO),
+                eq(igrejaId), eq(usuarioDaPessoaId), any(), any());
     }
 
     @Test
@@ -1029,7 +1088,7 @@ class InscricaoServiceTest {
         int processadas = service.aplicarEventoVirouGratuito(eventoId);
 
         assertThat(processadas).isEqualTo(1);
-        verify(mercadoPagoClient, never()).estornar(any(), any());
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         // Cobrança PENDENTE cancelada nunca chegou a debitar ninguém — sem lançamento no financeiro.
         verifyNoInteractions(movimentacaoAutomaticaService);
@@ -1076,14 +1135,14 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPagaComId("mp-payment-ok")));
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+                .when(mercadoPagoClient).estornarParcial(any(), eq("mp-payment-falha"), any());
 
         int processadas = service.aplicarEventoVirouGratuito(eventoId);
 
         assertThat(processadas).isEqualTo(1);
         assertThat(comFalha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         assertThat(comSucesso.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
-        verify(mercadoPagoClient).estornar(igrejaId, "mp-payment-ok");
+        verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-ok", new java.math.BigDecimal("50.00"));
     }
 
     @Test
@@ -1119,7 +1178,7 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(semCobranca.getId()))
                 .thenReturn(List.of());
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha-3"));
+                .when(mercadoPagoClient).estornarParcial(any(), eq("mp-payment-falha-3"), any());
 
         service.cancelarInscricoesEmEventosAbertosPorPessoa(pessoaId);
 
@@ -1345,7 +1404,7 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(congreganteSemCobranca.getId()))
                 .thenReturn(List.of());
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha"));
+                .when(mercadoPagoClient).estornarParcial(any(), eq("mp-payment-falha"), any());
 
         int removidos = service.removerInscritosNaoElegiveis(eventoId);
 
@@ -1410,7 +1469,7 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(semCobranca.getId()))
                 .thenReturn(List.of());
         doThrow(new IllegalStateException("Mercado Pago fora do ar"))
-                .when(mercadoPagoClient).estornar(any(), eq("mp-payment-falha-2"));
+                .when(mercadoPagoClient).estornarParcial(any(), eq("mp-payment-falha-2"), any());
         when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         int canceladas = service.cancelarInscricoesEmEventosExclusivos(pessoaId);
@@ -1569,7 +1628,7 @@ class InscricaoServiceTest {
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
 
-        InscritoResponse response = InscritoResponse.from(inscricao, pessoaDeOutraIgreja, null, null);
+        InscritoResponse response = InscritoResponse.from(inscricao, pessoaDeOutraIgreja, null, null, false, null);
 
         assertThat(response.igrejaDaPessoa().nome()).isEqualTo("Congregação Norte");
     }
@@ -1934,5 +1993,422 @@ class InscricaoServiceTest {
 
         assertThat(salva.getConvidadoPor()).isNull();
         verify(membroRepository, never()).findByIdAndIgrejaId(any(), any());
+    }
+
+    // ---- enviarLembretePagamento (2026-08-27) ----
+
+    @Test
+    void enviarLembretePagamentoUsaLinkPublicoQuandoCobrancaTemToken() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobrancaPendente()));
+        UUID usuarioDaPessoaId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioDaPessoaId).build()));
+
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA");
+
+        var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
+        assertThat(assuntoCaptor.getValue()).contains("Lembrete");
+        assertThat(assuntoCaptor.getValue()).doesNotContainIgnoringCase("cobrança");
+        assertThat(corpoCaptor.getValue()).contains("/cobranca/");
+        assertThat(corpoCaptor.getValue()).doesNotContainIgnoringCase("cobrar");
+        assertThat(corpoCaptor.getValue()).contains("/pagamento/").contains("/cancelar");
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.LEMBRETE_PAGAMENTO_PENDENTE),
+                eq(igrejaId), eq(usuarioDaPessoaId), any(), any());
+    }
+
+    @Test
+    void enviarLembretePagamentoUsaLinkAutenticadoQuandoCobrancaEhDoTitular() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        var cobrancaSemToken = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, null);
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobrancaSemToken));
+
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "LIDER");
+
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), any(), corpoCaptor.capture());
+        assertThat(corpoCaptor.getValue()).contains("/eventos/" + eventoId + "/pagamento/" + cobrancaSemToken.getId());
+    }
+
+    @Test
+    void enviarLembretePagamentoRecusaQuandoInscricaoNaoEstaAguardandoPagamento() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA"))
+                .hasFieldOrPropertyWithValue("codigo", "INSCRICAO_NAO_AGUARDA_PAGAMENTO");
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void enviarLembretePagamentoRecusaParaQuemNaoGerenciaInscricoes() {
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ACESSO_COMUM"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        verifyNoInteractions(emailService, inscricaoRepository);
+    }
+
+    @Test
+    void enviarLembretePagamentoRecusaSemEmailCadastrado() {
+        Pessoa semEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email(null)
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(semEmail)
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobrancaPendente()));
+
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA"))
+                .hasFieldOrPropertyWithValue("codigo", "SEM_EMAIL_PARA_LEMBRETE");
+    }
+
+    // ---- cancelarPorCobranca (2026-08-27) — "Cancelar inscrição" do e-mail de lembrete ----
+
+    @Test
+    void cancelarPorCobrancaCancelaInscricaoAguardandoPagamento() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        var cobrancaId = UUID.randomUUID();
+        var cobranca = cobrancaPendente();
+        when(cobrancaEventoRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobranca));
+
+        service.cancelarPorCobranca(cobrancaId);
+
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+    }
+
+    @Test
+    void cancelarPorCobrancaRecusaQuandoInscricaoNaoEstaMaisAguardandoPagamento() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobrancaId = UUID.randomUUID();
+        when(cobrancaEventoRepository.findById(cobrancaId)).thenReturn(Optional.of(cobrancaPendente()));
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(minha));
+
+        assertThatThrownBy(() -> service.cancelarPorCobranca(cobrancaId))
+                .hasFieldOrPropertyWithValue("codigo", "INSCRICAO_NAO_AGUARDA_PAGAMENTO");
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+    }
+
+    // ---- aplicarMudancaValorPago / calcularImpactoMudancaValorPago (2026-08-27) ----
+    // Evento continua pago, só o valor muda — terceira direção além do toggle
+    // gratuito<->pago (ver aplicarEventoVirouPago/aplicarEventoVirouGratuito acima).
+
+    @Test
+    void calcularImpactoMudancaValorPagoDetectaAumentoParaQuemJaPagou() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+
+        var impacto = service.calcularImpactoMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(
+                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.VALOR_AUMENTOU);
+        assertThat(impacto.pessoasSeraoCobradas()).isEqualTo(1);
+        assertThat(impacto.valorTotalACobrar()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void calcularImpactoMudancaValorPagoDetectaReducaoParaQuemJaPagou() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        // Pagou 80 de verdade (não os 50 fixos de cobrancaPagaComId) — o preço caiu de
+        // 80 pra 50, então o que importa é o que a pessoa REALMENTE pagou.
+        var cobrancaPagou80 = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("80.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, null);
+        cobrancaPagou80.marcarComoPago("mp-payment-1");
+        when(cobrancaEventoRepository.findByEventoId(eventoId)).thenReturn(List.of(cobrancaPagou80));
+
+        var impacto = service.calcularImpactoMudancaValorPago(
+                eventoId, new java.math.BigDecimal("80.00"), new java.math.BigDecimal("50.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(
+                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.VALOR_DIMINUIU);
+        assertThat(impacto.pessoasComPagamentoPago()).isEqualTo(1);
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void aplicarMudancaValorPagoGeraCobrancaDeComplementoEVoltaParaAguardandoPagamento() {
+        // Decisão do usuário (2026-08-27): tratar exatamente como aplicarEventoVirouPago —
+        // mesma pendência, mesma tag "Pagamento pendente", mesmo lembrete/cancelamento.
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+        var complemento = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-complemento");
+        when(cobrancaEventoService.criarParaTerceiro(
+                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true))
+                .thenReturn(complemento);
+        UUID usuarioDaPessoaId = UUID.randomUUID();
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioDaPessoaId).build()));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        verify(inscricaoRepository).save(minha);
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+
+        var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), assuntoCaptor.capture(), corpoCaptor.capture());
+        assertThat(corpoCaptor.getValue()).contains("token-complemento");
+        assertThat(corpoCaptor.getValue()).contains("cancelar"); // mesmo botão do lembrete comum
+
+        verify(notificacaoService).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.COMPLEMENTO_PAGAMENTO_PENDENTE),
+                eq(igrejaId), eq(usuarioDaPessoaId), any(), any());
+    }
+
+    @Test
+    void aplicarMudancaValorPagoEstornaParcialSemMudarStatusQuandoValorBaixa() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        // Pagou 80 de verdade (não os 50 fixos de cobrancaPagaComId) — o preço caiu de
+        // 80 pra 50, então o que importa é o que a pessoa REALMENTE pagou.
+        var cobrancaPagou80 = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("80.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, null);
+        cobrancaPagou80.marcarComoPago("mp-payment-1");
+        when(cobrancaEventoRepository.findByEventoId(eventoId)).thenReturn(List.of(cobrancaPagou80));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("80.00"), new java.math.BigDecimal("50.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-1", new java.math.BigDecimal("30.00"));
+        verify(cobrancaEventoService, never()).criarParaTerceiro(any(), any(), any(), any(), any(), any(), anyBoolean());
+        verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
+                eq(igrejaId), eq(new java.math.BigDecimal("30.00")),
+                org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
+        verify(emailService).enviar(eq("maria@email.com"), any(), any());
+    }
+
+    @Test
+    void aplicarMudancaValorPagoSoAtualizaValorDaCobrancaPendenteDeQuemAindaNaoPagou() {
+        InscricaoEvento aguardando = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(aguardando));
+        var cobrancaPendente = cobrancaPendente();
+        when(cobrancaEventoRepository.findByEventoId(eventoId)).thenReturn(List.of(cobrancaPendente));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(aguardando.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        assertThat(cobrancaPendente.getValor()).isEqualByComparingTo("80.00");
+        verify(cobrancaEventoRepository).save(cobrancaPendente);
+        verifyNoInteractions(emailService, mercadoPagoClient, cobrancaEventoService);
+    }
+
+    @Test
+    void aplicarMudancaValorPagoLancaErroSemContaDePagamentoConectadaQuandoAumentaEHaConfirmado() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-1")));
+        when(contaPagamentoIgrejaRepository.findByIgrejaId(igrejaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"), usuarioId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("codigo", "IGREJA_SEM_CONTA_PAGAMENTO");
+        verifyNoInteractions(cobrancaEventoService);
+    }
+
+    // Achado ao vivo (2026-08-27): um segundo reajuste, com um complemento do primeiro
+    // ainda pendente, cobrava o valor CHEIO do novo preço em vez de só a diferença
+    // restante — porque a diferença era calculada a partir do preço antigo do EVENTO, não
+    // do que a pessoa já tinha pago de verdade.
+    @Test
+    void aplicarMudancaValorPagoAtualizaComplementoJaAbertoEmVezDeCobrarValorCheioNoSegundoReajuste() {
+        // Já pagou 50 (valor original) e tem um complemento de 15 aberto, pendente, do
+        // primeiro reajuste (50 -> 65). Preço sobe de novo, agora 65 -> 90 — falta pagar
+        // 40 (90 - 50 já pago), não 90 (o valor cheio do preço novo).
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        var pagoOriginal = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600), usuarioId, null);
+        pagoOriginal.marcarComoPago("mp-payment-original");
+        var complementoAbertoDoPrimeiroReajuste = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("15.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-complemento-1");
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(pagoOriginal, complementoAbertoDoPrimeiroReajuste));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("65.00"), new java.math.BigDecimal("90.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        // Reaproveita a cobrança do primeiro complemento — nunca cria uma segunda.
+        assertThat(complementoAbertoDoPrimeiroReajuste.getValor()).isEqualByComparingTo("40.00");
+        verify(cobrancaEventoRepository).save(complementoAbertoDoPrimeiroReajuste);
+        verify(cobrancaEventoService, never()).criarParaTerceiro(any(), any(), any(), any(), any(), any(), anyBoolean());
+        // Já estava AGUARDANDO_PAGAMENTO desde o primeiro reajuste — continua assim.
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+    }
+
+    // Achado ao vivo (2026-08-27): um reajuste que zera a diferença exatamente (a pessoa já
+    // pagou exatamente o novo preço, contando o que tinha de complemento pendente) não
+    // resolvia nada — a cobrança pendente do complemento ficava aberta com um valor que já
+    // não era mais devido, e o status continuava travado em AGUARDANDO_PAGAMENTO.
+    @Test
+    void aplicarMudancaValorPagoResolveComplementoQuandoNovoPrecoZeraADiferenca() {
+        // Pagou 50 (original) e tem 15 de complemento pendente (do primeiro reajuste,
+        // 50 -> 65). O preço agora CAI de 65 pra 50 — a diferença zera: não deve nem
+        // estornar (não pagou os 15 ainda) nem deixar nada pendente.
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        var pagoOriginal = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600), usuarioId, null);
+        pagoOriginal.marcarComoPago("mp-payment-original");
+        var complementoPendente = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("15.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-complemento");
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(pagoOriginal, complementoPendente));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("65.00"), new java.math.BigDecimal("50.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(complementoPendente.getStatus()).isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.CANCELADO);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+    }
+
+    // Achado ao vivo (2026-08-27): quando pessoas diferentes já tinham histórico de preço
+    // diferente (reajustes anteriores), um novo reajuste pode fazer algumas deverem mais e
+    // outras precisarem de estorno AO MESMO TEMPO — a prévia tinha que mostrar as duas
+    // direções, não só uma escondendo a outra.
+    @Test
+    void calcularImpactoMudancaValorPagoDevolveVoltaMistoQuandoAsDuasDirecoesCoexistem() {
+        UUID inscricaoIdB = UUID.randomUUID();
+        UUID pessoaIdB = UUID.randomUUID();
+        InscricaoEvento pessoaA = InscricaoEvento.builder() // pagou 50, vai dever mais
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        InscricaoEvento pessoaB = InscricaoEvento.builder() // pagou 100 (reajuste anterior), vai ser estornada
+                .id(inscricaoIdB).igreja(igreja()).evento(evento(10))
+                .pessoa(Pessoa.builder().id(pessoaIdB).igreja(igreja()).nome("João").vinculo(Vinculo.MEMBRO).build())
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobrancaA = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("50.00"), java.time.Instant.now().plusSeconds(3600), usuarioId, null);
+        cobrancaA.marcarComoPago("mp-payment-a");
+        var cobrancaB = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoIdB, pessoaIdB,
+                new java.math.BigDecimal("100.00"), java.time.Instant.now().plusSeconds(3600), usuarioId, null);
+        cobrancaB.marcarComoPago("mp-payment-b");
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(pessoaA, pessoaB));
+        when(cobrancaEventoRepository.findByEventoId(eventoId)).thenReturn(List.of(cobrancaA, cobrancaB));
+
+        // Preço novo = 80: A (pagou 50) deve mais 30; B (pagou 100) recebe 20 de volta.
+        var impacto = service.calcularImpactoMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(
+                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.VALOR_MISTO);
+        assertThat(impacto.pessoasSeraoCobradas()).isEqualTo(1);
+        assertThat(impacto.valorTotalACobrar()).isEqualByComparingTo("30.00");
+        assertThat(impacto.pessoasComPagamentoPago()).isEqualTo(1);
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("20.00");
+    }
+
+    // Achado ao vivo (2026-08-27): o texto do lembrete não avisava que a pessoa já tinha
+    // pago o valor original — parecia que ela nunca tinha pago nada, mesmo só faltando o
+    // complemento de um reajuste.
+    @Test
+    void enviarLembretePagamentoUsaTextoDeComplementoQuandoJaPagouAlgo() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-payment-original"), cobrancaPendente()));
+
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA");
+
+        var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@email.com"), any(), corpoCaptor.capture());
+        assertThat(corpoCaptor.getValue()).contains("já pagou o valor original");
+        assertThat(corpoCaptor.getValue()).contains("Falta complementar");
     }
 }

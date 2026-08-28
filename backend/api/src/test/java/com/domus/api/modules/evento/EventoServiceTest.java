@@ -258,6 +258,47 @@ class EventoServiceTest {
     }
 
     @Test
+    void atualizarEventoChamaAplicarMudancaValorPagoQuandoContinuaPagoComValorDiferente() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .preco(new java.math.BigDecimal("50.00"))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        service.atualizarEvento(eventoId,
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("80.00"), true), igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        verify(inscricaoService).aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"), usuarioId);
+        verify(inscricaoService, never()).aplicarEventoVirouPago(any(), any(), any());
+        verify(inscricaoService, never()).aplicarEventoVirouGratuito(any());
+    }
+
+    @Test
+    void atualizarEventoNaoChamaAplicarMudancaValorPagoQuandoValorNaoMuda() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .preco(new java.math.BigDecimal("50.00"))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+
+        service.atualizarEvento(eventoId,
+                requestComPrecoERequerInscricao(new java.math.BigDecimal("50.00"), true), igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        verify(inscricaoService, never()).aplicarMudancaValorPago(any(), any(), any(), any());
+    }
+
+    @Test
     void atualizarEventoNaoChamaAplicarEventoVirouGratuitoQuandoContinuaGratuito() {
         UUID eventoId = UUID.randomUUID();
         Evento existente = Evento.builder()
@@ -337,7 +378,9 @@ class EventoServiceTest {
     }
 
     @Test
-    void calcularImpactoMudancaPrecoDevolveSemImpactoQuandoContinuaPago() {
+    void calcularImpactoMudancaPrecoDevolveSemImpactoQuandoValorNaoMuda() {
+        // Editar outros campos do evento sem tocar no preço (mesmo valor antes/depois) não
+        // é "mudança de preço" nenhuma — nem toggle nem reajuste de valor.
         UUID eventoId = UUID.randomUUID();
         Evento existente = Evento.builder()
                 .id(eventoId)
@@ -349,10 +392,38 @@ class EventoServiceTest {
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
 
         var impacto = service.calcularImpactoMudancaPreco(
-                eventoId, requestComPreco(new java.math.BigDecimal("80.00")), igrejaId, "ADMIN_IGREJA");
+                eventoId, requestComPreco(new java.math.BigDecimal("50.00")), igrejaId, "ADMIN_IGREJA");
 
         assertThat(impacto.tipo()).isEqualTo(com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.SEM_IMPACTO);
         verify(inscricaoService, never()).calcularImpactoEventoVirarGratuito(any());
+        verify(inscricaoService, never()).calcularImpactoMudancaValorPago(any(), any(), any());
+    }
+
+    @Test
+    void calcularImpactoMudancaPrecoDelegaParaMudancaDeValorQuandoContinuaPagoComValorDiferente() {
+        // Evento continua pago, só o valor muda (ex.: R$50 -> R$80) — reajuste de preço,
+        // não o toggle gratuito<->pago. Delega pro cálculo dedicado dessa terceira direção.
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder()
+                .id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical")
+                .inicioEm(LocalDateTime.now().plusDays(1))
+                .preco(new java.math.BigDecimal("50.00"))
+                .build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        var impactoEsperado = com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.valorAumentou(
+                2, new java.math.BigDecimal("60.00"), 0);
+        when(inscricaoService.calcularImpactoMudancaValorPago(
+                eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00")))
+                .thenReturn(impactoEsperado);
+
+        var impacto = service.calcularImpactoMudancaPreco(
+                eventoId, requestComPreco(new java.math.BigDecimal("80.00")), igrejaId, "ADMIN_IGREJA");
+
+        assertThat(impacto).isEqualTo(impactoEsperado);
+        verify(inscricaoService, never()).calcularImpactoEventoVirarGratuito(any());
+        verify(inscricaoService, never()).calcularImpactoEventoVirarPago(any(), any());
     }
 
     @Test

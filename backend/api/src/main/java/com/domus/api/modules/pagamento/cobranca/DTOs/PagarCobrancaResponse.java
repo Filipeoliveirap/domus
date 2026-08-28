@@ -1,5 +1,7 @@
 package com.domus.api.modules.pagamento.cobranca.DTOs;
 
+import java.time.Instant;
+
 /**
  * Resposta de {@code POST /cobrancas/{id}/pagar}. {@code mpPaymentId} identifica o
  * pagamento criado no Mercado Pago — a confirmação definitiva (marcar a
@@ -19,4 +21,13 @@ package com.domus.api.modules.pagamento.cobranca.DTOs;
  * específica em vez do genérico "cartão recusado" pra todo caso de recusa (ver
  * {@code PaymentBrickCheckout.tsx}, mapa {@code MENSAGENS_RECUSA}).</p>
  */
-public record PagarCobrancaResponse(String mpPaymentId, String status, String statusDetail, String qrCode, String qrCodeBase64) {}
+/**
+ * <p>{@code expiraEmPix} é a validade real deste QR Pix específico — sempre bem mais curta
+ * (30 min, ver {@code MercadoPagoApi.MINUTOS_EXPIRACAO_PIX}) que o prazo geral da
+ * {@code CobrancaEvento} (que pode chegar a 48h pra link compartilhado). Achado ao vivo
+ * (2026-08-27): usar o prazo da cobrança como se fosse a validade do Pix mostrava um
+ * contador sem sentido (ex.: quase 48h) pra quem pagava por um link de lembrete. Nulo fora
+ * de Pix (cartão não tem essa noção).</p>
+ */
+public record PagarCobrancaResponse(String mpPaymentId, String status, String statusDetail, String qrCode,
+                                     String qrCodeBase64, Instant expiraEmPix) {}

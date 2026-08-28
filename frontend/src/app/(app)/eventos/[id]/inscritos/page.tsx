@@ -20,6 +20,8 @@ import { ModalInscreverAlguem } from '@/components/module/eventos/ModalInscrever
 import { CardsRelatorioEvento } from '@/components/module/eventos/CardsRelatorioEvento'
 import { ConfirmarCancelamentoInscricao } from '@/components/module/eventos/ConfirmarCancelamentoInscricao'
 import { PendenciaCamposBadge } from '@/components/module/eventos/PendenciaCamposBadge'
+import { PagamentoPendenteBadge } from '@/components/module/eventos/PagamentoPendenteBadge'
+import { EstornoPendenteBadge } from '@/components/module/eventos/EstornoPendenteBadge'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { ModalDetalheInscrito } from '@/components/module/eventos/ModalDetalheInscrito'
@@ -326,6 +328,21 @@ export default function InscritosPage() {
                           )}
                           {camposObrigatorios.length > 0 && (
                             <PendenciaCamposBadge nome={inscrito.nome} inscricaoId={inscrito.id} camposObrigatorios={camposObrigatorios} />
+                          )}
+                          {inscrito.status === 'AGUARDANDO_PAGAMENTO' && (
+                            <PagamentoPendenteBadge
+                              nome={inscrito.nome}
+                              eventoId={eventoId}
+                              inscricaoId={inscrito.id}
+                              pagamentoParcial={inscrito.pagamentoParcial}
+                            />
+                          )}
+                          {inscrito.cobrancaEstornoPendenteId && (
+                            <EstornoPendenteBadge
+                              nome={inscrito.nome}
+                              eventoId={eventoId}
+                              cobrancaId={inscrito.cobrancaEstornoPendenteId}
+                            />
                           )}
                         </div>
                         <div className={styles.colData}>{formatarData(inscrito.inscritoEm)}</div>

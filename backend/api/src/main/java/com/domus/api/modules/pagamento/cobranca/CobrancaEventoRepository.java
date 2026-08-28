@@ -41,4 +41,27 @@ public interface CobrancaEventoRepository extends JpaRepository<CobrancaEvento, 
     long contarPessoasComVagaReservada(@Param("eventoId") UUID eventoId, @Param("agora") Instant agora);
 
     List<CobrancaEvento> findByStatusAndExpiraEmBefore(StatusCobranca status, Instant momento);
+
+    /** Todas as cobranças de um evento de uma vez (não uma por inscrição em loop) — usado
+     *  por {@code InscricaoService.aplicarMudancaValorPago}/{@code calcularImpactoMudancaValorPago}
+     *  pra calcular quanto cada pessoa JÁ pagou no total, incluindo histórico de complementos
+     *  de reajustes anteriores (2026-08-27). */
+    List<CobrancaEvento> findByEventoId(UUID eventoId);
+
+    /** Quais dessas inscrições já têm PELO MENOS uma cobrança PAGO — usado pra diferenciar,
+     *  na lista de inscritos, a tag "Pagamento pendente" (nunca pagou nada) de "Falta
+     *  complementar" (já pagou o valor original, só falta a diferença de um reajuste de
+     *  preço) — as duas são AGUARDANDO_PAGAMENTO, mas significam coisas bem diferentes pra
+     *  quem gerencia (2026-08-27). */
+    @Query("""
+        SELECT DISTINCT c.inscricaoId FROM CobrancaEvento c
+        WHERE c.inscricaoId IN :inscricaoIds
+          AND c.status = com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO
+        """)
+    List<UUID> findInscricaoIdsComCobrancaPaga(@Param("inscricaoIds") List<UUID> inscricaoIds);
+
+    /** Cobranças com estorno pendente (2026-08-27) — usado pra montar a tag "Estorno
+     *  pendente" com botão de retry na lista de inscritos; carrega a cobrança inteira (não
+     *  só o inscricaoId) porque o retry precisa do {@code id} dela, não da inscrição. */
+    List<CobrancaEvento> findByInscricaoIdInAndEstornoPendenteTrue(@Param("inscricaoIds") List<UUID> inscricaoIds);
 }

@@ -63,6 +63,15 @@ export interface InscritoResponse {
   inscritoEm: string
   compareceu: boolean
   igrejaDaPessoa: IgrejaResumo
+  status: 'CONFIRMADA' | 'AGUARDANDO_PAGAMENTO'
+  /** true = já pagou o valor original e só falta a diferença de um reajuste de preço
+   *  (bem diferente de quem nunca pagou nada) — sempre false fora de AGUARDANDO_PAGAMENTO. */
+  pagamentoParcial: boolean
+  /** ID da cobrança com estorno pendente, ou null quando não há nenhuma (2026-08-27). Pode
+   *  existir em CONFIRMADA (reajuste de preço pra baixo cujo excedente falhou ao devolver)
+   *  ou em AGUARDANDO_PAGAMENTO (cancelamento/estorno em massa que falhou) — não depende do
+   *  status, ao contrário de `pagamentoParcial`. */
+  cobrancaEstornoPendenteId: string | null
 }
 
 export interface CriarConvidadoRequest {

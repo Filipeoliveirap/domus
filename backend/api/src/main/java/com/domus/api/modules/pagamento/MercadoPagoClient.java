@@ -45,9 +45,14 @@ public class MercadoPagoClient {
             token, paymentMethodId, installments, payerEmail, issuerId);
     }
 
-    public void estornar(UUID igrejaId, String mpPaymentId) {
+    public void estornarParcial(UUID igrejaId, String mpPaymentId, java.math.BigDecimal valor) {
         String accessToken = obterAccessTokenPlano(igrejaId);
-        api.estornar(accessToken, mpPaymentId);
+        api.estornarParcial(accessToken, mpPaymentId, valor);
+    }
+
+    public void cancelarPagamento(UUID igrejaId, String mpPaymentId) {
+        String accessToken = obterAccessTokenPlano(igrejaId);
+        api.cancelarPagamento(accessToken, mpPaymentId);
     }
 
     /**

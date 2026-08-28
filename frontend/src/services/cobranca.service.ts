@@ -58,6 +58,9 @@ export interface PagarCobrancaResponse {
   qrCode: string | null
   /** Só vem preenchido quando o meio escolhido foi Pix — imagem do QR em base64. */
   qrCodeBase64: string | null
+  /** Validade real deste Pix específico (30min) — NUNCA o prazo da cobrança inteira (que
+   *  pode chegar a 48h pra link compartilhado). Nulo fora de Pix. */
+  expiraEmPix: string | null
 }
 
 export interface StatusCobrancaResponse {
@@ -69,6 +72,8 @@ export interface StatusCobrancaResponse {
 export interface PixResponse {
   qrCode: string | null
   qrCodeBase64: string | null
+  /** Validade real deste Pix específico — ver {@link PagarCobrancaResponse.expiraEmPix}. */
+  expiraEm: string | null
 }
 
 export const cobrancaService = {
@@ -94,4 +99,20 @@ export const cobrancaService = {
    *  que não pode ser chamado de novo). 404 se não há tentativa de pagamento em andamento. */
   pix: (cobrancaId: string): Promise<PixResponse> =>
     api.get<PixResponse>(Endpoints.cobrancas.PIX(cobrancaId)).then((res) => res.data),
+
+  /** "Cancelar inscrição" do e-mail de lembrete de pagamento pendente — sem sessão, mesma
+   *  garantia de posse do resto do módulo (o `id` já prova posse). Só tem efeito enquanto a
+   *  inscrição ainda está aguardando pagamento; um link velho não faz nada (backend recusa). */
+  cancelarInscricao: (cobrancaId: string): Promise<void> =>
+    api.post(Endpoints.cobrancas.CANCELAR_INSCRICAO(cobrancaId)).then(() => undefined),
+
+  /** "Gerar novo QR code" / "Pagar com outro método" — libera uma tentativa de pagamento
+   *  presa (Pix escaneado mas nunca pago) pra tentar de novo, com qualquer meio. */
+  reiniciar: (cobrancaId: string): Promise<void> =>
+    api.post(Endpoints.cobrancas.REINICIAR(cobrancaId)).then(() => undefined),
+
+  /** Retry manual da tag "Estorno pendente" (2026-08-27) — ao contrário do resto deste
+   *  service, EXIGE sessão de ADMIN/LÍDER (é ação de gestão, não do próprio pagador). */
+  tentarEstornoNovamente: (cobrancaId: string): Promise<void> =>
+    api.post(Endpoints.cobrancas.TENTAR_ESTORNO_NOVAMENTE(cobrancaId)).then(() => undefined),
 }

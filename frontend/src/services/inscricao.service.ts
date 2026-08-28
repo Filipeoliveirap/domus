@@ -65,4 +65,7 @@ export const inscricoesService = {
   marcarPresencaInscricao: (eventoId: string, inscricaoId: string, compareceu: boolean): Promise<void> =>
     api.patch(Endpoints.presenca.INSCRICAO(eventoId, inscricaoId), { compareceu })
       .then(() => undefined),
+
+  enviarLembretePagamento: (eventoId: string, inscricaoId: string): Promise<void> =>
+    api.post(Endpoints.inscricoes.LEMBRETE_PAGAMENTO(eventoId, inscricaoId)).then(() => undefined),
 }

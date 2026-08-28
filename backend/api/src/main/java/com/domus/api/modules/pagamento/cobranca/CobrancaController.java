@@ -50,6 +50,8 @@ public class CobrancaController {
     private final PessoaRepository pessoaRepository;
     private final MercadoPagoClient mercadoPagoClient;
     private final PagamentoPollingService pagamentoPollingService;
+    private final com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService;
+    private final com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado;
 
     public CobrancaController(CobrancaEventoService service,
                                CobrancaEventoRepository cobrancaRepository,
@@ -57,7 +59,9 @@ public class CobrancaController {
                                com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
                                MercadoPagoClient mercadoPagoClient,
-                               PagamentoPollingService pagamentoPollingService) {
+                               PagamentoPollingService pagamentoPollingService,
+                               com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService,
+                               com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado) {
         this.service = service;
         this.cobrancaRepository = cobrancaRepository;
         this.eventoRepository = eventoRepository;
@@ -65,6 +69,8 @@ public class CobrancaController {
         this.pessoaRepository = pessoaRepository;
         this.mercadoPagoClient = mercadoPagoClient;
         this.pagamentoPollingService = pagamentoPollingService;
+        this.inscricaoService = inscricaoService;
+        this.usuarioAutenticado = usuarioAutenticado;
     }
 
     @GetMapping("/id/{id}")
@@ -187,7 +193,8 @@ public class CobrancaController {
         // pelo usuário quando o webhook demora. Ver PagamentoPollingService.
         pagamentoPollingService.pollarConfirmacao(cobranca.getIgrejaId(), cobranca.getId().toString(), resultado.mpPaymentId());
 
-        return new PagarCobrancaResponse(resultado.mpPaymentId(), resultado.status(), resultado.statusDetail(), resultado.qrCode(), resultado.qrCodeBase64());
+        return new PagarCobrancaResponse(resultado.mpPaymentId(), resultado.status(), resultado.statusDetail(),
+            resultado.qrCode(), resultado.qrCodeBase64(), resultado.expiraEmPix());
     }
 
     /**
@@ -225,8 +232,56 @@ public class CobrancaController {
             throw new ResourceNotFoundException("Não há pagamento em andamento para esta cobrança.");
         }
         var qrCodePix = mercadoPagoClient.buscarQrCodePix(cobranca.getIgrejaId(), cobranca.getMpPaymentId());
-        return new PixResponse(qrCodePix.qrCode(), qrCodePix.qrCodeBase64());
+        return new PixResponse(qrCodePix.qrCode(), qrCodePix.qrCodeBase64(), qrCodePix.expiraEm());
     }
 
-    public record PixResponse(String qrCode, String qrCodeBase64) {}
+    /** {@code expiraEm} é a validade real deste Pix específico, não o prazo da cobrança
+     *  inteira — ver {@code PagarCobrancaResponse.expiraEmPix}. */
+    public record PixResponse(String qrCode, String qrCodeBase64, java.time.Instant expiraEm) {}
+
+    /**
+     * "Gerar novo QR code" / "Pagar com outro método" — achado ao vivo (2026-08-27): uma
+     * tentativa de Pix presa (QR escaneado mas nunca pago, ou simplesmente abandonado) não
+     * dava nenhum jeito de tentar de novo antes de expirar sozinha (até 30min) — a pessoa
+     * ficava travada na mesma tela sem opção. Cancela a tentativa no Mercado Pago
+     * (best-effort — ver {@code MercadoPagoApi.cancelarPagamento}) e libera a cobrança pra
+     * uma nova tentativa, com QUALQUER meio (não precisa ser Pix de novo). Sem autenticação,
+     * mesmo motivo já documentado na classe.
+     */
+    @PostMapping("/{id}/reiniciar")
+    @Transactional
+    public void reiniciar(@PathVariable UUID id) {
+        var cobranca = cobrancaRepository.buscarComLock(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        if (cobranca.getStatus() != StatusCobranca.PENDENTE || cobranca.getMpPaymentId() == null) {
+            // Nada pra reiniciar — cobrança já resolvida, ou nunca teve tentativa em andamento.
+            return;
+        }
+        mercadoPagoClient.cancelarPagamento(cobranca.getIgrejaId(), cobranca.getMpPaymentId());
+        cobranca.liberarParaNovaTentativa();
+        cobrancaRepository.save(cobranca);
+    }
+
+    /**
+     * "Cancelar inscrição" do e-mail de lembrete de pagamento pendente — sem autenticação,
+     * mesmo motivo já documentado na classe (o {@code id} da cobrança é a prova de posse).
+     * Só cancela quando a inscrição ainda está AGUARDANDO_PAGAMENTO (ver
+     * {@code InscricaoService.cancelarPorCobranca}) — um link velho não faz nada.
+     */
+    @PostMapping("/{id}/cancelar-inscricao")
+    public void cancelarInscricao(@PathVariable UUID id) {
+        inscricaoService.cancelarPorCobranca(id);
+    }
+
+    /**
+     * Retry manual da tag "Estorno pendente" (2026-08-27) — ao contrário do resto desta
+     * classe, este endpoint EXIGE sessão de ADMIN/LÍDER: é uma ação de gestão (mexe com o
+     * dinheiro de outra pessoa a pedido do admin), não uma ação do próprio pagador provando
+     * posse do id da cobrança. Ver {@code InscricaoService.tentarEstornoNovamente} e
+     * {@code SecurityConfig} (matcher específico, ANTES do permitAll de {@code /cobrancas/**}).
+     */
+    @PostMapping("/{id}/tentar-estorno-novamente")
+    public void tentarEstornoNovamente(@PathVariable UUID id) {
+        inscricaoService.tentarEstornoNovamente(id, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getRole());
+    }
 }

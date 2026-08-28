@@ -130,6 +130,15 @@ public class InscricaoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/eventos/{eventoId}/inscricoes/{inscricaoId}/lembrete-pagamento")
+    public ResponseEntity<Void> enviarLembretePagamento(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID inscricaoId) {
+        var usuario = usuarioAutenticado.get();
+        inscricaoService.enviarLembretePagamento(inscricaoId, usuario.getIgreja().getId(), usuario.getRole().getNome());
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/eventos/{eventoId}/presenca/inscricoes/{inscricaoId}")
     public ResponseEntity<Void> marcarPresencaInscricao(
             @PathVariable UUID eventoId,

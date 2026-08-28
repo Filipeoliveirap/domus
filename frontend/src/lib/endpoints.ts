@@ -50,6 +50,7 @@ export const Endpoints = {
     ME: '/pessoas/me',
     MINHA_FOTO: '/pessoas/me/foto',
     FOTO: (id: string) => `/pessoas/${id}/foto`,
+    EMAIL: (id: string) => `/pessoas/${id}/email`,
     PESSOA_MINISTERIOS: (pessoaId: string) => `/pessoas/${pessoaId}/ministerios`,
     ARQUIVADOS: '/pessoas/arquivados',
     RESTAURAR: (id: string) => `/pessoas/${id}/restaurar`,
@@ -108,6 +109,8 @@ export const Endpoints = {
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
     RESPOSTAS: (inscricaoId: string) => `/inscricoes/${inscricaoId}/respostas`,
+    LEMBRETE_PAGAMENTO: (eventoId: string, inscricaoId: string) =>
+      `/eventos/${eventoId}/inscricoes/${inscricaoId}/lembrete-pagamento`,
   },
 
   presenca: {
@@ -200,6 +203,9 @@ export const Endpoints = {
     PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
     STATUS: (id: string) => `/cobrancas/${id}/status`,
     PIX: (id: string) => `/cobrancas/${id}/pix`,
+    CANCELAR_INSCRICAO: (id: string) => `/cobrancas/${id}/cancelar-inscricao`,
+    REINICIAR: (id: string) => `/cobrancas/${id}/reiniciar`,
+    TENTAR_ESTORNO_NOVAMENTE: (id: string) => `/cobrancas/${id}/tentar-estorno-novamente`,
   },
 
   celulas: {

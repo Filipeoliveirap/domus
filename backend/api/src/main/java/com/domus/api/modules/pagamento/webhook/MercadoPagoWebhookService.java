@@ -99,10 +99,30 @@ public class MercadoPagoWebhookService {
      */
     public void confirmarPagamento(String cobrancaId, String mpPaymentId, String status) {
         var cobranca = cobrancaRepository.findById(UUID.fromString(cobrancaId)).orElse(null);
-        if (cobranca == null || cobranca.getStatus() != StatusCobranca.PENDENTE) {
-            log.info("Confirmação de pagamento ignorada — cobrança já resolvida ou inexistente. "
+        if (cobranca == null) {
+            log.info("Confirmação de pagamento ignorada — cobrança inexistente. "
                 + "cobrancaId={} mpPaymentId={} status={}", cobrancaId, mpPaymentId, status);
             return;
+        }
+
+        // Achado ao vivo (2026-08-27): dinheiro pode ser aprovado no Mercado Pago DEPOIS de
+        // CobrancaEventoExpiracaoJob já ter marcado a cobrança EXPIRADO e cancelado a
+        // inscrição (prazo vencido, mas o pagador já tinha enviado a tentativa antes disso —
+        // ex.: Pix pago em cima da hora). Ignorar essa confirmação simplesmente perderia o
+        // rastro de um pagamento real (dinheiro já caiu na conta da igreja) — reabre a
+        // cobrança e a inscrição em vez de descartar. PAGO/CANCELADO/REEMBOLSADO continuam
+        // ignorados: já resolvidos de vez (idempotência) ou cancelados por decisão explícita.
+        boolean expiradaMasRecuperavel = cobranca.getStatus() == StatusCobranca.EXPIRADO
+                && STATUS_APROVADO.equals(status);
+        if (cobranca.getStatus() != StatusCobranca.PENDENTE && !expiradaMasRecuperavel) {
+            log.info("Confirmação de pagamento ignorada — cobrança já resolvida. "
+                + "cobrancaId={} mpPaymentId={} status={} statusCobranca={}",
+                cobrancaId, mpPaymentId, status, cobranca.getStatus());
+            return;
+        }
+        if (expiradaMasRecuperavel) {
+            log.warn("Pagamento aprovado chegou depois da cobrança já ter expirado — reabrindo. "
+                + "cobrancaId={} mpPaymentId={}", cobrancaId, mpPaymentId);
         }
 
         if (!STATUS_APROVADO.equals(status)) {

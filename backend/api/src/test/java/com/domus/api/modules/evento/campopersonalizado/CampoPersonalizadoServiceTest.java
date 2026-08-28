@@ -498,4 +498,53 @@ class CampoPersonalizadoServiceTest {
         assertThatThrownBy(() -> service.responderComoConvidado(inscricaoId, List.of(), igrejaId))
                 .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
     }
+
+    @Test
+    void respostasPorInscricaoTrazAResposta() {
+        UUID inscricaoId = UUID.randomUUID();
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }}).evento(evento()).build();
+        var campo = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Tamanho da camiseta").tipo(TipoCampoPersonalizado.OPCAO_UNICA).build();
+        var resposta = RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).valor("M").build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(respostaRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(resposta));
+        when(campoRepository.findByIdAndIgrejaIdIncluindoArquivados(campo.getId(), igrejaId))
+                .thenReturn(Optional.of(campo));
+
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).label()).isEqualTo("Tamanho da camiseta");
+        assertThat(resultado.get(0).valor()).isEqualTo("M");
+    }
+
+    // A resposta guarda um snapshot da pergunta — o campo pode já ter sido arquivado pelo
+    // admin depois que a pessoa respondeu (salvarArquivaCampoQueSumiuDaListaEnviada acima).
+    // Sem findByIdAndIgrejaIdIncluindoArquivados, isso estourava 500 (EntityNotFoundException
+    // ao inicializar a associação lazy filtrada pelo @SQLRestriction do campo arquivado).
+    @Test
+    void respostasPorInscricaoNaoQuebraQuandoCampoFoiArquivado() {
+        UUID inscricaoId = UUID.randomUUID();
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }}).evento(evento()).build();
+        var campoArquivado = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Pergunta removida").tipo(TipoCampoPersonalizado.TEXTO_CURTO).build();
+        var resposta = RespostaCampoPersonalizado.builder().campo(campoArquivado).inscricao(inscricao).valor("Resposta antiga").build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(respostaRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(resposta));
+        // findByIdAndIgrejaId normal (respeita @SQLRestriction) não acharia; o service usa
+        // a variante "IncluindoArquivados" — mas mesmo essa devolvendo vazio (campo excluído
+        // de vez, não só arquivado) não pode estourar, só descarta a resposta órfã.
+        when(campoRepository.findByIdAndIgrejaIdIncluindoArquivados(campoArquivado.getId(), igrejaId))
+                .thenReturn(Optional.empty());
+
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+
+        assertThat(resultado).isEmpty();
+    }
 }

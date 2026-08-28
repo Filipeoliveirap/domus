@@ -50,6 +50,22 @@ public class CobrancaEvento {
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
+    /** Quanto desta cobrança JÁ foi estornado de verdade (soma de todo estorno parcial já
+     *  feito) — zero até o primeiro estorno. Essencial pra saber quanto ainda dá pra
+     *  estornar: sem isto, cancelar uma inscrição que já tinha recebido um estorno parcial
+     *  (reajuste de preço pra baixo, ver InscricaoService.aplicarMudancaValorPago) tentava
+     *  estornar o valor CHEIO de novo, e o Mercado Pago recusava por falta de saldo
+     *  (achado ao vivo, 2026-08-27). */
+    @Column(name = "valor_estornado", nullable = false)
+    private BigDecimal valorEstornado = BigDecimal.ZERO;
+
+    /** {@code true} quando uma tentativa de estorno (em lote ou individual) falhou e
+     *  ainda não foi resolvida — usado pela lista de inscritos pra mostrar a tag "Estorno
+     *  pendente" com botão de tentar de novo (2026-08-27). Nunca fica {@code true} sozinho
+     *  pra sempre: {@link #registrarEstorno} limpa assim que um estorno dá certo. */
+    @Column(name = "estorno_pendente", nullable = false)
+    private boolean estornoPendente = false;
+
     protected CobrancaEvento() {}
 
     public CobrancaEvento(UUID igrejaId, UUID eventoId, UUID inscricaoId, UUID pessoaId,
@@ -103,9 +119,40 @@ public class CobrancaEvento {
         this.pagoEm = Instant.now();
     }
 
+    /** Cobrança PENDENTE (ainda não paga) tendo seu valor ajustado depois de o admin mudar
+     *  o preço do evento — nunca chamado numa cobrança PAGO (ver InscricaoService
+     *  .aplicarMudancaValorPago: cobrança já paga recebe uma cobrança de diferença nova, ou
+     *  estorno, nunca tem o próprio valor reescrito). */
+    public void atualizarValor(BigDecimal valorNovo) { this.valor = valorNovo; }
+
     public void marcarComoExpirado() { this.status = StatusCobranca.EXPIRADO; }
     public void marcarComoCancelado() { this.status = StatusCobranca.CANCELADO; }
-    public void marcarComoReembolsado() { this.status = StatusCobranca.REEMBOLSADO; }
+
+    /** Registra que {@code valor} foi estornado de verdade (soma no total já devolvido),
+     *  limpa a pendência (estorno deu certo) e marca REEMBOLSADO quando não sobra mais
+     *  nada pra devolver — nunca chamar com um valor maior que
+     *  {@link #valorRestanteParaEstornar()}. */
+    public void registrarEstorno(BigDecimal valor) {
+        this.valorEstornado = this.valorEstornado.add(valor);
+        this.estornoPendente = false;
+        if (this.valorEstornado.compareTo(this.valor) >= 0) {
+            this.status = StatusCobranca.REEMBOLSADO;
+        }
+    }
+
+    /** Quanto ainda dá pra estornar desta cobrança — o valor original menos o que já foi
+     *  devolvido em estornos parciais anteriores. Nunca negativo. */
+    public BigDecimal valorRestanteParaEstornar() {
+        BigDecimal restante = this.valor.subtract(this.valorEstornado);
+        return restante.signum() > 0 ? restante : BigDecimal.ZERO;
+    }
+
+    /** Uma tentativa de estorno (em lote ou individual) falhou — fica marcada até alguém
+     *  tentar de novo com sucesso ({@link #registrarEstorno} limpa) ou até o "restante" da
+     *  cobrança já ter sido zerado por outro caminho. */
+    public void marcarEstornoPendente() { this.estornoPendente = true; }
+
+    public boolean isEstornoPendente() { return estornoPendente; }
 
     public UUID getId() { return id; }
     public UUID getIgrejaId() { return igrejaId; }

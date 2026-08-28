@@ -1,16 +1,19 @@
 'use client'
 
+import { useState } from 'react'
 import { CreditCard, CheckCircle2 } from 'lucide-react'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
 import { useConectarMercadoPago } from '@/hooks/pagamento/useConectarMercadoPago'
 import { useDesconectarMercadoPago } from '@/hooks/pagamento/useDesconectarMercadoPago'
 import { Button } from '@/components/common/button/Button'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import styles from './SecaoRecebimentos.module.css'
 
 export function SecaoRecebimentos() {
   const { data, isLoading } = useContaPagamento()
   const conectar = useConectarMercadoPago()
   const desconectar = useDesconectarMercadoPago()
+  const [confirmandoDesconexao, setConfirmandoDesconexao] = useState(false)
 
   if (isLoading) return null
 
@@ -29,8 +32,7 @@ export function SecaoRecebimentos() {
           <Button
             variant="secondary"
             size="sm"
-            isLoading={desconectar.isPending}
-            onClick={() => desconectar.mutate()}
+            onClick={() => setConfirmandoDesconexao(true)}
           >
             Desconectar
           </Button>
@@ -47,6 +49,19 @@ export function SecaoRecebimentos() {
             Conectar Mercado Pago
           </Button>
         </div>
+      )}
+
+      {confirmandoDesconexao && (
+        <ModalConfirmacao
+          titulo="Desconectar conta do Mercado Pago?"
+          mensagem="Enquanto não conectar de novo, eventos pagos desta igreja deixam de conseguir
+            cobrar ninguém. Inscrições já pagas não são afetadas."
+          textoConfirmar="Desconectar"
+          perigo
+          isLoading={desconectar.isPending}
+          onConfirmar={() => desconectar.mutate(undefined, { onSuccess: () => setConfirmandoDesconexao(false) })}
+          onClose={() => setConfirmandoDesconexao(false)}
+        />
       )}
     </section>
   )

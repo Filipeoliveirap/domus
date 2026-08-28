@@ -719,15 +719,14 @@ mutation (`useCriarConvidado`, `useGerarConvite`, etc.) e componentes com mais e
 condicional (`ModalInscreverAlguem`, com a pergunta "você também vai participar?"), não a
 base de código inteira de uma vez.
 
-### Desconectar conta Mercado Pago: sem confirmação nem aviso do que isso implica
+### ~~Desconectar conta Mercado Pago: sem confirmação nem aviso do que isso implica~~ (**RESOLVIDO 2026-08-27**)
 
 Achado testando o fluxo de pagamento contra o sandbox do Mercado Pago (2026-08-25): o
 botão de desconectar a conta de recebimento (`useDesconectarMercadoPago` /
-`DELETE /pagamentos/conta`) executa na hora, sem `ModalConfirmacao` nem explicar a
-consequência prática (eventos pagos com essa conta deixam de conseguir cobrar até
-reconectar; inscrições já pagas não são afetadas, mas isso não fica dito em lugar nenhum).
-Corrigir seguindo o padrão de confirmação já usado em outras ações destrutivas do projeto
-(ver `ui-notificar-e-confirmacao` — não é `window.confirm` nem toast do sonner).
+`DELETE /pagamentos/conta`) executava na hora, sem `ModalConfirmacao` nem explicar a
+consequência prática. Corrigido em `SecaoRecebimentos.tsx`: clicar "Desconectar" agora
+abre `ModalConfirmacao` (`perigo`) avisando que eventos pagos deixam de conseguir cobrar
+até reconectar, e que inscrições já pagas não são afetadas.
 `/login`) conforme esse campo.
 
 ### Prazo do link de pagamento ("enviar link") fixo em 48h — devia acompanhar o evento

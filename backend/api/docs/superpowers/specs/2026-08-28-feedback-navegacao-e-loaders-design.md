@@ -372,19 +372,28 @@ Descoberta que molda o desenho: **não existe componente `<Tabs>`** — as abas 
 que renderiza os links + `{children}`. Trocar de aba É navegar. Então uma transição de
 conteúdo de rota cobre rota **e** abas de uma vez.
 
-### D1 — `<TransicaoRota>` (conteúdo de rota + abas)
+### D1 — `<TransicaoRota>` + View Transitions API
 
-- `frontend/src/components/common/Transicao/TransicaoRota.tsx` (client) + `.module.css`.
-- Envolve `{children}` no `(app)/layout.tsx`. `key={pathname}` (via `usePathname`) força
-  remontar a cada navegação → replay do keyframe.
-- CSS: `animation: entrarConteudo 0.28s cubic-bezier(0.22, 1, 0.36, 1)` — `opacity 0→1` +
-  `translateY(8px→0)`.
-- Só o `<main>` anima; sidebar e topbar ficam fora do wrapper, parados.
-- `prefers-reduced-motion`: `animation: none`.
-- Sem animação de saída (o conteúdo antigo some) — aceitável; a de entrada já mata o
-  "seco". Animação de saída de verdade pede a View Transitions API, que fica pra segunda
-  passada (config `experimental` do Next + API `unstable` do React — fora de escopo desta
-  passada de polimento).
+> Revisado durante a execução: o autor achou a entrada-só "seca" em aba com cache (troca
+> instantânea, sem "saída"). Entrou a **View Transitions API** — sem lib, sem config
+> `experimental` do Next, só a API nativa do browser chamada à mão.
+
+Duas camadas, no mesmo `<TransicaoRota>` (client, envolve `{children}` no `(app)/layout.tsx`):
+
+1. **`view-transition-name: conteudoApp`** (sempre) — o `<NavProgress>` chama
+   `document.startViewTransition()` dentro do patch de `history.pushState`/`replaceState`/
+   `popstate` que já existe. O browser tira snapshot do antes, deixa a navegação acontecer,
+   e ao a rota nova renderizar (o `useEffect [pathname]` resolve a Promise da transição)
+   faz o crossfade — **inclusive em troca instantânea de aba em cache**. Só o `<main>`
+   anima (`::view-transition-*(conteudoApp)` em `globals.css`): sai `translateY(-10px)` +
+   fade 0.26s, entra `translateY(16px)` + fade 0.4s. `root` fica com `animation: none`
+   (sidebar/topbar parados). Promise com timeout de 500ms — navegação nunca trava.
+2. **Keyframe de entrada** (`key={pathname}` remonta) — fallback pra quem não tem a API
+   (Firefox). `TransicaoRota` detecta `'startViewTransition' in document` e só aplica a
+   classe `.rota` quando **não** tem (senão as duas animações somam).
+
+- `prefers-reduced-motion`: `::view-transition-*` com `animation: none !important`,
+  `view-transition-name: none`, keyframe `none`.
 
 ### D2 — `<Transicao>` (primitiva pra blocos fora de rota)
 

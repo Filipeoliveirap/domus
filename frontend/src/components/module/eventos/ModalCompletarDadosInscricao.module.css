@@ -1,0 +1,24 @@
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.btnFechar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btnFechar:hover:not(:disabled) { background: var(--color-bg-page); }
+.btnFechar:disabled { opacity: 0.45; cursor: not-allowed; }

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle, X, Check } from 'lucide-react'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './ModalConfirmacaoCritica.module.css'
 
 export interface Consequencia {
@@ -164,6 +165,8 @@ export function ModalConfirmacaoCritica({
             {isLoading ? 'Processando…' : textoConfirmar}
           </button>
         </div>
+
+        <OverlayCarregando ativo={isLoading} cobertura="absolute" texto="Processando…" />
       </form>
     </div>
   )

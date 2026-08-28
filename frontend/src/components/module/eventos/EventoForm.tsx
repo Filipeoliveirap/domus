@@ -28,6 +28,7 @@ import type { CamposPersonalizadosHandle } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import { useAtualizarFotoEvento } from '@/hooks/evento/useAtualizarFotoEvento'
 import { notificar } from '@/components/common/Notificacao/notificar'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -660,6 +661,8 @@ export function EventoForm(props: EventoFormProps) {
           onClose={onFecharEscopoEdicao}
         />
       )}
+
+      <OverlayCarregando ativo={isLoading} texto={ehEdicao ? 'Salvando alterações…' : 'Salvando…'} />
     </form>
   )
 }

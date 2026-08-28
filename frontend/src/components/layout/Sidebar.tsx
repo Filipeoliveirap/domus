@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -15,6 +15,8 @@ import type { Role } from '@/types/usuario.types'
 import { urlFoto } from '@/lib/urlFoto'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { podeGerenciarVisitantes, podeVerFinanceiro } from '@/lib/permissoes'
+import { MODO_INDICADOR_NAV } from '@/config/navIndicator'
+import { Loader } from '@/components/common/Loader/Loader'
 import styles from './Sidebar.module.css'
 
 type NavItem = { href: string; label: string; icon: typeof Home; roles: Role[]; visivel?: (role: Role | null, caps: string[]) => boolean }
@@ -40,6 +42,17 @@ const roleStyles: Record<string, string> = {
   ADMIN_IGREJA: styles.roleAdmin,
   LIDER: styles.roleLider,
   ACESSO_COMUM: styles.roleComum,
+}
+
+/** Renderiza o ícone do item; no modo 'barra-e-link', troca por um spinner enquanto a
+ *  navegação disparada por este link está pendente. `useLinkStatus` só funciona como
+ *  descendente de um <Link> do next. */
+function IconePendente({ icon: Icon }: { icon: typeof Home }) {
+  const { pending } = useLinkStatus()
+  if (MODO_INDICADOR_NAV === 'barra-e-link' && pending) {
+    return <Loader variant="circular" size="sm" />
+  }
+  return <Icon size={20} />
 }
 
 export function Sidebar() {
@@ -73,7 +86,6 @@ export function Sidebar() {
 
   const renderLink = (item: { href: string; label: string; icon: typeof Home }) => {
     const ativo = pathname === item.href
-    const Icon = item.icon
 
     return (
       <Link
@@ -82,7 +94,7 @@ export function Sidebar() {
         onClick={fecharNav}
         className={ativo ? `${styles.link} ${styles.linkActive}` : `${styles.link} ${styles.linkInactive}`}
       >
-        <Icon size={20} />
+        <IconePendente icon={item.icon} />
         <span className={styles.label}>{item.label}</span>
       </Link>
     )

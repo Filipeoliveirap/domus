@@ -13,6 +13,7 @@
 }
 
 .modal {
+  position: relative;
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 32px);

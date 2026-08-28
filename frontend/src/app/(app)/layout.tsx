@@ -4,6 +4,7 @@ import styles from './layout.module.css'
 import { FaixaOffline } from '@/components/common/FaixaOffline/FaixaOffline'
 import { BannerExclusaoAgendada } from '@/components/common/BannerExclusaoAgendada/BannerExclusaoAgendada'
 import { AuthGuard } from '@/components/auth/AuthGuard'
+import { NavProgress } from '@/components/layout/NavProgress/NavProgress'
 
 export default function AppLayout({
   children,
@@ -12,6 +13,7 @@ export default function AppLayout({
 }) {
   return (
     <AuthGuard>
+      <NavProgress />
       <FaixaOffline />
       <BannerExclusaoAgendada />
       <Sidebar />

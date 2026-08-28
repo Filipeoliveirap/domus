@@ -9,6 +9,7 @@ import { Endpoints } from '@/lib/endpoints'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { ApiError } from '@/types/api.types'
 import type { ResumoExclusao } from '@/types/exclusaoIgreja.types'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './ModalExcluirIgreja.module.css'
 
 interface Props {
@@ -219,6 +220,8 @@ export function ModalExcluirIgreja({ nomeIgreja, onClose, onExcluidoComSucesso }
             {carregando ? 'Processando…' : 'Excluir esta igreja'}
           </button>
         </div>
+
+        <OverlayCarregando ativo={carregando} cobertura="absolute" texto="Processando…" />
       </form>
     </div>
   )

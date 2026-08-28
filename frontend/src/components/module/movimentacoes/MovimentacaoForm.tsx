@@ -12,6 +12,7 @@ import type { UseFormReturn, UseFieldArrayReturn } from 'react-hook-form'
 import type { MovimentacaoFormInput, MovimentacaoFormData } from '@/lib/validators'
 import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/categoria.type'
 import type { TipoMovimentacao, ContribuinteResponse } from '@/types/financeiro/movimentacao.type'
+import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './MovimentacaoForm.module.css'
 
 type MovimentacaoFormProps = UseFormReturn<MovimentacaoFormInput, unknown, MovimentacaoFormData> & {
@@ -398,6 +399,8 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
           </div>
         </div>
       </div>
+
+      <OverlayCarregando ativo={isLoading} texto={ehEdicao ? 'Salvando alterações…' : 'Salvando…'} />
     </form>
   )
 }

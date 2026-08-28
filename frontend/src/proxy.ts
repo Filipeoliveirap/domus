@@ -28,11 +28,14 @@ export function proxy(request: NextRequest) {
     // silêncio pelo navegador e o formulário fica preso no "carregando" pra sempre.
     // secure-fields.mercadopago.com/api-static.mercadopago.com: mesmo propósito (secure
     // fields), domínio separado que o SDK também usa dependendo do fluxo.
-    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com https://api.mercadopago.com https://http2.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com",
+    // www.mercadolibre.com entra pro device fingerprint / antifraude que o SDK do Mercado
+    // Pago carrega (mercadolibre.com é a matriz; parte do checkout roda de lá). *.mlstatic.com
+    // (não só http2) porque o CDN de assets do Brick usa vários subdomínios.
+    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com https://api.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://www.mercadolibre.com",
     // ws://localhost só em dev: é o websocket do Hot Module Reload (webpack-hmr) — sem
     // isso o navegador bloqueia a conexão e o Fast Refresh para de funcionar.
-    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://http2.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com${isDev ? ' ws://localhost:*' : ''}`,
-    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://http2.mlstatic.com https://www.mercadopago.com",
+    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://www.mercadolibre.com https://api.mercadolibre.com${isDev ? ' ws://localhost:*' : ''}`,
+    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://*.mlstatic.com https://www.mercadopago.com https://www.mercadolibre.com",
     "font-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",

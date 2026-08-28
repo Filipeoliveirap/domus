@@ -10,6 +10,9 @@ interface Variaveis {
   pessoaIds: string[]
   /** `true` = "inscrever mesmo assim" — só tem efeito para quem gerencia (backend decide). */
   confirmado?: boolean
+  /** Task 14 (revisão pós-review) — subconjunto de `pessoaIds` marcado "gerar link" em
+   *  `EscolhaPagamentoPorPessoa`. Ausente = ninguém vira link. */
+  pessoasParaLink?: string[]
 }
 
 interface Opcoes {
@@ -33,12 +36,19 @@ export function useInscreverPessoas(eventoId: string, opcoes: Opcoes = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ pessoaIds, confirmado }: Variaveis) =>
-      inscricoesService.inscreverPessoas(eventoId, { pessoaIds }, confirmado),
-    onSuccess: (_dados, { pessoaIds }) => {
+    mutationFn: ({ pessoaIds, confirmado, pessoasParaLink }: Variaveis) =>
+      inscricoesService.inscreverPessoas(eventoId, { pessoaIds, pessoasParaLink }, confirmado),
+    onSuccess: (dados, { pessoaIds }) => {
       invalidarCache(queryClient, 'inscricao')
-      const um = pessoaIds.length === 1
-      notificar.sucesso(um ? 'Pessoa inscrita!' : `${pessoaIds.length} pessoas inscritas!`)
+      // Evento pago: quem tem cobrancaId fica AGUARDANDO_PAGAMENTO — o checkout ou o modal
+      // de compartilhar link é quem sinaliza o próximo passo, não um toast de "inscrita"
+      // que soaria como confirmado antes de qualquer pagamento acontecer. Só notifica aqui
+      // quando NINGUÉM do lote tem cobrança pendente (evento gratuito).
+      const algumComCobranca = dados.some((d) => d.cobrancaId)
+      if (!algumComCobranca) {
+        const um = pessoaIds.length === 1
+        notificar.sucesso(um ? 'Pessoa inscrita!' : `${pessoaIds.length} pessoas inscritas!`)
+      }
     },
     onError: (error: unknown, { pessoaIds }) => {
       // Só fica quieto se HÁ quem trate o contorno (gestor passou o callback) E o 422 é

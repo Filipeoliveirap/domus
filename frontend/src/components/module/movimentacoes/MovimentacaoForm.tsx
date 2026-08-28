@@ -74,12 +74,14 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
     return contribuintesIniciais?.find((c) => c.pessoaId === pessoaId)?.pessoaNome
   }
 
-  // Contribuinte com pessoa excluída definitivamente: pessoaId chega null, vira '' no form
-  // (igual a uma linha nova vazia) — sem isto não dá pra distinguir as duas. Mapeado por
-  // field.id (chave estável do react-hook-form, não pela posição) uma única vez, logo
-  // após o reset() inicial preencher as linhas — sobrevive a remover/adicionar outras linhas.
+  // Contribuinte com pessoa excluída definitivamente: pessoaId E nomeExterno chegam null,
+  // vira '' no form (igual a uma linha nova vazia) — sem isto não dá pra distinguir as
+  // duas. Mapeado por field.id (chave estável do react-hook-form, não pela posição) uma
+  // única vez, logo após o reset() inicial preencher as linhas — sobrevive a
+  // remover/adicionar outras linhas.
   const [removidosPorFieldId, setRemovidosPorFieldId] = useState<Record<string, string>>({})
   const [contribuintesIniciaisProcessados, setContribuintesIniciaisProcessados] = useState<ContribuinteResponse[] | undefined>(undefined)
+  const [modoExternoPorFieldId, setModoExternoPorFieldId] = useState<Record<string, boolean>>({})
   // Padrão recomendado pelo React pra "ajustar estado a partir de props que chegam depois"
   // (setState durante o render, não num efeito) — dispara só uma vez por referência nova de
   // contribuintesIniciais, guardado pela comparação abaixo.
@@ -88,16 +90,38 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
     const mapa: Record<string, string> = {}
     contribuintesArray.fields.forEach((field, i) => {
       const inicial = contribuintesIniciais[i]
-      if (inicial && inicial.pessoaId === null) {
+      if (inicial && inicial.pessoaId === null && inicial.nomeExterno === null) {
         mapa[field.id] = inicial.pessoaNome
       }
     })
     setRemovidosPorFieldId(mapa)
     setContribuintesIniciaisProcessados(contribuintesIniciais)
+
+    // Linha que já veio como "de fora" (nomeExterno preenchido) abre direto no modo de
+    // texto livre — senão a pessoa via o campo de busca vazio, sem entender por quê o
+    // nome que ela salvou não aparece lá.
+    const modoExterno: Record<string, boolean> = {}
+    contribuintesArray.fields.forEach((field, i) => {
+      const inicial = contribuintesIniciais[i]
+      if (inicial?.nomeExterno) modoExterno[field.id] = true
+    })
+    setModoExternoPorFieldId(modoExterno)
+  }
+
+  function alternarModoExterno(fieldId: string, index: number) {
+    const paraExterno = !modoExternoPorFieldId[fieldId]
+    setModoExternoPorFieldId((m) => ({ ...m, [fieldId]: paraExterno }))
+    // Limpa o campo do modo que está saindo — senão os dois ficam preenchidos ao mesmo
+    // tempo e o backend recusa (exatamente um entre pessoa/nome de fora).
+    if (paraExterno) {
+      setValue(`contribuintes.${index}.pessoaId`, '', { shouldValidate: true, shouldDirty: true })
+    } else {
+      setValue(`contribuintes.${index}.nomeExterno`, '', { shouldValidate: true, shouldDirty: true })
+    }
   }
 
   function adicionarContribuinte() {
-    contribuintesArray.append({ pessoaId: '', valor: '' })
+    contribuintesArray.append({ pessoaId: '', nomeExterno: '', valor: '' })
   }
 
   function dividirMeioAMeio() {
@@ -236,6 +260,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                 <div className={styles.contribuintesLista}>
                   {contribuintesArray.fields.map((field, index) => {
                     const nomeRemovido = removidosPorFieldId[field.id]
+                    const modoExterno = modoExternoPorFieldId[field.id]
                     return (
                     <div key={field.id} className={styles.contribuinteLinha}>
                       <div className={styles.contribuintePessoa}>
@@ -243,15 +268,35 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                           <span className={styles.pessoaRemovida} title="Essa pessoa foi excluída definitivamente do sistema — não dá mais para vincular a ela.">
                             <UserX size={16} /> Pessoa removida do sistema
                           </span>
+                        ) : modoExterno ? (
+                          <div className={styles.contribuinteExternoWrap}>
+                            <input
+                              type="text"
+                              className={styles.inputNomeExterno}
+                              placeholder={`Nome (sem cadastro na igreja)`}
+                              value={contribuintes[index]?.nomeExterno ?? ''}
+                              onChange={(e) =>
+                                setValue(`contribuintes.${index}.nomeExterno`, e.target.value, { shouldValidate: true, shouldDirty: true })
+                              }
+                            />
+                            <button type="button" className={styles.linkAlternarModo} onClick={() => alternarModoExterno(field.id, index)}>
+                              Tem cadastro? Buscar pessoa
+                            </button>
+                          </div>
                         ) : (
-                          <SelecaoPessoa
-                            pessoaIdSelecionado={contribuintes[index]?.pessoaId || undefined}
-                            nomeSelecionado={nomeInicialDe(contribuintes[index]?.pessoaId ?? '')}
-                            label={labelPessoa}
-                            onSelecionar={(id) =>
-                              setValue(`contribuintes.${index}.pessoaId`, id ?? '', { shouldValidate: true, shouldDirty: true })
-                            }
-                          />
+                          <div className={styles.contribuinteExternoWrap}>
+                            <SelecaoPessoa
+                              pessoaIdSelecionado={contribuintes[index]?.pessoaId || undefined}
+                              nomeSelecionado={nomeInicialDe(contribuintes[index]?.pessoaId ?? '')}
+                              label={labelPessoa}
+                              onSelecionar={(id) =>
+                                setValue(`contribuintes.${index}.pessoaId`, id ?? '', { shouldValidate: true, shouldDirty: true })
+                              }
+                            />
+                            <button type="button" className={styles.linkAlternarModo} onClick={() => alternarModoExterno(field.id, index)}>
+                              É de fora? Digitar nome
+                            </button>
+                          </div>
                         )}
                       </div>
                       <input

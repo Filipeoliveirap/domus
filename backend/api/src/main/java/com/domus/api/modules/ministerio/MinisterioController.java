@@ -23,7 +23,8 @@ public class MinisterioController {
 
     @GetMapping
     public ResponseEntity<List<MinisterioResponse>> listar() {
-        return ResponseEntity.ok(ministerioService.listar(usuarioAutenticado.getIgrejaId()));
+        return ResponseEntity.ok(ministerioService.listar(
+                usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getPessoaId()));
     }
 
     @GetMapping("/{id}")
@@ -42,9 +43,17 @@ public class MinisterioController {
 
     @PutMapping("/{id}")
     public ResponseEntity<MinisterioResponse> atualizar(@PathVariable UUID id, @Valid @RequestBody MinisterioRequest data) {
-        exigirAdmin();
         return ResponseEntity.ok(ministerioService.atualizar(
-                id, data, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId()));
+                id, data, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                usuarioAutenticado.getPessoaId(), souAdmin()));
+    }
+
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<Void> atualizarFoto(@PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        ministerioService.atualizarFoto(id, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                usuarioAutenticado.getPessoaId(), souAdmin(), data.fotoId());
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
@@ -91,8 +100,8 @@ public class MinisterioController {
     @PutMapping("/{id}/membros/{pessoaId}/papel")
     public ResponseEntity<Void> atualizarPapel(@PathVariable UUID id, @PathVariable UUID pessoaId,
                                                 @Valid @RequestBody AtualizarPapelRequest data) {
-        exigirAdmin();
-        ministerioService.atualizarPapel(id, pessoaId, data, usuarioAutenticado.getIgrejaId(), souAdmin());
+        ministerioService.atualizarPapel(id, pessoaId, data, usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(), souAdmin());
         return ResponseEntity.noContent().build();
     }
 
@@ -116,13 +125,15 @@ public class MinisterioController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Admin da igreja ou quem tem a capacidade SECRETARIO — gestão plena do cadastro de ministérios. */
     private boolean souAdmin() {
-        return Permissoes.podeGerenciarCadastroMinisterios(usuarioAutenticado.getRole());
+        return Permissoes.podeGerenciarCadastroMinisterios(
+                usuarioAutenticado.getRole(), usuarioAutenticado.getCapacidadesExtras());
     }
 
     private void exigirAdmin() {
-        if (!Permissoes.podeGerenciarCadastroMinisterios(usuarioAutenticado.getRole())) {
-            throw new AccessDeniedException("Só um administrador pode gerenciar o cadastro de ministérios.");
+        if (!souAdmin()) {
+            throw new AccessDeniedException("Só um administrador ou secretário pode gerenciar o cadastro de ministérios.");
         }
     }
 }

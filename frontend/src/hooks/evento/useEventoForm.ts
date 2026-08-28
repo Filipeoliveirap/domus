@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAppForm } from '../forms/useAppForm'
 import { eventoSchema, type EventoFormInput, type EventoFormData } from '@/lib/validators'
 import { eventosService } from '@/services/evento.service'
-import type { EventoRequest, EventoResponse, InscritoImpactado, RecorrenciaRequest, DiaSemana, EscopoEdicaoEvento } from '@/types/evento.type'
+import type { EventoRequest, EventoResponse, InscritoImpactado, ImpactoMudancaPrecoResponse, RecorrenciaRequest, DiaSemana, EscopoEdicaoEvento } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
 
 function montarRecorrencia(data: EventoFormData): RecorrenciaRequest {
@@ -41,6 +41,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const [impactoAfetados, setImpactoAfetados] = useState<InscritoImpactado[] | null>(null)
   const [isVerificandoImpacto, setIsVerificandoImpacto] = useState(false)
   const [payloadPendente, setPayloadPendente] = useState<EventoRequest | null>(null)
+
+  // Mesma ideia do impacto de restrição, mas pro toggle pago->gratuito: mexe com dinheiro
+  // de verdade (estorno real no Mercado Pago), então mostra os números antes de salvar.
+  const [impactoMudancaPreco, setImpactoMudancaPreco] = useState<ImpactoMudancaPrecoResponse | null>(null)
+  const [payloadPendenteMudancaPreco, setPayloadPendenteMudancaPreco] = useState<EventoRequest | null>(null)
 
   // Campos personalizados agora podem ser montados ANTES do evento existir (evento novo,
   // sem id ainda) — o painel registra aqui como salvar a si mesmo, e o próprio salvarEvento
@@ -269,6 +274,19 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     }
   }
 
+  // Prévia pura de "isso vai estornar R$X de N pessoas" — só chamada depois que o impacto
+  // de restrição já foi resolvido (nenhum afetado, ou o admin já confirmou), pra não
+  // empilhar dois modais de decisão ao mesmo tempo.
+  async function verificarImpactoMudancaPrecoEProsseguir(payload: EventoRequest, escopo: EscopoEdicaoEvento) {
+    const impacto = await eventosService.impactoMudancaPreco(eventoId!, payload)
+    if (impacto.tipo === 'SEM_IMPACTO') {
+      await salvarEvento(payload, false, escopo)
+    } else {
+      setPayloadPendenteMudancaPreco(payload)
+      setImpactoMudancaPreco(impacto)
+    }
+  }
+
   // Pergunta ao backend quem ficaria de fora com esta versão do evento; só abre o modal
   // de impacto se de fato sobrar alguém afetado. Roda depois do escopo (se aplicável),
   // porque só faz sentido conferir impacto no payload que realmente vai ser gravado.
@@ -277,7 +295,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     try {
       const { afetados } = await eventosService.impactoRestricao(eventoId!, payload)
       if (afetados.length === 0) {
-        await salvarEvento(payload, false, escopoEscolhido)
+        await verificarImpactoMudancaPrecoEProsseguir(payload, escopoEscolhido)
       } else {
         setPayloadPendente(payload)
         setImpactoAfetados(afetados)
@@ -304,7 +322,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     try {
       const { afetados } = await eventosService.impactoRestricao(eventoId!, payload)
       if (afetados.length === 0) {
-        await salvarEvento(payload, false, escopo)
+        await verificarImpactoMudancaPrecoEProsseguir(payload, escopo)
       } else {
         setPayloadPendente(payload)
         setImpactoAfetados(afetados)
@@ -325,17 +343,42 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   }
 
   // Escolha do admin no <ModalImpactoRestricao>: cancelarNaoElegiveis vira o parâmetro
-  // do PUT. O payload já foi validado pelo impacto — não recalcula nada, só decide.
+  // do PUT. Antes de salvar de vez, ainda passa pela checagem de mudança de preço — cobre
+  // o caso raro de mudar restrição E tirar o preço na mesma edição.
   async function onConfirmarImpacto(cancelarNaoElegiveis: boolean) {
     if (!payloadPendente) return
-    await salvarEvento(payloadPendente, cancelarNaoElegiveis, escopoEscolhido)
+    const payload = payloadPendente
     setImpactoAfetados(null)
     setPayloadPendente(null)
+    if (cancelarNaoElegiveis) {
+      await salvarEvento(payload, true, escopoEscolhido)
+    } else {
+      setIsVerificandoImpacto(true)
+      try {
+        await verificarImpactoMudancaPrecoEProsseguir(payload, escopoEscolhido)
+      } finally {
+        setIsVerificandoImpacto(false)
+      }
+    }
   }
 
   function onFecharImpacto() {
     setImpactoAfetados(null)
     setPayloadPendente(null)
+  }
+
+  // Escolha do admin no <ModalImpactoMudancaPreco>: só confirma ou cancela — não tem
+  // meio-termo como o de restrição (ninguém perde a vaga em nenhum dos dois casos).
+  async function onConfirmarMudancaPreco() {
+    if (!payloadPendenteMudancaPreco) return
+    await salvarEvento(payloadPendenteMudancaPreco, false, escopoEscolhido)
+    setImpactoMudancaPreco(null)
+    setPayloadPendenteMudancaPreco(null)
+  }
+
+  function onFecharMudancaPreco() {
+    setImpactoMudancaPreco(null)
+    setPayloadPendenteMudancaPreco(null)
   }
 
   // O <SeletorResponsavel> só recebe o id; o nome inicial (edição) vem daqui para ele
@@ -345,6 +388,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsavelNomeInicial,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,
     aguardandoEscopoEdicao: !!payloadAguardandoEscopo,
     onEscolherEscopoEdicao, onFecharEscopoEdicao,
   }

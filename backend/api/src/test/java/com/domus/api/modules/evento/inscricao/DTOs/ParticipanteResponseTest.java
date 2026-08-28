@@ -8,7 +8,6 @@ import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.visitante.Visitante;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +23,6 @@ class ParticipanteResponseTest {
                 .evento(Evento.builder().id(UUID.randomUUID()).igreja(igreja).titulo("Culto").build())
                 .status(StatusInscricao.CONFIRMADA)
                 .nomeConvidado("Pedro de Fora")
-                .acompanhantes(List.of())
                 .build();
         Pessoa convidante = Pessoa.builder().id(UUID.randomUUID()).nome("Lucas").build();
 
@@ -47,7 +45,6 @@ class ParticipanteResponseTest {
                 .status(StatusInscricao.CONFIRMADA)
                 .nomeConvidado("Pedro de Fora")
                 .visitante(visitante)
-                .acompanhantes(List.of())
                 .build();
 
         ParticipanteResponse resp = ParticipanteResponse.from(i, null, null);

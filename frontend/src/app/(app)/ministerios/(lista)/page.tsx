@@ -32,8 +32,9 @@ function rotuloLideres(lideres: string[]): string {
 export default function MinisteriosPage() {
   const router = useRouter()
   const role = useAuthStore((s) => s.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const hidratado = useAuthStore((s) => s.hidratado)
-  const podeGerenciar = podeGerenciarCadastroMinisterios(role)
+  const podeGerenciar = podeGerenciarCadastroMinisterios(role, capacidadesExtras)
 
   const { data: ministerios = [], isLoading } = useMinisterios()
   const { ministerio: rotuloMinisterio } = useRotulos()
@@ -108,11 +109,17 @@ export default function MinisteriosPage() {
       ) : (
         <div className={styles.grade}>
           {ministerios.map((ministerio) => {
+            // Mesmo padrão de Célula: líder da própria rede edita; arquivar/excluir só cadastro.
+            const podeEditarEsta = podeGerenciar || ministerio.souLiderDesteMinisterio
             const acoes: ItemAcao[] = [
-              { label: 'Editar', icone: Pencil, onClick: () => setFormAberto(ministerio) },
-              ministerio.temVinculo
-                ? { label: 'Arquivar', icone: Archive, onClick: () => handleArquivar(ministerio), perigo: true, separadorAntes: true }
-                : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(ministerio), perigo: true, separadorAntes: true },
+              ...(podeEditarEsta
+                ? [{ label: 'Editar', icone: Pencil, onClick: () => setFormAberto(ministerio) }]
+                : []),
+              ...(podeGerenciar
+                ? [ministerio.temVinculo
+                    ? { label: 'Arquivar', icone: Archive, onClick: () => handleArquivar(ministerio), perigo: true, separadorAntes: true }
+                    : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(ministerio), perigo: true, separadorAntes: true }]
+                : []),
             ]
             return (
               <div
@@ -125,7 +132,7 @@ export default function MinisteriosPage() {
                   if (e.key === 'Enter' || e.key === ' ') router.push(`/ministerios/${ministerio.id}`)
                 }}
               >
-                {podeGerenciar && (
+                {acoes.length > 0 && (
                   <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
                     <MenuAcoes itens={acoes} />
                   </div>

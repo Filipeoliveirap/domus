@@ -45,10 +45,14 @@ public record MovimentacaoResponse(
                 categoriaNome,
                 m.getContribuintes().stream()
                         .map(c -> {
+                            if (c.getNomeExterno() != null) {
+                                return new ContribuinteResponse(null, c.getNomeExterno(), c.getNomeExterno(), c.getValor());
+                            }
                             Pessoa pessoa = c.getPessoa() == null ? null : pessoasContribuintes.get(c.getPessoa().getId());
                             return new ContribuinteResponse(
                                     pessoa == null ? null : pessoa.getId(),
                                     pessoa == null ? "Pessoa removida do sistema" : pessoa.getNome(),
+                                    null,
                                     c.getValor());
                         })
                         .toList(),

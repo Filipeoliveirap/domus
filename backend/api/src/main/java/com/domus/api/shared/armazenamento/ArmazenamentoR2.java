@@ -65,6 +65,10 @@ public class ArmazenamentoR2 implements ArmazenamentoFotos {
         try {
             return cliente.getObjectAsBytes(GetObjectRequest.builder()
                     .bucket(bucket).key(chave).build()).asByteArray();
+        } catch (NoSuchKeyException e) {
+            // "Não existe" é um caso de negócio esperado (ex.: FotoService tenta .webp antes
+            // de .jpg) — distinto de falha real de infraestrutura, que deve propagar como erro.
+            throw new ArmazenamentoObjetoNaoEncontradoException(chave);
         } catch (S3Exception e) {
             throw new ArmazenamentoException("Falha ao ler foto: " + chave, e);
         }

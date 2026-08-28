@@ -5,10 +5,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Landmark, Info, ShieldCheck, Save, RotateCcw, AlertTriangle } from 'lucide-react'
-import { useMinhaIgreja, useAtualizarIgreja } from '@/hooks/igreja/useMinhaIgreja'
+import { useMinhaIgreja, useAtualizarIgreja, useAtualizarLogoIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { ModalExcluirIgreja } from '@/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja'
+import { SecaoRecebimentos } from '@/components/module/configuracoes/SecaoRecebimentos'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
@@ -54,6 +55,7 @@ function formatarDataHora(iso: string | null): string {
 export default function DadosDaIgrejaPage() {
   const { data: igreja, isLoading } = useMinhaIgreja()
   const atualizar = useAtualizarIgreja()
+  const atualizarLogo = useAtualizarLogoIgreja()
   const { buscar: buscarCep, carregando: buscandoCep } = useBuscaCep()
 
   const role = useAuthStore((s) => s.role)
@@ -80,9 +82,10 @@ export default function DadosDaIgrejaPage() {
   }
 
   // O logo não faz parte do schema do RHF (não é um <input> comum, é o UploadFoto) — vive
-  // em estado próprio, espelhado da igreja como o resto do formulário via reset().
+  // em estado próprio, espelhado da igreja como o resto do formulário via reset(). Salva
+  // sozinho assim que o UploadFoto confirma (useAtualizarLogoIgreja), sem esperar o
+  // "Salvar alterações" do resto do formulário — por isso não entra no isDirty do RHF.
   const [logoFotoId, setLogoFotoId] = useState<string | null>(null)
-  const [logoAlterada, setLogoAlterada] = useState(false)
 
   const {
     register, handleSubmit, reset, watch, setValue,
@@ -109,7 +112,6 @@ export default function DadosDaIgrejaPage() {
       uf: igreja.endereco?.uf ?? '',
     })
     setLogoFotoId(igreja.logoFotoId ?? null)
-    setLogoAlterada(false)
   }, [igreja, reset])
 
   const valores = watch()
@@ -181,7 +183,15 @@ export default function DadosDaIgrejaPage() {
           <div className={styles.logoWrap}>
             <UploadFoto
               valor={logoFotoId}
-              onChange={(id) => { setLogoFotoId(id); setLogoAlterada(true) }}
+              onChange={(id) => {
+                setLogoFotoId(id)
+                atualizarLogo.mutate(id, {
+                  onSuccess: () => notificar.sucesso(
+                    id ? 'Logo atualizada.' : 'Logo removida.',
+                  ),
+                  onError: () => setLogoFotoId(igreja.logoFotoId ?? null),
+                })
+              }}
               formato="circulo"
               nomeFallback={igreja.nome}
             />
@@ -277,12 +287,8 @@ export default function DadosDaIgrejaPage() {
             <button
               type="button"
               className={styles.botaoSecundario}
-              onClick={() => {
-                reset()
-                setLogoFotoId(igreja?.logoFotoId ?? null)
-                setLogoAlterada(false)
-              }}
-              disabled={(!isDirty && !logoAlterada) || atualizar.isPending}
+              onClick={() => reset()}
+              disabled={!isDirty || atualizar.isPending}
             >
               <RotateCcw size={16} aria-hidden="true" />
               Descartar alterações
@@ -291,7 +297,7 @@ export default function DadosDaIgrejaPage() {
             <button
               type="submit"
               className={styles.botaoPrimario}
-              disabled={(!isDirty && !logoAlterada) || atualizar.isPending}
+              disabled={!isDirty || atualizar.isPending}
             >
               <Save size={16} aria-hidden="true" />
               {atualizar.isPending ? 'Salvando...' : 'Salvar alterações'}
@@ -301,6 +307,8 @@ export default function DadosDaIgrejaPage() {
       </div>
 
       <SecaoNomenclatura rotulosAtuais={igreja.rotulos} />
+
+      <SecaoRecebimentos />
 
       <div className={styles.cardsRodape}>
         <section className={styles.cardRodape}>

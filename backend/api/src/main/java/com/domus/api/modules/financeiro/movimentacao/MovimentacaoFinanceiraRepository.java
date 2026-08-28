@@ -26,8 +26,8 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
     // e some com a movimentação inteira quando ela está arquivada. Nome resolvido à parte.
     @Query("""
         SELECT m FROM MovimentacaoFinanceira m
-        JOIN FETCH m.criadoPor cp
-        JOIN FETCH cp.pessoa
+        LEFT JOIN FETCH m.criadoPor cp
+        LEFT JOIN FETCH cp.pessoa
         LEFT JOIN FETCH m.contribuintes ct
         LEFT JOIN FETCH ct.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap
@@ -40,8 +40,8 @@ public interface MovimentacaoFinanceiraRepository extends JpaRepository<Moviment
     @Query("""
         SELECT m FROM MovimentacaoFinanceira m
         LEFT JOIN m.categoria c
-        JOIN FETCH m.criadoPor cp
-        JOIN FETCH cp.pessoa
+        LEFT JOIN FETCH m.criadoPor cp
+        LEFT JOIN FETCH cp.pessoa
         LEFT JOIN FETCH m.contribuintes ct
         LEFT JOIN FETCH ct.pessoa
         LEFT JOIN FETCH m.atualizadoPor ap

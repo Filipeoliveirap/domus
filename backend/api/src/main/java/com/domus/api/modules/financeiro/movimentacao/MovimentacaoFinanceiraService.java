@@ -284,9 +284,19 @@ public class MovimentacaoFinanceiraService {
     private void validarContribuintes(BigDecimal valorTotal, List<ContribuinteDTO> contribuintes) {
         if (contribuintes.isEmpty()) return;
 
+        // Exatamente um entre pessoaId/nomeExterno por contribuinte — pessoa de fora (sem
+        // cadastro) não tem um identificador único de verdade pra checar duplicidade contra
+        // (dois "João" de fora são só uma coincidência de nome, não a mesma linha), então a
+        // checagem de duplicado só faz sentido entre pessoaId's.
         Set<UUID> pessoas = new HashSet<>();
         for (ContribuinteDTO c : contribuintes) {
-            if (!pessoas.add(c.pessoaId())) {
+            boolean temPessoa = c.pessoaId() != null;
+            boolean temNomeExterno = c.nomeExterno() != null && !c.nomeExterno().isBlank();
+            if (temPessoa == temNomeExterno) {
+                throw new BusinessException("CONTRIBUINTE_INVALIDO",
+                        "Cada contribuinte precisa ser uma pessoa cadastrada OU um nome de fora, nunca os dois nem nenhum.");
+            }
+            if (temPessoa && !pessoas.add(c.pessoaId())) {
                 throw new BusinessException("CONTRIBUINTE_DUPLICADO",
                         "A mesma pessoa não pode aparecer duas vezes na lista de contribuintes.");
             }
@@ -307,7 +317,8 @@ public class MovimentacaoFinanceiraService {
         return dtos.stream()
                 .map(c -> MovimentacaoContribuinte.builder()
                         .movimentacao(mov)
-                        .pessoa(resolverMembro(c.pessoaId(), igrejaId))
+                        .pessoa(c.pessoaId() != null ? resolverMembro(c.pessoaId(), igrejaId) : null)
+                        .nomeExterno(c.pessoaId() == null ? c.nomeExterno().trim() : null)
                         .valor(c.valor())
                         .build())
                 .toList();

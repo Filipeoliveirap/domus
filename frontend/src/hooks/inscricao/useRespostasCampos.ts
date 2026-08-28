@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { inscricoesService } from '@/services/inscricao.service'
 
-export function useRespostasCampos(inscricaoId: string, acompanhanteId?: string) {
+export function useRespostasCampos(inscricaoId: string) {
   return useQuery({
-    queryKey: ['respostas-campos', inscricaoId, acompanhanteId ?? null],
-    queryFn: () => inscricoesService.respostas(inscricaoId, acompanhanteId),
+    queryKey: ['respostas-campos', inscricaoId],
+    queryFn: () => inscricoesService.respostas(inscricaoId),
     enabled: !!inscricaoId,
   })
 }

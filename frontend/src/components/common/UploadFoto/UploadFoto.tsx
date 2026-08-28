@@ -9,8 +9,8 @@ import { iniciais } from '@/lib/formats/pessoaFormat'
 import { CropperFoto } from './CropperFoto'
 import styles from './UploadFoto.module.css'
 
-const TIPOS_ACEITOS = ['image/jpeg', 'image/png']
-const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
+const TIPOS_ACEITOS = ['image/jpeg', 'image/png', 'image/webp']
+const TAMANHO_MAXIMO_BYTES = 15 * 1024 * 1024
 
 interface Props {
   valor: string | null | undefined
@@ -41,13 +41,13 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
 
   function validarArquivo(arquivo: File): boolean {
     if (!TIPOS_ACEITOS.includes(arquivo.type)) {
-      notificar.erro('Formato não aceito', 'Envie uma imagem JPEG ou PNG.')
+      notificar.erro('Formato não aceito', 'Envie uma imagem JPEG, PNG ou WebP.')
       return false
     }
     // Checagem no cliente só para poupar upload em vão (ex.: 4G) — quem decide de
     // verdade é o servidor.
     if (arquivo.size > TAMANHO_MAXIMO_BYTES) {
-      notificar.erro('Imagem grande demais', 'O tamanho máximo é 5 MB.')
+      notificar.erro('Imagem grande demais', 'O tamanho máximo é 15 MB.')
       return false
     }
     return true
@@ -56,7 +56,6 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
   function selecionarArquivo(arquivo: File) {
     if (!validarArquivo(arquivo)) return
     setArquivoBruto(arquivo)
-    if (formato === 'circulo') setRecortando(true)
   }
 
   function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -105,7 +104,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
   }
 
   const enviando = upload.isPending
-  const urlAtual = urlFoto(valor, 'THUMB')
+  const urlAtual = urlFoto(valor, 'DISPLAY')
   const temAlgumaImagem = Boolean(previaLocal || urlAtual)
 
   return (
@@ -116,8 +115,13 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
         }`}
         onClick={() => {
           if (disabled || enviando) return
-          if (urlAtual && !arquivoBruto) setVisualizando(true)
-          else inputRef.current?.click()
+          if (arquivoBruto) {
+            if (!recortando) setRecortando(true)
+          } else if (urlAtual) {
+            setVisualizando(true)
+          } else {
+            inputRef.current?.click()
+          }
         }}
         onDragOver={(e) => {
           e.preventDefault()
@@ -147,7 +151,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
           <div className={styles.placeholder}>
             <Camera size={22} aria-hidden="true" />
             <span>Clique ou arraste uma foto</span>
-            <span className={styles.ajuda}>JPEG ou PNG, até 5 MB</span>
+            <span className={styles.ajuda}>JPEG, PNG ou WebP, até 15 MB</span>
           </div>
         )}
 
@@ -169,7 +173,7 @@ export function UploadFoto({ valor, onChange, formato, nomeFallback, disabled = 
 
       {!enviando && temAlgumaImagem && (
         <div className={styles.acoes}>
-          {formato === 'banner' && arquivoBruto && !recortando && (
+          {arquivoBruto && !recortando && (
             <>
               <button type="button" className={styles.botaoSecundario} onClick={() => setRecortando(true)}>
                 <Crop size={14} aria-hidden="true" />

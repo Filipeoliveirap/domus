@@ -114,8 +114,9 @@ export function vagasRestantesCalc(
   participantes: ParticipanteResponse[],
 ): number | null {
   if (vagas == null) return null
-  const ocupadas = participantes.reduce((acc, p) => acc + 1 + p.convidados.length, 0)
-  return Math.max(0, vagas - ocupadas)
+  // Cada convidado já chega como sua própria entrada em `participantes` (InscricaoEvento
+  // unificada) — não soma mais "1 + convidados" por titular, é 1 por linha.
+  return Math.max(0, vagas - participantes.length)
 }
 
 export function vagasAcabando(vagas: number | null, vagasRestantes: number | null): boolean {

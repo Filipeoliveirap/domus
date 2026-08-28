@@ -20,6 +20,8 @@
   width: 100%;
   max-width: 520px;
   max-height: calc(100vh - 32px);
+
+  max-height: calc(100dvh - 32px);
   overflow: hidden;
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);

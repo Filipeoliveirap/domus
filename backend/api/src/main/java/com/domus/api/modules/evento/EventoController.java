@@ -1,5 +1,6 @@
 package com.domus.api.modules.evento;
 
+import com.domus.api.modules.evento.DTOs.AtualizarFotoRequest;
 import com.domus.api.modules.evento.DTOs.EventoRequest;
 import com.domus.api.modules.evento.DTOs.EventoResponse;
 import com.domus.api.modules.evento.DTOs.ImpactoRestricaoResponse;
@@ -105,6 +106,16 @@ public class EventoController {
                 id, data, igrejaId, usuarioId, cancelarNaoElegiveis, escopo));
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<Void> atualizarFoto(@PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        exigirGerenciar();
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        UUID usuarioId = usuarioAutenticado.getUsuarioId();
+        eventoService.atualizarFoto(id, igrejaId, usuarioId, data.fotoId());
+        return ResponseEntity.noContent().build();
+    }
+
     // Prévia de quem ficaria de fora se data fosse salvo, sem gravar. Restrito a quem gerencia eventos.
     @PostMapping("/{id}/impacto-restricao")
     public ResponseEntity<ImpactoRestricaoResponse> impactoRestricao(
@@ -112,6 +123,16 @@ public class EventoController {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
         String role = usuarioAutenticado.getRole();
         return ResponseEntity.ok(eventoService.calcularImpacto(id, data, igrejaId, role));
+    }
+
+    // Prévia de quanto dinheiro/gente seria afetado ao mudar o preço, sem gravar nada —
+    // o front chama isso antes de "Salvar" pra mostrar um aviso quando há impacto real.
+    @PostMapping("/{id}/impacto-mudanca-preco")
+    public ResponseEntity<com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse> impactoMudancaPreco(
+            @PathVariable UUID id, @Valid @RequestBody EventoRequest data) {
+        UUID igrejaId = usuarioAutenticado.getIgrejaId();
+        String role = usuarioAutenticado.getRole();
+        return ResponseEntity.ok(eventoService.calcularImpactoMudancaPreco(id, data, igrejaId, role));
     }
 
     @DeleteMapping("/{id}")

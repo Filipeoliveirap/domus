@@ -28,6 +28,11 @@ public class MovimentacaoContribuinte {
     @JoinColumn(name = "pessoa_id")
     private Pessoa pessoa;
 
+    /** Contribuinte/beneficiário sem cadastro na igreja (ex.: doação de visitante avulso) —
+     *  exatamente um entre {@code pessoa}/{@code nomeExterno} (CHECK no banco, V32). */
+    @Column(name = "nome_externo")
+    private String nomeExterno;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal valor;
 }

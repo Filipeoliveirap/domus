@@ -12,7 +12,6 @@ import type { CampoPersonalizadoResponse, RespostaResponse } from '@/types/campo
 
 interface Props {
   inscricaoId: string
-  acompanhanteId?: string
   campos: CampoPersonalizadoResponse[]
   respostasIniciais: RespostaResponse[]
   onClose: () => void
@@ -20,7 +19,7 @@ interface Props {
 }
 
 export function ModalResponderCamposPersonalizados({
-  inscricaoId, acompanhanteId, campos, respostasIniciais, onClose, onSalvo,
+  inscricaoId, campos, respostasIniciais, onClose, onSalvo,
 }: Props) {
   const { responder, isLoading, erro } = useResponderCampos()
   const [valores, setValores] = useState<Record<string, string>>(
@@ -47,7 +46,7 @@ export function ModalResponderCamposPersonalizados({
     if (pendentes.length > 0) return
 
     const dados = campos.map((c) => ({ campoId: c.id, valor: valores[c.id] ?? '' }))
-    const sucesso = await responder(inscricaoId, dados, acompanhanteId)
+    const sucesso = await responder(inscricaoId, dados)
     if (sucesso) onSalvo()
   }
 

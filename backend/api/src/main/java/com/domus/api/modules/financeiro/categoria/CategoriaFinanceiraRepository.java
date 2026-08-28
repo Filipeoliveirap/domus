@@ -66,6 +66,17 @@ public interface CategoriaFinanceiraRepository extends JpaRepository<CategoriaFi
                           @Param("nome") String nome,
                           @Param("idIgnorar") UUID idIgnorar);
 
+    /** Usado por {@code MovimentacaoAutomaticaService} pra achar a categoria de eventos já
+     *  existente antes de criar uma nova, tolerando variações de nome digitadas pelo admin
+     *  (singular/plural, maiúsculas). {@code nomesNormalizados} já vem em minúsculo/trim. */
+    @Query("""
+        SELECT c FROM CategoriaFinanceira c
+        WHERE c.igreja.id = :igrejaId
+          AND LOWER(TRIM(c.nome)) IN :nomesNormalizados
+        """)
+    List<CategoriaFinanceira> buscarPorIgrejaENomeNormalizado(@Param("igrejaId") UUID igrejaId,
+                                                                @Param("nomesNormalizados") java.util.Set<String> nomesNormalizados);
+
     /** Purga da igreja: chamar só depois de purgar movimentacao_financeira (que referencia categoria). */
     @Modifying
     @Query(value = "DELETE FROM categoria_financeira WHERE igreja_id = :igrejaId", nativeQuery = true)

@@ -14,11 +14,7 @@ import java.util.UUID;
 public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID> {
 
     @Query("""
-        SELECT COALESCE(COUNT(i), 0) + COALESCE(
-                   (SELECT COUNT(a) FROM AcompanhanteInscricao a
-                     WHERE a.inscricao.evento.id = :eventoId
-                       AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA), 0)
-        FROM InscricaoEvento i
+        SELECT COUNT(i) FROM InscricaoEvento i
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
     """)
@@ -56,7 +52,6 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // proxy); nunca chamar outro getter em i.getPessoa() aqui.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
-        LEFT JOIN FETCH i.acompanhantes
         WHERE i.evento.id = :eventoId AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
         ORDER BY i.createdAt ASC
     """)
@@ -66,11 +61,15 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // parâmetro é null e lower(bytea) não existe.
     // LEFT JOIN: pessoa excluída definitivamente não pode sumir da paginação, só não bate
     // busca por nome (não tem nome pra buscar).
+    // A tela de gerenciar inscritos precisa mostrar quem está com pagamento pendente
+    // (não só CONFIRMADA) — senão um evento que virou pago (ou que nasceu pago) some da
+    // lista pra todo mundo que ainda não pagou.
     @Query(value = """
         SELECT i.id FROM InscricaoEvento i
         LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
-          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.status IN (com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA,
+                            com.domus.api.modules.evento.inscricao.StatusInscricao.AGUARDANDO_PAGAMENTO)
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
         ORDER BY i.createdAt ASC
         """,
@@ -78,7 +77,8 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         SELECT COUNT(i) FROM InscricaoEvento i
         LEFT JOIN i.pessoa p
         WHERE i.evento.id = :eventoId
-          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.status IN (com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA,
+                            com.domus.api.modules.evento.inscricao.StatusInscricao.AGUARDANDO_PAGAMENTO)
           AND (CAST(:busca AS string) IS NULL OR LOWER(p.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))
         """)
     Page<UUID> listarIdsPaginadoPorEvento(@Param("eventoId") UUID eventoId,
@@ -88,7 +88,6 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     // Sem FETCH em i.pessoa — mesmo motivo de listarPorEvento.
     @Query("""
         SELECT DISTINCT i FROM InscricaoEvento i
-        LEFT JOIN FETCH i.acompanhantes
         WHERE i.id IN :ids
         ORDER BY i.createdAt ASC
         """)
@@ -111,13 +110,15 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         SELECT COUNT(i) FROM InscricaoEvento i
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NULL
     """)
     long countPessoasInscritas(@Param("eventoId") UUID eventoId);
 
     @Query("""
-        SELECT COUNT(a) FROM AcompanhanteInscricao a
-        WHERE a.inscricao.evento.id = :eventoId
-          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NOT NULL
     """)
     long countConvidadosInscritos(@Param("eventoId") UUID eventoId);
 
@@ -126,14 +127,16 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
         WHERE i.evento.id = :eventoId
           AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
           AND i.compareceu = true
+          AND i.convidadoPor IS NULL
     """)
     long countPessoasCompareceram(@Param("eventoId") UUID eventoId);
 
     @Query("""
-        SELECT COUNT(a) FROM AcompanhanteInscricao a
-        WHERE a.inscricao.evento.id = :eventoId
-          AND a.inscricao.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
-          AND a.compareceu = true
+        SELECT COUNT(i) FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.CONFIRMADA
+          AND i.convidadoPor IS NOT NULL
+          AND i.compareceu = true
     """)
     long countConvidadosCompareceram(@Param("eventoId") UUID eventoId);
 
@@ -165,7 +168,7 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     """)
     List<InscricaoEvento> listarConvidadosSemCadastroPorEvento(@Param("eventoId") UUID eventoId);
 
-    /** Purga da igreja: acompanhante_inscricao cascadeia sozinho via ON DELETE CASCADE. */
+    /** Purga da igreja: delete de inscrição_evento cobre convidados (linhas normais com pessoa_id nulo). */
     @Modifying
     @Query(value = "DELETE FROM inscricao_evento WHERE igreja_id = :igrejaId", nativeQuery = true)
     void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);

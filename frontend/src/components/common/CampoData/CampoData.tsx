@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { CalendarDays } from 'lucide-react'
 import { formatarDataDigitada } from '@/lib/masks'
 import styles from './CampoData.module.css'
@@ -31,7 +31,6 @@ function brParaISO(br: string): string {
 export function CampoData({
   value, onChange, label, id, erro, min, max, disabled, semLabel,
 }: Props) {
-  const seletorRef = useRef<HTMLInputElement>(null)
   const [textoLocal, setTextoLocal] = useState<string | null>(null)
   const exibido = textoLocal ?? isoParaBR(value)
 
@@ -39,14 +38,6 @@ export function CampoData({
     const formatado = formatarDataDigitada(bruto)
     setTextoLocal(formatado)
     onChange(brParaISO(formatado))
-  }
-
-  function abrirCalendario() {
-    const el = seletorRef.current
-    if (!el || disabled) return
-    // showPicker() não existe em navegadores antigos; focar é o fallback natural.
-    if (typeof el.showPicker === 'function') el.showPicker()
-    else el.focus()
   }
 
   return (
@@ -72,29 +63,38 @@ export function CampoData({
           onBlur={() => setTextoLocal(null)}
         />
 
-        <button
-          type="button"
-          className={styles.botaoCalendario}
-          onClick={abrirCalendario}
-          aria-label={label ? `Abrir calendário — ${label}` : 'Abrir calendário'}
-          tabIndex={-1}
-          disabled={disabled}
-        >
-          <CalendarDays size={16} aria-hidden="true" />
-        </button>
+        <span className={styles.botaoCalendario} aria-hidden="true">
+          <CalendarDays size={16} />
+        </span>
 
+        {/*
+          O seletor nativo de data é um overlay TRANSPARENTE de tamanho real por cima do
+          ícone — não um input de 1px escondido. iOS/Safari só abre o calendário nativo
+          num toque real do usuário sobre um input visível/interativo; `showPicker()` (a
+          abordagem anterior) não existe no Safari e `.focus()` programático não abre nada
+          no iPhone. Assim o toque no ícone é, de fato, um toque no `type="date"`, e os
+          três (iOS, Android, desktop) abrem o picker nativo sozinhos.
+        */}
         <input
-          ref={seletorRef}
           type="date"
-          className={styles.seletorOculto}
+          className={styles.seletorData}
           tabIndex={-1}
-          aria-hidden="true"
+          aria-label={label ? `Escolher data no calendário — ${label}` : 'Escolher data no calendário'}
           value={value || ''}
           min={min}
           max={max}
+          disabled={disabled}
           onChange={(e) => {
             setTextoLocal(isoParaBR(e.target.value))
             onChange(e.target.value)
+          }}
+          onClick={(e) => {
+            // Progressive enhancement pra Firefox/desktop, onde clicar na área não abre
+            // sozinho. iOS ignora (não implementa) e abre pelo próprio toque.
+            const el = e.currentTarget
+            if (typeof el.showPicker === 'function') {
+              try { el.showPicker() } catch { /* gesto inválido / não suportado */ }
+            }
           }}
         />
       </div>

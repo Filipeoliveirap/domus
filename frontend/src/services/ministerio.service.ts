@@ -17,6 +17,9 @@ export const ministerioService = {
   atualizar: (id: string, data: MinisterioRequest): Promise<MinisterioResponse> =>
     api.put<MinisterioResponse>(Endpoints.ministerios.BY_ID(id), data).then(res => res.data),
 
+  atualizarFoto: (id: string, fotoId: string | null): Promise<void> =>
+    api.patch(Endpoints.ministerios.FOTO(id), { fotoId }).then(() => undefined),
+
   arquivar: (id: string): Promise<void> =>
     api.delete(Endpoints.ministerios.BY_ID(id)).then(() => undefined),
 

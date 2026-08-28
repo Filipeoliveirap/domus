@@ -3,11 +3,15 @@ export type TipoMovimentacao = 'ENTRADA' | 'SAIDA'
 export interface ContribuinteResponse {
   pessoaId: string | null
   pessoaNome: string
+  /** Só vem preenchido quando é pessoa de fora (sem cadastro) — distingue esse caso de
+   *  "pessoa cadastrada mas já excluída definitivamente" (pessoaId também nulo nos dois). */
+  nomeExterno: string | null
   valor: string
 }
 
 export interface ContribuinteInput {
-  pessoaId: string
+  pessoaId: string | null
+  nomeExterno: string | null
   valor: string
 }
 

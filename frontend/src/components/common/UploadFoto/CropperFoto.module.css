@@ -62,6 +62,7 @@
   position: relative;
   width: 100%;
   height: 360px;
+  min-height: 300px;
   background: #1e293b;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -128,15 +129,18 @@
 }
 
 .previewCircle {
-  width: 64px;
-  height: 64px;
+  width: 120px;
+  height: 120px;
   border-radius: var(--radius-full);
   overflow: hidden;
   border: 2px solid var(--color-border);
+  background: var(--color-bg-page);
 }
 
-.previewImg {
-  max-width: none;
+.previewCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .controles {
@@ -218,9 +222,19 @@
 .btnConfirmar:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 767px) {
-  .modal { padding: 16px; max-width: 100vw; }
-  .corpo { flex-direction: column; }
-  .viewportWrap { height: 280px; }
+  .modal {
+    padding: 16px;
+    max-width: 100vw;
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    /* Scroll quando o conteúdo excede a altura — sem isso, o flex column
+       comprime o `.corpo` e o Cropper fica com altura 0 (invisível). */
+    overflow-y: auto;
+  }
+  /* Filhos fixos não devem ser comprimidos pelo flex — só o `.corpo`
+     deve absorver a diferença se faltar espaço. */
+  .cabecalho, .controles, .rodape { flex-shrink: 0; }
+  .corpo { flex-direction: column; flex-shrink: 0; }
+  .viewportWrap { height: 320px; }
   .previewCol { flex-direction: row; }
   .rodape { flex-direction: column-reverse; }
   .btnCancelar, .btnConfirmar { width: 100%; justify-content: center; }

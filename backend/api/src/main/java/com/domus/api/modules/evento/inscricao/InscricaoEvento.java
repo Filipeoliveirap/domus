@@ -10,8 +10,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -43,6 +41,12 @@ public class InscricaoEvento {
     @Column(name = "telefone_convidado", length = 20)
     private String telefoneConvidado;
 
+    /** Obrigatório no front quando o evento é pago (usado pra mandar o comprovante de
+     *  pagamento) — opcional em evento gratuito. Nulável aqui só por causa de inscrições
+     *  antigas, criadas antes deste campo existir. */
+    @Column(name = "email_convidado", length = 255)
+    private String emailConvidado;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "convidado_por_pessoa_id")
     private Pessoa convidadoPor;
@@ -70,10 +74,6 @@ public class InscricaoEvento {
     @Builder.Default
     private boolean compareceu = false;
 
-    @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<AcompanhanteInscricao> acompanhantes = new ArrayList<>();
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -86,8 +86,11 @@ public class InscricaoEvento {
         return status == StatusInscricao.CONFIRMADA;
     }
 
-    /** {@code true} = inscrição de gente sem cadastro no sistema (modelo desta spec — nunca
-     *  confundir com {@link #getAcompanhantes()}, que é o modelo antigo aninhado). */
+    public boolean estaAguardandoPagamento() {
+        return status == StatusInscricao.AGUARDANDO_PAGAMENTO;
+    }
+
+    /** {@code true} = inscrição de gente sem cadastro no sistema. */
     public boolean isConvidadoSemCadastro() {
         return pessoa == null && nomeConvidado != null;
     }

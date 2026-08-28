@@ -1,5 +1,7 @@
 .pagina {
   min-height: 100vh;
+
+  min-height: 100dvh;
   background: var(--color-bg-page);
   display: flex;
   flex-direction: column;
@@ -251,6 +253,11 @@
 .erroTexto {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-error, #dc2626);
+}
+
+.dica {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
 }
 
 .aviso {

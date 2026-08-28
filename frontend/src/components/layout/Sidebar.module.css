@@ -4,17 +4,19 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* iOS: 100vh conta a barra de URL e corta o rodapé da sidebar */
   width: 16rem;
   max-width: 85vw;
   position: fixed;
   left: 0;
   top: 0;
   background-color: #f2f3ff;
-  padding: 1rem;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   gap: 0.5rem;
   z-index: 40;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
+  overflow-y: auto;
 }
 
 .sidebarAberta {
@@ -78,7 +80,11 @@
 .nav {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0%;
+  /* grow pra empurrar rodapé/perfil pro fim quando sobra espaço, mas NUNCA encolher
+     abaixo do próprio conteúdo (flex-shrink 0): ao abrir os submenus "Pessoas"/
+     "Configurações" o conteúdo cresce e a .sidebar inteira rola, em vez de espremer os
+     itens ou empurrar o perfil pra fora da tela. */
+  flex: 1 0 auto;
   gap: 0.25rem;
 }
 

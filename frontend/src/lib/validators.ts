@@ -184,6 +184,9 @@ export const eventoSchema = eventoSchemaBase.refine(
   },
   { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
 ).refine(
+  (data) => !data.requerInscricao || data.tipoInscricao !== 'PAGO' || !!data.preco,
+  { message: 'Informe o valor da inscrição.', path: ['preco'] }
+).refine(
   (data) => !data.repetir || !!data.recorrenciaFrequencia,
   { message: 'Escolha se repete por dia, semana ou mês.', path: ['recorrenciaFrequencia'] }
 ).refine(
@@ -209,8 +212,13 @@ export const categoriaSchema = z.object({
 })
 
 const contribuinteSchema = z.object({
-  pessoaId: z.string().min(1, 'Selecione a pessoa.'),
+  pessoaId: z.string(),
+  /** Pessoa de fora, sem cadastro — exatamente um entre pessoaId/nomeExterno preenchido. */
+  nomeExterno: z.string(),
   valor: z.string().min(1, 'Informe o valor.').refine((v) => parseFloat(v) > 0, 'O valor deve ser maior que zero.'),
+}).refine((c) => c.pessoaId.trim() !== '' || c.nomeExterno.trim() !== '', {
+  message: 'Selecione a pessoa ou digite um nome.',
+  path: ['pessoaId'],
 })
 
 export const movimentacaoSchema = z.object({

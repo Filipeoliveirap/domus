@@ -76,7 +76,7 @@ public class ConviteController {
                 evento.getIgreja().getLogoFoto() != null ? evento.getIgreja().getLogoFoto().getId() : null,
                 convidante != null ? convidante.getNome() : null,
                 convidante != null && convidante.getFoto() != null ? convidante.getFoto().getId() : null,
-                vagasRestantes, evento.getPreco(), campos
+                vagasRestantes, evento.getPreco(), campos, evento.isRequerInscricao()
         ));
     }
 
@@ -114,16 +114,19 @@ public class ConviteController {
         var evento = resolvido.evento();
 
         // inscritoPorUsuarioId = null: quem preencheu este formulário não tem usuário logado
-        // (fluxo público/anônimo) — "inscrito por" dele é sempre "ele mesmo".
-        var inscricao = inscricaoService.inscreverConvidado(
-                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(),
-                resolvido.convidante().getId(), null, null);
+        // (fluxo público/anônimo) — "inscrito por" dele é sempre "ele mesmo". gerarLink
+        // sempre false: é a própria pessoa se auto-inscrevendo, sempre "paga agora" (mesma
+        // regra do titular em inscreverInterno).
+        var resultado = inscricaoService.inscreverConvidado(
+                evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), data.email(),
+                resolvido.convidante().getId(), null, null, false);
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responderComoConvidado(
-                    inscricao.getId(), data.respostas(), evento.getIgreja().getId());
+                    resultado.inscricao().getId(), data.respostas(), evento.getIgreja().getId());
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ConvidadoResponse.from(inscricao));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ConvidadoResponse.from(resultado.inscricao(), resultado.cobranca()));
     }
 }

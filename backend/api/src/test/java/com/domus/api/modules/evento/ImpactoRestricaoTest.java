@@ -73,6 +73,8 @@ class ImpactoRestricaoTest implements PostgresTestContainerSupport {
         Pessoa pessoa = Pessoa.builder()
                 .igreja(igrejaDoTeste)
                 .nome(nome)
+                // E-mail obrigatório pra se inscrever em qualquer evento (2026-08-27).
+                .email(java.util.UUID.randomUUID() + "@teste.com")
                 .vinculo(vinculo)
                 .dataNascimento(LocalDate.now().minusYears(idade))
                 .build();

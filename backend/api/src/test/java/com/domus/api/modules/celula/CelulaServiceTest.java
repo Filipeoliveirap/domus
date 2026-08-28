@@ -17,6 +17,7 @@ import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalTime;
@@ -481,7 +482,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID()))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("visitante");
     }
@@ -497,7 +498,7 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
     }
@@ -516,7 +517,7 @@ class CelulaServiceTest {
                 .thenReturn(Optional.of(Usuario.builder().id(usuarioIdPromovido).build()));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         verify(notificacaoService).criar(
                 eq(TipoNotificacao.PROMOVIDO_LIDER_CELULA), eq(igrejaId), eq(usuarioIdPromovido),
@@ -537,7 +538,7 @@ class CelulaServiceTest {
                 .thenReturn(Optional.of(Usuario.builder().id(usuarioIdAtor).build()));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, usuarioIdAtor);
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, usuarioIdAtor);
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
@@ -553,18 +554,36 @@ class CelulaServiceTest {
         when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
 
         service.atualizarPapel(celulaId, membro.getId(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, true, UUID.randomUUID());
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, true, UUID.randomUUID());
 
         verify(notificacaoService, never()).criar(any(), any(), any(), anyString(), anyString());
     }
 
     @Test
-    void atualizarPapelRecusaQuemNaoEAdmin() {
+    void atualizarPapelRecusaQuemNaoEAdminNemLider() {
         dadoQueExiste();
 
         assertThatThrownBy(() -> service.atualizarPapel(celulaId, UUID.randomUUID(),
-                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, false, UUID.randomUUID()))
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, null, false, UUID.randomUUID()))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void liderDaCelulaPromoveCoLider() {
+        dadoQueExiste();
+        UUID pessoaIdLiderAtor = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, pessoaIdLiderAtor, "LIDER"))
+                .thenReturn(true);
+        Pessoa alvo = Pessoa.builder().id(UUID.randomUUID()).nome("Novo co-líder").igreja(igreja()).build();
+        CelulaMembro membro = CelulaMembro.builder()
+                .id(UUID.randomUUID()).celula(celula()).pessoa(alvo).papel(PapelCelula.MEMBRO)
+                .igreja(igreja()).build();
+        when(membroRepository.findById(membro.getId())).thenReturn(Optional.of(membro));
+
+        service.atualizarPapel(celulaId, membro.getId(),
+                new AtualizarPapelCelulaRequest(PapelCelula.LIDER), igrejaId, pessoaIdLiderAtor, false, UUID.randomUUID());
+
+        assertThat(membro.getPapel()).isEqualTo(PapelCelula.LIDER);
     }
 
     @Test
@@ -634,5 +653,50 @@ class CelulaServiceTest {
         List<CelulaResponse> response = service.listar(igrejaId, null);
 
         assertThat(response.get(0).temVinculo()).isFalse();
+    }
+
+    @Test
+    void atualizarFotoTrocaSoAFotoSemTocarNoNome() {
+        dadoQueExiste();
+        UUID fotoId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(fotoId);
+        when(fotoService.buscarParaVincular(fotoId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(celulaId, igrejaId, null, null, true, fotoId);
+
+        ArgumentCaptor<Celula> captor = ArgumentCaptor.forClass(Celula.class);
+        verify(celulaRepository).save(captor.capture());
+        assertThat(captor.getValue().getFoto()).isEqualTo(fotoNova);
+        assertThat(captor.getValue().getNome()).isEqualTo("Célula Bethânia");
+    }
+
+    @Test
+    void atualizarFotoRemoveAFotoAntigaQuandoTrocada() {
+        UUID fotoAntigaId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoAntiga = new com.domus.api.modules.foto.Foto();
+        fotoAntiga.setId(fotoAntigaId);
+        Celula existente = Celula.builder().id(celulaId).igreja(igreja()).nome("Célula Bethânia").foto(fotoAntiga).build();
+        when(celulaRepository.findByIdAndIgrejaId(celulaId, igrejaId)).thenReturn(Optional.of(existente));
+
+        UUID fotoNovaId = UUID.randomUUID();
+        com.domus.api.modules.foto.Foto fotoNova = new com.domus.api.modules.foto.Foto();
+        fotoNova.setId(fotoNovaId);
+        when(fotoService.buscarParaVincular(fotoNovaId, igrejaId)).thenReturn(fotoNova);
+
+        service.atualizarFoto(celulaId, igrejaId, null, null, true, fotoNovaId);
+
+        verify(fotoService).remover(fotoAntigaId);
+    }
+
+    @Test
+    void atualizarFotoRecusaQuemNaoEAdminNemLiderDaCelula() {
+        dadoQueExiste();
+        UUID atorPessoaId = UUID.randomUUID();
+        when(membroRepository.existsByCelulaIdAndPessoaIdAndPapel(celulaId, atorPessoaId, PapelCelula.LIDER.name()))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> service.atualizarFoto(celulaId, igrejaId, null, atorPessoaId, false, UUID.randomUUID()))
+                .isInstanceOf(AccessDeniedException.class);
     }
 }

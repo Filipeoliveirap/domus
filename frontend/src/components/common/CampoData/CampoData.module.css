@@ -39,6 +39,7 @@
   color: var(--color-placeholder);
 }
 
+/* Só o visual do ícone — quem recebe o toque é o .seletorData por cima. */
 .botaoCalendario {
   position: absolute;
   right: 6px;
@@ -46,33 +47,35 @@
   place-items: center;
   width: 28px;
   height: 28px;
-  border: none;
   border-radius: var(--radius-sm);
-  background: none;
   color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.botaoCalendario:hover {
-  background: var(--color-bg-page);
-  color: var(--color-primary);
+  pointer-events: none;
 }
 
 /*
-  Ocupa o mesmo ponto do ícone com tamanho zero: o showPicker() de alguns navegadores
-  ancora o calendário na posição do input, então escondê-lo com display:none faria o
-  seletor abrir no canto da tela.
+  Overlay TRANSPARENTE de tamanho real sobre a área do ícone. Precisa de dimensão de
+  verdade e pointer-events ativos: o iOS só abre o calendário nativo num toque real sobre
+  um input de data interativo. Fica por último no DOM pra ficar acima do ícone.
 */
-.seletorOculto {
+.seletorData {
   position: absolute;
-  right: 12px;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 100%;
+  margin: 0;
   padding: 0;
   border: none;
+  background: transparent;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
+  /* Safari desenha o próprio widget dentro do input; sem isto ele "vaza" visualmente. */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.seletorData:disabled {
+  cursor: default;
 }
 
 .erro {

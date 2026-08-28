@@ -104,6 +104,7 @@ public class EventoService {
         validarDatas(data);
         validarIdades(data);
         validarControlaPresenca(data);
+        validarPreco(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -175,6 +176,7 @@ public class EventoService {
         validarDatas(data);
         validarIdades(data);
         validarControlaPresenca(data);
+        validarPreco(data);
         LocalEvento local = resolverLocal(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
@@ -215,7 +217,7 @@ public class EventoService {
         evento.setRestricaoSexo(data.restricaoSexo());
         evento.setAtualizadoPor(usuario);
 
-        // Vagas contam inscritos confirmados + acompanhantes.
+        // Vagas contam inscritos confirmados + convidados.
         // Reduzir abaixo do total de confirmados é proibido; null = sem limite.
         if (data.vagas() != null) {
             long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
@@ -227,6 +229,7 @@ public class EventoService {
             }
         }
         evento.setVagas(data.vagas());
+        java.math.BigDecimal precoAntigo = evento.getPreco();
         evento.setPreco(data.preco());
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
         evento.setExclusivoMembros(exclusivoMembros);
@@ -250,6 +253,24 @@ public class EventoService {
                 case SERIE -> salvo = propagarParaSerie(salvo, igrejaId);
                 case ESTA_E_SEGUINTES -> salvo = dividirSerie(salvo, igrejaId);
             }
+        }
+
+        // Decisão do usuário (2026-08-27): mesmo com "aplicar a toda a série", o
+        // reembolso/cobrança em lote roda SÓ na ocorrência editada agora (id original) —
+        // mudar dinheiro de várias ocorrências de uma vez multiplicaria o risco financeiro
+        // sem necessidade. Ninguém perde a vaga em nenhuma das duas direções: pago ->
+        // gratuito estorna quem pagou e confirma quem esperava; gratuito -> pago cobra
+        // quem já estava confirmado, sem re-checar vaga (são os mesmos de antes).
+        boolean virouGratuito = precoAntigo != null && data.preco() == null;
+        boolean virouPago = precoAntigo == null && data.preco() != null;
+        boolean valorMudouAindaPago = precoAntigo != null && data.preco() != null
+                && precoAntigo.compareTo(data.preco()) != 0;
+        if (virouGratuito) {
+            inscricaoService.aplicarEventoVirouGratuito(id);
+        } else if (virouPago) {
+            inscricaoService.aplicarEventoVirouPago(id, data.preco(), usuarioId);
+        } else if (valorMudouAindaPago) {
+            inscricaoService.aplicarMudancaValorPago(id, precoAntigo, data.preco(), usuarioId);
         }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
@@ -289,6 +310,31 @@ public class EventoService {
         return EventoResponse.from(salvo, inscricoesRemovidas, igrejaId, true);
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @Transactional
+    public void atualizarFoto(UUID id, UUID igrejaId, UUID usuarioId, UUID fotoId) {
+        Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Usuario usuario = usuarioRepository.findByIdAndIgrejaId(usuarioId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        Foto fotoAntiga = evento.getFoto();
+        Foto fotoNova = fotoService.buscarParaVincular(fotoId, igrejaId);
+        evento.setFoto(fotoNova);
+        evento.setAtualizadoPor(usuario);
+        eventoRepository.save(evento);
+
+        boolean fotoMudou = !java.util.Objects.equals(
+                fotoAntiga == null ? null : fotoAntiga.getId(),
+                fotoNova == null ? null : fotoNova.getId());
+        if (fotoMudou && fotoAntiga != null) {
+            fotoService.remover(fotoAntiga.getId());
+        }
+
+        evictarCacheDeEventosDaFamilia(igrejaId);
+        log.info("Foto do evento atualizada. id={}, igreja_id={}, por_usuario_id={}", id, igrejaId, usuarioId);
+    }
+
     @Transactional
     public void arquivarEvento(UUID id, UUID igrejaId, UUID usuarioId,
                                com.domus.api.modules.evento.serie.EscopoEdicaoEvento escopo) {
@@ -316,7 +362,22 @@ public class EventoService {
             if (ocorrencia.getSituacao() == SituacaoEvento.EM_ANDAMENTO) continue;
             notificarInscritos(ocorrencia, igrejaId, usuarioId,
                     "O evento \"" + ocorrencia.getTitulo() + "\" foi cancelado.", "/eventos");
+            // Arquivar um evento pago com gente já confirmada/paga precisa devolver o
+            // dinheiro — sem isto, a cobrança simplesmente sumia junto com o evento sem
+            // ninguém ser reembolsado (achado ao vivo, 2026-08-27).
             eventoRepository.delete(ocorrencia);
+            // Flush explícito ANTES de estornar/cancelar as inscrições (2026-08-27, achado
+            // ao vivo): o UPDATE de deleted_at (SQLDelete) e o carregamento/gravação de
+            // InscricaoEvento (que referencia este Evento, FK não-nula) na MESMA sessão
+            // Hibernate disparavam TransientObjectException num autoflush — mesma classe de
+            // bug que EventoArquivamentoNotificaInscritosTest já cobria pra
+            // notificarInscritos. Fechando o delete (e seu flush) ANTES de tocar em
+            // InscricaoEvento evita as duas mutações concorrerem no mesmo ciclo de flush.
+            eventoRepository.flush();
+            // Arquivar um evento pago com gente já confirmada/paga precisa devolver o
+            // dinheiro — sem isto, a cobrança simplesmente sumia junto com o evento sem
+            // ninguém ser reembolsado (achado ao vivo, 2026-08-27).
+            inscricaoService.cancelarTodasInscricoesDoEventoComEstorno(ocorrencia.getId());
             outboxRegistrador.registrar(TipoEntidadeOutbox.EVENTO, TipoEventoOutbox.REMOVIDO,
                     ocorrencia.getId(), igrejaId);
         }
@@ -528,6 +589,38 @@ public class EventoService {
                 inscricaoService.calcularImpacto(eventoId, regrasHipoteticas));
     }
 
+    /**
+     * Prévia pura (nada gravado, nenhuma chamada ao Mercado Pago) do impacto de mudar o
+     * preço do evento — cobre as duas direções do toggle; mudança de preço que continua
+     * pago (ou continua gratuito) devolve SEM_IMPACTO.
+     */
+    @Transactional(readOnly = true)
+    public com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse calcularImpactoMudancaPreco(
+            UUID eventoId, EventoRequest data, UUID igrejaId, String role) {
+        if (!Permissoes.podeGerenciarEventos(role)) {
+            throw new AccessDeniedException(
+                    "Você não tem permissão para ver o impacto desta mudança de preço.");
+        }
+
+        Evento evento = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        boolean vaiVirarGratuito = evento.getPreco() != null && data.preco() == null;
+        boolean vaiVirarPago = evento.getPreco() == null && data.preco() != null;
+        boolean valorMudouAindaPago = evento.getPreco() != null && data.preco() != null
+                && evento.getPreco().compareTo(data.preco()) != 0;
+        if (vaiVirarGratuito) {
+            return inscricaoService.calcularImpactoEventoVirarGratuito(eventoId);
+        }
+        if (vaiVirarPago) {
+            return inscricaoService.calcularImpactoEventoVirarPago(eventoId, data.preco());
+        }
+        if (valorMudouAindaPago) {
+            return inscricaoService.calcularImpactoMudancaValorPago(eventoId, evento.getPreco(), data.preco());
+        }
+        return com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.semImpacto();
+    }
+
     private void validarDatas(EventoRequest data) {
         if (data.fimEm() != null && data.fimEm().isBefore(data.inicioEm())) {
             log.warn("Data de término anterior ao início. inicio={}, fim={}", data.inicioEm(), data.fimEm());
@@ -543,6 +636,17 @@ public class EventoService {
         if (controlaPresenca && !requerInscricao) {
             throw new BusinessException("CONTROLA_PRESENCA_SEM_INSCRICAO",
                     "Só é possível controlar presença em eventos que também exigem inscrição.");
+        }
+    }
+
+    /** Cobrar sem exigir inscrição não faz sentido — não haveria quem pagar. Defesa em
+     *  profundidade: o front já bloqueia isso (não deixa marcar "Pago" sem preço), mas
+     *  {@code preco} continua opcional no DTO — nada impede uma chamada direta à API. */
+    private void validarPreco(EventoRequest data) {
+        boolean requerInscricao = Boolean.TRUE.equals(data.requerInscricao());
+        if (data.preco() != null && !requerInscricao) {
+            throw new BusinessException("PRECO_SEM_INSCRICAO",
+                    "Só é possível cobrar em eventos que também exigem inscrição.");
         }
     }
 

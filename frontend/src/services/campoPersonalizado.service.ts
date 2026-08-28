@@ -8,7 +8,7 @@ export const camposPersonalizadosService = {
 
   /** Só os campos que EU (pessoa logada) ainda preciso responder — pula os mapeados que já
    *  tenho no cadastro. Usado só quando quem responde é o próprio usuário logado (nunca pra
-   *  responder em nome de acompanhante/convidado — aí a lista completa continua certa). */
+   *  responder em nome de convidado — aí a lista completa continua certa). */
   listarParaMinhaResposta: (eventoId: string): Promise<CampoPersonalizadoResponse[]> =>
     api.get<CampoPersonalizadoResponse[]>(Endpoints.eventos.CAMPOS_PERSONALIZADOS_MINHA(eventoId)).then(res => res.data),
 

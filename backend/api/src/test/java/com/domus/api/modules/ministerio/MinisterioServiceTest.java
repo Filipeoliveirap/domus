@@ -78,7 +78,25 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
 
         service.arquivar(id, igrejaId);
 
-        assertThat(service.listar(igrejaId)).extracting(MinisterioResponse::id).doesNotContain(id);
+        assertThat(service.listar(igrejaId, null)).extracting(MinisterioResponse::id).doesNotContain(id);
+    }
+
+    @Test
+    void listar_marca_souLiderDesteMinisterio_para_o_lider() {
+        UUID ministerioA = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID ministerioB = service.criar(new MinisterioRequest("Recepção", null), igrejaId, null).id();
+        UUID liderId = novaPessoa("Lia", igrejaId).getId();
+        service.adicionarMembro(ministerioA, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioA, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
+
+        var lista = service.listar(igrejaId, liderId);
+
+        assertThat(lista).filteredOn(m -> m.id().equals(ministerioA))
+                .allMatch(MinisterioResponse::souLiderDesteMinisterio);
+        assertThat(lista).filteredOn(m -> m.id().equals(ministerioB))
+                .noneMatch(MinisterioResponse::souLiderDesteMinisterio);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -120,7 +138,7 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
     }
 
     @Test
-    void lider_do_ministerio_nao_pode_promover_ou_rebaixar_papel() {
+    void lider_do_ministerio_promove_co_lider() {
         UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
         UUID liderId = novaPessoa("Fabio", igrejaId).getId();
         UUID membroId = novaPessoa("Gabi", igrejaId).getId();
@@ -128,12 +146,77 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
                 igrejaId, null, true, null);
         service.atualizarPapel(ministerioId, liderId,
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(membroId),
                 igrejaId, liderId, false, null);
 
-        assertThatThrownBy(() -> service.atualizarPapel(ministerioId, membroId,
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, false))
+        service.atualizarPapel(ministerioId, membroId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, liderId, false);
+
+        assertThat(service.detalhe(ministerioId, igrejaId, null, true).membros())
+                .anySatisfy(m -> {
+                    assertThat(m.pessoaId()).isEqualTo(membroId);
+                    assertThat(m.papel()).isEqualTo(Papel.LIDER);
+                });
+    }
+
+    @Test
+    void lider_de_um_ministerio_nao_promove_papel_em_outro() {
+        UUID ministerioA = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID ministerioB = service.criar(new MinisterioRequest("Recepção", null), igrejaId, null).id();
+        UUID liderId = novaPessoa("Fabio", igrejaId).getId();
+        UUID membroB = novaPessoa("Gabi", igrejaId).getId();
+
+        service.adicionarMembro(ministerioA, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioA, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
+        service.adicionarMembro(ministerioB, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(membroB),
+                igrejaId, null, true, null);
+
+        assertThatThrownBy(() -> service.atualizarPapel(ministerioB, membroB,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, liderId, false))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void lider_do_ministerio_edita_dados_do_proprio_ministerio() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID liderId = novaPessoa("Hugo", igrejaId).getId();
+        service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioId, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
+
+        service.atualizar(ministerioId, new MinisterioRequest("Louvor e Adoração", null),
+                igrejaId, null, liderId, false);
+
+        assertThat(repository.findByIdAndIgrejaId(ministerioId, igrejaId).orElseThrow().getNome())
+                .isEqualTo("Louvor e Adoração");
+    }
+
+    @Test
+    void lider_de_um_ministerio_nao_edita_outro_ministerio() {
+        UUID ministerioA = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID ministerioB = service.criar(new MinisterioRequest("Recepção", null), igrejaId, null).id();
+        UUID liderId = novaPessoa("Iris", igrejaId).getId();
+        service.adicionarMembro(ministerioA, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
+                igrejaId, null, true, null);
+        service.atualizarPapel(ministerioA, liderId,
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
+
+        assertThatThrownBy(() -> service.atualizar(ministerioB, new MinisterioRequest("Outro nome", null),
+                igrejaId, null, liderId, false))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void pessoa_comum_nao_edita_ministerio() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID comumId = novaPessoa("Jonas", igrejaId).getId();
+
+        assertThatThrownBy(() -> service.atualizar(ministerioId, new MinisterioRequest("Nome novo", null),
+                igrejaId, null, comumId, false))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
     }
 
@@ -146,7 +229,7 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
                 igrejaId, null, true, null);
         service.atualizarPapel(ministerioId, liderId,
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
 
         service.pedirEntrada(ministerioId, candidataId, igrejaId);
         assertThat(service.detalhe(ministerioId, igrejaId, liderId, false).pedidosPendentes())
@@ -206,7 +289,7 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderPessoa.getId()),
                 igrejaId, null, true, null);
         service.atualizarPapel(ministerioId, liderPessoa.getId(),
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
         com.domus.api.modules.usuario.Usuario usuarioLider = novoUsuario(liderPessoa);
 
         service.pedirEntrada(ministerioId, candidataId, igrejaId);
@@ -227,7 +310,7 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         service.adicionarMembro(ministerioId, new com.domus.api.modules.ministerio.DTOs.AdicionarMembroRequest(liderId),
                 igrejaId, null, true, null);
         service.atualizarPapel(ministerioId, liderId,
-                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, true);
+                new com.domus.api.modules.ministerio.DTOs.AtualizarPapelRequest(Papel.LIDER), igrejaId, null, true);
 
         service.pedirEntrada(ministerioId, candidataId, igrejaId); // não deve lançar mesmo sem usuário no líder
     }
@@ -362,7 +445,7 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
                 .isInstanceOf(com.domus.api.shared.exception.ResourceNotFoundException.class);
 
         service.restaurar(ministerioId, igrejaId);
-        assertThat(service.listar(igrejaId)).extracting(MinisterioResponse::id).contains(ministerioId);
+        assertThat(service.listar(igrejaId, null)).extracting(MinisterioResponse::id).contains(ministerioId);
     }
 
     @Test
@@ -386,5 +469,41 @@ class MinisterioServiceTest implements PostgresTestContainerSupport {
         entityManager.clear();
 
         assertThat(repository.findById(ministerioId)).isEmpty();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.domus.api.modules.foto.FotoRepository fotoRepository;
+
+    private com.domus.api.modules.foto.Foto novaFoto(UUID igrejaId) {
+        Igreja igreja = igrejaRepository.findById(igrejaId).orElseThrow();
+        return fotoRepository.save(com.domus.api.modules.foto.Foto.builder()
+                .igreja(igreja)
+                .chave(UUID.randomUUID().toString())
+                .tipo("image/webp")
+                .bytes(1024)
+                .build());
+    }
+
+    @Test
+    void atualizarFotoTrocaSoAFotoSemTocarNoNome() {
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", null), igrejaId, null).id();
+        UUID fotoId = novaFoto(igrejaId).getId();
+
+        service.atualizarFoto(ministerioId, igrejaId, null, null, true, fotoId);
+
+        Ministerio salvo = repository.findByIdAndIgrejaId(ministerioId, igrejaId).orElseThrow();
+        assertThat(salvo.getFoto().getId()).isEqualTo(fotoId);
+        assertThat(salvo.getNome()).isEqualTo("Louvor");
+    }
+
+    @Test
+    void atualizarFotoRemoveAFotoAntigaQuandoTrocada() {
+        UUID fotoAntigaId = novaFoto(igrejaId).getId();
+        UUID ministerioId = service.criar(new MinisterioRequest("Louvor", fotoAntigaId), igrejaId, null).id();
+        UUID fotoNovaId = novaFoto(igrejaId).getId();
+
+        service.atualizarFoto(ministerioId, igrejaId, null, null, true, fotoNovaId);
+
+        assertThat(fotoRepository.findById(fotoAntigaId)).isEmpty();
     }
 }

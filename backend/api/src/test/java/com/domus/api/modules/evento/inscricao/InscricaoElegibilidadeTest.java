@@ -36,7 +36,6 @@ class InscricaoElegibilidadeTest {
 
     EventoRepository eventoRepository;
     InscricaoRepository inscricaoRepository;
-    AcompanhanteRepository acompanhanteRepository;
     PessoaRepository membroRepository;
     UsuarioRepository usuarioRepository;
     VisitanteRepository visitanteRepository;
@@ -55,7 +54,6 @@ class InscricaoElegibilidadeTest {
     void setup() {
         eventoRepository = mock(EventoRepository.class);
         inscricaoRepository = mock(InscricaoRepository.class);
-        acompanhanteRepository = mock(AcompanhanteRepository.class);
         membroRepository = mock(PessoaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         visitanteRepository = mock(VisitanteRepository.class);
@@ -70,9 +68,25 @@ class InscricaoElegibilidadeTest {
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
-                acompanhanteRepository, membroRepository, usuarioRepository, visitanteRepository,
+                membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
-                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository);
+                campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
+                mock(com.domus.api.modules.pagamento.MercadoPagoClient.class),
+                contaPagamentoIgrejaRepositoryComContaConectada(),
+                mock(com.domus.api.shared.email.EmailService.class),
+                mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class));
+    }
+
+    // Este teste não é sobre a regra de conta de pagamento conectada (Important 9) — todos
+    // os cenários assumem igreja com conta conectada, pra não misturar a asserção.
+    private static com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository
+            contaPagamentoIgrejaRepositoryComContaConectada() {
+        var repo = mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository.class);
+        when(repo.findByIgrejaId(any())).thenReturn(java.util.Optional.of(
+                mock(com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja.class)));
+        return repo;
     }
 
     private Igreja igreja() {
@@ -100,7 +114,7 @@ class InscricaoElegibilidadeTest {
 
     private Pessoa pessoaComIdade(int idade) {
         return Pessoa.builder()
-                .id(UUID.randomUUID()).igreja(igreja()).nome("Fulano")
+                .id(UUID.randomUUID()).igreja(igreja()).nome("Fulano").email("fulano@email.com")
                 .dataNascimento(LocalDate.now().minusYears(idade))
                 .vinculo(Vinculo.MEMBRO)
                 .build();

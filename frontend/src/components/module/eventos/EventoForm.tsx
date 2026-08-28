@@ -3,7 +3,11 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
+import Link from 'next/link'
 import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
+import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { useAuthStore } from '@/store/authStore'
+import { podeConectarContaPagamento } from '@/lib/permissoes'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
@@ -17,14 +21,17 @@ import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
+import { ModalImpactoMudancaPreco } from './ModalImpactoMudancaPreco'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
 import { CamposPersonalizadosPainel } from './CamposPersonalizadosPainel'
 import type { CamposPersonalizadosHandle } from './CamposPersonalizadosPainel'
 import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
+import { useAtualizarFotoEvento } from '@/hooks/evento/useAtualizarFotoEvento'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
-import type { InscritoImpactado, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
+import type { InscritoImpactado, ImpactoMudancaPrecoResponse, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
   isFormIncomplete: boolean
@@ -39,6 +46,9 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   isVerificandoImpacto: boolean
   onConfirmarImpacto: (cancelarNaoElegiveis: boolean) => void
   onFecharImpacto: () => void
+  impactoMudancaPreco: ImpactoMudancaPrecoResponse | null
+  onConfirmarMudancaPreco: () => void
+  onFecharMudancaPreco: () => void
   aguardandoEscopoEdicao: boolean
   onEscolherEscopoEdicao: (escopo: EscopoEdicaoEvento) => void
   onFecharEscopoEdicao: () => void
@@ -62,10 +72,14 @@ export function EventoForm(props: EventoFormProps) {
     erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
+    impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,
     aguardandoEscopoEdicao, onEscolherEscopoEdicao, onFecharEscopoEdicao,
   } = props
 
   const { congregacao, concordar } = useRotulos()
+  const { data: contaPagamento } = useContaPagamento()
+  const role = useAuthStore((s) => s.role)
+  const podeConectar = podeConectarContaPagamento(role)
   const repetir = watch('repetir')
   const recorrenciaFrequencia = watch('recorrenciaFrequencia')
   const recorrenciaDiasSemana = (watch('recorrenciaDiasSemana') as string[]) ?? []
@@ -78,6 +92,8 @@ export function EventoForm(props: EventoFormProps) {
   const inicioData = (watch('inicioData') as string) ?? ''
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
+  const precisaConectarContaPagamento = requerInscricao && tipoInscricao === 'PAGO'
+    && !!contaPagamento && !contaPagamento.conectada
   const fotoIdAtual = watch('fotoId') as string | null | undefined
   const localIdAtual = watch('localId') as string | undefined
   const localTextoAtual = watch('localTexto') as string | undefined
@@ -91,6 +107,7 @@ export function EventoForm(props: EventoFormProps) {
   const restricaoSexoAtual = watch('restricaoSexo') as RestricaoSexo | null | undefined
 
   const { data: tiposSugeridos = [] } = useTiposEvento()
+  const atualizarFoto = useAtualizarFotoEvento(eventoId)
 
   const { data: vinculoStatus } = useVinculoStatus()
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
@@ -375,7 +392,23 @@ export function EventoForm(props: EventoFormProps) {
               <span className={styles.labelData}>IMAGEM DO EVENTO</span>
               <UploadFoto
                 valor={fotoIdAtual}
-                onChange={(id) => setValue('fotoId', id, { shouldValidate: true, shouldDirty: true })}
+                onChange={(id) => {
+                  setValue('fotoId', id, { shouldValidate: true })
+                  // Em criação, o evento ainda não existe (sem id) — a foto só é enviada
+                  // junto do "Salvar evento". Em edição, salva sozinha ao confirmar o recorte.
+                  if (!ehEdicao || !eventoId) return
+                  const fotoAnterior = fotoIdAtual ?? null
+                  atualizarFoto.mutate(id, {
+                    onSuccess: () => notificar.sucesso(id ? 'Imagem atualizada.' : 'Imagem removida.'),
+                    onError: (erro: unknown) => {
+                      setValue('fotoId', fotoAnterior)
+                      const mensagem =
+                        (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                        'Tente novamente em alguns instantes.'
+                      notificar.erro('Não foi possível salvar a imagem', mensagem)
+                    },
+                  })
+                }}
                 formato="banner"
               />
             </div>
@@ -536,10 +569,28 @@ export function EventoForm(props: EventoFormProps) {
                         })
                       }}
                     />
-                    <span className={styles.campoHint}>
-                      Informativo. O pagamento é combinado com a igreja — informe o PIX ou um
-                      contato na descrição do evento.
-                    </span>
+                    {contaPagamento && !contaPagamento.conectada ? (
+                      <div className={styles.avisoContaPagamento}>
+                        {podeConectar ? (
+                          <>
+                            A igreja ainda não conectou uma conta pra receber pagamentos —
+                            sem isso, ninguém consegue se inscrever neste evento.{' '}
+                            <Link href="/configuracoes/igreja">Conectar agora</Link>
+                          </>
+                        ) : (
+                          <>
+                            A igreja ainda não conectou uma conta pra receber pagamentos —
+                            sem isso, ninguém consegue se inscrever neste evento. Consulte o
+                            administrador ou responsável pela igreja pra conectar.
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <span className={styles.campoHint}>
+                        Cobrado automaticamente na inscrição, através da conta de recebimento
+                        conectada pela igreja.
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -574,7 +625,7 @@ export function EventoForm(props: EventoFormProps) {
             variant="primary"
             size="lg"
             isLoading={isLoading || isVerificandoImpacto}
-            disabled={isFormIncomplete || isLoading || isVerificandoImpacto}
+            disabled={isFormIncomplete || isLoading || isVerificandoImpacto || precisaConectarContaPagamento}
             style={{ width: '100%' }}
           >
             {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}
@@ -590,6 +641,15 @@ export function EventoForm(props: EventoFormProps) {
           onManterTodos={() => onConfirmarImpacto(false)}
           onCancelarNaoElegiveis={() => onConfirmarImpacto(true)}
           onClose={onFecharImpacto}
+        />
+      )}
+
+      {impactoMudancaPreco && impactoMudancaPreco.tipo !== 'SEM_IMPACTO' && (
+        <ModalImpactoMudancaPreco
+          impacto={impactoMudancaPreco}
+          isLoading={isLoading}
+          onConfirmar={onConfirmarMudancaPreco}
+          onClose={onFecharMudancaPreco}
         />
       )}
 

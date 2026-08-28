@@ -433,6 +433,8 @@
   width: 100%;
   max-width: 440px;
   max-height: min(600px, calc(100vh - 32px));
+
+  max-height: min(600px, calc(100dvh - 32px));
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 40px rgba(19, 27, 46, 0.15);

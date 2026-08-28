@@ -50,6 +50,14 @@ public class CelulaController {
                 usuarioAutenticado.getPessoaId(), souAdmin()));
     }
 
+    /** Só a foto — salva assim que o recorte é confirmado, sem esperar o resto do "Salvar". */
+    @PatchMapping("/{id}/foto")
+    public ResponseEntity<Void> atualizarFoto(@PathVariable UUID id, @RequestBody AtualizarFotoRequest data) {
+        celulaService.atualizarFoto(id, usuarioAutenticado.getIgrejaId(), usuarioAutenticado.getUsuarioId(),
+                usuarioAutenticado.getPessoaId(), souAdmin(), data.fotoId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable UUID id) {
         exigirAdmin();
@@ -97,8 +105,8 @@ public class CelulaController {
     public ResponseEntity<Void> atualizarPapel(@PathVariable UUID id,
                                                 @PathVariable UUID membroId,
                                                 @Valid @RequestBody AtualizarPapelCelulaRequest data) {
-        celulaService.atualizarPapel(id, membroId, data, usuarioAutenticado.getIgrejaId(), souAdmin(),
-                usuarioAutenticado.getUsuarioId());
+        celulaService.atualizarPapel(id, membroId, data, usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(), souAdmin(), usuarioAutenticado.getUsuarioId());
         return ResponseEntity.noContent().build();
     }
 
@@ -112,14 +120,16 @@ public class CelulaController {
         return ResponseEntity.ok(PessoaResponse.from(pessoa));
     }
 
+    /** Admin da igreja ou quem tem a capacidade SECRETARIO — gestão plena do cadastro de células. */
     private boolean souAdmin() {
-        return Permissoes.podeGerenciarCelulas(usuarioAutenticado.getRole());
+        return Permissoes.podeGerenciarCelulas(
+                usuarioAutenticado.getRole(), usuarioAutenticado.getCapacidadesExtras());
     }
 
     private void exigirAdmin() {
-        if (!Permissoes.podeGerenciarCelulas(usuarioAutenticado.getRole())) {
+        if (!souAdmin()) {
             throw new AccessDeniedException(
-                    "Só um administrador pode gerenciar o cadastro de células.");
+                    "Só um administrador ou secretário pode gerenciar o cadastro de células.");
         }
     }
 }

@@ -18,6 +18,32 @@ export function useMinhaIgreja(enabled = true) {
   })
 }
 
+/**
+ * Salva só a logo — dispara assim que o UploadFoto confirma o recorte (ou remove a
+ * foto), sem esperar o resto do formulário de Dados da Igreja ser salvo.
+ */
+export function useAtualizarLogoIgreja() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (fotoId: string | null): Promise<void> => {
+      await api.patch(Endpoints.igreja.LOGO, { fotoId })
+    },
+    onSuccess: (_, fotoId) => {
+      queryClient.setQueryData<IgrejaDetalhe | undefined>(CHAVE, (atual) =>
+        atual ? { ...atual, logoFotoId: fotoId } : atual,
+      )
+      useAuthStore.getState().atualizarUsuarioLogado({ igrejaLogoId: fotoId })
+    },
+    onError: (erro: unknown) => {
+      const mensagem =
+        (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Tente novamente em alguns instantes.'
+      notificar.erro('Não foi possível salvar a foto', mensagem)
+    },
+  })
+}
+
 export function useAtualizarIgreja() {
   const queryClient = useQueryClient()
 

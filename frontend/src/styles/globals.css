@@ -11,6 +11,8 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  /* iOS infla o texto ao rotacionar o aparelho sem isto. */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -22,6 +24,21 @@ body {
   background-color: var(--color-bg-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Rede de segurança: nenhuma tela deve rolar na horizontal no celular. Se algum
+     filho estourar a largura, ele fica contido em vez de empurrar o body inteiro. */
+  overflow-x: hidden;
+  /* Mata o "bounce" elástico vertical do iOS que revela área fora do layout. */
+  overscroll-behavior-y: none;
+}
+
+/* iOS dá zoom automático ao focar um input com fonte < 16px, e o zoom desalinha o
+   layout todo. 16px no mobile evita o zoom sem mudar o desktop. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* ─── Links ──────────────────────────────────────────────── */

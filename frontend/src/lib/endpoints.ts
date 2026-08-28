@@ -48,6 +48,9 @@ export const Endpoints = {
     ARQUIVAR: (id: string) => `/pessoas/${id}`,
     BAIRROS: '/pessoas/bairros',
     ME: '/pessoas/me',
+    MINHA_FOTO: '/pessoas/me/foto',
+    FOTO: (id: string) => `/pessoas/${id}/foto`,
+    EMAIL: (id: string) => `/pessoas/${id}/email`,
     PESSOA_MINISTERIOS: (pessoaId: string) => `/pessoas/${pessoaId}/ministerios`,
     ARQUIVADOS: '/pessoas/arquivados',
     RESTAURAR: (id: string) => `/pessoas/${id}/restaurar`,
@@ -60,12 +63,14 @@ export const Endpoints = {
     BY_ID: (id: string) => `/eventos/${id}`,
     TIPOS: '/eventos/tipos',
     IMPACTO_RESTRICAO: (id: string) => `/eventos/${id}/impacto-restricao`,
+    IMPACTO_MUDANCA_PRECO: (id: string) => `/eventos/${id}/impacto-mudanca-preco`,
     ELEGIBILIDADE: (id: string) => `/eventos/${id}/elegibilidade`,
     RELATORIO: (id: string) => `/eventos/${id}/relatorio`,
     RELATORIO_GERAL: '/eventos/relatorio-geral',
     ARQUIVADOS: '/eventos/arquivados',
     RESTAURAR: (id: string) => `/eventos/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/eventos/${id}/definitivo`,
+    FOTO: (id: string) => `/eventos/${id}/foto`,
     CAMPOS_PERSONALIZADOS: (id: string) => `/eventos/${id}/campos-personalizados`,
     CAMPOS_PERSONALIZADOS_MINHA: (id: string) => `/eventos/${id}/campos-personalizados/minha`,
   },
@@ -83,6 +88,7 @@ export const Endpoints = {
     LISTAR: '/ministerios',
     CRIAR: '/ministerios',
     BY_ID: (id: string) => `/ministerios/${id}`,
+    FOTO: (id: string) => `/ministerios/${id}/foto`,
     ARQUIVADOS: '/ministerios/arquivados',
     RESTAURAR: (id: string) => `/ministerios/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/ministerios/${id}/definitivo`,
@@ -98,14 +104,13 @@ export const Endpoints = {
     INSCREVER: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     MINHA: (eventoId: string) => `/eventos/${eventoId}/inscricoes/minha`,
     INSCREVER_MEMBROS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/pessoas`,
-    ACOMPANHANTES: (eventoId: string, inscricaoId: string) =>
-      `/eventos/${eventoId}/inscricoes/${inscricaoId}/acompanhantes`,
     CONVIDADOS: (eventoId: string) => `/eventos/${eventoId}/inscricoes/convidados`,
     PARTICIPANTES: (eventoId: string) => `/eventos/${eventoId}/inscricoes/participantes`,
     LISTAR: (eventoId: string) => `/eventos/${eventoId}/inscricoes`,
     CANCELAR: (inscricaoId: string) => `/inscricoes/${inscricaoId}`,
-    REMOVER_ACOMPANHANTE: (acompanhanteId: string) => `/acompanhantes/${acompanhanteId}`,
     RESPOSTAS: (inscricaoId: string) => `/inscricoes/${inscricaoId}/respostas`,
+    LEMBRETE_PAGAMENTO: (eventoId: string, inscricaoId: string) =>
+      `/eventos/${eventoId}/inscricoes/${inscricaoId}/lembrete-pagamento`,
   },
 
   presenca: {
@@ -113,8 +118,6 @@ export const Endpoints = {
     DESMARCAR_TODOS: (eventoId: string) => `/eventos/${eventoId}/presenca/desmarcar-todos`,
     INSCRICAO: (eventoId: string, inscricaoId: string) =>
       `/eventos/${eventoId}/presenca/inscricoes/${inscricaoId}`,
-    ACOMPANHANTE: (eventoId: string, acompanhanteId: string) =>
-      `/eventos/${eventoId}/presenca/acompanhantes/${acompanhanteId}`,
   },
 
   categorias: {
@@ -150,6 +153,7 @@ export const Endpoints = {
   igreja: {
     MINHA: '/igrejas/minha',
     ROTULOS: '/igrejas/minha/rotulos',
+    LOGO: '/igrejas/minha/logo',
     exclusao: {
       RESUMO: '/igrejas/exclusao/resumo',
       AGENDAR: '/igrejas/exclusao/agendar',
@@ -187,10 +191,28 @@ export const Endpoints = {
     BY_ID: (id: string) => `/fotos/${id}`,
   },
 
+  pagamento: {
+    STATUS: '/pagamentos/conta/status',
+    CONECTAR: '/pagamentos/conta/conectar',
+    DESCONECTAR: '/pagamentos/conta',
+  },
+
+  cobrancas: {
+    BUSCAR_POR_TOKEN: (token: string) => `/cobrancas/${token}`,
+    BUSCAR_POR_ID: (id: string) => `/cobrancas/id/${id}`,
+    PAGAR: (id: string) => `/cobrancas/${id}/pagar`,
+    STATUS: (id: string) => `/cobrancas/${id}/status`,
+    PIX: (id: string) => `/cobrancas/${id}/pix`,
+    CANCELAR_INSCRICAO: (id: string) => `/cobrancas/${id}/cancelar-inscricao`,
+    REINICIAR: (id: string) => `/cobrancas/${id}/reiniciar`,
+    TENTAR_ESTORNO_NOVAMENTE: (id: string) => `/cobrancas/${id}/tentar-estorno-novamente`,
+  },
+
   celulas: {
     LISTAR: '/celulas',
     CRIAR: '/celulas',
     BY_ID: (id: string) => `/celulas/${id}`,
+    FOTO: (id: string) => `/celulas/${id}/foto`,
     ARQUIVADOS: '/celulas/arquivados',
     RESTAURAR: (id: string) => `/celulas/${id}/restaurar`,
     DEFINITIVO: (id: string) => `/celulas/${id}/definitivo`,

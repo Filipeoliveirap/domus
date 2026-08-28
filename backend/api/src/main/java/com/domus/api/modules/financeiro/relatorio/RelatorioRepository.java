@@ -161,12 +161,18 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
     /**
      * Nativa + LEFT JOIN de propósito: um contribuinte cuja pessoa foi excluída (pessoa_id
      * NULL) precisa continuar contando aqui — JOIN normal (JPQL) sumiria com ele. Agrupa
-     * todos os anônimos numa linha só (pessoa_id NULL).
+     * todos os anônimos (pessoa excluída, sem nome_externo) numa linha só.
+     *
+     * <p>Contribuinte de fora (sem cadastro, {@code nome_externo} preenchido — achado
+     * revisando com o usuário, 2026-08-26): sem o COALESCE incluir {@code nome_externo},
+     * toda doação de fora caía também em "Pessoa removida do sistema", misturada com
+     * pessoas de verdade excluídas — enganoso, parece perda de dado quando não é.
+     * Agrupado por nome (não tem id próprio pra agrupar por identidade).
      */
     @Query(value = """
         SELECT
             p.id AS pessoaId,
-            COALESCE(p.nome, 'Pessoa removida do sistema') AS pessoaNome,
+            COALESCE(p.nome, ct.nome_externo, 'Pessoa removida do sistema') AS pessoaNome,
             m.tipo AS tipo,
             SUM(ct.valor) AS total
         FROM movimentacao_contribuinte ct
@@ -176,7 +182,7 @@ public interface RelatorioRepository extends JpaRepository<MovimentacaoFinanceir
           AND m.deleted_at IS NULL
           AND m.data_movimentacao >= :dataInicio
           AND m.data_movimentacao <= :dataFim
-        GROUP BY p.id, p.nome, m.tipo
+        GROUP BY p.id, p.nome, ct.nome_externo, m.tipo
         ORDER BY SUM(ct.valor) DESC
         """, nativeQuery = true)
     List<RelatorioProjections.ContribuinteAgregado> agregarPorContribuinte(@Param("igrejaId") UUID igrejaId,

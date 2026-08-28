@@ -1,0 +1,274 @@
+.pagina {
+  min-height: 100vh;
+
+  min-height: 100dvh;
+  background: var(--color-bg-page);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 48px;
+}
+
+.topo {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+}
+
+.topoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.topoTextos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topoTitulo {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topoData {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+}
+
+.conteudo {
+  width: 100%;
+  max-width: 480px;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.card {
+  padding: 24px 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.card h1 {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-bottom: 8px;
+}
+
+.card p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.iconeSucesso {
+  color: var(--color-success, #16a34a);
+  margin-bottom: 8px;
+}
+
+.iconeErro {
+  color: var(--color-danger);
+  margin-bottom: 8px;
+}
+
+.iconeAguardando {
+  color: var(--color-primary);
+  margin-bottom: 8px;
+  animation: pulsar 1.6s ease-in-out infinite;
+}
+
+@keyframes pulsar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.saudacao {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.valor {
+  font-size: var(--font-size-xl, 28px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-top: 4px;
+}
+
+.seguranca {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.estado {
+  padding: 24px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.voltarLink {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ---- Tela de "Pagamento aprovado" ---- */
+
+.cardAprovado {
+  padding: 32px 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: entradaCard 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes entradaCard {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.aneisAprovado {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.anelAprovado {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-success-bg);
+  animation: pulsarAnel 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+@keyframes pulsarAnel {
+  from { opacity: 1; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(1.6); }
+}
+
+.iconeAprovado {
+  position: relative;
+  color: var(--color-success-text);
+  animation: nascerIcone 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes nascerIcone {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.aprovadoTitulo {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-bottom: 6px;
+  animation: entrarDeBaixo 0.4s ease-out 0.25s both;
+}
+
+.aprovadoTexto {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  animation: entrarDeBaixo 0.4s ease-out 0.32s both;
+}
+
+.aprovadoResumo {
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: entrarDeBaixo 0.4s ease-out 0.4s both;
+}
+
+.aprovadoResumoLabel {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.aprovadoResumoValor {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-text);
+}
+
+@keyframes entrarDeBaixo {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.aprovadoAcao {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: opacity var(--transition-fast);
+  animation: entrarDeBaixo 0.4s ease-out 0.48s both;
+}
+
+.aprovadoAcao:hover {
+  opacity: 0.9;
+}
+
+.aprovadoFechar {
+  margin-top: 24px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  animation: entrarDeBaixo 0.4s ease-out 0.48s both;
+}
+
+@media (max-width: 480px) {
+  .conteudo {
+    padding: 0 12px;
+  }
+}
+
+/* ---- Tela de "Cancelar inscrição" ---- */
+
+.avisoErro {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+}
+
+.acoesCancelar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}

@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Archive } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Archive, Trash2 } from 'lucide-react'
 import { useCategorias } from '@/hooks/financeiro/categoria/useCategorias'
+import { useExcluirCategoriaDefinitivamente } from '@/hooks/financeiro/categoria/useExcluirCategoriaDefinitivamente'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { ModalCategoriaForm } from '@/app/(app)/financeiro/categorias/ModalCategoriaForm'
 import { ModalArquivarCategoria } from '@/app/(app)/financeiro/categorias/ModalArquivarCategoria'
+import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { rotuloTipoCategoria, varianteTipoCategoria } from '@/lib/formats/financeiro/categoriaFormat'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import styles from './categoria.module.css'
@@ -50,6 +52,7 @@ function CategoriasConteudo() {
   const [pagina, setPagina] = useState(0)
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
+  const [categoriaExcluindo, setCategoriaExcluindo] = useState<CategoriaResponse | null>(null)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -72,9 +75,14 @@ function CategoriasConteudo() {
   }
 
   function acoesDaLinha(categoria: CategoriaResponse): ItemAcao[] {
+    // Sem nenhuma movimentação vinculada, arquivar (reversível, mas dá trabalho: exige
+    // digitar o nome pra confirmar) é fricção desnecessária — apagar direto é seguro e só
+    // pede uma confirmação simples (padrão "hard delete quando vazio").
     return [
       { label: 'Editar', icone: Pencil, onClick: () => setModalForm({ aberto: true, categoria }) },
-      { label: 'Arquivar', icone: Archive, onClick: () => setCategoriaArquivando(categoria), perigo: true, separadorAntes: true },
+      categoria.temVinculo
+        ? { label: 'Arquivar', icone: Archive, onClick: () => setCategoriaArquivando(categoria), perigo: true, separadorAntes: true }
+        : { label: 'Excluir', icone: Trash2, onClick: () => setCategoriaExcluindo(categoria), perigo: true, separadorAntes: true },
     ]
   }
 
@@ -202,7 +210,30 @@ function CategoriasConteudo() {
           onClose={() => setCategoriaArquivando(null)}
         />
       )}
+
+      {categoriaExcluindo && (
+        <ModalExcluirCategoria
+          categoria={categoriaExcluindo}
+          onClose={() => setCategoriaExcluindo(null)}
+        />
+      )}
     </div>
+  )
+}
+
+function ModalExcluirCategoria({ categoria, onClose }: { categoria: CategoriaResponse; onClose: () => void }) {
+  const { confirmar, isLoading } = useExcluirCategoriaDefinitivamente(categoria, onClose)
+
+  return (
+    <ModalConfirmacao
+      titulo="Excluir categoria?"
+      mensagem={<>Isso vai apagar <strong>{categoria.nome}</strong> de vez. Não tem como desfazer.</>}
+      textoConfirmar="Excluir"
+      perigo
+      isLoading={isLoading}
+      onConfirmar={confirmar}
+      onClose={onClose}
+    />
   )
 }
 

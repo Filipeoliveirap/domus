@@ -1512,6 +1512,240 @@ git commit -m "feat(front): polimento do sidebar — pilula ativa, swipe-to-clos
 
 ---
 
+## Task 10B: Peça D — animação em toda troca de conteúdo
+
+> Adicionada na execução. Ver spec "Peça D". Sem dependência nova.
+
+**Files (novos):**
+- `frontend/src/components/common/Transicao/TransicaoRota.tsx`
+- `frontend/src/components/common/Transicao/Transicao.tsx`
+- `frontend/src/components/common/Transicao/ItemAnimado.tsx`
+- `frontend/src/components/common/Transicao/Transicao.module.css`
+- `frontend/src/hooks/useListaComSaida.ts`
+
+**Files (modificados):**
+- `frontend/src/app/(app)/layout.tsx` — `{children}` dentro de `<TransicaoRota>`
+- 2–3 listas com add/remove pra `<ItemAnimado>` (ver Step 4)
+- `frontend/src/app/demo/loaders/page.tsx` — seção demonstrando D1/D2/D3
+
+**Interfaces produzidas:**
+- `TransicaoRota({ children }: { children: React.ReactNode }): JSX.Element` — `key={usePathname()}` + keyframe de entrada.
+- `Transicao({ children, modo, className }: { children: React.ReactNode; modo?: 'fade' | 'subir' | 'escala'; className?: string }): JSX.Element` — anima na montagem via `@starting-style`.
+- `ItemAnimado({ children, saindo, className }: { children: React.ReactNode; saindo?: boolean; className?: string }): JSX.Element`.
+- `useListaComSaida<T>(itens: T[], chave: (item: T) => string): Array<{ item: T; chave: string; saindo: boolean }>` — mantém no array por ~0.3s os itens que sumiram, marcados `saindo`, pra o `<ItemAnimado>` rodar a saída antes de desmontar.
+
+- [ ] **Step 1: `Transicao.module.css`**
+
+```css
+/* D1 — conteúdo de rota: keyframe (re-dispara a cada navegação via key={pathname}) */
+.rota { animation: entrarConteudo 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes entrarConteudo {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* D2 — bloco fora de rota: transition + @starting-style (não re-dispara a cada render) */
+.bloco {
+  transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 1;
+  transform: none;
+}
+.fade { @starting-style { opacity: 0; } }
+.subir { @starting-style { opacity: 0; transform: translateY(10px); } }
+.escala { @starting-style { opacity: 0; transform: scale(0.96); } }
+
+/* D3 — item de lista */
+.item {
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              max-height 0.24s ease, margin 0.24s ease, padding 0.24s ease;
+  overflow: hidden;
+  opacity: 1;
+}
+.item {
+  @starting-style { opacity: 0; transform: translateX(-6px); }
+}
+.itemSaindo {
+  opacity: 0;
+  transform: translateX(-6px);
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rota { animation: none; }
+  .bloco, .item { transition: opacity 0.15s ease; }
+  .fade, .subir, .escala { @starting-style { opacity: 0; transform: none; } }
+  .itemSaindo { transform: none; }
+}
+```
+
+- [ ] **Step 2: `TransicaoRota.tsx`**
+
+```tsx
+'use client'
+
+import { usePathname } from 'next/navigation'
+import styles from './Transicao.module.css'
+
+/** Faz o conteúdo da rota (e das abas, que são rotas) entrar animado a cada navegação.
+ *  `key={pathname}` remonta a subárvore → o keyframe roda de novo. Sidebar/topbar ficam
+ *  fora deste wrapper, então não piscam. */
+export function TransicaoRota({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  return (
+    <div key={pathname} className={styles.rota}>
+      {children}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: `Transicao.tsx` + `ItemAnimado.tsx` + `useListaComSaida.ts`**
+
+```tsx
+// Transicao.tsx
+'use client'
+
+import { clsx } from 'clsx'
+import styles from './Transicao.module.css'
+
+export function Transicao({
+  children,
+  modo = 'fade',
+  className,
+}: {
+  children: React.ReactNode
+  modo?: 'fade' | 'subir' | 'escala'
+  className?: string
+}) {
+  return <div className={clsx(styles.bloco, styles[modo], className)}>{children}</div>
+}
+```
+
+```tsx
+// ItemAnimado.tsx
+'use client'
+
+import { clsx } from 'clsx'
+import styles from './Transicao.module.css'
+
+export function ItemAnimado({
+  children,
+  saindo = false,
+  className,
+}: {
+  children: React.ReactNode
+  saindo?: boolean
+  className?: string
+}) {
+  return <div className={clsx(styles.item, saindo && styles.itemSaindo, className)}>{children}</div>
+}
+```
+
+```ts
+// useListaComSaida.ts
+import { useEffect, useRef, useState } from 'react'
+
+const DURACAO_SAIDA = 260
+
+type Entrada<T> = { item: T; chave: string; saindo: boolean }
+
+/** Mantém no array, por ~0.26s e marcados `saindo`, os itens que sumiram da lista de
+ *  origem — pra o <ItemAnimado> rodar a animação de saída antes de desmontar. */
+export function useListaComSaida<T>(itens: T[], chave: (item: T) => string): Entrada<T>[] {
+  const [render, setRender] = useState<Entrada<T>[]>(() =>
+    itens.map((item) => ({ item, chave: chave(item), saindo: false })),
+  )
+  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    const chavesAtuais = new Set(itens.map(chave))
+    setRender((anterior) => {
+      const porChave = new Map(anterior.map((e) => [e.chave, e]))
+      // atualiza/insere os presentes
+      for (const item of itens) {
+        porChave.set(chave(item), { item, chave: chave(item), saindo: false })
+      }
+      // marca saindo os que sumiram e agenda a remoção
+      for (const e of anterior) {
+        if (!chavesAtuais.has(e.chave) && !e.saindo) {
+          porChave.set(e.chave, { ...e, saindo: true })
+          if (!timers.current.has(e.chave)) {
+            const t = setTimeout(() => {
+              timers.current.delete(e.chave)
+              setRender((r) => r.filter((x) => x.chave !== e.chave))
+            }, DURACAO_SAIDA)
+            timers.current.set(e.chave, t)
+          }
+        }
+      }
+      // preserva a ordem: primeiro os itens atuais, depois os que estão saindo
+      const vivos = itens.map((item) => porChave.get(chave(item))!)
+      const saindo = anterior.filter((e) => !chavesAtuais.has(e.chave)).map((e) => porChave.get(e.chave)!)
+      return [...vivos, ...saindo]
+    })
+  }, [itens, chave])
+
+  useEffect(() => {
+    const mapa = timers.current
+    return () => { mapa.forEach(clearTimeout); mapa.clear() }
+  }, [])
+
+  return render
+}
+```
+
+- [ ] **Step 4: Aplicar**
+
+`(app)/layout.tsx`:
+
+```tsx
+import { TransicaoRota } from '@/components/common/Transicao/TransicaoRota'
+// ...
+      <main className={styles.main}>
+        <TransicaoRota>{children}</TransicaoRota>
+      </main>
+```
+
+Listas com add/remove real (usar `useListaComSaida` + `<ItemAnimado>`):
+- `frontend/src/components/module/eventos/` — lista de acompanhantes na inscrição (achar o arquivo: grep `acompanhante` em `components/module/eventos`).
+- `frontend/src/components/module/movimentacoes/MovimentacaoForm.tsx` — `contribuintesArray` (linhas de contribuinte).
+- `frontend/src/components/module/eventos/EventoForm.tsx` — campos personalizados do builder, se a lista for dinâmica.
+
+Padrão de aplicação:
+
+```tsx
+const linhas = useListaComSaida(campos, (c) => c.id)
+// ...
+{linhas.map(({ item, chave, saindo }) => (
+  <ItemAnimado key={chave} saindo={saindo}>
+    {/* conteúdo da linha, usando `item` */}
+  </ItemAnimado>
+))}
+```
+
+- [ ] **Step 5: Demo** — em `demo/loaders/page.tsx`, seção "Transições" com: um botão que troca um bloco via `<Transicao modo="subir">`, e uma mini-lista com adicionar/remover usando `useListaComSaida` + `<ItemAnimado>`.
+
+- [ ] **Step 6: Verificar**
+
+`npx tsc --noEmit && npx eslint src/components/common/Transicao/ src/hooks/useListaComSaida.ts "src/app/(app)/layout.tsx" <arquivos de lista> && npm run build`
+
+Manual: navegar entre rotas/abas → conteúdo entra com fade+subir; adicionar/remover contribuinte → linha anima entrada e colapsa na saída; `reduce motion` → só opacity.
+
+- [ ] **Step 7: CHECKPOINT — pedaço D.** Avisar, esperar teste, commit:
+
+```bash
+git add frontend/src/components/common/Transicao/ frontend/src/hooks/useListaComSaida.ts "frontend/src/app/(app)/layout.tsx" frontend/src/app/demo/ <arquivos de lista>
+git commit -m "feat(front): transicoes de entrada em rota/abas, blocos e itens de lista"
+```
+
+- [ ] **Step 8:** `graphify update .`
+
+---
+
 ## Task 11: Limpeza — remover variantes de loader não escolhidas
 
 **Files:**

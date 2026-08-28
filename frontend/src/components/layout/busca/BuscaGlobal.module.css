@@ -2,11 +2,17 @@
   position: relative;
   width: 100%;
   max-width: 480px;
+  /* Filho flex do .topbar: sem min-width:0 ele não encolhe abaixo do conteúdo e
+     empurra o grupo da direita (sino + logo da igreja) pra fora da tela no mobile,
+     onde some por causa do overflow-x: hidden do body. */
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .inputWrap {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 10px;
   padding: 0 14px;
   height: 42px;
@@ -28,6 +34,7 @@
 
 .input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   outline: none;

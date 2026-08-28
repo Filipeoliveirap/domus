@@ -362,6 +362,64 @@ Mantém o mecanismo (grid `grid-template-rows: 0fr → 1fr`). Polimento:
 
 ---
 
+## Peça D — animação em toda troca de conteúdo
+
+> Adicionada durante a execução. Objetivo do autor: "nada seco, animação em toda parte".
+> Guardrail mantido: **sem dependência nova** (nada de framer-motion).
+
+Descoberta que molda o desenho: **não existe componente `<Tabs>`** — as abas do app
+(configurações, financeiro, células, usuários, locais…) são **rotas** com um `layout.tsx`
+que renderiza os links + `{children}`. Trocar de aba É navegar. Então uma transição de
+conteúdo de rota cobre rota **e** abas de uma vez.
+
+### D1 — `<TransicaoRota>` (conteúdo de rota + abas)
+
+- `frontend/src/components/common/Transicao/TransicaoRota.tsx` (client) + `.module.css`.
+- Envolve `{children}` no `(app)/layout.tsx`. `key={pathname}` (via `usePathname`) força
+  remontar a cada navegação → replay do keyframe.
+- CSS: `animation: entrarConteudo 0.28s cubic-bezier(0.22, 1, 0.36, 1)` — `opacity 0→1` +
+  `translateY(8px→0)`.
+- Só o `<main>` anima; sidebar e topbar ficam fora do wrapper, parados.
+- `prefers-reduced-motion`: `animation: none`.
+- Sem animação de saída (o conteúdo antigo some) — aceitável; a de entrada já mata o
+  "seco". Animação de saída de verdade pede a View Transitions API, que fica pra segunda
+  passada (config `experimental` do Next + API `unstable` do React — fora de escopo desta
+  passada de polimento).
+
+### D2 — `<Transicao>` (primitiva pra blocos fora de rota)
+
+- `frontend/src/components/common/Transicao/Transicao.tsx` + reusa o mesmo `.module.css`.
+- `<Transicao modo="fade" | "subir" | "escala">{children}</Transicao>` — anima na montagem
+  via `@starting-style` + `transition` (não keyframe, pra não re-disparar a cada render).
+- Uso: resultado de filtro que aparece, seção condicional, painel que expande, preview de
+  builder — qualquer bloco que hoje aparece do nada.
+- `prefers-reduced-motion`: sem transição.
+
+### D3 — `<ItemAnimado>` (entrada/saída de item de lista)
+
+- `frontend/src/components/common/Transicao/ItemAnimado.tsx` + `.module.css`.
+- Entrada: `@starting-style` (`opacity 0`, `translateX(-6px)`) → estado normal.
+- Saída: o pai marca `saindo` (prop) antes de desmontar; o item roda a transição reversa +
+  colapsa a altura (`max-height`/`opacity`), e só então o pai remove do array. Um hook
+  auxiliar `useListaComSaida(itens, chave)` encapsula esse "segurar 1 ciclo antes de
+  remover" — devolve a lista renderizável com os que estão saindo ainda dentro, marcados.
+- **Reordenação (FLIP) fica de fora** — é o caso que de verdade pediria framer-motion.
+  Reabrir se o autor quiser depois.
+- Aplicar nas listas onde add/remove é comum e visível: acompanhantes na inscrição,
+  contribuintes na movimentação, campos personalizados no builder de evento. Não sair
+  aplicando em toda `.map` do app — YAGNI, aplica onde o add/remove é interação real.
+- `prefers-reduced-motion`: entra/sai sem deslocamento, só `opacity` instantâneo.
+
+### Arquivos tocados na peça D
+
+- Novos: `components/common/Transicao/{TransicaoRota,Transicao,ItemAnimado}.tsx` +
+  `Transicao.module.css` + `hooks/useListaComSaida.ts`.
+- `frontend/src/app/(app)/layout.tsx` — envolve `{children}` no `<TransicaoRota>`.
+- 2–3 formulários/builders pra `<ItemAnimado>` (identificados no plano).
+- `demo/loaders` (renomear mentalmente pra "demo") ganha uma seção mostrando D1/D2/D3.
+
+---
+
 ## Fluxo ponta a ponta (peça B)
 
 1. Usuário clica num `<Link>` (ex.: "Eventos" no sidebar) ou um `router.push` roda.
@@ -416,8 +474,9 @@ Entregar um, esperar o autor testar, commit, próximo.
    `(app)/layout.tsx` + `<IconePendente>` no Sidebar. Default `'barra-e-link'`.
 3. **Peça B2** — `<OverlayCarregando>` + aplicar no reiniciar do checkout, nos modais
    críticos e no submit dos cadastros.
-4. **Peça C** — sidebar c1 → c2 → c3 → c4 (podem vir juntos ou em 2 sub-entregas:
-   c1+c2, depois c3+c4).
+4. **Peça C** — sidebar c1 → c2 → c3 → c4.
+5. **Peça D** — D1 (`<TransicaoRota>` no layout) → D2 (`<Transicao>`) → D3
+   (`<ItemAnimado>` + hook + aplicar em 2–3 listas).
 
 Depois: commit de limpeza removendo as variantes de loader não escolhidas.
 

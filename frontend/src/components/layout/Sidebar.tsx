@@ -148,13 +148,15 @@ export function Sidebar() {
               />
             </button>
 
-            {pessoasAberto && (
+            <div className={`${styles.submenuWrap} ${pessoasAberto ? styles.submenuAberto : ''}`}>
               <div className={styles.submenu}>
                 {pessoasSubItensVisiveis.map((sub) => (
                   <Link
                     key={sub.href}
                     href={sub.href}
                     onClick={fecharNav}
+                    tabIndex={pessoasAberto ? 0 : -1}
+                    aria-hidden={!pessoasAberto}
                     className={`${styles.subLink} ${
                       pathname === sub.href || (sub.href !== '/pessoas' && pathname.startsWith(sub.href))
                         ? styles.subLinkAtivo
@@ -165,7 +167,7 @@ export function Sidebar() {
                   </Link>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         )}
       </nav>
@@ -194,13 +196,15 @@ export function Sidebar() {
               />
             </button>
 
-            {configAberto && (
+            <div className={`${styles.submenuWrap} ${configAberto ? styles.submenuAberto : ''}`}>
               <div className={styles.submenu}>
                 {subItensVisiveis.map((sub) => (
                   <Link
                     key={sub.href}
                     href={sub.href}
                     onClick={fecharNav}
+                    tabIndex={configAberto ? 0 : -1}
+                    aria-hidden={!configAberto}
                     className={`${styles.subLink} ${
                       pathname === sub.href || (sub.href !== '/perfil' && pathname.startsWith(sub.href))
                         ? styles.subLinkAtivo
@@ -211,7 +215,7 @@ export function Sidebar() {
                   </Link>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         )}
         <button type="button" onClick={handleLogout} className={`${styles.link} ${styles.logout}`}>

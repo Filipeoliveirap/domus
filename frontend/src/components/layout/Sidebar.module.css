@@ -15,8 +15,12 @@
   gap: 0.5rem;
   z-index: 40;
   transform: translateX(-100%);
-  transition: transform 0.25s ease;
+  /* mesma curva dos drawers do app — entrada rápida, desaceleração suave (sensação nativa) */
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  will-change: transform;
 }
 
 .sidebarAberta {
@@ -103,6 +107,13 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
+  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+/* feedback de toque nativo — o link "afunda" de leve ao pressionar */
+.link:active {
+  transform: scale(0.98);
+  background-color: #e0e7ff;
 }
 
 .linkActive {
@@ -113,11 +124,12 @@
 
 .linkInactive {
   color: #64748b;
-  transition: all 150ms ease;
 }
 
-.linkInactive:hover {
-  background-color: #eff6ff;
+@media (hover: hover) {
+  .linkInactive:hover {
+    background-color: #eff6ff;
+  }
 }
 
 .label {
@@ -215,7 +227,19 @@
 .grupo {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  /* zero: o respiro do submenu aberto vem do próprio .submenu; assim o estado
+     fechado não deixa um gap solto embaixo do botão. */
+  gap: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .submenuWrap,
+  .seta,
+  .link,
+  .subLink {
+    transition: none;
+  }
 }
 
 /* O link vira botão de abrir/fechar, então precisa do mesmo alinhamento + a seta na ponta. */
@@ -240,26 +264,54 @@
   transform: rotate(180deg);
 }
 
+/*
+  Acordeão animado sem medir altura em JS: um grid de 1 linha que anima de 0fr
+  (fechado) até 1fr (aberto). O filho precisa de overflow:hidden + min-height:0
+  pra recortar durante a transição. O submenu fica sempre no DOM (só os links
+  saem da ordem de tabulação quando fechado) — é o que dá a expansão suave, em
+  vez do "pulo" de conteúdo aparecendo do nada.
+*/
+.submenuWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.submenuAberto {
+  grid-template-rows: 1fr;
+}
+
 .submenu {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+  overflow: hidden;
+  min-height: 0;
   /* Alinha o texto do submenu com o texto do pai (ícone 20px + gap 0.75rem). */
   padding-left: 2.75rem;
 }
+/* respiro só quando aberto, pra não contar altura no estado fechado */
+.submenuAberto .submenu {
+  padding-top: 0.125rem;
+  padding-bottom: 0.25rem;
+}
 
 .subLink {
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 500;
   color: #64748b;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease;
 }
-
-.subLink:hover {
-  background-color: #eff6ff;
-  color: #1d4ed8;
+.subLink:active {
+  transform: scale(0.98);
+  background-color: #e0e7ff;
+}
+@media (hover: hover) {
+  .subLink:hover {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+  }
 }
 
 .subLinkAtivo {

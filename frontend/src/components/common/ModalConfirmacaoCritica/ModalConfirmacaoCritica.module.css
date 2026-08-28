@@ -16,6 +16,8 @@
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 32px);
+
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);

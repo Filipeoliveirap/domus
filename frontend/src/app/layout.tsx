@@ -1,8 +1,17 @@
+import type { Viewport } from 'next'
 import { Inter, Geist } from 'next/font/google'
 import { Providers } from '@/components/common/Providers'
 import '@/styles/globals.css'
 import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
+
+// viewportFit: 'cover' é o que habilita `env(safe-area-inset-*)` no CSS — sem isso o header
+// fixo fica atrás da barra de status / Dynamic Island no iPhone (Chrome no iOS = motor Safari).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 // Todo o app passa a renderizar por requisição (não mais pré-fabricado no build) — é o que
 // permite o nonce da CSP (src/proxy.ts) chegar em toda página, em vez de só nas poucas

@@ -797,24 +797,18 @@ cliente) — decidido não mexer por ora. Se algum dia sobrar tempo de polimento
 ganho real é uma mensagem de erro mais amigável em vez do erro genérico que o Mercado
 Pago devolve pra input malformado.
 
-### Unificar "acompanhante" e "convidado sem cadastro" — dois modelos pro mesmo conceito (2026-08-26, ainda não desenhado)
+### ~~Unificar "acompanhante" e "convidado sem cadastro" — dois modelos pro mesmo conceito~~ (2026-08-26, **RESOLVIDO**)
 
-Ao longo desta sessão (feature de pagamento + financeiro), toda lógica que precisa
-resolver "quem é o pagador/contribuinte de uma inscrição" acabou com uma ramificação de
-3 caminhos — `pessoa` / `acompanhante` / `convidado sem cadastro` — espalhada em
-`CobrancaController`, `MercadoPagoWebhookService`, `InscricaoService` e
-`MovimentacaoAutomaticaService`. `acompanhante` (`AcompanhanteInscricao`, entidade própria
-aninhada em `InscricaoEvento.getAcompanhantes()`) é o modelo mais antigo do projeto e
-**não tem campo de e-mail** — por isso nunca recebe comprovante de pagamento nem aparece
-como contribuinte cadastrado em nada. `convidado sem cadastro` (`nomeConvidado`/
-`emailConvidado`/`telefoneConvidado`, direto em `InscricaoEvento`, criado no Plano 4b)
-resolve o mesmo problema — "alguém sem conta no Domus participando do evento" — só que
-com e-mail desde o início. Os comentários `// Acompanhante (modelo antigo, ...)` espalhados
-pelo código (`MercadoPagoWebhookService`, `InscricaoService`, `InscricaoEvento`) já
-sinalizavam a divergência mesmo antes desta sessão.
+Ao longo da sessão de pagamento + financeiro, toda lógica que precisa resolver "quem é o
+pagador/contribuinte de uma inscrição" tinha virado uma ramificação de 3 caminhos —
+`pessoa` / `acompanhante` / `convidado sem cadastro` — espalhada em `CobrancaController`,
+`MercadoPagoWebhookService`, `InscricaoService` e `MovimentacaoAutomaticaService`.
+`AcompanhanteInscricao` (entidade própria, aninhada em `InscricaoEvento.getAcompanhantes()`)
+era o modelo mais antigo e não tinha e-mail — nunca recebia comprovante de pagamento nem
+aparecia como contribuinte cadastrado em nada.
 
-Unificar os dois eliminaria essa ramificação de 3 caminhos em tudo que resolve "quem pagou"
-e destravaria e-mail de comprovante pra quem hoje entra como acompanhante. Não é bounded:
-mexe em modelo de dados (`AcompanhanteInscricao` provavelmente vira campos em
-`InscricaoEvento`, ou o inverso), sem falar em todo código/frontend que já assume os dois
-modelos separados — precisa de brainstorm completo antes de qualquer código.
+Resolvido: `AcompanhanteInscricao` foi eliminada (migration V33, commit `c511c2e`) — todo
+acompanhante agora é sua própria `InscricaoEvento` independente, no mesmo formato de
+convidado sem cadastro (`nomeConvidado`/`emailConvidado`/`telefoneConvidado` +
+`convidadoPorPessoaId`). A ramificação de 3 caminhos virou 2 (`pessoa` ou convidado sem
+cadastro), e acompanhante ganhou e-mail de comprovante de graça.

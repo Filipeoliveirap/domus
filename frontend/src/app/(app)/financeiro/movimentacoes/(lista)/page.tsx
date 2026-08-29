@@ -80,7 +80,7 @@ function MovimentacoesConteudo() {
   const qDebounced = useDebounce(filtros.q, 250)
 
   const { data: categorias } = useCategoriasSelect(autorizado)
-  const { data, isLoading, isError, refetch } = useMovimentacoes({
+  const { data, isLoading, isError, isFetching, refetch } = useMovimentacoes({
     tipo: (filtros.tipo as TipoMovimentacao) || undefined,
     categoriaId: filtros.categoriaId || undefined,
     dataInicio: filtros.dataInicio || undefined,
@@ -251,7 +251,9 @@ function MovimentacoesConteudo() {
         </Transicao>
       )}
 
-      {/* Tabela */}
+      {/* Tabela — remonta ao trocar filtro/página; digitar na busca NÃO remonta:
+          as linhas atualizam no lugar (cada nova entra com @starting-style) e a
+          tabela só amortece enquanto o fetch corre. */}
       <div className={styles.painel}>
        <Transicao
          key={`${filtros.tipo}|${filtros.categoriaId}|${filtros.dataInicio}|${filtros.dataFim}|${filtros.pessoaId}|${pagina}`}
@@ -284,7 +286,7 @@ function MovimentacoesConteudo() {
           <>
             <CabecalhoTabela />
 
-            <div className={styles.linhas}>
+            <div className={`${styles.linhas} ${isFetching && !isLoading ? styles.listaAtualizando : ''}`}>
               {movimentacoes.map((mov) => (
                 <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
                   <div className={styles.colDesc}>

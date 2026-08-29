@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './PessoaForm.module.css'
@@ -57,7 +58,7 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
       <span className={styles.labelRedes}>{ministerio.plural.toUpperCase()}</span>
 
       {redesSelecionadas.length > 0 && (
-        <div className={styles.redesChips}>
+        <Transicao className={styles.redesChips} modo="subir">
           {redesSelecionadas.map((rede) => (
             <span key={rede.id} className={styles.redeChip}>
               {rede.nome}
@@ -71,7 +72,7 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
               </button>
             </span>
           ))}
-        </div>
+        </Transicao>
       )}
 
       <Input
@@ -83,25 +84,27 @@ export function SeletorRedes({ selecionadas, onChange }: SeletorRedesProps) {
       />
 
       {buscaNormalizada && (
-        resultados.length === 0 ? (
-          <p className={styles.redesVazio}>
-            Nenhuma {ministerio.singular.toLowerCase()} encontrada para &quot;{busca.trim()}&quot;.
-          </p>
-        ) : (
-          <ul className={styles.redesResultados}>
-            {resultados.map((rede) => (
-              <li key={rede.id}>
-                <button
-                  type="button"
-                  className={styles.redeResultado}
-                  onClick={() => { adicionar(rede.id); setBusca('') }}
-                >
-                  {rede.nome}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )
+        <Transicao key={buscaNormalizada} modo="subir">
+          {resultados.length === 0 ? (
+            <p className={styles.redesVazio}>
+              Nenhuma {ministerio.singular.toLowerCase()} encontrada para &quot;{busca.trim()}&quot;.
+            </p>
+          ) : (
+            <ul className={styles.redesResultados}>
+              {resultados.map((rede) => (
+                <li key={rede.id}>
+                  <button
+                    type="button"
+                    className={styles.redeResultado}
+                    onClick={() => { adicionar(rede.id); setBusca('') }}
+                  >
+                    {rede.nome}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Transicao>
       )}
     </div>
   )

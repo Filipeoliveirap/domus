@@ -26,6 +26,14 @@
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
+.gatilho:disabled {
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+.gatilho:disabled:hover {
+  border-color: var(--color-border-input);
+}
 
 .valor {
   overflow: hidden;

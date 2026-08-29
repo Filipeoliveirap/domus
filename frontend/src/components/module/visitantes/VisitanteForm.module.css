@@ -2,6 +2,31 @@
   width: 100%;
 }
 
+/* Dentro de modal: fluxo único, sem cartão por seção nem coluna grudada. */
+.emModal .colunas {
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.emModal .colunaEsquerda,
+.emModal .colunaDireita {
+  gap: 20px;
+}
+.emModal .colunaDireita {
+  position: static;
+  top: auto;
+}
+.emModal .secao,
+.emModal .secaoFilhos {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 16px;
+}
+.emModal .secao + .secao {
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+}
+
 .colunas {
   display: grid;
   grid-template-columns: 1fr 340px;

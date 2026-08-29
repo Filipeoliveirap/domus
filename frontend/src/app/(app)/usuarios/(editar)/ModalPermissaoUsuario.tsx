@@ -1,6 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clsx } from 'clsx'
 import { ShieldCheck, Users, User, X, Check } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { usuarioService } from '@/services/usuarios.service'
@@ -30,6 +32,19 @@ export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioRe
   const [tesoureiro, setTesoureiro] = useState(capacidadesIniciais.includes('TESOUREIRO'))
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { saindo, fechar } = useFecharAnimado(onClose, 240)
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !isLoading) fechar() }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [fechar, isLoading])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   const roleMudou = roleSelecionada !== usuario.role
   const capacidadesMudaram = secretario !== capacidadesIniciais.includes('SECRETARIO')
@@ -70,14 +85,15 @@ export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioRe
   }
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
-      <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !isLoading && fechar()}>
+      <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.header}>
           <div>
             <h2 className={styles.title}>Alterar permissões</h2>
             <p className={styles.subtitle}>Editando acesso de: <strong>{usuario.nome}</strong></p>
           </div>
-          <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+          <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar"><X size={20} /></button>
         </div>
 
         <div className={styles.body}>
@@ -112,23 +128,31 @@ export function ModalPermissaoUsuario({ usuario, onClose }: { usuario: UsuarioRe
 
           <div className={styles.capacidades}>
             <p className={styles.capacidadesLabel}>Capacidades extras</p>
-            <label className={styles.checkbox}>
-              <input type="checkbox" checked={secretario}
-                onChange={e => setSecretario(e.target.checked)} />
-              <span>Secretário — gerencia pessoas, visitantes, {celula.plural.toLowerCase()} e {ministerio.plural.toLowerCase()}</span>
-            </label>
-            <label className={styles.checkbox}>
-              <input type="checkbox" checked={tesoureiro}
-                onChange={e => setTesoureiro(e.target.checked)} />
-              <span>Tesoureiro — acesso ao financeiro</span>
-            </label>
+            <div className={styles.capGrid}>
+              <label className={styles.capCard}>
+                <input type="checkbox" className={styles.capCheck} checked={secretario}
+                  onChange={e => setSecretario(e.target.checked)} />
+                <span className={styles.capTexto}>
+                  <span className={styles.capTitulo}>Secretário</span>
+                  <span className={styles.capDesc}>Gerencia pessoas, visitantes, {celula.plural.toLowerCase()} e {ministerio.plural.toLowerCase()}</span>
+                </span>
+              </label>
+              <label className={styles.capCard}>
+                <input type="checkbox" className={styles.capCheck} checked={tesoureiro}
+                  onChange={e => setTesoureiro(e.target.checked)} />
+                <span className={styles.capTexto}>
+                  <span className={styles.capTitulo}>Tesoureiro</span>
+                  <span className={styles.capDesc}>Acesso ao financeiro</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {erroGeral && <div className={styles.alertError}>{erroGeral}</div>}
         </div>
 
         <div className={styles.footer}>
-          <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
+          <button type="button" className={styles.btnCancel} onClick={fechar}>Cancelar</button>
           <button type="button" disabled={isLoading || semMudanca} className={styles.btnSubmit} onClick={salvar}>
             {isLoading ? 'Salvando...' : 'Salvar alterações'}
           </button>

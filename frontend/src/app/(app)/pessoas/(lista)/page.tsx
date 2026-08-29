@@ -8,7 +8,9 @@ import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
+import { clsx } from 'clsx'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
   iniciais, rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
@@ -17,11 +19,12 @@ import { urlFoto } from '@/lib/urlFoto'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { PessoaResponse } from '@/types/pessoa.type'
 import styles from './page.module.css'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { ModalConcederAcesso } from './ModalConcederAcesso'
 import { useRouter } from 'next/navigation'
 import { ModalArquivarPessoa } from './(arquivar)/ArquivarPessoa'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
-import { SearchX, Inbox, X } from 'lucide-react'
+import { SearchX, Inbox } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { SkeletonPessoas } from "./SkeletonPessoas";
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
@@ -125,11 +128,14 @@ function PessoasConteudo() {
           className={styles.inputBusca}
         />
         <PainelFiltros grupos={GRUPOS_FILTRO} valores={filtros} onAplicar={aoAplicarFiltros} />
-        {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 
       <div className={styles.containerTabela}>
-        <table className={styles.tabela}>
+       {/* Remonta só ao trocar filtro/página (transição cheia). Digitar na busca NÃO
+           remonta a lista — as linhas atualizam no lugar, cada nova entra com @starting-style
+           e a tabela inteira só amortece (opacity) enquanto o fetch corre. */}
+       <Transicao key={`${filtros.vinculo}|${pagina}`} modo="fade">
+        <table className={clsx(styles.tabela, isFetching && !isLoading && styles.tabelaAtualizando)}>
           <thead>
             <tr>
               <th>Pessoa</th>
@@ -217,6 +223,7 @@ function PessoasConteudo() {
             )}
           </tbody>
         </table>
+       </Transicao>
 
         {!isLoading && !isError && pessoas.length > 0 && (
           <footer className={styles.rodape}>
@@ -252,14 +259,7 @@ function PessoasConteudo() {
         <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
       )}
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <X size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
     </div>
   )

@@ -317,9 +317,12 @@
   color: var(--color-bg-white);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
-.btnSalvar:hover:not(:disabled) { opacity: 0.9; }
+@media (hover: hover) {
+  .btnSalvar:hover:not(:disabled) { opacity: 0.9; }
+}
+.btnSalvar:active:not(:disabled) { transform: scale(0.98); }
 .btnSalvar:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .cancelarLink {
@@ -338,7 +341,11 @@
   font-weight: var(--font-weight-semibold);
   transition: background-color var(--transition-fast);
 }
-.cancelarLink:hover { background: var(--color-bg-table-head); }
+.cancelarLink { transition: background-color var(--transition-fast), transform var(--transition-fast); }
+@media (hover: hover) {
+  .cancelarLink:hover { background: var(--color-bg-table-head); }
+}
+.cancelarLink:active { transform: scale(0.98); }
 
 /* ─── Aviso: sem categoria cadastrada ─── */
 .avisoCategoria {
@@ -402,7 +409,11 @@
   font-weight: var(--font-weight-semibold);
   transition: opacity var(--transition-fast);
 }
-.btnMeioAMeio:hover { opacity: 0.85; }
+.btnMeioAMeio { transition: opacity var(--transition-fast), transform 0.1s ease; }
+@media (hover: hover) {
+  .btnMeioAMeio:hover { opacity: 0.85; }
+}
+.btnMeioAMeio:active { transform: scale(0.94); }
 
 .contribuintesLista {
   display: flex;
@@ -440,8 +451,12 @@
   font-size: var(--font-size-xs);
   color: var(--color-primary);
   font-weight: var(--font-weight-medium);
+  transition: transform 0.1s ease;
 }
-.linkAlternarModo:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .linkAlternarModo:hover { text-decoration: underline; }
+}
+.linkAlternarModo:active { transform: scale(0.94); }
 
 .pessoaRemovida {
   display: flex;
@@ -505,7 +520,11 @@
   font-weight: var(--font-weight-medium);
   transition: background-color var(--transition-fast);
 }
-.btnAdicionarContribuinte:hover { background: var(--color-bg-page); }
+.btnAdicionarContribuinte { transition: background-color var(--transition-fast), transform 0.1s ease; }
+@media (hover: hover) {
+  .btnAdicionarContribuinte:hover { background: var(--color-bg-page); }
+}
+.btnAdicionarContribuinte:active { transform: scale(0.97); }
 
 .somaContribuintes {
   margin-top: 4px;
@@ -517,13 +536,37 @@
 
 /* ─── Responsivo ─── */
 @media (max-width: 1024px) {
-  .colunas { grid-template-columns: 1fr; }
+  .colunas { grid-template-columns: 1fr; gap: 20px; }
   .colunaDireita { position: static; }
 }
 
-@media (max-width: 560px) {
+/* Mobile: menos padding, tipografia menor, campos empilham — cabe na tela sem "gigante". */
+@media (max-width: 767px) {
+  .colunaEsquerda, .colunaDireita { gap: 16px; }
+
+  .secao, .resumo { padding: 18px; }
+  .secao { gap: 18px; box-shadow: 0 2px 6px -2px rgba(19, 27, 46, 0.1); }
+
+  .secaoIcone { width: 34px; height: 34px; }
+  .secaoTitulo, .resumoTitulo { font-size: var(--font-size-base); }
+
+  .label { font-size: var(--font-size-xs); letter-spacing: 0.4px; }
+
+  .tipoBtn { padding: 14px 10px; }
+  .tipoDesc { font-size: 11px; }
+
+  .inputValor { min-height: 52px; font-size: var(--font-size-lg); }
+
+  .linha2 { flex-direction: column; gap: 20px; }
+
   .contribuinteLinha {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "pessoa  pessoa"
+      "valor   remover";
+    gap: 8px 10px;
   }
-  .inputValorContribuinte { width: 100%; }
+  .contribuintePessoa { grid-area: pessoa; }
+  .inputValorContribuinte { grid-area: valor; width: 100%; }
+  .btnRemoverContribuinte { grid-area: remover; }
 }

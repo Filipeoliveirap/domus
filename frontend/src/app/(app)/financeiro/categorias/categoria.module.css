@@ -27,6 +27,7 @@
 .botaoPrimario {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 24px;
   border-radius: var(--radius-md);
@@ -35,9 +36,12 @@
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
   box-shadow: var(--shadow-btn-primary);
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--transition-normal), transform var(--transition-fast);
 }
-.botaoPrimario:hover { opacity: 0.9; }
+@media (hover: hover) {
+  .botaoPrimario:hover { opacity: 0.9; }
+}
+.botaoPrimario:active { transform: scale(0.98); }
 
 /* Busca */
 .barraBusca { display: flex; }
@@ -91,9 +95,26 @@
   padding: 14px 16px;
   background: var(--color-bg-white);
   border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
-.linha:hover { background: var(--color-bg-igreja-card); }
+@media (hover: hover) {
+  .linha:hover { background: var(--color-bg-igreja-card); }
+}
+
+/* Amortece a lista enquanto a busca refaz o fetch — em vez de piscar as linhas. */
+.listaAtualizando {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linha { transition: background-color var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+}
 
 .colNome { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .colTipo { display: flex; align-items: center; }
@@ -165,9 +186,12 @@
   border: 1px solid var(--color-border-input);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
-.botaoPagina:hover:not(:disabled) { background: var(--color-bg-white); }
+@media (hover: hover) {
+  .botaoPagina:hover:not(:disabled) { background: var(--color-bg-white); }
+}
+.botaoPagina:active:not(:disabled) { transform: scale(0.92); }
 .botaoPagina:disabled { opacity: 0.4; cursor: not-allowed; }
 .infoPagina { padding: 0 8px; }
 
@@ -177,15 +201,25 @@
   .colTipo { grid-column: 1; }
   .inputBusca { width: 100%; }
 }
-/* ---- Mobile: header empilha (botão para de vazar) ---- */
+/* ---- Mobile: header empilha, tipografia e botão menores ---- */
 @media (max-width: 767px) {
+  .pagina { gap: 16px; }
   .cabecalho {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
   .botaoPrimario {
     width: 100%;
-    justify-content: center;
+    padding: 10px 16px;
   }
+  .inputBusca {
+    /* 16px evita o zoom do iOS ao focar. */
+    font-size: var(--font-size-md);
+  }
+  .painel { padding: 14px; min-height: 300px; }
+  .rodape { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
+  .paginacao { justify-content: center; }
 }

@@ -64,9 +64,51 @@
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem;
   border: 1px solid #e5e7eb; border-radius: 0.5rem; min-width: 0; flex-wrap: wrap;
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  overflow: hidden;
+  max-height: 320px;
+  transition: background-color var(--transition-fast), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.3s ease, max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+              margin 0.38s cubic-bezier(0.22, 1, 0.36, 1), padding 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+              border-width 0.38s ease;
+  /* entrada suave — membro adicionado desliza pra dentro; no load a lista faz uma cascata leve */
+  @starting-style {
+    opacity: 0;
+    transform: translateX(-12px);
+    max-height: 0;
+  }
 }
-.itemMembro:hover { background-color: var(--color-bg-table-head); }
+/* hover só com mouse — no touch "gruda" depois do tap e parece que o card todo foi pressionado. */
+@media (hover: hover) {
+  .itemMembro:hover { background-color: var(--color-bg-table-head); }
+}
+.itemMembro:active { transform: scale(0.995); }
+
+/* saída: colapsa + fade antes do refetch remover a linha (page.tsx segura ~420ms). */
+.itemMembroSaindo {
+  opacity: 0;
+  transform: translateX(-24px);
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-width: 0 !important;
+  pointer-events: none;
+}
+
+/* badge/estrela de líder entram animados quando o papel vira LIDER */
+.badgeLider, .estrela {
+  animation: badgeLiderEntra 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes badgeLiderEntra {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itemMembro, .badgeLider, .estrela { animation: none; transition: opacity 0.15s ease; }
+  .itemMembro:active { transform: none; }
+}
 .itemMembroInfo {
   display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;
 }
@@ -92,84 +134,119 @@
 }
 .botaoAceitar, .botaoRecusar, .botaoPromover, .botaoRemover {
   padding: 0.375rem 0.625rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: #fff;
+  transition: background-color var(--transition-fast), transform 0.1s ease, opacity var(--transition-fast);
+}
+.botaoAceitar:active, .botaoRecusar:active, .botaoPromover:active, .botaoRemover:active {
+  transform: scale(0.95);
+}
+.botaoPromover:disabled, .botaoRemover:disabled { opacity: 0.5; }
+@media (hover: hover) {
+  .botaoPromover:hover, .botaoRemover:hover { background-color: var(--color-bg-table-head); }
 }
 .acoesPedido { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .tagPendente { font-size: 0.875rem; color: #6b7280; }
 
-/* ModalAdicionarMembro */
+/* ModalAdicionarMembro — bottom-sheet no mobile, igual aos outros modais */
 .overlay {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-  display: flex; align-items: flex-start; justify-content: center;
-  padding: 4rem 1rem; z-index: 50; overflow-y: auto;
+  position: fixed; inset: 0; background: rgba(19, 27, 46, 0.30);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 100;
+  animation: modalSurgir 0.2s ease-out;
 }
 .modal {
-  background: #fff; border-radius: 0.75rem; width: 100%; max-width: 480px;
-  max-height: 80vh; display: flex; flex-direction: column; min-width: 0;
+  position: relative;
+  background: #fff; border-radius: var(--radius-lg); width: 100%; max-width: 480px;
+  max-height: calc(100dvh - 48px); display: flex; flex-direction: column; min-width: 0;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.18);
+  animation: modalSubir 0.22s ease-out;
 }
+
+@keyframes modalSurgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSubir {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+.saindo { animation: modalSumir 0.24s ease forwards; }
+.saindo .modal { animation: modalDescer 0.24s ease forwards; }
+@keyframes modalSumir { to { opacity: 0; } }
+@keyframes modalDescer { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+
+.grabber { display: none; }
+
+.fechar {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-md);
+  color: var(--color-text-muted); background: none; border: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.fechar:active { transform: scale(0.92); }
+
 .buscaWrap {
-  padding: 1rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; min-width: 0;
-}
-.botaoFechar {
-  padding: 0; width: 32px; height: 32px; border: none;
+  padding: 1rem 3rem 1rem 1rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; min-width: 0;
 }
 .listaResultados {
-  list-style: none; padding: 0.5rem; margin: 0; overflow-y: auto; min-width: 0;
+  list-style: none; padding: 0.5rem; margin: 0; overflow-y: auto; overscroll-behavior: contain; min-width: 0;
 }
 .itemResultado {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.5rem;
-  border-radius: 0.5rem; cursor: pointer; min-width: 0;
+  border-radius: 0.5rem; cursor: pointer; min-width: 0; overflow: hidden;
+  max-height: 200px;
+  transition: background-color var(--transition-fast), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.3s ease, max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+              padding 0.38s cubic-bezier(0.22, 1, 0.36, 1), margin 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  @starting-style { opacity: 0; transform: translateX(-12px); max-height: 0; }
 }
-.itemResultado:hover { background: #f3f4f6; }
+@media (hover: hover) {
+  .itemResultado:hover { background: #f3f4f6; }
+}
+.itemResultado:active { transform: scale(0.99); }
+.itemResultadoSaindo {
+  opacity: 0; transform: translateX(-24px);
+  max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important;
+  margin: 0 !important; pointer-events: none;
+}
 .semResultado { padding: 1rem 0.5rem; color: #6b7280; font-size: 0.875rem; text-align: center; }
+
+@keyframes modalDeslizarCima {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes modalDeslizarBaixo {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
 
 @media (max-width: 640px) {
   .cabecalho { flex-direction: column; align-items: stretch; }
   .itemMembro { flex-direction: row; flex-wrap: wrap; }
   .itemMembroInfo { flex-basis: 100%; }
   .itemMembroAcoes { flex-basis: 100%; justify-content: flex-end; }
-  .overlay { padding: 1rem; align-items: center; }
-  .modal { max-height: 90vh; }
 }
 
-.viewerOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.75);
+@media (max-width: 767px) {
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100%; max-height: 92dvh;
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    animation: modalDeslizarCima 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .saindo .modal { animation: modalDeslizarBaixo 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .grabber {
+    display: block; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 3; width: 38px; height: 4px; border-radius: 999px; background: var(--color-border);
+  }
+  .buscaWrap { padding-top: 1.75rem; }
+  .fechar { top: 18px; }
+  .listaResultados { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
 }
-.viewerModal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: 480px;
-  width: 100%;
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .saindo, .saindo .modal, .itemResultado { animation: none; }
 }
-.viewerClose {
-  align-self: flex-end;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.viewerClose:hover { background: rgba(255,255,255,0.2); }
-.viewerImg {
-  width: 100%;
-  max-height: 60vh;
-  object-fit: contain;
-  border-radius: var(--radius-lg);
-}
+
 
 .avisoArquivada {
   display: flex;

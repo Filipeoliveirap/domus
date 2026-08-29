@@ -14,7 +14,9 @@ import { EventoResponse } from '@/types/evento.type'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
 import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
+import { clsx } from 'clsx'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { RECORTES_ETARIOS } from '@/components/module/eventos/BlocoParaQuemE'
 import styles from './Page.module.css'
 import { EstadoVazio } from "@/components/common/EstadoVazio/EstadoVazio";
@@ -81,6 +83,10 @@ function EventosConteudo() {
     setPagina(0)
   }
 
+  // Muda quando filtro/página muda (busca fica de fora — não re-anima a cada tecla) →
+  // o grid faz fade de entrada, como em movimentações financeiras.
+  const chaveLista = `${filtros.tipo}|${filtros.recorteEtario}|${pagina}`
+
   function abrirDetalhe(evento: EventoResponse) {
     router.push(`/eventos?detalhe=${evento.id}`, { scroll: false })
   }
@@ -135,65 +141,69 @@ function EventosConteudo() {
           className={styles.inputBusca}
         />
         <PainelFiltros grupos={gruposFiltro} valores={filtros} onAplicar={aoAplicarFiltros} />
-        {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 
-      {isLoading ? (
-        <SkeletonEventos cards={TAMANHO_PAGINA} />
-      ) : isError ? (
-        <EstadoErro
-          titulo="Não foi possível carregar os eventos"
-          mensagem="Verifique sua conexão e tente novamente."
-          aoTentarNovamente={() => refetch()}
-        />
-      ) : eventos.length === 0 ? (
-        <EstadoVazio
-          icone={buscaDebounced ? SearchX : Inbox}
-          titulo={buscaDebounced ? 'Nenhum evento encontrado' : 'Nenhum evento cadastrado'}
-          mensagem={
-            buscaDebounced
-              ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
-              : 'Comece cadastrando o primeiro evento da agenda.'
-          }
-          acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
-          acaoPrimaria={!buscaDebounced && podeGerenciar ? { label: 'Novo evento', onClick: () => router.push('/eventos/cadastrar') } : undefined}
-        />
-      ) : (
-        <>
-          <div className={styles.grid}>
-            {eventos.map((evento) => (
-              <EventoCard
-                key={evento.id}
-                evento={evento}
-                onAbrirDetalhe={abrirDetalhe}
-                onAbrirPendencia={abrirDetalheComPendencia}
-                onArquivar={setEventoArquivando}
-              />
-            ))}
-          </div>
-
-          <footer className={styles.rodape}>
-            <span className={styles.contagem}>
-              Exibindo {eventos.length} de {totalElementos} eventos
-            </span>
-            <div className={styles.paginacao}>
-              <button
-                onClick={() => setPagina((p) => Math.max(0, p - 1))}
-                disabled={pagina === 0}
-                className={styles.botaoPagina}
-              >‹</button>
-              <span className={styles.infoPagina}>
-                Página {pagina + 1} de {totalPaginas}
-              </span>
-              <button
-                onClick={() => setPagina((p) => p + 1)}
-                disabled={pagina + 1 >= totalPaginas}
-                className={styles.botaoPagina}
-              >›</button>
+      {/* Um só <Transicao> sempre montado (igual movimentações): remonta ao trocar
+          filtro/página, mas digitar na busca NÃO remonta — o grid só amortece (opacity)
+          enquanto o fetch corre e as linhas novas entram com @starting-style. */}
+      <Transicao key={chaveLista} modo="fade" className={styles.conteudoLista}>
+        {isLoading ? (
+          <SkeletonEventos cards={TAMANHO_PAGINA} />
+        ) : isError ? (
+          <EstadoErro
+            titulo="Não foi possível carregar os eventos"
+            mensagem="Verifique sua conexão e tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
+        ) : eventos.length === 0 ? (
+          <EstadoVazio
+            icone={buscaDebounced ? SearchX : Inbox}
+            titulo={buscaDebounced ? 'Nenhum evento encontrado' : 'Nenhum evento cadastrado'}
+            mensagem={
+              buscaDebounced
+                ? `Não encontramos resultados para "${buscaDebounced}". Tente outro termo.`
+                : 'Comece cadastrando o primeiro evento da agenda.'
+            }
+            acaoSecundaria={buscaDebounced ? { label: 'Limpar busca', onClick: () => setBusca('') } : undefined}
+            acaoPrimaria={!buscaDebounced && podeGerenciar ? { label: 'Novo evento', onClick: () => router.push('/eventos/cadastrar') } : undefined}
+          />
+        ) : (
+          <>
+            <div className={clsx(styles.grid, isFetching && !isLoading && styles.listaAtualizando)}>
+              {eventos.map((evento) => (
+                <EventoCard
+                  key={evento.id}
+                  evento={evento}
+                  onAbrirDetalhe={abrirDetalhe}
+                  onAbrirPendencia={abrirDetalheComPendencia}
+                  onArquivar={setEventoArquivando}
+                />
+              ))}
             </div>
-          </footer>
-        </>
-      )}
+
+            <footer className={styles.rodape}>
+              <span className={styles.contagem}>
+                Exibindo {eventos.length} de {totalElementos} eventos
+              </span>
+              <div className={styles.paginacao}>
+                <button
+                  onClick={() => setPagina((p) => Math.max(0, p - 1))}
+                  disabled={pagina === 0}
+                  className={styles.botaoPagina}
+                >‹</button>
+                <span className={styles.infoPagina}>
+                  Página {pagina + 1} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPagina((p) => p + 1)}
+                  disabled={pagina + 1 >= totalPaginas}
+                  className={styles.botaoPagina}
+                >›</button>
+              </div>
+            </footer>
+          </>
+        )}
+      </Transicao>
 
       {detalheId && (
         <DrawerDetalheEvento

@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react'
 import Image from 'next/image'
+import { clsx } from 'clsx'
 import { X, Shield, Clock, CalendarPlus, KeyRound } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useUsuario } from '@/hooks/usuario/useUsuario'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { rotuloRole, varianteRole, iniciais, formatarUltimoAcesso } from '@/lib/formats/usuarioFormat'
@@ -16,24 +18,32 @@ interface Props {
 
 export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
   const { data: usuario, isPending, isError, refetch } = useUsuario(usuarioId)
+  const { saindo, fechar } = useFecharAnimado(onClose, 200)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose])
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <button type="button" className={styles.fechar} onClick={onClose} aria-label="Fechar">
+        <span className={styles.grabber} aria-hidden="true" />
+        <button type="button" className={styles.fechar} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

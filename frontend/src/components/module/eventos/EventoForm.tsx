@@ -29,6 +29,8 @@ import { useTiposEvento } from '@/hooks/evento/useTiposEvento'
 import { useAtualizarFotoEvento } from '@/hooks/evento/useAtualizarFotoEvento'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -289,7 +291,7 @@ export function EventoForm(props: EventoFormProps) {
                 </label>
 
                 {repetir && (
-                  <>
+                  <Revelar className={styles.campos}>
                     <div>
                       <span className={styles.labelData}>REPETE A CADA</span>
                       <div className={styles.linhaRecorrencia}>
@@ -320,7 +322,7 @@ export function EventoForm(props: EventoFormProps) {
                     </div>
 
                     {recorrenciaFrequencia === 'SEMANAL' && (
-                      <div>
+                      <Transicao modo="subir">
                         <span className={styles.labelData}>DIAS DA SEMANA</span>
                         <div className={styles.chipsLinha}>
                           {DIAS_SEMANA_OPTIONS.map((dia) => {
@@ -345,17 +347,19 @@ export function EventoForm(props: EventoFormProps) {
                         {errors.recorrenciaDiasSemana && (
                           <span className={styles.erroCampo}>{errors.recorrenciaDiasSemana.message}</span>
                         )}
-                      </div>
+                      </Transicao>
                     )}
 
                     {recorrenciaFrequencia === 'MENSAL' && (
-                      <Select id="recorrencia-tipo-mensal" label="REPETE" placeholder="Selecione"
-                        options={[
-                          { value: 'DIA_FIXO', label: 'No mesmo dia do mês' },
-                          { value: 'DIA_DA_SEMANA', label: 'Na mesma posição (ex.: toda 1ª terça)' },
-                        ]}
-                        error={errors.recorrenciaTipoMensal?.message}
-                        {...register('recorrenciaTipoMensal')} />
+                      <Transicao modo="subir">
+                        <Select id="recorrencia-tipo-mensal" label="REPETE" placeholder="Selecione"
+                          options={[
+                            { value: 'DIA_FIXO', label: 'No mesmo dia do mês' },
+                            { value: 'DIA_DA_SEMANA', label: 'Na mesma posição (ex.: toda 1ª terça)' },
+                          ]}
+                          error={errors.recorrenciaTipoMensal?.message}
+                          {...register('recorrenciaTipoMensal')} />
+                      </Transicao>
                     )}
 
                     <Select id="recorrencia-fim-tipo" label="TERMINA" placeholder="Selecione"
@@ -368,22 +372,26 @@ export function EventoForm(props: EventoFormProps) {
                       {...register('recorrenciaFimTipo')} />
 
                     {recorrenciaFimTipo === 'DATA' && (
-                      <CampoData
-                        id="recorrencia-data-fim"
-                        label="Data final"
-                        value={(watch('recorrenciaDataFim') as string) ?? ''}
-                        onChange={(v) => setValue('recorrenciaDataFim', v, { shouldValidate: true })}
-                        erro={errors.recorrenciaDataFim?.message}
-                      />
+                      <Transicao modo="subir">
+                        <CampoData
+                          id="recorrencia-data-fim"
+                          label="Data final"
+                          value={(watch('recorrenciaDataFim') as string) ?? ''}
+                          onChange={(v) => setValue('recorrenciaDataFim', v, { shouldValidate: true })}
+                          erro={errors.recorrenciaDataFim?.message}
+                        />
+                      </Transicao>
                     )}
 
                     {recorrenciaFimTipo === 'CONTAGEM' && (
-                      <Input id="recorrencia-numero-ocorrencias" label="NÚMERO DE OCORRÊNCIAS" type="number" min={1}
-                        placeholder="Ex.: 10"
-                        error={errors.recorrenciaNumeroOcorrencias?.message}
-                        {...register('recorrenciaNumeroOcorrencias')} />
+                      <Transicao modo="subir">
+                        <Input id="recorrencia-numero-ocorrencias" label="NÚMERO DE OCORRÊNCIAS" type="number" min={1}
+                          placeholder="Ex.: 10"
+                          error={errors.recorrenciaNumeroOcorrencias?.message}
+                          {...register('recorrenciaNumeroOcorrencias')} />
+                      </Transicao>
                     )}
-                  </>
+                  </Revelar>
                 )}
               </div>
             )}
@@ -466,7 +474,6 @@ export function EventoForm(props: EventoFormProps) {
               restricaoEstadoCivil={restricaoEstadoCivilAtual}
               restricaoSexo={restricaoSexoAtual}
               exclusivoMembros={!!exclusivoMembros}
-              mostrarExclusivoMembros={requerInscricao}
               erroIdadeMax={errors.idadeMax?.message}
               onChangeRecorteEtario={(v) => setValue('recorteEtario', v, { shouldDirty: true })}
               onChangeIdadeMin={(v) => setValue('idadeMin', v, { shouldDirty: true, shouldValidate: true })}
@@ -498,7 +505,7 @@ export function EventoForm(props: EventoFormProps) {
             </label>
 
             {requerInscricao && (
-              <div className={styles.campos}>
+              <Revelar className={styles.campos}>
                 <div>
                   <Input
                     id="vagas"
@@ -552,7 +559,7 @@ export function EventoForm(props: EventoFormProps) {
                 </label>
 
                 {tipoInscricao === 'PAGO' && (
-                  <div>
+                  <Revelar>
                     <Input
                       id="preco"
                       label="PREÇO"
@@ -570,6 +577,7 @@ export function EventoForm(props: EventoFormProps) {
                         })
                       }}
                     />
+                    <Transicao key={contaPagamento && !contaPagamento.conectada ? 'aviso' : 'hint'} modo="fade">
                     {contaPagamento && !contaPagamento.conectada ? (
                       <div className={styles.avisoContaPagamento}>
                         {podeConectar ? (
@@ -592,10 +600,11 @@ export function EventoForm(props: EventoFormProps) {
                         conectada pela igreja.
                       </span>
                     )}
-                  </div>
+                    </Transicao>
+                  </Revelar>
                 )}
 
-              </div>
+              </Revelar>
             )}
           </section>
         </div>
@@ -606,6 +615,7 @@ export function EventoForm(props: EventoFormProps) {
           inteira do formulário. */}
       <div className={styles.blocoFinal}>
         {requerInscricao && (
+          <Revelar>
           <section className={styles.secao}>
             <div className={styles.secaoHeader}>
               <span className={styles.secaoIcone}><ClipboardCheck size={20} /></span>
@@ -616,6 +626,7 @@ export function EventoForm(props: EventoFormProps) {
                 registrou o callback (ver useEffect acima e useEventoForm.salvarEvento). */}
             <CamposPersonalizadosPainel ref={camposPersonalizadosRef} eventoId={eventoId} />
           </section>
+          </Revelar>
         )}
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}

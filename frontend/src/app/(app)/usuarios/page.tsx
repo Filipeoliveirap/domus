@@ -3,7 +3,7 @@
 import { useState, Suspense} from "react";
 import Link from "next/link";
 import axios from "axios";
-import { ChevronRight, Shield, Ban, Archive, UserCheck, Send, X } from "lucide-react";
+import { ChevronRight, Shield, Ban, Archive, UserCheck, Send } from "lucide-react";
 import { notificar } from "@/components/common/Notificacao/notificar";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidarCache } from "@/lib/cacheInvalidacao";
@@ -16,8 +16,10 @@ import {
   formatarUltimoAcesso,
 } from "@/lib/formats/usuarioFormat";
 import { Avatar } from "@/components/common/Avatar/Avatar";
+import { Transicao } from "@/components/common/Transicao/Transicao";
 import { MenuAcoes, ItemAcao } from "@/components/common/menuacoes/MenuAcoes";
 import styles from "./usuarios.module.css";
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { UsuarioResponse } from "@/types/usuario.types";
 import { ModalStatusUsuario } from "./(editar)/ModalStatusUsuario";
 import { ModalPermissaoUsuario } from "./(editar)/ModalPermissaoUsuario";
@@ -31,7 +33,6 @@ import { SearchX, Inbox } from 'lucide-react'
 import { SkeletonUsuarios } from "./SkeletonUsuarios";
 import { EstadoErro } from "@/components/common/EstadoErro/EstadoErro";
 import { podeGerenciarUsuarios } from "@/lib/permissoes";
-import { urlFoto } from "@/lib/urlFoto";
 
 const TAMANHO_PAGINA = 10;
 
@@ -144,11 +145,13 @@ function UsuariosConteudo() {
           placeholder="Buscar por nome ou e-mail..."
           className={styles.inputBusca}
         />
-        {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 
       <div className={styles.containerTabela}>
-        <table className={styles.tabela}>
+       {/* Remonta só ao paginar; digitar na busca NÃO remonta — linhas atualizam no lugar
+           (cada nova entra com @starting-style) e a tabela só amortece durante o fetch. */}
+       <Transicao key={pagina} modo="fade">
+        <table className={`${styles.tabela} ${isFetching && !isLoading ? styles.tabelaAtualizando : ''}`}>
           <CabecalhoTabela />
           <tbody>
             {isLoading ? (
@@ -250,6 +253,7 @@ function UsuariosConteudo() {
             )}
           </tbody>
         </table>
+       </Transicao>
 
         {!isLoading && !isError && usuarios.length > 0 && (
           <footer className={styles.rodape}>
@@ -291,14 +295,7 @@ function UsuariosConteudo() {
       )}
 
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <X size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
 
     </div>

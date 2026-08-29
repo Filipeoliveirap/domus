@@ -29,8 +29,8 @@ export function useRemoverMembro(ministerioId: string) {
   return useMutation({
     mutationFn: (pessoaId: string) => ministerioService.removerMembro(ministerioId, pessoaId),
     onSuccess: () => {
+      // Sem toast de sucesso: a linha colapsa animada, já fica claro que saiu.
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Membro removido.')
     },
     onError: (error: unknown) => notificar.erro('Não foi possível remover o membro', mensagemErro(error, 'Tente novamente.')),
   })
@@ -42,8 +42,8 @@ export function useAtualizarPapel(ministerioId: string) {
     mutationFn: ({ pessoaId, papel }: { pessoaId: string; papel: 'LIDER' | 'MEMBRO' }) =>
       ministerioService.atualizarPapel(ministerioId, pessoaId, papel),
     onSuccess: () => {
+      // Sem toast de sucesso: o badge de líder entra/sai animado, já é visível.
       invalidarCache(queryClient, 'ministerio')
-      notificar.sucesso('Papel atualizado.')
     },
     onError: (error: unknown) => notificar.erro('Não foi possível atualizar o papel', mensagemErro(error, 'Tente novamente.')),
   })

@@ -9,6 +9,8 @@ import styles from './ModalConfirmacao.module.css'
 interface Props {
   titulo: string
   mensagem: React.ReactNode
+  /** Erro da API — mostrado em destaque logo acima dos botões. */
+  erro?: React.ReactNode
   textoConfirmar?: string
   textoCancelar?: string
   perigo?: boolean
@@ -18,7 +20,7 @@ interface Props {
 }
 
 export function ModalConfirmacao({
-  titulo, mensagem, textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar',
+  titulo, mensagem, erro, textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar',
   perigo = false, isLoading = false, onConfirmar, onClose,
 }: Props) {
   const confirmarRef = useRef<HTMLButtonElement>(null)
@@ -56,6 +58,8 @@ export function ModalConfirmacao({
         </div>
 
         <div className={styles.corpo}>{mensagem}</div>
+
+        {erro && <div className={styles.erro}>{erro}</div>}
 
         <div className={styles.rodape}>
           <button

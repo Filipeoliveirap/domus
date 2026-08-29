@@ -65,6 +65,7 @@
 .botaoPrimario {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 24px;
   border-radius: var(--radius-md);
@@ -73,10 +74,15 @@
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
   box-shadow: var(--shadow-btn-primary);
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--transition-normal), transform var(--transition-fast);
 }
-.botaoPrimario:hover {
-  opacity: 0.9;
+@media (hover: hover) {
+  .botaoPrimario:hover {
+    opacity: 0.9;
+  }
+}
+.botaoPrimario:active {
+  transform: scale(0.98);
 }
 
 /*  Barra de busca */
@@ -147,11 +153,31 @@
 .tabela thead th:first-child { border-top-left-radius: var(--radius-lg); }
 .tabela thead th:last-child  { border-top-right-radius: var(--radius-lg); }
 
-.tabela tbody tr {
-  transition: background-color var(--transition-fast);
+/* Amortece a lista enquanto a busca refaz o fetch — em vez de piscar os cards. */
+.tabelaAtualizando {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
-.tabela tbody tr:hover {
+
+.tabela tbody tr {
+  transition: background-color var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (hover: hover) {
+  .tabela tbody tr:hover {
+    background-color: var(--color-bg-table-head);
+  }
+}
+.linhaClicavel:active {
   background-color: var(--color-bg-table-head);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabela tbody tr { transition: background-color var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
 }
 
 .celulaPessoa {
@@ -283,10 +309,15 @@
   border: 1px solid var(--color-border-input);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
-.botaoPagina:hover:not(:disabled) {
-  background-color: var(--color-bg-page);
+@media (hover: hover) {
+  .botaoPagina:hover:not(:disabled) {
+    background-color: var(--color-bg-page);
+  }
+}
+.botaoPagina:active:not(:disabled) {
+  transform: scale(0.92);
 }
 .botaoPagina:disabled {
   opacity: 0.4;
@@ -313,16 +344,20 @@
     align-items: stretch;
     gap: 12px;
   }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
   .botaoPrimario {
     justify-content: center;
+    padding: 10px 16px;
   }
   .barraBusca {
     flex-wrap: wrap;
   }
   .inputBusca {
     width: 100%;
+    /* 16px evita o zoom automático do iOS ao focar. */
+    font-size: var(--font-size-md);
   }
-
   /* Cada linha vira um card empilhado — sem scroll horizontal nem corte. */
   .containerTabela {
     background: transparent;
@@ -340,7 +375,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px 12px;
+    gap: 6px 12px;
     background: var(--color-bg-white);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
@@ -352,15 +387,19 @@
     border: none;
     padding: 0;
   }
-  /* Pessoa (avatar + nome + e-mail) ocupa a linha inteira do card. */
+  /* Pessoa (avatar + nome + cargo) ocupa a linha inteira do card. */
   .tabela tbody td:first-child {
     flex-basis: 100%;
   }
-  /* Esconde Telefone e Cadastro dentro do card. */
+  /* Telefone e Cadastro NÃO somem — viram informação secundária no card
+     (esconder coluna é perder informação, ver CLAUDE.md). */
   .tabela tbody td:nth-child(2),
   .tabela tbody td:nth-child(4) {
-    display: none;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
   }
+  .tabela tbody td:nth-child(2)::before { content: "☎ "; }
+  .tabela tbody td:nth-child(4)::before { content: "cadastro "; }
   /* Ações vão pra direita do card. */
   .colunaAcoes {
     margin-left: auto;
@@ -379,43 +418,4 @@
   }
 }
 
-.viewerOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.75);
-}
-.viewerModal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: 480px;
-  width: 100%;
-}
-.viewerClose {
-  align-self: flex-end;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.viewerClose:hover { background: rgba(255,255,255,0.2); }
-.viewerImg {
-  width: 100%;
-  max-height: 60vh;
-  object-fit: contain;
-  border-radius: var(--radius-lg);
-}
 

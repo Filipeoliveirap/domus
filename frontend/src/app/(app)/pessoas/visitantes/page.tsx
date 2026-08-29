@@ -2,7 +2,10 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { clsx } from 'clsx'
 import { ChevronRight, Pencil, Trash2, Phone as PhoneIcon, Grid3x3 } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useVisitantes } from '@/hooks/visitante/useVisitantes'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
@@ -22,7 +25,6 @@ import { DrawerDetalheVisitante } from './(detalhe)/DrawerDetalheVisitante'
 import { ExcluirVisitante } from './(excluir)/ExcluirVisitante'
 import { iniciaisVisitante, formatarTelefoneExibicao } from '@/lib/formats/visitanteFormat'
 import { useCelulas } from '@/hooks/celula/useCelulas'
-import { celulaService } from '@/services/celula.service'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import type { VisitanteResponse } from '@/types/visitante.type'
 import { SearchX, Users } from 'lucide-react'
@@ -71,6 +73,7 @@ function VisitantesConteudo() {
   const [visitanteExcluindo, setVisitanteExcluindo] = useState<VisitanteResponse | null>(null)
   const [visitanteDetalheId, setVisitanteDetalheId] = useState<string | null>(null)
   const [visitanteMoverCelula, setVisitanteMoverCelula] = useState<VisitanteResponse | null>(null)
+  const moverSaida = useFecharAnimado(() => setVisitanteMoverCelula(null), 240)
 
   const { data: celulas } = useCelulas()
 
@@ -88,7 +91,7 @@ function VisitantesConteudo() {
       queryClient.invalidateQueries({ queryKey: ['visitantes'] })
       invalidarCache(queryClient, 'celula')
       notificar.sucesso(`${visitanteMoverCelula.nome} movido para ${celula.singular.toLowerCase()}.`)
-      setVisitanteMoverCelula(null)
+      moverSaida.fechar()
     } catch { notificar.erro(`Erro ao mover para ${celula.singular.toLowerCase()}.`) }
   }
 
@@ -189,11 +192,16 @@ function VisitantesConteudo() {
           className={styles.inputBusca}
         />
         <PainelFiltros grupos={GRUPOS_FILTRO} valores={filtros} onAplicar={aoAplicarFiltros} />
-        {isFetching && <span className={styles.indicadorAtualizando}>Atualizando…</span>}
       </div>
 
       <div className={styles.containerTabela}>
-        <table className={styles.tabela}>
+       {/* Remonta só ao trocar filtro/página; digitar na busca NÃO remonta — linhas
+           atualizam no lugar e a tabela só amortece enquanto o fetch corre. */}
+       <Transicao
+         key={`${filtros.contato}|${filtros.visita}|${filtros.acompanhamento}|${pagina}`}
+         modo="fade"
+       >
+        <table className={`${styles.tabela} ${isFetching && !isLoading ? styles.tabelaAtualizando : ''}`}>
           <thead>
             <tr>
               <th>Visitante</th>
@@ -311,6 +319,7 @@ function VisitantesConteudo() {
             )}
           </tbody>
         </table>
+       </Transicao>
 
         {!isLoading && !isError && visitantes.length > 0 && (
           <footer className={styles.rodape}>
@@ -343,9 +352,10 @@ function VisitantesConteudo() {
         <DrawerDetalheVisitante visitanteId={visitanteDetalheId} onClose={() => setVisitanteDetalheId(null)} />
       )}
       {visitanteMoverCelula && (
-        <div className={styles.modalOverlay} onMouseDown={() => setVisitanteMoverCelula(null)}>
-          <div className={styles.modalCelula} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.modalClose} onClick={() => setVisitanteMoverCelula(null)}>✕</button>
+        <div className={clsx(styles.modalOverlay, moverSaida.saindo && styles.modalSaindo)} onMouseDown={moverSaida.fechar}>
+          <div className={styles.modalCelula} onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true">
+            <span className={styles.modalGrabber} aria-hidden="true" />
+            <button className={styles.modalClose} onClick={moverSaida.fechar} aria-label="Fechar">✕</button>
             <h3 className={styles.modalTitulo}>Mover para {celula.singular.toLowerCase()}</h3>
             <p className={styles.modalSub}>{visitanteMoverCelula.nome}</p>
             <div className={styles.modalLista}>

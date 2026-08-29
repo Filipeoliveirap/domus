@@ -69,11 +69,19 @@
 .tabela tbody tr {
   transition: background-color var(--transition-fast);
 }
-.tabela tbody tr:hover {
-  background-color: var(--color-bg-table-head);
+/* hover só em quem tem mouse — no touch o :hover "gruda" depois do tap e o card fica
+   destacado como se estivesse pressionado. */
+@media (hover: hover) {
+  .tabela tbody tr:hover {
+    background-color: var(--color-bg-table-head);
+  }
 }
 .linhaClicavel {
   cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+.linhaClicavel:active {
+  transform: scale(0.99);
 }
 .nome {
   font-weight: var(--font-weight-semibold);
@@ -110,9 +118,13 @@
     align-items: stretch;
     gap: 12px;
   }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
   .botaoPrimario {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
+    font-size: var(--font-size-base);
   }
 
   .containerTabela {

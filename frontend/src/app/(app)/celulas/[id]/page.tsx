@@ -1,12 +1,12 @@
 'use client'
 
-import { use, useState, useMemo } from 'react'
+import { use, useState } from 'react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, UserMinus, ArrowLeftRight, TrendingUp, Grid3X3, X, Archive, ArrowLeft } from 'lucide-react'
+import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, ArrowLeftRight, TrendingUp, Grid3X3, Archive, ArrowLeft } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
-import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
-import { useAtualizarFotoCelula } from '@/hooks/celula/useAtualizarFotoCelula'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { celulaService } from '@/services/celula.service'
@@ -14,37 +14,25 @@ import { visitanteService } from '@/services/visitante.service'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCelulas } from '@/lib/permissoes'
 import { rotuloDiaSemana, formatarHorario } from '@/lib/formats/celulaFormat'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
-import { Input } from '@/components/common/input/Input'
-import { Select } from '@/components/common/select/Select'
-import { Button } from '@/components/common/button/Button'
-import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import { ModalConverterVisitante } from './ModalConverterVisitante'
+import { ModalCelulaForm } from '../(lista)/ModalCelulaForm'
 import { urlFoto } from '@/lib/urlFoto'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { iniciaisVisitante } from '@/lib/formats/visitanteFormat'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { DrawerDetalheVisitante } from '@/app/(app)/pessoas/visitantes/(detalhe)/DrawerDetalheVisitante'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
-import { VisitanteForm } from '@/components/module/visitantes/VisitanteForm'
+import { VisitanteForm, type VisitanteFormData } from '@/components/module/visitantes/VisitanteForm'
 import { useVisitanteForm } from '@/hooks/visitante/useVisitanteForm'
 import type { MembroCelulaResponse } from '@/types/celula.type'
 import styles from './page.module.css'
-
-const DIA_OPTIONS = [
-  { value: '', label: 'Sem dia fixo' },
-  { value: 'SEGUNDA', label: 'Segunda' },
-  { value: 'TERCA', label: 'Terça' },
-  { value: 'QUARTA', label: 'Quarta' },
-  { value: 'QUINTA', label: 'Quinta' },
-  { value: 'SEXTA', label: 'Sexta' },
-  { value: 'SABADO', label: 'Sábado' },
-  { value: 'DOMINGO', label: 'Domingo' },
-]
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 
 export default function CelulaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -65,36 +53,33 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   )
   const [convertendoId, setConvertendoId] = useState<string | null>(null)
   const [cadastrarExterno, setCadastrarExterno] = useState(false)
-  const [fotoId, setFotoId] = useState<string | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
+  const externoSaida = useFecharAnimado(() => setCadastrarExterno(false), 260)
 
   const formExterno = useVisitanteForm({})
 
-  const celulaInicial = useMemo(() => celula ? {
-    id: celula.id,
-    nome: celula.nome,
-    diaSemana: celula.diaSemana,
-    horario: celula.horario,
-    fotoId: celula.fotoId,
-    lideres: [] as string[],
-    totalMembros: celula.membros.length,
-    souLiderDestaCelula: celula.souLiderDestaCelula,
-    temVinculo: celula.membros.length > 0,
-  } : undefined, [celula?.id, celula?.nome, celula?.diaSemana, celula?.horario, celula?.fotoId, celula?.souLiderDestaCelula, celula?.membros.length])
+  // ids saindo — cada linha colapsa animada, independente. Pode remover vários seguidos.
+  const [removendo, setRemovendo] = useState<Set<string>>(() => new Set())
+  const semIdRemov = (s: Set<string>, mid: string) => {
+    const n = new Set(s)
+    n.delete(mid)
+    return n
+  }
 
-  const form = useCelulaForm({ celulaId: id, celulaInicial })
-  const atualizarFoto = useAtualizarFotoCelula(id)
-  const { register, handleSubmit, setValue, watch, formState: { errors }, isLoading: salvando, erroGeral } = form
-  const horarioValue = watch('horario') as string ?? ''
-
-  async function handleRemoverMembro(membroId: string) {
-    try {
-      await celulaService.removerMembro(id, membroId)
-      invalidarCache(queryClient, 'celula')
-      notificar.sucesso('Membro removido.')
-    } catch {
-      notificar.erro('Erro ao remover membro.')
-    }
+  function handleRemoverMembro(membroId: string) {
+    if (removendo.has(membroId)) return
+    setRemovendo((s) => new Set(s).add(membroId))
+    setTimeout(async () => {
+      try {
+        await celulaService.removerMembro(id, membroId)
+        invalidarCache(queryClient, 'celula')
+        // sem toast de sucesso: a linha colapsa animada, já é visível
+        setTimeout(() => setRemovendo((s) => semIdRemov(s, membroId)), 350)
+      } catch {
+        notificar.erro('Erro ao remover membro.')
+        setRemovendo((s) => semIdRemov(s, membroId))
+      }
+    }, 420)
   }
 
   async function handlePromover(membroId: string, papelAtual: 'LIDER' | 'MEMBRO') {
@@ -102,7 +87,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       const novoPapel = papelAtual === 'LIDER' ? 'MEMBRO' : 'LIDER'
       await celulaService.atualizarPapel(id, membroId, novoPapel)
       invalidarCache(queryClient, 'celula')
-      notificar.sucesso('Papel atualizado.')
+      // sem toast de sucesso: o badge de líder entra/sai animado, já é visível
     } catch {
       notificar.erro('Erro ao atualizar papel.')
     }
@@ -112,7 +97,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
     setConvertendoId(visitanteId)
   }
 
-  async function handleCriarExterno(data: any) {
+  async function handleCriarExterno(data: VisitanteFormData) {
     try {
       const payload = {
         ...data,
@@ -128,7 +113,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
           cep: data.endereco.cep?.replace(/\D/g, '') || undefined,
         } : undefined,
       }
-      const visitante = await visitanteService.criar(payload)
+      // sexo/estadoCivil já vêm validados pelo schema do form; o cast só estreita o tipo.
+      const visitante = await visitanteService.criar(payload as Parameters<typeof visitanteService.criar>[0])
       await celulaService.adicionarMembro(id, { visitanteId: visitante.id })
       invalidarCache(queryClient, 'celula')
       queryClient.invalidateQueries({ queryKey: ['visitantes'] })
@@ -136,23 +122,6 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
       setCadastrarExterno(false)
       formExterno.reset()
     } catch { notificar.erro('Erro ao cadastrar.') }
-  }
-
-  async function onSalvarEdicao() {
-    const data = form.getValues()
-    try {
-      await celulaService.atualizar(id, {
-        nome: data.nome,
-        diaSemana: (data.diaSemana || undefined) as 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO' | 'DOMINGO',
-        horario: data.horario ? data.horario + ':00' : undefined,
-        fotoId: fotoId ?? undefined,
-      })
-      invalidarCache(queryClient, 'celula')
-      notificar.sucesso(`${rotuloCelula.singular} atualizada.`)
-      setEditando(false)
-    } catch {
-      notificar.erro('Erro ao atualizar.')
-    }
   }
 
   function membrosFiltrados(): MembroCelulaResponse[] {
@@ -206,15 +175,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
               <div className={styles.tituloLinha}>
                 <h1 className={styles.titulo}>{celula.nome}</h1>
                 {podeGerenciarCelula && (
-                <button className={styles.btnEditar} onClick={() => {
-                  if (celula) form.reset({
-                    nome: celula.nome,
-                    diaSemana: celula.diaSemana ?? '',
-                    horario: celula.horario ? celula.horario.slice(0, 5) : '',
-                  })
-                  setFotoId(celula?.fotoId ?? null)
-                  setEditando(true)
-                }} title={`Editar ${rotuloCelula.singular.toLowerCase()}`}>
+                <button className={styles.btnEditar} onClick={() => setEditando(true)}
+                  title={`Editar ${rotuloCelula.singular.toLowerCase()}`}>
                   <Pencil size={16} />
                 </button>
                 )}
@@ -256,7 +218,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             ))}
           </div>
 
-          <div className={styles.lista}>
+          <Transicao key={filtro} modo="fade" className={styles.lista}>
             {membrosFiltrados().map(m => {
               const podeGerenciar = podeGerenciarCelula
 
@@ -287,7 +249,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
 
               return (
                 <div key={m.id}
-                  className={`${styles.membro} ${m.tipo === 'VISITANTE' ? styles.membroVisitante : ''}`}
+                  className={clsx(styles.membro, m.tipo === 'VISITANTE' && styles.membroVisitante, removendo.has(m.id) && styles.membroSaindo)}
                   onClick={() => {
                     if (m.tipo === 'PESSOA' && m.pessoaId) setPessoaDetalheId(m.pessoaId)
                     else if (m.visitanteId) setVisitanteDetalheId(m.visitanteId)
@@ -323,58 +285,12 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                 </div>
               )
             })}
-          </div>
+          </Transicao>
         </>
       )}
 
-      {editando && (
-        <div className={styles.modalOverlay} onMouseDown={() => setEditando(false)}>
-          <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.modalClose} onClick={() => setEditando(false)}>✕</button>
-            <h2 className={styles.modalTitulo}>Editar {rotuloCelula.singular}</h2>
-            <form onSubmit={handleSubmit(onSalvarEdicao)} className={styles.modalForm}>
-              <div className={styles.fotoWrap}>
-                <UploadFoto
-                  valor={fotoId}
-                  onChange={(novoFotoId) => {
-                    const fotoAnterior = fotoId
-                    setFotoId(novoFotoId)
-                    atualizarFoto.mutate(novoFotoId, {
-                      onSuccess: () => notificar.sucesso(novoFotoId ? 'Foto atualizada.' : 'Foto removida.'),
-                      onError: (erro: unknown) => {
-                        setFotoId(fotoAnterior)
-                        const mensagem =
-                          (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                          'Tente novamente em alguns instantes.'
-                        notificar.erro('Não foi possível salvar a foto', mensagem)
-                      },
-                    })
-                  }}
-                  formato="circulo"
-                  nomeFallback={form.getValues('nome') as string}
-                />
-              </div>
-              <Input id="nome-edit" label="NOME*" placeholder={`Nome da ${rotuloCelula.singular.toLowerCase()}`}
-                error={errors.nome?.message} {...register('nome')} />
-              <Select id="diaSemana-edit" label="DIA QUE A CÉLULA OCORRE" placeholder="Selecione"
-                options={DIA_OPTIONS} error={errors.diaSemana?.message} {...register('diaSemana')} />
-              <Input id="horario-edit" label="HORÁRIO DE INÍCIO" placeholder="hh:mm" inputMode="numeric" maxLength={5}
-                value={horarioValue} onChange={e => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4)
-                  const formatted = digits.length <= 2 ? digits : digits.replace(/(\d{2})(\d{0,2})/, '$1:$2')
-                  setValue('horario', formatted, { shouldValidate: true })
-                }} error={errors.horario?.message} />
-              {erroGeral && <p className={styles.modalErro}>{erroGeral}</p>}
-              <div className={styles.modalAcoes}>
-                <Button type="button" variant="secondary" onClick={() => setEditando(false)}>Cancelar</Button>
-                <Button type="submit" variant="primary" isLoading={salvando}
-                  disabled={form.isFormIncomplete || salvando}>
-                  Salvar
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {editando && celula && (
+        <ModalCelulaForm celula={celula} onClose={() => setEditando(false)} />
       )}
 
       {modalAdicionarAberto && celula && (
@@ -404,12 +320,15 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         />
       )}
       {cadastrarExterno && (
-        <div className={styles.modalOverlay} onMouseDown={() => setCadastrarExterno(false)}>
+        <div className={clsx(styles.modalOverlay, externoSaida.saindo && styles.modalSaindo)} onMouseDown={externoSaida.fechar}>
           <div className={styles.modalLargo} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.modalClose} onClick={() => setCadastrarExterno(false)}>✕</button>
+            <span className={styles.modalGrabber} aria-hidden="true" />
+            <button className={styles.modalClose} onClick={externoSaida.fechar} aria-label="Fechar">✕</button>
             <h2 className={styles.modalTitulo}>Cadastrar Visitante</h2>
             <VisitanteForm
               {...formExterno}
+              emModal
+              onCancel={externoSaida.fechar}
               onSubmit={async (data) => {
                 await handleCriarExterno(data)
               }}
@@ -418,14 +337,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
         </div>
       )}
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <X size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
     </div>
   )

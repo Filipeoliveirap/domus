@@ -14,10 +14,15 @@
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
-.gatilho:hover {
-  background-color: var(--color-bg-table-header);
+@media (hover: hover) {
+  .gatilho:hover {
+    background-color: var(--color-bg-table-header);
+  }
+}
+.gatilho:active {
+  transform: scale(0.97);
 }
 
 .contador {
@@ -52,6 +57,11 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 .cabecalhoPainel {
@@ -111,10 +121,15 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   background-color: var(--color-bg-white);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
 }
-.opcao:hover {
-  background-color: var(--color-bg-table-header);
+@media (hover: hover) {
+  .opcao:hover {
+    background-color: var(--color-bg-table-header);
+  }
+}
+.opcao:active {
+  transform: scale(0.94);
 }
 .opcaoAtiva {
   background-color: var(--color-primary-light);
@@ -147,10 +162,18 @@
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
-.botaoAplicar:hover {
-  background-color: var(--color-primary-dark);
+@media (hover: hover) {
+  .botaoAplicar:hover {
+    background-color: var(--color-primary-dark);
+  }
+}
+.botaoAplicar:active { transform: scale(0.96); }
+.botaoLimpar:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  .painel { transition: opacity 0.12s ease; }
 }
 
 /* ─── Mobile: o painel vira uma folha inferior, não um popover ─────────── */
@@ -161,7 +184,9 @@
     inset: 0;
     background-color: var(--color-bg-overlay);
     z-index: var(--z-modal);
+    animation: painelFundo 0.2s ease-out;
   }
+  @keyframes painelFundo { from { opacity: 0; } to { opacity: 1; } }
 
   .painel {
     position: fixed;
@@ -174,6 +199,10 @@
     max-height: 80vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     z-index: var(--z-modal);
+    @starting-style {
+      opacity: 1;
+      transform: translateY(100%);
+    }
   }
 
   .corpo {

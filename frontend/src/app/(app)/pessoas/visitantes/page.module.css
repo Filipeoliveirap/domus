@@ -63,6 +63,7 @@
 .botaoPrimario {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 24px;
   border-radius: var(--radius-md);
@@ -71,11 +72,16 @@
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
   box-shadow: var(--shadow-btn-primary);
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--transition-normal), transform var(--transition-fast);
   text-decoration: none;
 }
-.botaoPrimario:hover {
-  opacity: 0.9;
+@media (hover: hover) {
+  .botaoPrimario:hover {
+    opacity: 0.9;
+  }
+}
+.botaoPrimario:active {
+  transform: scale(0.98);
 }
 
 .barraBusca {
@@ -157,11 +163,30 @@
 
 .linhaClicavel {
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: background var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (hover: hover) {
+  .linhaClicavel:hover {
+    background: var(--color-bg-hover-row);
+  }
+}
+.linhaClicavel:active {
+  background: var(--color-bg-hover-row);
 }
 
-.linhaClicavel:hover {
-  background: var(--color-bg-hover-row);
+/* Amortece a lista enquanto a busca refaz o fetch — em vez de piscar as linhas. */
+.tabelaAtualizando {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linhaClicavel { transition: background var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
 }
 
 .celulaPessoa {
@@ -215,27 +240,32 @@
   font-weight: var(--font-weight-medium);
   border: none;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
+button.toggleBtn:active { transform: scale(0.93); }
 
 .toggleBtn.toggleAtivo {
   background: var(--color-primary-bg, #dbeafe);
   color: var(--color-primary);
 }
-.toggleBtn.toggleAtivo:hover {
-  background: var(--color-primary-bg-hover, #bfdbfe);
+@media (hover: hover) {
+  button.toggleBtn.toggleAtivo:hover {
+    background: var(--color-primary-bg-hover, #bfdbfe);
+  }
 }
 
 .toggleBtn.toggleInativo {
   background: var(--color-bg-muted, #f1f5f9);
   color: var(--color-text-muted);
 }
-.toggleBtn.toggleInativo:hover {
-  background: var(--color-bg-muted-hover, #e2e8f0);
-  color: var(--color-text-secondary);
+@media (hover: hover) {
+  button.toggleBtn.toggleInativo:hover {
+    background: var(--color-bg-muted-hover, #e2e8f0);
+    color: var(--color-text-secondary);
+  }
 }
 
 .colunaAcoes {
@@ -275,14 +305,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition-fast);
+  transition: background var(--transition-fast), transform var(--transition-fast);
 }
 .botaoPagina:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.botaoPagina:hover:not(:disabled) {
-  background: var(--color-bg-hover);
+@media (hover: hover) {
+  .botaoPagina:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+  }
+}
+.botaoPagina:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 .infoPagina {
@@ -291,6 +326,24 @@
 }
 
 @media (max-width: 767px) {
+  .pagina { gap: 16px; }
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
+  .botaoPrimario {
+    width: 100%;
+    padding: 10px 16px;
+  }
+  .inputBusca {
+    width: 100%;
+    /* 16px evita o zoom do iOS ao focar. */
+    font-size: var(--font-size-md);
+  }
+
   .tabela thead {
     display: none;
   }
@@ -330,11 +383,15 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(19, 27, 46, 0.30);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  animation: mvSurgir 0.2s ease-out;
 }
 
 .modalCelula {
@@ -342,20 +399,42 @@
   border-radius: var(--radius-lg);
   padding: 24px;
   width: 400px;
-  max-width: 95vw;
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   position: relative;
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.18);
+  animation: mvSubir 0.22s ease-out;
+}
+
+@keyframes mvSurgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mvSubir { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
+@keyframes mvSumir { to { opacity: 0; } }
+@keyframes mvDescer { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+@keyframes mvDeslizarCima { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes mvDeslizarBaixo { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.modalSaindo { animation: mvSumir 0.22s ease forwards; }
+.modalSaindo .modalCelula { animation: mvDescer 0.22s ease forwards; }
+
+.modalGrabber { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay, .modalCelula, .modalSaindo, .modalSaindo .modalCelula { animation: none; }
 }
 
 .modalClose {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 14px;
+  right: 14px;
   border: none;
   background: none;
   cursor: pointer;
   font-size: 18px;
   color: var(--color-text-muted);
+  transition: transform 0.1s ease;
 }
+.modalClose:active { transform: scale(0.9); }
 
 .modalTitulo {
   font-size: var(--font-size-lg);
@@ -387,14 +466,38 @@
   background: var(--color-bg-white);
   cursor: pointer;
   font-size: var(--font-size-base);
-  transition: background var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform 0.1s ease;
+  @starting-style { opacity: 0; transform: translateX(-10px); }
 }
-
-.modalItem:hover {
-  background: var(--color-bg-table-head);
+@media (hover: hover) {
+  .modalItem:hover {
+    background: var(--color-bg-table-head);
+    border-color: var(--color-primary);
+  }
 }
+.modalItem:active { transform: scale(0.98); }
 
 .modalItemInfo {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+@media (max-width: 767px) {
+  .modalOverlay { padding: 0; align-items: flex-end; }
+  .modalCelula {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-top: 34px;
+    animation: mvDeslizarCima 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .modalSaindo .modalCelula { animation: mvDeslizarBaixo 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .modalGrabber {
+    display: block;
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 2; width: 38px; height: 4px; border-radius: 999px; background: var(--color-border);
+  }
+  .modalLista { max-height: 60dvh; }
 }

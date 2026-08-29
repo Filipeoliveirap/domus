@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, Archive, Users, Crown, X, Trash2 } from 'lucide-react'
+import { Pencil, Archive, Users, Crown, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
@@ -20,6 +20,7 @@ import { invalidarCache } from '@/lib/cacheInvalidacao'
 import { useQueryClient } from '@tanstack/react-query'
 import type { MinisterioResponse } from '@/types/ministerio.type'
 import styles from './ministerios.module.css'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 
 // Rótulo de líder(es) do card — nome do líder + contagem de membros no próprio card,
 // sem precisar abrir o detalhe. Sem líder ainda = "Sem líder".
@@ -171,14 +172,7 @@ export default function MinisteriosPage() {
         <ModalExcluirDefinitivo ministerio={excluindoDefinitivo} onClose={() => setExcluindoDefinitivo(null)} />
       )}
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <X size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
     </div>
   )

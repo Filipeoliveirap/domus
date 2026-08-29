@@ -94,6 +94,21 @@
   grid-column: 1 / -1;
 }
 
+/* Wrapper pra SelectMenu ficar com label + erro igual aos <Input> vizinhos. */
+.campoSelect {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.labelSelect {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
 /* ─── Textarea ───────────────────────────────────────────── */
 .campoTextarea {
   display: flex;
@@ -175,14 +190,25 @@
 }
 
 /* ─── Responsivo ─────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .pagina {
     padding: 16px;
+    gap: 16px;
   }
+  .titulo { font-size: var(--font-size-lg); }
   .card {
-    padding: 20px;
+    padding: 18px;
+    gap: 18px;
+  }
+  .secao { gap: 16px; }
+  .secaoIcone { width: 34px; height: 34px; }
+  .secaoTitulo { font-size: var(--font-size-base); }
+  .labelTextarea, .labelMinisterio, .labelSelect {
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.4px;
   }
   .grid2 {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }

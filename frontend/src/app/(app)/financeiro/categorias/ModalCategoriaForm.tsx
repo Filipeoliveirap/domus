@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { clsx } from 'clsx'
 import { X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, AlertTriangle } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useCategoriaForm } from '@/hooks/financeiro/categoria/useCategoriaForm'
 import { ModalArquivar } from '@/components/common/modalArquivar/ModalArquivar'
 import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/categoria.type'
@@ -31,19 +33,27 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
   })
 
   const tipoSelecionado = watch('tipo')
+  const { saindo, fechar } = useFecharAnimado(onClose, 240)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) onClose()
+      if (e.key === 'Escape' && !isLoading) fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, isLoading])
+  }, [fechar, isLoading])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !isLoading && fechar()}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+        <span className={styles.grabber} aria-hidden="true" />
+        <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 
@@ -91,7 +101,7 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
           {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
           <div className={styles.rodape}>
-            <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={isLoading}>
+            <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={isLoading}>
               Cancelar
             </button>
             <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || isLoading}>

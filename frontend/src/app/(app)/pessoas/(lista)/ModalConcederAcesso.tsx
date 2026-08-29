@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clsx } from 'clsx'
 import { KeyRound, X, Mail, ShieldCheck, Users, User, Info, RotateCcw } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useConcederAcesso } from '@/hooks/pessoa/useConcederAcesso'
 import { concederAcessoSchema, type ConcederAcessoFormData, type ConcederAcessoFormInput } from '@/lib/validators'
 import { Input } from '@/components/common/input/Input'
@@ -26,6 +28,19 @@ export function ModalConcederAcesso({
   onClose: () => void
 }) {
   const { confirmar, reativar, cancelarReativacao, precisaReativar, isLoading, erroGeral } = useConcederAcesso(pessoa, onClose)
+  const { saindo, fechar } = useFecharAnimado(onClose, 240)
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !isLoading) fechar() }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [fechar, isLoading])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   const semEmail = !pessoa.email
 
@@ -59,9 +74,10 @@ export function ModalConcederAcesso({
 
   if (precisaReativar) {
     return (
-      <div className={styles.overlay} onMouseDown={onClose}>
+      <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
         <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
-          <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+          <span className={styles.grabber} aria-hidden="true" />
+          <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
             <X size={20} />
           </button>
           <div className={styles.bloqueado}>
@@ -93,13 +109,14 @@ export function ModalConcederAcesso({
 
   // ─── Estado normal: form de convite ────────────────────
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.header}>
           <div className={styles.iconBox}>
             <KeyRound size={24} />
           </div>
-          <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+          <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
@@ -160,14 +177,22 @@ export function ModalConcederAcesso({
           {/* Capacidades extras */}
           <div className={styles.capacidadesSection}>
             <span className={styles.roleLabel}>CAPACIDADES EXTRAS</span>
-            <label className={styles.checkbox}>
-              <input type="checkbox" checked={secretario} onChange={e => setSecretario(e.target.checked)} />
-              <span>Secretário — gerencia pessoas e visitantes</span>
-            </label>
-            <label className={styles.checkbox}>
-              <input type="checkbox" checked={tesoureiro} onChange={e => setTesoureiro(e.target.checked)} />
-              <span>Tesoureiro — acesso ao financeiro</span>
-            </label>
+            <div className={styles.capGrid}>
+              <label className={styles.capCard}>
+                <input type="checkbox" className={styles.capCheck} checked={secretario} onChange={e => setSecretario(e.target.checked)} />
+                <span className={styles.capTexto}>
+                  <span className={styles.capTitulo}>Secretário</span>
+                  <span className={styles.capDesc}>Gerencia pessoas e visitantes</span>
+                </span>
+              </label>
+              <label className={styles.capCard}>
+                <input type="checkbox" className={styles.capCheck} checked={tesoureiro} onChange={e => setTesoureiro(e.target.checked)} />
+                <span className={styles.capTexto}>
+                  <span className={styles.capTitulo}>Tesoureiro</span>
+                  <span className={styles.capDesc}>Acesso ao financeiro</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* Aviso */}
@@ -182,7 +207,7 @@ export function ModalConcederAcesso({
 
           {/* Footer */}
           <div className={styles.footer}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
+            <button type="button" className={styles.btnCancel} onClick={fechar}>Cancelar</button>
             <Button type="submit" variant="primary" size="md" isLoading={isLoading}>
               Enviar convite
             </Button>

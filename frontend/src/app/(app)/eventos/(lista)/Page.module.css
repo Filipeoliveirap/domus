@@ -132,6 +132,17 @@
 }
 
 /* ─── Grid de cards (4 colunas) ─── */
+.conteudoLista {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Amortece o grid enquanto a busca refaz o fetch — em vez de piscar os cards. */
+.listaAtualizando {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -205,16 +216,26 @@
     align-items: stretch;
     gap: 12px;
   }
-  .botaoPrimario {
-    width: 100%;
-    justify-content: center;
-  }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
+
   .acoesCabecalho {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
+  /* botões menos "gordos" no mobile */
+  .botaoPrimario,
   .botaoSecundario {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
+    font-size: var(--font-size-base);
+  }
+  /* "Relatório" é um link de texto — encosta na esquerda e a área de toque = o texto,
+     não a linha inteira. */
+  .linkRelatorio {
+    align-self: flex-start;
+    padding: 8px 4px;
   }
 }

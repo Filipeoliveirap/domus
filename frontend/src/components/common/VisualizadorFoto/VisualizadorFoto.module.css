@@ -26,7 +26,7 @@
   object-fit: contain;
   border-radius: var(--radius-md, 8px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-  animation: zoomIn 0.2s ease-out;
+  animation: zoomIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: default;
 }
 
@@ -61,12 +61,18 @@
 }
 
 @keyframes zoomIn {
-  from { opacity: 0; transform: scale(0.97); }
+  from { opacity: 0; transform: scale(0.88); }
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* saída (useFecharAnimado marca .saindo antes de desmontar) */
+.saindo { animation: fadeOut 0.2s ease forwards; }
+.saindo .imagem { animation: zoomOut 0.2s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes zoomOut { to { opacity: 0; transform: scale(0.9); } }
+
 @media (prefers-reduced-motion: reduce) {
-  .overlay, .imagem { animation: none; }
+  .overlay, .imagem, .saindo, .saindo .imagem { animation: none; }
 }
 
 /*

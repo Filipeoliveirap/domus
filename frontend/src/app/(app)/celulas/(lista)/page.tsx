@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Archive, Grid3X3, Crown, X, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Pencil, Archive, Grid3X3, Crown, Trash2 } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
-import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
-import { useAtualizarFotoCelula } from '@/hooks/celula/useAtualizarFotoCelula'
 import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
@@ -15,10 +14,6 @@ import { podeGerenciarCelulas } from '@/lib/permissoes'
 import { rotuloDiaSemana, formatarHorario } from '@/lib/formats/celulaFormat'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
-import { Input } from '@/components/common/input/Input'
-import { Select } from '@/components/common/select/Select'
-import { Button } from '@/components/common/button/Button'
-import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { urlFoto } from '@/lib/urlFoto'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { celulaService } from '@/services/celula.service'
@@ -26,65 +21,34 @@ import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { notificar } from '@/components/common/Notificacao/notificar'
 import type { CelulaResponse } from '@/types/celula.type'
 import styles from './page.module.css'
+import { ModalCelulaForm } from './ModalCelulaForm'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 
-const DIA_OPTIONS = [
-  { value: 'SEGUNDA', label: 'Segunda' },
-  { value: 'TERCA', label: 'Terça' },
-  { value: 'QUARTA', label: 'Quarta' },
-  { value: 'QUINTA', label: 'Quinta' },
-  { value: 'SEXTA', label: 'Sexta' },
-  { value: 'SABADO', label: 'Sábado' },
-  { value: 'DOMINGO', label: 'Domingo' },
-]
+// Rótulo de líder do card — nome do 1º líder + contagem, ou "Sem líder". Mesmo padrão de Ministério.
+function rotuloLideres(lideres: string[]): string {
+  if (lideres.length === 0) return 'Sem líder'
+  if (lideres.length === 1) return lideres[0]
+  return `${lideres[0]} +${lideres.length - 1}`
+}
 
 export default function CelulasPage() {
+  const router = useRouter()
   const { data: celulas, isLoading, isError, refetch } = useCelulas()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const podeGerenciar = podeGerenciarCelulas(role, capacidadesExtras)
-  const [modalAberto, setModalAberto] = useState(false)
-  const [editando, setEditando] = useState<CelulaResponse | null>(null)
-  const [fotoId, setFotoId] = useState<string | null>(null)
-  const [arquivando, setArquivando] = useState<string | null>(null)
+  // `null` = fechado; `'novo'` = criar; objeto = editar. Mesma convenção do ModalMinisterioForm.
+  const [formAberto, setFormAberto] = useState<'novo' | CelulaResponse | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
   const [excluindoDefinitivo, setExcluindoDefinitivo] = useState<CelulaResponse | null>(null)
+  const [arquivando, setArquivando] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const { celula: rotuloCelula } = useRotulos()
 
-  const form = useCelulaForm()
-  const atualizarFoto = useAtualizarFotoCelula(editando?.id)
-  const { register, handleSubmit, setValue, watch, formState: { errors }, isFormIncomplete, isLoading: salvando, erroGeral } = form
-  const horarioValue = watch('horario') as string ?? ''
-
-  async function onSalvar() {
-    const data = form.getValues()
-    try {
-      const payload = {
-        nome: data.nome,
-        diaSemana: (data.diaSemana || undefined) as 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO' | 'DOMINGO',
-        horario: data.horario ? data.horario + ':00' : undefined,
-        fotoId: fotoId ?? undefined,
-      }
-      if (editando) {
-        await celulaService.atualizar(editando.id, payload)
-      } else {
-        await celulaService.criar(payload)
-      }
-      invalidarCache(queryClient, 'celula')
-      notificar.sucesso(editando ? `${rotuloCelula.singular} atualizada!` : `${rotuloCelula.singular} criada!`)
-      form.reset()
-      setFotoId(null)
-      setEditando(null)
-      setModalAberto(false)
-    } catch {
-      notificar.erro(`Erro ao salvar ${rotuloCelula.singular.toLowerCase()}.`)
-    }
-  }
-
   async function handleToggleArquivar(id: string) {
     if (arquivando) return
-    const celula = celulas?.find(c => c.id === id)
+    const celula = celulas?.find((c) => c.id === id)
     if (!celula) return
     setArquivando(id)
     try {
@@ -111,85 +75,74 @@ export default function CelulasPage() {
           <p className={styles.subtitulo}>Pequenos grupos de estudo bíblico.</p>
         </div>
         {podeGerenciar && (
-          <button className={styles.botaoPrimario} onClick={() => { setFotoId(null); setEditando(null); setModalAberto(true) }}>
+          <button type="button" className={styles.botaoPrimario} onClick={() => setFormAberto('novo')}>
             Nova {rotuloCelula.singular.toLowerCase()}
           </button>
         )}
       </header>
 
-        {isLoading ? (
-          <div className={styles.grid}>
-            {[1,2,3].map(i => (
-              <div key={i} className={styles.card}>
-                <div className={styles.cardIcon}>
-                  <Skeleton width="48px" height="48px" radius="var(--radius-lg)" />
-                </div>
-                <Skeleton width="70%" height="18px" />
-                <Skeleton width="50%" height="14px" />
-                <div className={styles.cardFooter}>
-                  <Skeleton width="80px" height="14px" />
-                  <Skeleton width="30px" height="24px" radius="var(--radius-full)" />
-                </div>
-              </div>
-            ))}
-          </div>
+      {isLoading ? (
+        <div className={styles.grid}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={styles.card}>
+              <Skeleton width="64px" height="64px" radius="var(--radius-lg)" />
+              <Skeleton width="70%" height="18px" />
+              <Skeleton width="50%" height="14px" />
+            </div>
+          ))}
+        </div>
       ) : isError ? (
         <EstadoErro titulo="Erro ao carregar" mensagem="Verifique sua conexão."
           aoTentarNovamente={() => refetch()} />
       ) : celulas && celulas.length === 0 ? (
         <EstadoVazio icone={Grid3X3} titulo={`Nenhuma ${rotuloCelula.singular.toLowerCase()}`}
           mensagem={`Comece cadastrando a primeira ${rotuloCelula.singular.toLowerCase()} da sua igreja.`}
-          acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloCelula.singular.toLowerCase()}`, onClick: () => setModalAberto(true) } : undefined} />
+          acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloCelula.singular.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined} />
       ) : (
         <div className={styles.grid}>
-          {celulas?.map(c => {
+          {celulas?.map((c) => {
             const podeEditarEsta = podeGerenciar || c.souLiderDestaCelula
             const acoes: ItemAcao[] = [
-              ...(podeEditarEsta ? [{ label: 'Editar', icone: Pencil, onClick: () => {
-                form.reset({
-                  nome: c.nome,
-                  diaSemana: c.diaSemana ?? '',
-                  horario: c.horario ? c.horario.slice(0, 5) : '',
-                })
-                setFotoId(c.fotoId ?? null)
-                setEditando(c)
-                setModalAberto(true)
-              }}] : []),
-              ...(podeGerenciar ? [
-                c.temVinculo
-                  ? { label: 'Arquivar', icone: Archive, onClick: () => handleToggleArquivar(c.id), perigo: true, separadorAntes: true }
-                  : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(c), perigo: true, separadorAntes: true }
-              ] : []),
+              ...(podeEditarEsta ? [{ label: 'Editar', icone: Pencil, onClick: () => setFormAberto(c) }] : []),
+              ...(podeGerenciar
+                ? [c.temVinculo
+                    ? { label: 'Arquivar', icone: Archive, onClick: () => handleToggleArquivar(c.id), perigo: true, separadorAntes: true }
+                    : { label: 'Excluir', icone: Trash2, onClick: () => setExcluindoDefinitivo(c), perigo: true, separadorAntes: true }]
+                : []),
             ]
             return (
               <div key={c.id} className={styles.card}
-                onClick={() => window.location.href = `/celulas/${c.id}`}>
+                role="button" tabIndex={0}
+                onClick={() => router.push(`/celulas/${c.id}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/celulas/${c.id}`) }}
+              >
                 {acoes.length > 0 && (
-                <div className={styles.cardActions} onClick={e => e.stopPropagation()}>
-                  <MenuAcoes itens={acoes} />
-                </div>
+                  <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
+                    <MenuAcoes itens={acoes} />
+                  </div>
                 )}
-                <div className={styles.cardIcon}
-                  onClick={c.fotoId ? (e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) } : undefined}>
-                  {c.fotoId ? (
-                    <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
-                  ) : (
+                {c.fotoId ? (
+                  <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto}
+                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) }} />
+                ) : (
+                  <div className={styles.cardIcon}>
                     <Grid3X3 size={24} />
-                  )}
+                  </div>
+                )}
+                <div className={styles.cardTopo}>
+                  <span className={styles.cardTitulo}>{c.nome}</span>
                 </div>
-                <h3 className={styles.cardNome}>{c.nome}</h3>
                 {(c.diaSemana || c.horario) && (
                   <p className={styles.cardHorario}>
                     {[rotuloDiaSemana(c.diaSemana), formatarHorario(c.horario)].filter(Boolean).join(', ')}
                   </p>
                 )}
-                <div className={styles.cardFooter}>
-                  {c.lideres.length > 0 ? (
-                    <div className={styles.cardLider}><Crown size={14} /><span>{c.lideres[0]}</span></div>
-                  ) : (
-                    <span className={styles.cardLiderVazio}>Sem líder</span>
-                  )}
-                  <span className={styles.cardMembros}>{c.totalMembros}</span>
+                <div className={styles.cardLider}>
+                  <Crown size={14} />
+                  <span>{rotuloLideres(c.lideres)}</span>
+                </div>
+                <div className={styles.cardMembros}>
+                  {c.totalMembros} {c.totalMembros === 1 ? 'membro' : 'membros'}
                 </div>
               </div>
             )
@@ -197,67 +150,12 @@ export default function CelulasPage() {
         </div>
       )}
 
-      {modalAberto && (
-        <div className={styles.modalOverlay} onMouseDown={() => { setModalAberto(false); setEditando(null) }}>
-          <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.modalClose} onClick={() => { setModalAberto(false); setEditando(null) }}>✕</button>
-            <h2 className={styles.modalTitulo}>{editando ? `Editar ${rotuloCelula.singular}` : `Nova ${rotuloCelula.singular}`}</h2>
-            <form onSubmit={handleSubmit(onSalvar)} className={styles.modalForm}>
-              <div className={styles.fotoWrap}>
-                <UploadFoto
-                  valor={fotoId}
-                  onChange={(id) => {
-                    setFotoId(id)
-                    // Em criação, a célula ainda não existe (sem id) — a foto só é
-                    // enviada junto do "Salvar". Em edição, salva sozinha ao confirmar o recorte.
-                    if (!editando) return
-                    const fotoAnterior = fotoId
-                    atualizarFoto.mutate(id, {
-                      onSuccess: () => notificar.sucesso(id ? 'Foto atualizada.' : 'Foto removida.'),
-                      onError: (erro: unknown) => {
-                        setFotoId(fotoAnterior)
-                        const mensagem =
-                          (erro as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                          'Tente novamente em alguns instantes.'
-                        notificar.erro('Não foi possível salvar a foto', mensagem)
-                      },
-                    })
-                  }}
-                  formato="circulo"
-                  nomeFallback={form.getValues('nome') as string}
-                />
-              </div>
-              <Input id="nome-modal" label="NOME*" placeholder={`Nome da ${rotuloCelula.singular.toLowerCase()}`}
-                error={errors.nome?.message} {...register('nome')} />
-              <Select id="diaSemana-modal" label={`DIA QUE A ${rotuloCelula.singular.toUpperCase()} OCORRE`} placeholder="Selecione"
-                options={DIA_OPTIONS} error={errors.diaSemana?.message} {...register('diaSemana')} />
-              <Input id="horario-modal" label="HORÁRIO DE INÍCIO" placeholder="hh:mm" inputMode="numeric" maxLength={5}
-                value={horarioValue} onChange={e => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4)
-                  const formatted = digits.length <= 2 ? digits : digits.replace(/(\d{2})(\d{0,2})/, '$1:$2')
-                  setValue('horario', formatted, { shouldValidate: true })
-                }} error={errors.horario?.message} />
-              {erroGeral && <p className={styles.modalErro}>{erroGeral}</p>}
-              <div className={styles.modalAcoes}>
-                <Button type="submit" variant="primary" isLoading={salvando}
-                  disabled={isFormIncomplete || salvando}>
-                  {editando ? 'Salvar' : `Criar ${rotuloCelula.singular.toLowerCase()}`}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {formAberto && (
+        <ModalCelulaForm celula={formAberto === 'novo' ? null : formAberto} onClose={() => setFormAberto(null)} />
       )}
 
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <X size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
 
       {excluindoDefinitivo && (

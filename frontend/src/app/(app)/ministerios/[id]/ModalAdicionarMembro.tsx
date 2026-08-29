@@ -1,15 +1,16 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Search, X } from 'lucide-react'
+import { clsx } from 'clsx'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useAdicionarMembro } from '@/hooks/ministerio/useMembroMinisterio'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { Input } from '@/components/common/input/Input'
-import { Button } from '@/components/common/button/Button'
 import styles from './detalhe.module.css'
 
 interface Props {
@@ -25,22 +26,55 @@ export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }
   const inputRef = useRef<HTMLInputElement>(null)
   const { data } = usePessoas({ q: buscaDebounced, page: 0 })
   const adicionar = useAdicionarMembro(ministerioId)
-
-  async function selecionar(pessoaId: string) {
-    try {
-      await adicionar.mutateAsync(pessoaId)
-      // Sem onClose(): fica aberto pra adicionar mais gente. A pessoa some da lista
-      // sozinha (membrosAtuaisIds é recalculado quando ministerio.membros atualiza).
-    } catch {
-      // erro já notificado pela mutation.
-    }
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
+  // pessoaIds sendo adicionadas — cada linha colapsa animada, independente. Pode adicionar
+  // várias rápido em sequência.
+  const [adicionando, setAdicionando] = useState<Set<string>>(() => new Set())
+  // ids já adicionados nesta sessão do modal — filtra a lista pra sempre (não espera o
+  // refetch). Sem isso, se o refetch demora mais que o timer, a linha "pisca de volta".
+  const [jaAdicionados, setJaAdicionados] = useState<Set<string>>(() => new Set())
+  const semId = (s: Set<string>, id: string) => {
+    const n = new Set(s)
+    n.delete(id)
+    return n
   }
 
-  const resultados = (data?.content ?? []).filter((p) => !membrosAtuaisIds.has(p.id))
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') fechar() }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
+
+  const resultados = (data?.content ?? []).filter((p) => !membrosAtuaisIds.has(p.id) && !jaAdicionados.has(p.id))
+
+  function selecionar(pessoaId: string) {
+    if (adicionando.has(pessoaId)) return // só ignora re-clique na MESMA pessoa
+    setAdicionando((s) => new Set(s).add(pessoaId))
+    setTimeout(() => {
+      adicionar.mutate(pessoaId, {
+        onSuccess: () => {
+          setJaAdicionados((s) => new Set(s).add(pessoaId))
+          setTimeout(() => setAdicionando((s) => semId(s, pessoaId)), 350)
+        },
+        onError: () => setAdicionando((s) => semId(s, pessoaId)),
+      })
+    }, 400)
+  }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
+      <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <span className={styles.grabber} aria-hidden="true" />
+        <button type="button" className={styles.fechar} onClick={fechar} aria-label="Fechar">
+          <X size={18} />
+        </button>
+
         <div className={styles.buscaWrap}>
           <Input
             ref={inputRef}
@@ -50,23 +84,15 @@ export function ModalAdicionarMembro({ ministerioId, membrosAtuaisIds, onClose }
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             leftIcon={<Search size={18} />}
-            rightElement={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                aria-label="Fechar"
-                className={styles.botaoFechar}
-              >
-                <X size={18} />
-              </Button>
-            }
           />
         </div>
         <ul className={styles.listaResultados}>
           {resultados.map((pessoa) => (
-            <li key={pessoa.id} className={styles.itemResultado} onClick={() => selecionar(pessoa.id)}>
+            <li
+              key={pessoa.id}
+              className={clsx(styles.itemResultado, adicionando.has(pessoa.id) && styles.itemResultadoSaindo)}
+              onClick={() => selecionar(pessoa.id)}
+            >
               {urlFoto(pessoa.fotoId, 'THUMB') ? (
                 <Image src={urlFoto(pessoa.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatar} />
               ) : (

@@ -45,6 +45,7 @@ export default function RootLayout({
           <Toaster
             position="top-right"
             offset={24}
+            mobileOffset={0}
             gap={12}
             toastOptions={{ unstyled: true, classNames: { toast: 'w-full' } }}
           />

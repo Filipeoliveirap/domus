@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useCriarMinisterio, useAtualizarMinisterio, useAtualizarFotoMinisterio } from '@/hooks/ministerio/useMinisterioForm'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { Input } from '@/components/common/input/Input'
@@ -26,6 +28,19 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
   const atualizarFoto = useAtualizarFotoMinisterio(ministerio?.id ?? '')
   const salvando = criar.isPending || atualizar.isPending
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !salvando) fechar() }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [fechar, salvando])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   async function salvar() {
     try {
@@ -41,8 +56,9 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   }
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !salvando && fechar()}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <span className={styles.grabber} aria-hidden="true" />
         <h2 className={styles.titulo}>
           {ministerio ? `Editar ${rotuloMinisterio.singular.toLowerCase()}` : `Nova ${rotuloMinisterio.singular.toLowerCase()}`}
         </h2>
@@ -80,7 +96,7 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
           autoFocus
         />
         <div className={styles.acoes}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={salvando}>
+          <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
             Cancelar
           </Button>
           <Button type="button" variant="primary" disabled={!nome.trim() || salvando} isLoading={salvando} loadingText="Salvando…" onClick={salvar}>

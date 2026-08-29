@@ -7,6 +7,7 @@ import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale, UserX } f
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoPessoa } from './SelecaoPessoa'
 import { CampoData } from '@/components/common/CampoData/CampoData'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { formatarMoeda, formatarValorDigitado } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { UseFormReturn, UseFieldArrayReturn } from 'react-hook-form'
 import type { MovimentacaoFormInput, MovimentacaoFormData } from '@/lib/validators'
@@ -210,17 +211,14 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     </div>
                   ) : (
                     <>
-                      <select
-                        id="categoriaId"
-                        className={styles.select}
-                        {...register('categoriaId')}
+                      <SelectMenu
+                        value={categoriaId}
+                        onChange={(v) => setValue('categoriaId', v, { shouldValidate: true, shouldDirty: true })}
+                        options={categoriasCompativeis.map((c: CategoriaResponse) => ({ value: c.id, label: c.nome }))}
+                        placeholder={tipo ? 'Selecione' : 'Escolha o tipo primeiro'}
+                        ariaLabel="Categoria"
                         disabled={!tipo}
-                      >
-                        <option value="">{tipo ? 'Selecione' : 'Escolha o tipo primeiro'}</option>
-                        {categoriasCompativeis.map((c: CategoriaResponse) => (
-                          <option key={c.id} value={c.id}>{c.nome}</option>
-                        ))}
-                      </select>
+                      />
                       {semCategoriaParaTipo && (
                         <span className={styles.avisoCategoriaTipo}>
                           Nenhuma categoria de {tipo === 'ENTRADA' ? 'entrada' : 'saída'}.{' '}
@@ -266,6 +264,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     return (
                     <Transicao key={field.id} modo="subir" className={styles.contribuinteLinha}>
                       <div className={styles.contribuintePessoa}>
+                        <Transicao key={nomeRemovido ? 'rem' : modoExterno ? 'ext' : 'busca'} modo="fade">
                         {nomeRemovido ? (
                           <span className={styles.pessoaRemovida} title="Essa pessoa foi excluída definitivamente do sistema — não dá mais para vincular a ela.">
                             <UserX size={16} /> Pessoa removida do sistema
@@ -300,6 +299,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                             </button>
                           </div>
                         )}
+                        </Transicao>
                       </div>
                       <input
                         className={styles.inputValorContribuinte}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useDebounce } from '@/hooks/useDebounce'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import styles from './SelecaoPessoa.module.css'
 
 interface SelecaoPessoaProps {
@@ -60,29 +61,31 @@ export function SelecaoPessoa({ pessoaIdSelecionado, nomeSelecionado, onSelecion
 
       {aberto && buscaDebounced && (
         <div className={styles.dropdown}>
-          {pessoas.length === 0 ? (
-            <div className={styles.vazio}>Nenhuma pessoa encontrada.</div>
-          ) : (
-            pessoas.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={styles.opcao}
-                // onMouseDown (não onClick): dispara antes do onBlur do input fechar o
-                // dropdown, evitando o "precisa clicar duas vezes" — o 1º clique fechava
-                // sem selecionar. preventDefault evita que o input perca o foco antes da hora.
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  setNomeCapturado(p.nome)
-                  onSelecionar(p.id, p.nome)
-                  setBusca('')
-                  setAberto(false)
-                }}
-              >
-                {p.nome}
-              </button>
-            ))
-          )}
+          <Transicao key={buscaDebounced} modo="fade">
+            {pessoas.length === 0 ? (
+              <div className={styles.vazio}>Nenhuma pessoa encontrada.</div>
+            ) : (
+              pessoas.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={styles.opcao}
+                  // onMouseDown (não onClick): dispara antes do onBlur do input fechar o
+                  // dropdown, evitando o "precisa clicar duas vezes" — o 1º clique fechava
+                  // sem selecionar. preventDefault evita que o input perca o foco antes da hora.
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setNomeCapturado(p.nome)
+                    onSelecionar(p.id, p.nome)
+                    setBusca('')
+                    setAberto(false)
+                  }}
+                >
+                  {p.nome}
+                </button>
+              ))
+            )}
+          </Transicao>
         </div>
       )}
     </div>

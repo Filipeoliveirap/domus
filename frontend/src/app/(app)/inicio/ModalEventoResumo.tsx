@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { X, CalendarDays, MapPin, Users, Share2, Ticket, Flame, Pencil, Building2, CheckCircle2 } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuthStore } from '@/store/authStore'
@@ -58,6 +60,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
   const [acabouDeInscrever, setAcabouDeInscrever] = useState(false)
   const [ampliada, setAmpliada] = useState(false)
   const [localDetalhe, setLocalDetalhe] = useState<EventoLocalInfo | null>(null)
+  const { saindo, fechar } = useFecharAnimado(aoFechar, 260)
 
   // Vagas contam PESSOAS: cada convidado já chega como sua própria entrada em
   // `participantes` (InscricaoEvento unificada) — não soma mais "1 + convidados" por
@@ -72,15 +75,23 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') aoFechar()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [aoFechar])
+  }, [fechar])
+
+  // Trava o scroll do body enquanto o sheet está aberto (senão o mobile "arrasta" a página
+  // atrás e o iOS faz rubber-band).
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
     <>
-    <div className={styles.overlay} onMouseDown={aoFechar}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -88,8 +99,9 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         aria-modal="true"
         aria-labelledby="titulo-evento"
       >
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.capa}>
-          <button type="button" className={styles.fechar} onClick={aoFechar} aria-label="Fechar">
+          <button type="button" className={styles.fechar} onClick={fechar} aria-label="Fechar">
             <X size={18} />
           </button>
 

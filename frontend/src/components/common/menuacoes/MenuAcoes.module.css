@@ -17,6 +17,12 @@
   color: var(--color-text-primary);
 }
 
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-dropdown) - 1);
+}
+
 .menu {
   width: 224px;
   padding: 4px;

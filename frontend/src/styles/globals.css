@@ -108,3 +108,17 @@ ul, ol {
     animation: none !important;
   }
 }
+
+/* ─── Toast: no mobile o sonner vira um banner full-width colado no topo ─── */
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    padding: 0 !important;
+    --width: 100vw !important;
+  }
+  [data-sonner-toast] {
+    width: 100vw !important;
+  }
+}

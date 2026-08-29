@@ -1,6 +1,7 @@
 'use client'
 
 import { forwardRef, useImperativeHandle, useState } from 'react'
+import { clsx } from 'clsx'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
@@ -61,6 +62,9 @@ const PainelEditor = forwardRef<
 >(function PainelEditor({ eventoId, dadosIniciais }, ref) {
   const { salvar } = useSalvarCamposPersonalizados()
   const [campos, setCampos] = useState<CampoPersonalizadoRequest[]>(() => dadosIniciais.map(paraRequest))
+  // chaves de cartões saindo — o cartão colapsa animado antes de sumir da lista.
+  const [removendo, setRemovendo] = useState<Set<string>>(() => new Set())
+  const chaveCampo = (campo: CampoPersonalizadoRequest, indice: number) => campo.id ?? `novo-${indice}`
 
   useImperativeHandle(ref, () => ({
     salvar: async (eventoIdParam?: string) => {
@@ -106,8 +110,19 @@ const PainelEditor = forwardRef<
     })
   }
 
-  function removerCampo(indice: number) {
-    setCampos((atual) => atual.filter((_, i) => i !== indice).map((c, i) => ({ ...c, ordem: i })))
+  function removerCampoAnimado(campo: CampoPersonalizadoRequest, indice: number) {
+    const chave = chaveCampo(campo, indice)
+    if (removendo.has(chave)) return
+    setRemovendo((s) => new Set(s).add(chave))
+    setTimeout(() => {
+      // remove por referência (não por índice) — se outro cartão saiu no meio-tempo, o índice já mudou
+      setCampos((atual) => atual.filter((c) => c !== campo).map((c, i) => ({ ...c, ordem: i })))
+      setRemovendo((s) => {
+        const n = new Set(s)
+        n.delete(chave)
+        return n
+      })
+    }, 380)
   }
 
   return (
@@ -133,7 +148,10 @@ const PainelEditor = forwardRef<
         </p>
 
         {campos.map((campo, indice) => (
-          <div key={campo.id ?? `novo-${indice}`} className={styles.cartaoCampo}>
+          <div
+            key={chaveCampo(campo, indice)}
+            className={clsx(styles.cartaoCampo, removendo.has(chaveCampo(campo, indice)) && styles.cartaoSaindo)}
+          >
             <div className={styles.cabecalhoCartao}>
               <span className={styles.numeroCampo}>
                 <GripVertical size={14} className={styles.iconeArraste} aria-hidden="true" />
@@ -144,7 +162,7 @@ const PainelEditor = forwardRef<
                   </span>
                 )}
               </span>
-              <button type="button" className={styles.botaoRemover} onClick={() => removerCampo(indice)} title="Remover esta pergunta">
+              <button type="button" className={styles.botaoRemover} onClick={() => removerCampoAnimado(campo, indice)} title="Remover esta pergunta">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -235,14 +253,14 @@ const PainelEditor = forwardRef<
         </p>
       </div>
 
-      <PreviaInterativa campos={campos} />
+      <PreviaInterativa campos={campos} removendo={removendo} />
     </div>
   )
 })
 
 /** Prévia de verdade, não só ilustrativa: os campos respondem a clique/digitação, com estado
  *  próprio (nunca é enviado a lugar nenhum) — deixa o admin realmente sentir como vai ficar. */
-function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
+function PreviaInterativa({ campos, removendo }: { campos: CampoPersonalizadoRequest[]; removendo: Set<string> }) {
   const [valores, setValores] = useState<Record<string, string | string[]>>({})
 
   function valorTexto(chave: string) {
@@ -303,7 +321,7 @@ function PreviaInterativa({ campos }: { campos: CampoPersonalizadoRequest[] }) {
       {campos.map((campo, indice) => {
         const chave = campo.id ?? `novo-${indice}`
         return (
-          <div key={chave} className={styles.previewCampo}>
+          <div key={chave} className={clsx(styles.previewCampo, removendo.has(chave) && styles.previewSaindo)}>
             <label className={styles.previewLabel}>
               {campo.label || 'O que você quer perguntar'}{campo.obrigatorio && <span className={styles.previewAsterisco}> *</span>}
             </label>

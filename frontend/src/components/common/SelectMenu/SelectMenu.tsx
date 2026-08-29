@@ -19,6 +19,7 @@ interface SelectMenuProps {
   placeholder?: string
   className?: string
   ariaLabel?: string
+  disabled?: boolean
 }
 
 /**
@@ -32,6 +33,7 @@ export function SelectMenu({
   placeholder = 'Selecionar',
   className,
   ariaLabel,
+  disabled = false,
 }: SelectMenuProps) {
   const [aberto, setAberto] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -59,7 +61,8 @@ export function SelectMenu({
       <button
         type="button"
         className={styles.gatilho}
-        onClick={() => setAberto((a) => !a)}
+        onClick={() => !disabled && setAberto((a) => !a)}
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={aberto}
         aria-label={ariaLabel}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Search, X, Check } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useDebounce } from '@/hooks/useDebounce'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import styles from './SeletorResponsavel.module.css'
 
 interface SeletorResponsavelProps {
@@ -32,7 +33,7 @@ export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResp
     return (
       <div className={styles.campo}>
         <span className={styles.label}>RESPONSÁVEL</span>
-        <div className={styles.chip}>
+        <Transicao modo="escala" className={styles.chip}>
           <span className={styles.chipNome}>{nomeEscolhido ?? 'Responsável selecionado'}</span>
           <button
             type="button"
@@ -42,7 +43,7 @@ export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResp
           >
             <X size={16} />
           </button>
-        </div>
+        </Transicao>
       </div>
     )
   }
@@ -62,7 +63,7 @@ export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResp
       </div>
 
       {habilitado && (
-        <div className={styles.resultados}>
+        <Transicao key={buscaDebounced} modo="subir" className={styles.resultados}>
           {isLoading ? (
             <p className={styles.aviso}>Buscando…</p>
           ) : resultados.length === 0 ? (
@@ -80,7 +81,7 @@ export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResp
               </button>
             ))
           )}
-        </div>
+        </Transicao>
       )}
     </div>
   )

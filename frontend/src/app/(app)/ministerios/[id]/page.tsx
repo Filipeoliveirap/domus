@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { clsx } from 'clsx'
 import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft, Pencil } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
@@ -20,6 +21,7 @@ import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import styles from './detalhe.module.css'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 
 // Todas as mutations usadas aqui (useRemoverMembro, useAtualizarPapel, usePedirEntrada,
 // useAceitarPedido, useRecusarPedido) já disparam notificar.sucesso/erro sozinhas (Task 9)
@@ -42,6 +44,26 @@ export default function MinisterioDetalhePage() {
   const [editarAberto, setEditarAberto] = useState(false)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
   const [fotoVisualizando, setFotoVisualizando] = useState<string | null>(null)
+  // pessoaIds saindo — cada linha colapsa animada, independente das outras. Pode remover
+  // vários rápido em sequência.
+  const [removendo, setRemovendo] = useState<Set<string>>(() => new Set())
+  const semId = (s: Set<string>, id: string) => {
+    const n = new Set(s)
+    n.delete(id)
+    return n
+  }
+
+  function removerComAnimacao(pessoaId: string) {
+    if (removendo.has(pessoaId)) return // só ignora re-clique na MESMA pessoa
+    setRemovendo((s) => new Set(s).add(pessoaId))
+    setTimeout(() => {
+      removerMembro.mutate(pessoaId, {
+        // sucesso: espera o refetch tirar a linha antes de limpar o id (senão "pisca de volta")
+        onSuccess: () => setTimeout(() => setRemovendo((s) => semId(s, pessoaId)), 350),
+        onError: () => setRemovendo((s) => semId(s, pessoaId)),
+      })
+    }, 420)
+  }
 
   if (isLoading || !ministerio) {
     return (
@@ -153,7 +175,9 @@ export default function MinisterioDetalhePage() {
         ) : (
           <ul className={styles.lista}>
             {ministerio.membros.map((membro) => (
-              <li key={membro.pessoaId} className={styles.itemMembro}
+              <li
+                key={membro.pessoaId}
+                className={clsx(styles.itemMembro, removendo.has(membro.pessoaId) && styles.itemMembroSaindo)}
                 onClick={() => setPessoaDetalheId(membro.pessoaId)}
               >
                 <div className={styles.itemMembroInfo}>
@@ -174,6 +198,7 @@ export default function MinisterioDetalhePage() {
                 <div className={styles.itemMembroAcoes}>
                   {podeGerenciar && (
                     <button type="button" className={styles.botaoPromover}
+                      disabled={removendo.has(membro.pessoaId)}
                       onClick={(e) => {
                         e.stopPropagation()
                         atualizarPapel.mutate({
@@ -186,7 +211,8 @@ export default function MinisterioDetalhePage() {
                   )}
                   {podeGerenciar && (
                     <button type="button" className={styles.botaoRemover}
-                      onClick={(e) => { e.stopPropagation(); removerMembro.mutate(membro.pessoaId) }}>
+                      disabled={removendo.has(membro.pessoaId)}
+                      onClick={(e) => { e.stopPropagation(); removerComAnimacao(membro.pessoaId) }}>
                       <UserMinus size={16} />
                     </button>
                   )}
@@ -222,14 +248,7 @@ export default function MinisterioDetalhePage() {
         <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
       )}
       {fotoVisualizando && (
-        <div className={styles.viewerOverlay} onMouseDown={() => setFotoVisualizando(null)}>
-          <div className={styles.viewerModal} onMouseDown={e => e.stopPropagation()}>
-            <button className={styles.viewerClose} onClick={() => setFotoVisualizando(null)}>
-              <XIcon size={20} />
-            </button>
-            <img src={urlFoto(fotoVisualizando, 'DISPLAY')!} alt="" className={styles.viewerImg} />
-          </div>
-        </div>
+        <VisualizadorFoto fotoId={fotoVisualizando} descricao="Foto de perfil" onClose={() => setFotoVisualizando(null)} />
       )}
     </div>
   )

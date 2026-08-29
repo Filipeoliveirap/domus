@@ -30,8 +30,9 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   background: var(--color-bg-white);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
 }
+.segmentoBtn:active { transform: scale(0.97); }
 .segmentoBtn:not(:last-child) {
   border-right: 1px solid var(--color-border-input);
 }
@@ -72,8 +73,9 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   white-space: nowrap;
-  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform 0.1s ease;
 }
+.chip:active { transform: scale(0.93); }
 .chipAtivo {
   background: var(--color-primary);
   border-color: var(--color-primary);
@@ -90,6 +92,13 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .linhaIdades,
+  .linhaSelects {
+    grid-template-columns: 1fr;
+  }
 }
 
 .campoSelect {

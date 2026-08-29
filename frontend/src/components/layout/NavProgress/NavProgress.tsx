@@ -10,7 +10,12 @@ const MIN_VISIVEL = 400
 const TIMEOUT_SEGURANCA = 10000
 
 // A View Transitions API ainda não está nos types do lib.dom padrão.
-type ViewTransition = { finished: Promise<unknown>; skipTransition: () => void }
+type ViewTransition = {
+  ready: Promise<unknown>
+  finished: Promise<unknown>
+  updateCallbackDone: Promise<unknown>
+  skipTransition: () => void
+}
 type DocumentComVT = Document & {
   startViewTransition: (cb: () => void | Promise<void>) => ViewTransition
 }
@@ -151,6 +156,11 @@ export function NavProgress() {
           }
         })
       })
+
+      // skipTransition() rejeita as 3 promises da transição com AbortError — todas
+      // esperadas, todas engolidas (senão viram "Uncaught (in promise)").
+      vt.ready.catch(() => {})
+      vt.updateCallbackDone.catch(() => {})
 
       // nav lenta = vai ter spinner → aborta pra ele aparecer vivo
       const timerAbortar = setTimeout(abortar, 200)

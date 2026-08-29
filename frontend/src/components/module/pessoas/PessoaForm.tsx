@@ -8,9 +8,10 @@ import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { useBairros } from '@/hooks/pessoa/useBairros'
 import { Button } from '@/components/common/button/Button'
-import { Select } from '@/components/common/select/Select'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import { SeletorRedes } from './SeletorRedes'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
@@ -64,7 +65,8 @@ export function PessoaForm(props: PessoaFormProps) {
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
-  const cargoAtual = (watch('cargo') as string | undefined) ?? ''
+  const estadoCivilAtual = (watch('estadoCivil') as string | undefined) ?? ''
+  const ufAtual = (watch('endereco.uf') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
@@ -123,8 +125,17 @@ export function PessoaForm(props: PessoaFormProps) {
               <CampoData id="dataNascimento" label="DATA DE NASCIMENTO"
                 value={dataNascimentoAtual} erro={errors.dataNascimento?.message}
                 onChange={(v) => setValue('dataNascimento', v, { shouldValidate: true })} />
-              <Select id="estadoCivil" label="ESTADO CIVIL" placeholder="Selecione"
-                options={ESTADO_CIVIL_OPTIONS} error={errors.estadoCivil?.message} {...register('estadoCivil')} />
+              <div className={styles.campoSelect}>
+                <span className={styles.labelSelect}>ESTADO CIVIL</span>
+                <SelectMenu
+                  value={estadoCivilAtual}
+                  onChange={(v) => setValue('estadoCivil', v as PessoaFormInput['estadoCivil'], { shouldValidate: true, shouldDirty: true })}
+                  placeholder="Selecione"
+                  ariaLabel="Estado civil"
+                  options={ESTADO_CIVIL_OPTIONS}
+                />
+                {errors.estadoCivil?.message && <span className={styles.erroCampo}>{errors.estadoCivil.message}</span>}
+              </div>
             </div>
             {/* Nulável de propósito — não é sobre identidade, é pra restringir
                 inscrição em evento ("encontro de mulheres", "café dos homens"). */}
@@ -165,8 +176,17 @@ export function PessoaForm(props: PessoaFormProps) {
               </datalist>
               <Input id="cidade" label="CIDADE"
                 error={errors.endereco?.cidade?.message} {...register('endereco.cidade')} />
-              <Select id="uf" label="UF" placeholder="UF"
-                options={UF_OPTIONS} error={errors.endereco?.uf?.message} {...register('endereco.uf')} />
+              <div className={styles.campoSelect}>
+                <span className={styles.labelSelect}>UF</span>
+                <SelectMenu
+                  value={ufAtual}
+                  onChange={(v) => setValue('endereco.uf', v, { shouldValidate: true, shouldDirty: true })}
+                  placeholder="UF"
+                  ariaLabel="Estado (UF)"
+                  options={UF_OPTIONS}
+                />
+                {errors.endereco?.uf?.message && <span className={styles.erroCampo}>{errors.endereco.uf.message}</span>}
+              </div>
             </div>
           </section>
 
@@ -200,12 +220,12 @@ export function PessoaForm(props: PessoaFormProps) {
               do que o fez aparecer não é lido como consequência daquela escolha.
             */}
             {vinculoAtual === 'MEMBRO' && (
-              <div className={styles.batismoWrap}>
+              <Revelar className={styles.batismoWrap}>
                 <CampoData id="dataBatismo" label="DATA DE BATISMO"
                   value={dataBatismoAtual} erro={errors.dataBatismo?.message}
                   onChange={(v) => setValue('dataBatismo', v, { shouldValidate: true })} />
                 <span className={styles.campoHint}>Opcional</span>
-              </div>
+              </Revelar>
             )}
 
             <div className={styles.ministerioWrap}>

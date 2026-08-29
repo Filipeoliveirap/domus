@@ -12,6 +12,7 @@ import { useRelatorioGeral } from '@/hooks/evento/useRelatorioGeral'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { RECORTES_ETARIOS } from '@/components/module/eventos/BlocoParaQuemE'
 import { CampoData } from '@/components/common/CampoData/CampoData'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { GraficoTendenciaComparecimento } from '@/components/module/eventos/GraficoTendenciaComparecimento'
 import { CardVariacao } from '@/components/module/eventos/CardVariacao'
@@ -57,6 +58,10 @@ function RelatorioGeralConteudo() {
     setPagina(0)
   }
 
+  // Muda quando período/filtro/página muda → o conteúdo reanima a entrada (crossfade
+  // suave em vez de troca seca dos dados), como em movimentações financeiras.
+  const chaveRelatorio = `${periodo.inicio}|${periodo.fim}|${filtros.tipo}|${filtros.recorteEtario}|${pagina}`
+
   return (
     <div className={styles.pagina}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
@@ -100,7 +105,7 @@ function RelatorioGeralConteudo() {
           aoTentarNovamente={() => refetch()}
         />
       ) : (
-        <>
+        <Transicao key={chaveRelatorio} modo="fade" className={styles.conteudo}>
           <div className={styles.resumoGrade}>
             <div className={styles.resumoCard}>
               <span className={styles.resumoValor}>{relatorio.resumo.totalEventos}</span>
@@ -199,7 +204,7 @@ function RelatorioGeralConteudo() {
               </>
             )}
           </section>
-        </>
+        </Transicao>
       )}
     </div>
   )

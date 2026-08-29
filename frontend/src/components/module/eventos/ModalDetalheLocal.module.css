@@ -9,33 +9,47 @@
   background: rgba(19, 27, 46, 0.30);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  animation: fadeIn 0.2s ease-out;
+  animation: surgir 0.2s ease-out;
 }
 
 .modal {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 420px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 40px rgba(19, 27, 46, 0.18);
-  padding: 24px;
-  animation: zoomIn 0.2s ease-out;
+  animation: subir 0.22s ease-out;
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes zoomIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes surgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes subir {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
 }
+
+/* saída (useFecharAnimado marca .saindo antes de desmontar) — iguais ao modal de evento */
+.saindo { animation: sumir 0.24s ease forwards; }
+.saindo .modal { animation: descerLeve 0.24s ease forwards; }
+@keyframes sumir { to { opacity: 0; } }
+@keyframes descerLeve { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+
+.grabber { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .overlay, .modal { animation: none; }
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
 }
 
 .fechar {
   position: absolute;
   top: 16px;
   right: 16px;
+  z-index: 1;
   color: var(--color-text-muted);
   transition: color var(--transition-fast);
 }
@@ -45,7 +59,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-right: 32px;
+  padding: 24px 32px 0 24px;
   margin-bottom: 16px;
 }
 
@@ -73,6 +87,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 
 .endereco {
@@ -98,6 +116,50 @@
 }
 .herdado svg { flex-shrink: 0; }
 
-@media (max-width: 480px) {
-  .modal { padding: 20px; }
+/* ---- Mobile: bottom-sheet, igual ao modal de evento/início ---- */
+@media (max-width: 767px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: 100%;
+    max-height: 92dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    animation: deslizarCima 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .saindo .modal { animation: deslizarBaixo 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+
+  .grabber {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+  }
+
+  .cabecalho {
+    padding-top: 28px;
+    padding-left: 20px;
+  }
+  .corpo {
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes deslizarCima {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes deslizarBaixo {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
 }

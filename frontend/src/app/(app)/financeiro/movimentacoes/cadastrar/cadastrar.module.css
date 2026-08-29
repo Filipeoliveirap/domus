@@ -48,3 +48,8 @@
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium);
 }
+
+@media (max-width: 767px) {
+  .pagina { gap: 16px; }
+  .titulo { font-size: var(--font-size-lg); }
+}

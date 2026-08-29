@@ -98,6 +98,14 @@ export function MenuAcoes({ itens }: MenuAcoesProps) {
 
       {aberto && typeof document !== "undefined" &&
         createPortal(
+          <>
+          {/* Backdrop invisível: captura o clique que fecha o menu pra ele NÃO cair no
+              card/linha atrás (senão abrir o menu e clicar fora abria o detalhe). */}
+          <div
+            className={styles.backdrop}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setAberto(false)}
+          />
           <div
             ref={menuRef}
             className={styles.menu}
@@ -125,7 +133,8 @@ export function MenuAcoes({ itens }: MenuAcoesProps) {
                 </Fragment>
               );
             })}
-          </div>,
+          </div>
+          </>,
           document.body
         )}
     </div>

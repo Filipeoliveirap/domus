@@ -90,10 +90,20 @@
   color: var(--color-primary);
 }
 
-/* ---- Mobile: ocupa a largura toda, sem encostar nas bordas ---- */
+/* ---- Mobile: vira um banner colado no topo, estilo notificação de app ---- */
 
-@media (max-width: 767px) {
+@media (max-width: 600px) {
   .toast {
-    padding: 14px;
+    width: 100vw;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+    border-radius: 0;
+    border-inline: none;
+    border-top: none;
+    /* só sombra pra baixo — parece um banner descendo do topo */
+    box-shadow: 0 8px 20px -8px rgba(19, 27, 46, 0.22);
+  }
+  .icone {
+    width: 32px;
+    height: 32px;
   }
 }

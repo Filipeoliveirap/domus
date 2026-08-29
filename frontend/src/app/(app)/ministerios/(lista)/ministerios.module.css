@@ -89,9 +89,13 @@
   min-width: 0;
   cursor: pointer;
   position: relative;
-  transition: background var(--transition-normal);
+  transition: background var(--transition-normal), transform var(--transition-fast);
 }
-.card:hover { background: var(--color-bg-hover); }
+/* hover só com mouse — no touch "gruda" depois do tap. */
+@media (hover: hover) {
+  .card:hover { background: var(--color-bg-hover); }
+}
+.card:active { transform: scale(0.99); }
 
 .cardActions {
   position: absolute;
@@ -168,51 +172,16 @@
     align-items: stretch;
     gap: 12px;
   }
+  .titulo { font-size: var(--font-size-lg); }
+  .subtitulo { font-size: var(--font-size-base); }
   .botaoPrimario {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
+    font-size: var(--font-size-base);
   }
   .grade {
     grid-template-columns: 1fr;
   }
 }
 
-.viewerOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.75);
-}
-.viewerModal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: 480px;
-  width: 100%;
-}
-.viewerClose {
-  align-self: flex-end;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.viewerClose:hover { background: rgba(255,255,255,0.2); }
-.viewerImg {
-  width: 100%;
-  max-height: 60vh;
-  object-fit: contain;
-  border-radius: var(--radius-lg);
-}

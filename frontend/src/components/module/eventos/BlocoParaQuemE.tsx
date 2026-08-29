@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { Users, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import type { RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
 import styles from './BlocoParaQuemE.module.css'
 import formStyles from './EventoForm.module.css'
@@ -96,7 +99,7 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
       </div>
 
       {modoFaixa && (
-        <div className={styles.detalhes}>
+        <Revelar className={styles.detalhes}>
           <div>
             <span className={styles.subLabel}>Faixa etária</span>
             <div className={styles.chips}>
@@ -138,37 +141,39 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
           <div className={styles.linhaSelects}>
             <div className={styles.campoSelect}>
               <span className={styles.subLabel}>Estado civil</span>
-              <select
-                className={styles.select}
+              <SelectMenu
                 value={restricaoEstadoCivil ?? ''}
-                onChange={(e) => onChangeEstadoCivil((e.target.value || null) as RestricaoEstadoCivil | null)}
-              >
-                <option value="">Qualquer</option>
-                <option value="SOLTEIRO">Solteiro(a)</option>
-                <option value="CASADO">Casado(a)</option>
-                <option value="DIVORCIADO">Divorciado(a)</option>
-                <option value="VIUVO">Viúvo(a)</option>
-              </select>
+                onChange={(v) => onChangeEstadoCivil((v || null) as RestricaoEstadoCivil | null)}
+                placeholder="Qualquer"
+                ariaLabel="Restrição de estado civil"
+                options={[
+                  { value: 'SOLTEIRO', label: 'Solteiro(a)' },
+                  { value: 'CASADO', label: 'Casado(a)' },
+                  { value: 'DIVORCIADO', label: 'Divorciado(a)' },
+                  { value: 'VIUVO', label: 'Viúvo(a)' },
+                ]}
+              />
             </div>
 
             <div className={styles.campoSelect}>
               <span className={styles.subLabel}>Sexo</span>
-              <select
-                className={styles.select}
+              <SelectMenu
                 value={restricaoSexo ?? ''}
-                onChange={(e) => onChangeSexo((e.target.value || null) as RestricaoSexo | null)}
-              >
-                <option value="">Qualquer</option>
-                <option value="HOMEM">Homem</option>
-                <option value="MULHER">Mulher</option>
-              </select>
+                onChange={(v) => onChangeSexo((v || null) as RestricaoSexo | null)}
+                placeholder="Qualquer"
+                ariaLabel="Restrição de sexo"
+                options={[
+                  { value: 'HOMEM', label: 'Homem' },
+                  { value: 'MULHER', label: 'Mulher' },
+                ]}
+              />
             </div>
           </div>
-        </div>
+        </Revelar>
       )}
 
       {mostrarExclusivoMembros && (
-        <>
+        <Revelar className={styles.detalhes}>
           <label className={formStyles.toggleRow}>
             <span className={formStyles.toggleTexto}>
               <span className={formStyles.toggleTitulo}>Somente membros da igreja</span>
@@ -185,14 +190,16 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
           </label>
 
           {exclusivoMembros && (
-            <div className={formStyles.infoBox}>
-              <AlertTriangle size={18} className={formStyles.infoIcon} />
-              <p className={formStyles.infoText}>
-                Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
-              </p>
-            </div>
+            <Transicao modo="subir">
+              <div className={formStyles.infoBox}>
+                <AlertTriangle size={18} className={formStyles.infoIcon} />
+                <p className={formStyles.infoText}>
+                  Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
+                </p>
+              </div>
+            </Transicao>
           )}
-        </>
+        </Revelar>
       )}
     </div>
   )

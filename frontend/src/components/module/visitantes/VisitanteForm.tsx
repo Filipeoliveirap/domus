@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { clsx } from 'clsx'
 import { User, MapPin, FileText, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
@@ -30,7 +31,7 @@ const UF_OPTIONS = [
   'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ].map((uf) => ({ value: uf, label: uf }))
 
-type VisitanteFormData = {
+export type VisitanteFormData = {
   nome: string
   telefone?: string
   dataNascimento?: string
@@ -56,6 +57,11 @@ type VisitanteFormProps = UseFormReturn<VisitanteFormData> & {
   isLoading: boolean
   ehEdicao: boolean
   onSubmit: (data: VisitanteFormData) => void
+  // Quando renderizado dentro de um modal: tira o "cartão" de cada seção e a coluna
+  // grudada, ficando um fluxo único estilo app mobile.
+  emModal?: boolean
+  // Se passado, o "Cancelar" chama isto em vez de router.back() (usado no modal).
+  onCancel?: () => void
 }
 
 export function VisitanteForm(props: VisitanteFormProps) {
@@ -63,7 +69,7 @@ export function VisitanteForm(props: VisitanteFormProps) {
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao,
+    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, emModal, onCancel,
   } = props
 
   const sexoAtual = watch('sexo') ?? ''
@@ -88,7 +94,7 @@ export function VisitanteForm(props: VisitanteFormProps) {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form className={clsx(styles.form, emModal && styles.emModal)} onSubmit={handleSubmit(onSubmit)}>
       <div className={styles.colunas}>
         <div className={styles.colunaEsquerda}>
           <section className={styles.secao}>
@@ -196,7 +202,7 @@ export function VisitanteForm(props: VisitanteFormProps) {
               isLoading={isLoading} disabled={isFormIncomplete || isLoading} style={{ width: '100%' }}>
               {ehEdicao ? 'Salvar alterações' : 'Salvar visitante'}
             </Button>
-            <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>
+            <button type="button" onClick={() => (onCancel ? onCancel() : router.back())} className={styles.cancelarLink}>Cancelar</button>
           </div>
         </div>
       </div>

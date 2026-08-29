@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { urlFoto } from '@/lib/urlFoto'
 import styles from './VisualizadorFoto.module.css'
 
@@ -13,9 +15,16 @@ interface Props {
 
 export function VisualizadorFoto({ fotoId, descricao, onClose }: Props) {
   const fecharRef = useRef<HTMLButtonElement>(null)
+  const { saindo, fechar } = useFecharAnimado(onClose, 200)
 
   useEffect(() => {
     fecharRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
   }, [])
 
   useEffect(() => {
@@ -24,17 +33,17 @@ export function VisualizadorFoto({ fotoId, descricao, onClose }: Props) {
         // O drawer por baixo também escuta Escape. Sem isto, um toque fecharia os dois
         // de uma vez, e a pessoa perderia o cadastro que estava lendo.
         e.stopPropagation()
-        onClose()
+        fechar()
       }
     }
     document.addEventListener('keydown', aoTeclar, true)
     return () => document.removeEventListener('keydown', aoTeclar, true)
-  }, [onClose])
+  }, [fechar])
 
   return (
     <div
-      className={styles.overlay}
-      onMouseDown={onClose}
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      onMouseDown={fechar}
       role="dialog"
       aria-modal="true"
       aria-label={descricao}
@@ -43,7 +52,7 @@ export function VisualizadorFoto({ fotoId, descricao, onClose }: Props) {
         ref={fecharRef}
         type="button"
         className={styles.fechar}
-        onClick={onClose}
+        onClick={fechar}
         onMouseDown={(e) => e.stopPropagation()}
         aria-label="Fechar visualização"
       >

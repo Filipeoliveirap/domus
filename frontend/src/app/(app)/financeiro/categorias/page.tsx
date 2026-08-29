@@ -11,6 +11,7 @@ import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConf
 import { rotuloTipoCategoria, varianteTipoCategoria } from '@/lib/formats/financeiro/categoriaFormat'
 import type { CategoriaResponse } from '@/types/financeiro/categoria.type'
 import styles from './categoria.module.css'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { useAuthStore } from '@/store/authStore'
@@ -58,7 +59,7 @@ function CategoriasConteudo() {
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
   const autorizado = podeVerFinanceiro(role, capacidadesExtras)
 
-  const { data, isLoading, isError, refetch } = useCategorias({
+  const { data, isLoading, isError, isFetching, refetch } = useCategorias({
     q: buscaDebounced,
     page: pagina,
     size: TAMANHO_PAGINA,
@@ -125,7 +126,10 @@ function CategoriasConteudo() {
         />
       </div>
 
+      {/* Remonta só ao trocar página; digitar na busca NÃO remonta — as linhas atualizam
+          no lugar (cada nova entra com @starting-style) e a lista só amortece no fetch. */}
       <div className={styles.painel}>
+       <Transicao key={pagina} modo="fade">
         {isLoading ? (
           <>
             <CabecalhoTabela />
@@ -153,7 +157,7 @@ function CategoriasConteudo() {
           <>
             <CabecalhoTabela />
 
-            <div className={styles.linhas}>
+            <div className={`${styles.linhas} ${isFetching && !isLoading ? styles.listaAtualizando : ''}`}>
               {categorias.map((categoria) => (
                 <div key={categoria.id} className={styles.linha}>
                   <div className={styles.colNome}>
@@ -195,6 +199,7 @@ function CategoriasConteudo() {
             </footer>
           </>
         )}
+       </Transicao>
       </div>
 
       {modalForm.aberto && (

@@ -12,12 +12,14 @@ import { SkeletonPerfil } from './SkeletonPerfil'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
-import { Select } from '@/components/common/select/Select'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { Button } from '@/components/common/button/Button'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { useBairros } from '@/hooks/pessoa/useBairros'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
+import type { PessoaFormInput } from '@/lib/validators'
 import styles from './page.module.css'
 
 const VINCULO_OPTIONS = [
@@ -58,6 +60,8 @@ export default function PerfilPage() {
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
+  const estadoCivilAtual = (watch('estadoCivil') as string | undefined) ?? ''
+  const ufAtual = (watch('endereco.uf') as string | undefined) ?? ''
   const dataNascimentoAtual = (watch('dataNascimento') as string | undefined) ?? ''
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
@@ -144,9 +148,18 @@ export default function PerfilPage() {
             <CampoData id="dataNascimento" label="DATA DE NASCIMENTO"
               value={dataNascimentoAtual} erro={errors.dataNascimento?.message} disabled={!podeEditarTudo}
               onChange={(v) => setValue('dataNascimento', v, { shouldValidate: true })} />
-            <Select id="estadoCivil" label="ESTADO CIVIL" placeholder="Selecione"
-              options={ESTADO_CIVIL_OPTIONS} error={errors.estadoCivil?.message}
-              disabled={!podeEditarTudo} {...register('estadoCivil')} />
+            <div className={styles.campoSelect}>
+              <span className={styles.labelSelect}>ESTADO CIVIL</span>
+              <SelectMenu
+                value={estadoCivilAtual}
+                onChange={(v) => setValue('estadoCivil', v as PessoaFormInput['estadoCivil'], { shouldValidate: true, shouldDirty: true })}
+                placeholder="Selecione"
+                ariaLabel="Estado civil"
+                disabled={!podeEditarTudo}
+                options={ESTADO_CIVIL_OPTIONS}
+              />
+              {errors.estadoCivil?.message && <span className={styles.erroCampo}>{errors.estadoCivil.message}</span>}
+            </div>
           </div>
           <StatusCards label="SEXO" options={SEXO_OPTIONS}
             selecionado={sexoAtual} disabled={!podeEditarTudo} {...register('sexo')} />
@@ -190,9 +203,18 @@ export default function PerfilPage() {
             <Input id="cidade" label="CIDADE"
               error={errors.endereco?.cidade?.message} disabled={!podeEditarTudo}
               {...register('endereco.cidade')} />
-            <Select id="uf" label="UF" placeholder="UF"
-              options={UF_OPTIONS} error={errors.endereco?.uf?.message}
-              disabled={!podeEditarTudo} {...register('endereco.uf')} />
+            <div className={styles.campoSelect}>
+              <span className={styles.labelSelect}>UF</span>
+              <SelectMenu
+                value={ufAtual}
+                onChange={(v) => setValue('endereco.uf', v, { shouldValidate: true, shouldDirty: true })}
+                placeholder="UF"
+                ariaLabel="Estado (UF)"
+                disabled={!podeEditarTudo}
+                options={UF_OPTIONS}
+              />
+              {errors.endereco?.uf?.message && <span className={styles.erroCampo}>{errors.endereco.uf.message}</span>}
+            </div>
           </div>
         </section>
 
@@ -207,12 +229,12 @@ export default function PerfilPage() {
             selecionado={vinculoAtual} disabled={!podeEditarTudo} {...register('vinculo')} />
 
           {vinculoAtual === 'MEMBRO' && (
-            <div className={styles.batismoWrap}>
+            <Revelar className={styles.batismoWrap}>
               <CampoData id="dataBatismo" label="DATA DE BATISMO"
                 value={dataBatismoAtual} erro={errors.dataBatismo?.message} disabled={!podeEditarTudo}
                 onChange={(v) => setValue('dataBatismo', v, { shouldValidate: true })} />
               <span className={styles.campoHint}>Opcional</span>
-            </div>
+            </Revelar>
           )}
 
           <div className={styles.ministerioWrap}>

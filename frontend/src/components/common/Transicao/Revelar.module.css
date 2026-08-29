@@ -1,0 +1,39 @@
+.wrap {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: none;
+
+  @starting-style {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* O filho precisa colapsar junto — sem isto o conteúdo "vaza" enquanto a linha do grid
+   ainda está em 0fr. */
+.inner {
+  overflow: hidden;
+  min-height: 0;
+}
+/* Animação acabou: libera overflow pra dropdown/tooltip dentro do bloco não recortar. */
+.pronto {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap {
+    transition: opacity 0.15s ease;
+    @starting-style {
+      grid-template-rows: 1fr;
+      opacity: 0;
+      transform: none;
+    }
+  }
+  .inner { overflow: visible; }
+}

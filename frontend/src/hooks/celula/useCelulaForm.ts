@@ -29,7 +29,9 @@ const defaultValues: DefaultValues<CelulaFormInput> = {
 
 interface UseCelulaFormParams {
   celulaId?: string
-  celulaInicial?: CelulaResponse
+  // Só os campos que o formulário edita — serve tanto CelulaResponse (lista) quanto
+  // CelulaDetalheResponse ([id]).
+  celulaInicial?: Pick<CelulaResponse, 'nome' | 'diaSemana' | 'horario'>
 }
 
 export function useCelulaForm({ celulaId, celulaInicial }: UseCelulaFormParams = {}) {

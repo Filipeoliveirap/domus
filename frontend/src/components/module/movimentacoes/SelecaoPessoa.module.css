@@ -33,39 +33,54 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-/* Dropdown de resultados */
+/* Dropdown de resultados — mesmo desenho do SelectMenu */
 .dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 20;
-  max-height: 240px;
+  z-index: var(--z-dropdown, 50);
+  max-height: 280px;
   overflow-y: auto;
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(19, 27, 46, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.18), 0 4px 8px -6px rgba(0, 0, 0, 0.12);
   padding: 4px;
+  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 .opcao {
   display: block;
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   text-align: left;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-base);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform 0.1s ease;
 }
-.opcao:hover {
-  background: var(--color-bg-page);
+@media (hover: hover) {
+  .opcao:hover {
+    background-color: var(--color-bg-table-header);
+  }
+}
+.opcao:active {
+  transform: scale(0.985);
 }
 .vazio {
   padding: 12px;
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown, .opcao { transition: none; }
 }
 
 /* Chip da pessoa selecionada */

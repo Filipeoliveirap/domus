@@ -6,11 +6,25 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), opacity 0.28s ease;
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
-.card:hover {
-  box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
-  transform: translateY(-2px);
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: box-shadow var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+}
+/* hover só em quem tem mouse — no touch o :hover "gruda" depois do tap e o card fica
+   levantado como se estivesse pressionado. */
+@media (hover: hover) {
+  .card:hover {
+    box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
+    transform: translateY(-2px);
+  }
+}
+.card:active {
+  transform: scale(0.99);
 }
 .cardEncerrado {
   opacity: 0.7;

@@ -9,6 +9,8 @@
 .subtitulo { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin: 4px 0 0; }
 .form { display: flex; flex-direction: column; gap: 16px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  .secao { padding: 18px; }
+  .titulo { font-size: var(--font-size-base); }
   .grid2 { grid-template-columns: 1fr; }
 }

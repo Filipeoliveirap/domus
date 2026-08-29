@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 import { X, MapPin, Building2 } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import type { EventoLocalInfo } from '@/types/evento.type'
 import styles from './ModalDetalheLocal.module.css'
 
@@ -19,16 +21,24 @@ interface Props {
  * explicitamente — a pessoa entende que o endereço é o da sede, não um cadastrado à parte.
  */
 export function ModalDetalheLocal({ local, onClose }: Props) {
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
+
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose])
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -36,7 +46,8 @@ export function ModalDetalheLocal({ local, onClose }: Props) {
         aria-modal="true"
         aria-labelledby="detalhe-local-titulo"
       >
-        <button type="button" className={styles.fechar} onClick={onClose} aria-label="Fechar">
+        <span className={styles.grabber} aria-hidden="true" />
+        <button type="button" className={styles.fechar} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
 

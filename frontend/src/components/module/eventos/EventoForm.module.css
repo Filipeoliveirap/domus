@@ -415,6 +415,28 @@
 }
 .cancelarLink:active { transform: scale(0.99); }
 
+/* Chrome das páginas /eventos/cadastrar e /eventos/[id] (que importam este css). */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-dark);
+}
+@media (max-width: 767px) {
+  .pagina { gap: 16px; }
+  .titulo { font-size: var(--font-size-lg); }
+}
+
 .breadcrumb {
   display: flex;
   flex-direction: row;

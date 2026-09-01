@@ -34,6 +34,11 @@
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+/* iOS dá zoom automático quando o campo tem menos de 16px ao focar. */
+@media (max-width: 767px) {
+  .select { font-size: 16px; }
+}
+
 .select:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);

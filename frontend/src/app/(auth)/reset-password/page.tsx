@@ -28,7 +28,7 @@ function RedefinirSenhaConteudo() {
 
   if (linkInvalido) {
     return (
-      <div className={styles.card}>
+      <div className={styles.card} key="link-invalido">
         <div className={styles.header}>
           <span className={styles.iconBadgeError}>
             <TimerOff size={34} />
@@ -64,7 +64,7 @@ function RedefinirSenhaConteudo() {
 
   if (sucesso) {
     return (
-      <div className={styles.card}>
+      <div className={styles.card} key="sucesso">
         <div className={styles.header}>
           <span className={styles.iconBadgeSuccess}>
             <CheckCircle2 size={38} />
@@ -86,7 +86,7 @@ function RedefinirSenhaConteudo() {
   }
 
   return (
-    <div className={styles.card}>
+    <div className={styles.card} key="form">
       <div className={styles.header}>
         <span className={styles.iconBadge}>
           <KeyRound size={28} />

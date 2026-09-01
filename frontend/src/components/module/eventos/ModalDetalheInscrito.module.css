@@ -1,3 +1,114 @@
+/* Modal de detalhe: centralizado no desktop, bottom-sheet estilo app no mobile. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(19, 27, 46, 0.30);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: dinSurgir 0.2s ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(19, 27, 46, 0.15);
+  animation: dinSubir 0.22s ease-out;
+}
+
+.grabber { display: none; }
+
+@keyframes dinSurgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dinSubir { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
+@keyframes dinSumir { to { opacity: 0; } }
+@keyframes dinDescer { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+@keyframes dinSheetSobe { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dinSheetDesce { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.saindo { animation: dinSumir 0.2s ease forwards; }
+.saindo .modal { animation: dinDescer 0.2s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 22px 0;
+}
+
+.titulo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.corpo {
+  padding: 14px 22px 0;
+}
+
+.rodape {
+  display: flex;
+  justify-content: flex-end;
+  padding: 18px 22px 22px;
+}
+
+.btnCancelar {
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform 0.1s ease;
+}
+@media (hover: hover) {
+  .btnCancelar:hover { background: var(--color-bg-page); }
+}
+.btnCancelar:active { transform: scale(0.96); }
+
+@media (max-width: 767px) {
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100%;
+    max-height: 88dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    animation: dinSheetSobe 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .saindo .modal { animation: dinSheetDesce 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .grabber {
+    display: block;
+    position: absolute;
+    top: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 2; width: 38px; height: 4px; border-radius: 999px; background: var(--color-border);
+  }
+  .cabecalho { padding-top: 30px; }
+  .rodape {
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+  .btnCancelar { width: 100%; text-align: center; }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .modal, .saindo .modal { animation: none; }
+}
+
 .avatar {
   display: flex;
   align-items: center;
@@ -58,4 +169,8 @@
   cursor: pointer;
   text-decoration: underline;
 }
-.btnVerRespostas:hover { opacity: 0.8; }
+.btnVerRespostas { transition: opacity var(--transition-fast), transform 0.1s ease; }
+@media (hover: hover) {
+  .btnVerRespostas:hover { opacity: 0.8; }
+}
+.btnVerRespostas:active { transform: scale(0.96); }

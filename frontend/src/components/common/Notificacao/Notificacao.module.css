@@ -16,6 +16,18 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 15px -3px rgba(19, 27, 46, 0.1), 0 4px 6px -4px rgba(19, 27, 46, 0.1);
+  /* O sonner anima o wrapper (translate/opacity); aqui um assentar leve do conteúdo
+     por cima, só na entrada. Toast monta uma vez, então keyframe é seguro. */
+  animation: domusToastSurge 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes domusToastSurge {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
 }
 
 /* Ícone circular, como no protótipo. A cor é quem diferencia o tipo. */
@@ -60,12 +72,20 @@
   height: 24px;
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
 }
 
-.fechar:hover {
+/* hover só com mouse — no touch "gruda" depois do tap. */
+@media (hover: hover) {
+  .fechar:hover {
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
+  }
+}
+.fechar:active {
   background: var(--color-bg-page);
-  color: var(--color-text-primary);
+  transform: scale(0.9);
 }
 
 /* ---- Tipos ---- */
@@ -94,8 +114,9 @@
 
 @media (max-width: 600px) {
   .toast {
-    width: 100vw;
-    padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+    width: 100%;
+    /* área segura do notch vai no container do sonner (globals.css), não aqui */
+    padding: 14px 16px;
     border-radius: 0;
     border-inline: none;
     border-top: none;
@@ -105,5 +126,12 @@
   .icone {
     width: 32px;
     height: 32px;
+  }
+  /* xs/sm ficam ilegíveis nesse tamanho de tela — sobe um degrau */
+  .titulo {
+    font-size: var(--font-size-base);
+  }
+  .descricao {
+    font-size: var(--font-size-sm);
   }
 }

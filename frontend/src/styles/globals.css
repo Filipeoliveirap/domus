@@ -41,6 +41,19 @@ body {
   }
 }
 
+/* Tira o flash cinza do iOS/Android ao tocar em qualquer alvo clicável. O
+   feedback de toque fica por conta do :active de cada componente. */
+a,
+button,
+[role="button"],
+label,
+summary,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ─── Links ──────────────────────────────────────────────── */
 a {
   color: inherit;
@@ -111,14 +124,18 @@ ul, ol {
 
 /* ─── Toast: no mobile o sonner vira um banner full-width colado no topo ─── */
 @media (max-width: 600px) {
+  /* fixed + left/right:0 já dá largura total; 100vw ignora barra de rolagem e
+     pode vazar na horizontal. A área segura do notch fica no container, não em
+     cada toast (senão empilha padding quando há mais de um). */
   [data-sonner-toaster] {
     left: 0 !important;
     right: 0 !important;
-    width: 100vw !important;
+    width: 100% !important;
     padding: 0 !important;
-    --width: 100vw !important;
+    padding-top: env(safe-area-inset-top) !important;
+    --width: 100% !important;
   }
   [data-sonner-toast] {
-    width: 100vw !important;
+    width: 100% !important;
   }
 }

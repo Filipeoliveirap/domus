@@ -95,11 +95,7 @@
   padding: 14px 16px;
   background: var(--color-bg-white);
   border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
+  transition: background-color var(--transition-fast);
 }
 @media (hover: hover) {
   .linha:hover { background: var(--color-bg-igreja-card); }
@@ -113,7 +109,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .linha { transition: background-color var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+  .linha { transition: background-color var(--transition-fast); }
 }
 
 .colNome { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -217,7 +213,7 @@
   }
   .inputBusca {
     /* 16px evita o zoom do iOS ao focar. */
-    font-size: var(--font-size-md);
+    font-size: 16px;
   }
   .painel { padding: 14px; min-height: 300px; }
   .rodape { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }

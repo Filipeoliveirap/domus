@@ -13,6 +13,7 @@
 }
 
 .modal {
+  position: relative;
   width: 100%;
   max-width: 380px;
   max-height: calc(100dvh - 32px);
@@ -146,11 +147,13 @@
   outline-offset: 2px;
 }
 
+/* Mobile: alerta continua centralizado e compacto (padrão de dialog nativo),
+   só os botões passam a ocupar a largura toda. */
 @media (max-width: 767px) {
   .cabecalho, .corpo { padding-left: 16px; padding-right: 16px; }
   .rodape {
     flex-direction: column-reverse;
-    padding: 20px 16px;
+    padding: 16px;
   }
   .btnCancelar, .btnConfirmar { width: 100%; }
 }

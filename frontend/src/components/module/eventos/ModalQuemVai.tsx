@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { clsx } from 'clsx'
 import Image from 'next/image'
 import { X, Users } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
@@ -34,14 +36,21 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
     eventoId, ehGestor, '', 0, 500)
   const cancelar = useCancelarInscricao()
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+  const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') aoFechar()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [aoFechar])
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   // Normaliza as duas fontes numa só, para não ramificar a marcação por papel. Cada
   // convidado já chega como linha própria (InscricaoEvento unificada) — sem agrupamento
@@ -68,7 +77,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
   const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
 
   return (
-    <div className={styles.overlay} onMouseDown={aoFechar}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -76,6 +85,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
         aria-modal="true"
         aria-labelledby="titulo-quem-vai"
       >
+        <span className={styles.grabber} aria-hidden="true" />
         <header className={styles.cabecalho}>
           <div>
             <h2 className={styles.titulo} id="titulo-quem-vai">
@@ -85,7 +95,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
               {total === 1 ? '1 pessoa confirmada' : `${total} pessoas confirmadas`}
             </p>
           </div>
-          <button type="button" className={styles.fechar} onClick={aoFechar} aria-label="Fechar">
+          <button type="button" className={styles.fechar} onClick={fechar} aria-label="Fechar">
             <X size={18} />
           </button>
         </header>

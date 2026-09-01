@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { clsx } from 'clsx'
 import { Archive, History, Info, type LucideIcon } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import styles from './ModalArquivar.module.css'
 
 interface ModalArquivarProps {
@@ -33,17 +35,24 @@ export function ModalArquivar({
   reversivel = true,
   icone: Icone = Archive,
 }: ModalArquivarProps) {
-  
+  const { saindo, fechar } = useFecharAnimado(onClose, 200)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) onClose()
+      if (e.key === 'Escape' && !isLoading) fechar()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, isLoading])
+  }, [fechar, isLoading])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={() => !isLoading && onClose()}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !isLoading && fechar()}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -52,7 +61,7 @@ export function ModalArquivar({
       >
         <div className={styles.corpo}>
           <div className={styles.iconBox}>
-            <Icone size={28} />
+            <Icone size={24} />
           </div>
 
           <h2 className={styles.titulo}>{titulo}</h2>
@@ -80,7 +89,7 @@ export function ModalArquivar({
           <button
             type="button"
             className={styles.btnCancelar}
-            onClick={onClose}
+            onClick={fechar}
             disabled={isLoading}
           >
             Cancelar

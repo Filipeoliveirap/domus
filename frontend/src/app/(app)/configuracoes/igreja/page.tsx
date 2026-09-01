@@ -9,6 +9,7 @@ import { Landmark, Info, ShieldCheck, Save, RotateCcw, AlertTriangle } from 'luc
 import { useMinhaIgreja, useAtualizarIgreja, useAtualizarLogoIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
+import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { ModalExcluirIgreja } from '@/components/module/configuracoes/ModalExcluirIgreja/ModalExcluirIgreja'
 import { SecaoRecebimentos } from '@/components/module/configuracoes/SecaoRecebimentos'
 import { notificar } from '@/components/common/Notificacao/notificar'
@@ -37,6 +38,11 @@ const schema = z.object({
 })
 
 type FormData = z.infer<typeof schema>
+
+const UF_OPTIONS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+].map((uf) => ({ value: uf, label: uf }))
 
 // Nome e e-mail ficam de fora: já obrigatórios no cadastro, inflariam o percentual à toa.
 const CAMPOS_COMPLETUDE: (keyof FormData)[] = [
@@ -299,8 +305,14 @@ export default function DadosDaIgrejaPage() {
             </div>
 
             <div className={styles.campo}>
-              <label className={styles.rotulo} htmlFor="uf">UF</label>
-              <input id="uf" className={styles.input} maxLength={2} placeholder="SP" {...register('uf')} />
+              <span className={styles.rotulo}>UF</span>
+              <SelectMenu
+                value={valores.uf ?? ''}
+                onChange={(v) => setValue('uf', v, { shouldDirty: true, shouldValidate: true })}
+                placeholder="UF"
+                ariaLabel="Estado (UF)"
+                options={UF_OPTIONS}
+              />
               {errors.uf && <span className={styles.erroCampo}>{errors.uf.message}</span>}
             </div>
           </div>

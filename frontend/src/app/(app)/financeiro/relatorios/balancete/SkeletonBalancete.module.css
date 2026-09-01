@@ -1,0 +1,31 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.barra,
+.linha {
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-table-header, #f1f5f9) 25%,
+    var(--color-border, #e2e8f0) 37%,
+    var(--color-bg-table-header, #f1f5f9) 63%
+  );
+  background-size: 400% 100%;
+  animation: balShimmer 1.4s ease-in-out infinite;
+}
+
+.barra { height: 22px; }
+.linha { height: 44px; }
+
+@keyframes balShimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra, .linha { animation: none; opacity: 0.7; }
+}

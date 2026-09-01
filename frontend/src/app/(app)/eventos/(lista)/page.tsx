@@ -145,7 +145,7 @@ function EventosConteudo() {
 
       {/* Um só <Transicao> sempre montado (igual movimentações): remonta ao trocar
           filtro/página, mas digitar na busca NÃO remonta — o grid só amortece (opacity)
-          enquanto o fetch corre e as linhas novas entram com @starting-style. */}
+          enquanto o fetch corre sem re-montar a lista. */}
       <Transicao key={chaveLista} modo="fade" className={styles.conteudoLista}>
         {isLoading ? (
           <SkeletonEventos cards={TAMANHO_PAGINA} />

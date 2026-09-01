@@ -122,6 +122,13 @@
   white-space: nowrap;
 }
 
+.tabela tbody tr {
+  transition: background-color var(--transition-fast);
+}
+@media (hover: hover) {
+  .tabela tbody tr:hover { background: var(--color-bg-page); }
+}
+
 .tabela td {
   padding: 16px 20px;
   border-top: 1px solid var(--color-border);
@@ -219,6 +226,7 @@
 .botaoPrimario {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 20px;
   border-radius: var(--radius-md);
@@ -226,15 +234,19 @@
   color: #fff;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.botaoPrimario:hover:not(:disabled) { background: var(--color-primary-dark); }
+@media (hover: hover) {
+  .botaoPrimario:hover:not(:disabled) { background: var(--color-primary-dark); }
+}
+.botaoPrimario:active:not(:disabled) { transform: scale(0.98); }
 .botaoPrimario:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .botaoSecundario {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 20px;
   border-radius: var(--radius-md);
@@ -243,15 +255,19 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.botaoSecundario:hover:not(:disabled) { background: var(--color-bg-page); }
+@media (hover: hover) {
+  .botaoSecundario:hover:not(:disabled) { background: var(--color-bg-page); }
+}
+.botaoSecundario:active:not(:disabled) { transform: scale(0.98); }
 .botaoSecundario:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .botaoPerigo {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 14px;
   border-radius: var(--radius-md);
@@ -260,10 +276,13 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.botaoPerigo:hover:not(:disabled) { background: var(--color-danger-bg); }
+@media (hover: hover) {
+  .botaoPerigo:hover:not(:disabled) { background: var(--color-danger-bg); }
+}
+.botaoPerigo:active:not(:disabled) { transform: scale(0.97); }
 .botaoPerigo:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ---- Formulário de entrar com código ---- */
@@ -310,6 +329,10 @@
 /* ---- Mobile: tabela vira cards ---- */
 
 @media (max-width: 767px) {
+  .container { gap: 16px; }
+  .maeNome { font-size: var(--font-size-lg); }
+  .codigoValor { font-size: var(--font-size-xl); }
+
   .faixa,
   .blocoCodigo,
   .cartaoFilha {

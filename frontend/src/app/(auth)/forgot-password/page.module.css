@@ -27,6 +27,20 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+  animation: authCardEntra 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes authCardEntra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes authBadgePop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .iconBadge, .iconBadge svg { animation: none; }
 }
 
 .header {
@@ -46,6 +60,7 @@
   border-radius: var(--radius-lg);
   background-color: var(--color-primary-light);
   color: var(--color-primary-dark);
+  animation: authBadgePop 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
 }
 
 .titulo {
@@ -102,11 +117,16 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
-.backLink:hover {
-  color: var(--color-primary-dark);
+@media (hover: hover) {
+  .backLink:hover {
+    color: var(--color-primary-dark);
+  }
+}
+.backLink:active {
+  transform: scale(0.97);
 }
 
 .copyright {
@@ -121,7 +141,8 @@
 }
 
 /* ---- Mobile ---- */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .page { padding: 16px; }
-  .card { padding: 28px 20px; }
+  .card { padding: 26px 20px; gap: 24px; }
+  .titulo { font-size: var(--font-size-lg); }
 }

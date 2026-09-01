@@ -161,11 +161,7 @@
 }
 
 .tabela tbody tr {
-  transition: background-color var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
+  transition: background-color var(--transition-fast);
 }
 @media (hover: hover) {
   .tabela tbody tr:hover {
@@ -177,7 +173,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tabela tbody tr { transition: background-color var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+  .tabela tbody tr { transition: background-color var(--transition-fast); }
 }
 
 .celulaPessoa {
@@ -356,7 +352,7 @@
   .inputBusca {
     width: 100%;
     /* 16px evita o zoom automático do iOS ao focar. */
-    font-size: var(--font-size-md);
+    font-size: 16px;
   }
   /* Cada linha vira um card empilhado — sem scroll horizontal nem corte. */
   .containerTabela {

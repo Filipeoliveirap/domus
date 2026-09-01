@@ -220,7 +220,12 @@
   transition: background-color var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
 }
-.linhaClicavel:hover {
+@media (hover: hover) {
+  .linhaClicavel:hover {
+    background: var(--color-bg-page);
+  }
+}
+.linhaClicavel:active {
   background: var(--color-bg-page);
 }
 
@@ -494,10 +499,18 @@
     align-items: stretch;
     gap: 12px;
   }
+  .titulo { font-size: var(--font-size-lg); }
   .botaoPrimario {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
   }
+  .inputBusca {
+    width: 100%;
+    /* 16px evita o zoom do iOS ao focar. */
+    font-size: 16px;
+  }
+  .painel { padding: 14px; }
 }
 
 .voltar {
@@ -557,3 +570,22 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
+
+/* --- polish comum: feedback de toque nos botões --- */
+.botaoPrimario,
+.botaoSelecionar,
+.botaoPresenca,
+.botaoMarcarTodos,
+.botaoPagina,
+.voltar,
+.btnCancelar {
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast), opacity var(--transition-fast), transform 0.1s ease;
+}
+.botaoPrimario:active:not(:disabled),
+.botaoSelecionar:active:not(:disabled),
+.botaoPresenca:active:not(:disabled),
+.botaoMarcarTodos:active:not(:disabled),
+.botaoPagina:active:not(:disabled),
+.voltar:active,
+.btnCancelar:active { transform: scale(0.96); }

@@ -15,9 +15,7 @@
 .modal {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  max-height: calc(100vh - 32px);
-
+  max-width: 440px;
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
   background: var(--color-bg-white);
@@ -195,11 +193,12 @@
   cursor: not-allowed;
 }
 
+/* Mobile: confirmação escrita continua centralizada; botões largura toda. */
 @media (max-width: 767px) {
   .cabecalho, .corpo { padding-left: 16px; padding-right: 16px; }
   .rodape {
     flex-direction: column-reverse;
-    padding: 20px 16px;
+    padding: 16px;
   }
   .btnCancelar, .btnConfirmar { width: 100%; }
 }

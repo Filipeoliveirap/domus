@@ -127,7 +127,7 @@ function CategoriasConteudo() {
       </div>
 
       {/* Remonta só ao trocar página; digitar na busca NÃO remonta — as linhas atualizam
-          no lugar (cada nova entra com @starting-style) e a lista só amortece no fetch. */}
+          no lugar e a lista só amortece no fetch. */}
       <div className={styles.painel}>
        <Transicao key={pagina} modo="fade">
         {isLoading ? (

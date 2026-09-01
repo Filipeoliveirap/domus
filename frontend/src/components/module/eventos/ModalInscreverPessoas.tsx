@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { clsx } from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, X, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
@@ -115,17 +117,25 @@ export function ModalInscreverPessoas({
       : undefined,
   })
 
+  const { saindo, fechar } = useFecharAnimado(onClose, 220)
+
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
   useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
+
+  useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !inscreverPessoas.isPending && !pessoaClicada && !compartilhando) onClose()
+      if (e.key === 'Escape' && !inscreverPessoas.isPending && !pessoaClicada && !compartilhando) fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose, inscreverPessoas.isPending, pessoaClicada, compartilhando])
+  }, [fechar, inscreverPessoas.isPending, pessoaClicada, compartilhando])
 
   function alternarSelecao(p: PessoaResponse) {
     setSelecionados((atual) => {
@@ -326,14 +336,14 @@ export function ModalInscreverPessoas({
       </div>
     )
     return embutido ? conteudo : (
-      <div className={styles.overlay} onMouseDown={() => onClose()}>
-        <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => fechar()}>
+        <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true"><span className={styles.grabber} aria-hidden="true" />
           <div className={styles.header}>
             <div>
               <h2 className={styles.titulo}>Inscrever pessoas</h2>
               <p className={styles.subtitulo}>{tituloEvento}</p>
             </div>
-            <button type="button" className={styles.btnFechar} onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+            <button type="button" className={styles.btnFechar} onClick={fechar} aria-label="Fechar"><X size={20} /></button>
           </div>
           {conteudo}
         </div>
@@ -414,14 +424,14 @@ export function ModalInscreverPessoas({
     return (
       <>
         {embutido ? conteudo : (
-          <div className={styles.overlay} onMouseDown={() => !inscreverPessoas.isPending && onClose()}>
+          <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !inscreverPessoas.isPending && fechar()}>
             <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
               <div className={styles.header}>
                 <div>
                   <h2 className={styles.titulo}>Inscrever pessoas</h2>
                   <p className={styles.subtitulo}>{tituloEvento}</p>
                 </div>
-                <button type="button" className={styles.btnFechar} onClick={onClose} aria-label="Fechar" disabled={inscreverPessoas.isPending}><X size={20} /></button>
+                <button type="button" className={styles.btnFechar} onClick={fechar} aria-label="Fechar" disabled={inscreverPessoas.isPending}><X size={20} /></button>
               </div>
               {conteudo}
             </div>
@@ -532,7 +542,7 @@ export function ModalInscreverPessoas({
             {selecionados.size} selecionado{selecionados.size === 1 ? '' : 's'}
           </span>
           <div className={styles.footerAcoes}>
-            <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={inscreverPessoas.isPending}>
+            <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={inscreverPessoas.isPending}>
               Cancelar
             </button>
             <button
@@ -552,7 +562,7 @@ export function ModalInscreverPessoas({
   return (
     <>
       {embutido ? conteudo : (
-        <div className={styles.overlay} onMouseDown={() => !inscreverPessoas.isPending && onClose()}>
+        <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !inscreverPessoas.isPending && fechar()}>
           <div
             className={styles.modal}
             onMouseDown={(e) => e.stopPropagation()}

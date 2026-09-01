@@ -132,7 +132,7 @@ function PessoasConteudo() {
 
       <div className={styles.containerTabela}>
        {/* Remonta só ao trocar filtro/página (transição cheia). Digitar na busca NÃO
-           remonta a lista — as linhas atualizam no lugar, cada nova entra com @starting-style
+           remonta a lista — as linhas atualizam no lugar
            e a tabela inteira só amortece (opacity) enquanto o fetch corre. */}
        <Transicao key={`${filtros.vinculo}|${pagina}`} modo="fade">
         <table className={clsx(styles.tabela, isFetching && !isLoading && styles.tabelaAtualizando)}>

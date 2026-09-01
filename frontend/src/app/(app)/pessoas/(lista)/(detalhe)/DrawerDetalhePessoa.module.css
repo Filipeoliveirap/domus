@@ -242,3 +242,62 @@
 @media (max-width: 480px) {
   .conteudo { padding: 40px 20px 20px; }
 }
+
+/* --- polish comum (drawer): feedback de toque nos controles --- */
+.btnClose { transition: color var(--transition-fast), background-color var(--transition-fast), transform 0.1s ease; }
+.btnClose:active { transform: scale(0.9); }
+.botaoEditar,
+.acaoInscritos,
+.acaoPrimaria,
+.acaoSecundaria,
+.avatarClicavel,
+.localBotaoLinha {
+  transition: color var(--transition-fast), background-color var(--transition-fast),
+              border-color var(--transition-fast), box-shadow var(--transition-fast), transform 0.1s ease;
+}
+.botaoEditar:active,
+.acaoInscritos:active,
+.acaoPrimaria:active:not(:disabled),
+.acaoSecundaria:active:not(:disabled),
+.avatarClicavel:active,
+.localBotaoLinha:active { transform: scale(0.97); }
+
+/* --- Mobile: o drawer lateral vira bottom-sheet (estilo app) --- */
+@keyframes sheetSobe { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheetDesce { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+@media (max-width: 767px) {
+  .overlay {
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0;
+  }
+  .drawer {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 92dvh;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    box-shadow: 0 -8px 30px rgba(19, 27, 46, 0.18);
+    animation: sheetSobe 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .drawer::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+    z-index: 2;
+  }
+  .saindo .drawer { animation: sheetDesce 0.26s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .btnClose { top: 14px; }
+  .conteudo { padding-top: 32px; }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .drawer, .saindo .drawer { animation: none; }
+}

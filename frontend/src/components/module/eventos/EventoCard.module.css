@@ -6,14 +6,10 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast), opacity 0.28s ease;
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 @media (prefers-reduced-motion: reduce) {
-  .card { transition: box-shadow var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+  .card { transition: box-shadow var(--transition-fast); }
 }
 /* hover só em quem tem mouse — no touch o :hover "gruda" depois do tap e o card fica
    levantado como se estivesse pressionado. */

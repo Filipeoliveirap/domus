@@ -13,11 +13,34 @@
   gap: 0.5rem;
 }
 
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
 .seletorAno {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
+.setaAno {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-white);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+@media (hover: hover) {
+  .setaAno:hover { background: var(--color-bg-page); }
+}
+.setaAno:active { transform: scale(0.92); }
 
 .abas {
   display: flex;
@@ -68,4 +91,20 @@
   text-decoration: underline;
   padding: 0;
   font: inherit;
+}
+
+/* --- polish: feedback de toque nas abas --- */
+.aba,
+.abaAtiva {
+  transition: color var(--transition-fast), border-color var(--transition-fast), transform 0.1s ease;
+}
+@media (hover: hover) {
+  .aba:hover { color: var(--color-text-primary); }
+}
+.aba:active,
+.abaAtiva:active { transform: scale(0.96); }
+
+@media (max-width: 767px) {
+  .header { flex-direction: column; align-items: stretch; }
+  .blocoIgreja h2 { font-size: var(--font-size-lg); }
 }

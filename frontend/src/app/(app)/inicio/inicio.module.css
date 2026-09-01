@@ -152,12 +152,13 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-primary);
   white-space: nowrap;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), transform 0.1s ease;
 }
 
-.verTodos:hover {
-  color: var(--color-primary-dark);
+@media (hover: hover) {
+  .verTodos:hover { color: var(--color-primary-dark); }
 }
+.verTodos:active { transform: scale(0.96); }
 
 /* ---- Carrossel de eventos ---- */
 
@@ -185,13 +186,16 @@
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   text-align: left;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-.cardEvento:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 8px 20px rgba(19, 27, 46, 0.06);
+@media (hover: hover) {
+  .cardEvento:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 20px rgba(19, 27, 46, 0.06);
+  }
 }
+.cardEvento:active { transform: scale(0.985); }
 
 .cardEventoTopo {
   display: flex;
@@ -286,9 +290,11 @@
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
+@media (hover: hover) {
 .cardEvento:hover .eventoAcao {
   background: var(--color-primary);
   color: #fff;
+}
 }
 
 /* ---- Card de aniversariantes ---- */
@@ -399,12 +405,13 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-muted);
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), transform 0.1s ease;
 }
 
-.botaoVerTodos:hover {
-  color: var(--color-text-dark);
+@media (hover: hover) {
+  .botaoVerTodos:hover { color: var(--color-text-dark); }
 }
+.botaoVerTodos:active { transform: scale(0.97); }
 
 .vazio {
   font-size: var(--font-size-sm);
@@ -467,13 +474,15 @@
   height: 32px;
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
 }
-
-.modalFechar:hover {
-  background: var(--color-bg-page);
-  color: var(--color-text-dark);
+@media (hover: hover) {
+  .modalFechar:hover {
+    background: var(--color-bg-page);
+    color: var(--color-text-dark);
+  }
 }
+.modalFechar:active { transform: scale(0.9); }
 
 /* É aqui que a rolagem acontece — o modal em si não rola. */
 .modalCorpo {

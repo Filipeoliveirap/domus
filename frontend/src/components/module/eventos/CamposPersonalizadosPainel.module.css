@@ -83,7 +83,6 @@
     transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     margin 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  @starting-style { opacity: 0; transform: translateY(-8px); max-height: 0; }
 }
 .previewSaindo {
   opacity: 0;
@@ -129,11 +128,6 @@
     padding 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     margin 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     border-width 0.4s ease;
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-10px);
-    max-height: 0;
-  }
 }
 /* saída: colapsa + desliza pra esquerda antes de sumir da lista (JS segura ~380ms) */
 .cartaoSaindo {
@@ -147,7 +141,7 @@
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cartaoCampo { transition: opacity 0.15s ease; @starting-style { opacity: 0; max-height: 1200px; } }
+  .cartaoCampo { transition: opacity 0.15s ease; }
 }
 /* Mesmo bug do cabeçalho da prévia: sem flex-wrap + min-width:0, o texto de "Pergunta N"
    (mais comprido ainda com o selo "do template") empurrava o botão de excluir pra fora do

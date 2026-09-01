@@ -163,11 +163,7 @@
 
 .linhaClicavel {
   cursor: pointer;
-  transition: background var(--transition-fast), opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
+  transition: background var(--transition-fast);
 }
 @media (hover: hover) {
   .linhaClicavel:hover {
@@ -186,7 +182,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .linhaClicavel { transition: background var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+  .linhaClicavel { transition: background var(--transition-fast); }
 }
 
 .celulaPessoa {
@@ -341,7 +337,7 @@ button.toggleBtn:active { transform: scale(0.93); }
   .inputBusca {
     width: 100%;
     /* 16px evita o zoom do iOS ao focar. */
-    font-size: var(--font-size-md);
+    font-size: 16px;
   }
 
   .tabela thead {
@@ -467,7 +463,6 @@ button.toggleBtn:active { transform: scale(0.93); }
   cursor: pointer;
   font-size: var(--font-size-base);
   transition: background var(--transition-fast), border-color var(--transition-fast), transform 0.1s ease;
-  @starting-style { opacity: 0; transform: translateX(-10px); }
 }
 @media (hover: hover) {
   .modalItem:hover {

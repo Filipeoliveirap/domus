@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { clsx } from 'clsx'
 import { X, Share2 } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
 import { ModalCompartilharConvite } from './ModalCompartilharConvite'
 import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
@@ -31,6 +33,13 @@ interface Props {
 export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, onClose }: Props) {
   const router = useRouter()
   const [aba, setAba] = useState<Aba>('pessoas')
+  const { saindo, fechar } = useFecharAnimado(onClose, 220)
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   const [buscaVisitante, setBuscaVisitante] = useState('')
   const buscaDebounced = useDebounce(buscaVisitante, 300)
@@ -177,7 +186,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
   return (
     <>
-    <div className={painelStyles.overlay} onMouseDown={() => !isPending && onClose()}>
+    <div className={clsx(painelStyles.overlay, saindo && painelStyles.saindo)} onMouseDown={() => !isPending && fechar()}>
       <div
         className={painelStyles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -185,6 +194,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
         aria-modal="true"
         aria-labelledby="titulo-inscrever-alguem"
       >
+        <span className={painelStyles.grabber} aria-hidden="true" />
         <div className={painelStyles.header}>
           <div>
             <h2 className={painelStyles.titulo} id="titulo-inscrever-alguem">Inscrever alguém</h2>
@@ -193,7 +203,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
           <button
             type="button"
             className={painelStyles.btnFechar}
-            onClick={onClose}
+            onClick={fechar}
             aria-label="Fechar"
             disabled={isPending}
           >
@@ -212,7 +222,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               </p>
             </div>
             <div className={styles.footer}>
-              <button type="button" className={styles.btnCancelar} onClick={onClose}>
+              <button type="button" className={styles.btnCancelar} onClick={fechar}>
                 Concluir
               </button>
               <button type="button" className={styles.btnConfirmar} onClick={adicionarOutroConvidado}>
@@ -399,7 +409,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
             )}
 
             <div className={styles.footer}>
-              <button type="button" className={styles.btnCancelar} onClick={onClose} disabled={isPending}>
+              <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={isPending}>
                 Cancelar
               </button>
               {preco ? (

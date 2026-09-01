@@ -192,12 +192,7 @@
   background: var(--color-bg-white);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color var(--transition-fast), transform var(--transition-fast),
-              opacity 0.28s ease;
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 /* hover só com mouse — no touch "gruda" depois do tap. */
@@ -218,7 +213,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .linha { transition: background-color var(--transition-fast), transform var(--transition-fast); @starting-style { opacity: 0; transform: none; } }
+  .linha { transition: background-color var(--transition-fast), transform var(--transition-fast); }
 }
 
 /* ─── Colunas ─── */
@@ -408,7 +403,7 @@
   }
   /* 16px evita o zoom automático do iOS ao focar o campo. */
   .filtroInput {
-    font-size: var(--font-size-md);
+    font-size: 16px;
   }
 
   .painel {

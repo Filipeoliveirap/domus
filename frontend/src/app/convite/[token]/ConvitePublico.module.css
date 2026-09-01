@@ -322,3 +322,11 @@
     font-size: var(--font-size-lg, 18px);
   }
 }
+
+/* --- polish: feedback de toque --- */
+.btnInscrever, .btnLogin, .btnSemConta, .linkJaTenhoConta, .btnConfirmar {
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast), opacity var(--transition-fast), transform 0.1s ease;
+}
+.btnInscrever:active, .btnLogin:active, .btnSemConta:active,
+.linkJaTenhoConta:active, .btnConfirmar:active:not(:disabled) { transform: scale(0.97); }

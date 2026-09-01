@@ -29,6 +29,11 @@
   font-size: var(--font-size-sm);
 }
 
+/* iOS dá zoom automático quando o campo tem menos de 16px ao focar. */
+@media (max-width: 767px) {
+  .entrada { font-size: 16px; }
+}
+
 .entrada:focus {
   outline: none;
   border-color: var(--color-primary);

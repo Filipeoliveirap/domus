@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { clsx } from 'clsx'
 import Image from 'next/image'
 import { User } from 'lucide-react'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { formatarData, iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { ModalRespostasInscrito } from './ModalRespostasInscrito'
-import baseStyles from '@/components/common/ModalConfirmacao/ModalConfirmacao.module.css'
 import styles from './ModalDetalheInscrito.module.css'
 import type { InscritoResponse } from '@/types/inscricao.type'
 
@@ -26,12 +27,19 @@ export function ModalDetalheInscrito({
   onClose: () => void
 }) {
   const [verRespostas, setVerRespostas] = useState(false)
+  const { saindo, fechar } = useFecharAnimado(onClose, 180)
 
   useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !verRespostas) onClose() }
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !verRespostas) fechar() }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onClose, verRespostas])
+  }, [fechar, verRespostas])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   if (typeof document === 'undefined') return null
 
@@ -39,15 +47,16 @@ export function ModalDetalheInscrito({
 
   return createPortal(
     <>
-      <div className={baseStyles.overlay} onMouseDown={onClose}>
+      <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
         <div
-          className={baseStyles.modal}
+          className={styles.modal}
           onMouseDown={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-detalhe-inscrito-titulo"
         >
-          <div className={baseStyles.cabecalho}>
+          <span className={styles.grabber} aria-hidden="true" />
+          <div className={styles.cabecalho}>
             <span className={styles.avatar}>
               {foto ? (
                 <Image src={foto} alt="" width={44} height={44} unoptimized className={styles.avatarFoto} />
@@ -58,12 +67,12 @@ export function ModalDetalheInscrito({
               )}
             </span>
             <div className={styles.cabecalhoTextos}>
-              <h2 className={baseStyles.titulo} id="modal-detalhe-inscrito-titulo">{inscrito.nome}</h2>
+              <h2 className={styles.titulo} id="modal-detalhe-inscrito-titulo">{inscrito.nome}</h2>
               {ehConvidado && <span className={styles.pillConvidado}>Convidado</span>}
             </div>
           </div>
 
-          <div className={baseStyles.corpo}>
+          <div className={styles.corpo}>
             <ul className={styles.lista}>
               <li>Inscrito em {formatarData(inscrito.inscritoEm)}</li>
               {ehConvidado ? (
@@ -96,8 +105,8 @@ export function ModalDetalheInscrito({
             )}
           </div>
 
-          <div className={baseStyles.rodape}>
-            <button type="button" className={baseStyles.btnCancelar} onClick={onClose}>
+          <div className={styles.rodape}>
+            <button type="button" className={styles.btnCancelar} onClick={fechar}>
               Fechar
             </button>
           </div>

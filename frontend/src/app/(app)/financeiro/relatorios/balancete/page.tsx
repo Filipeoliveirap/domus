@@ -11,6 +11,7 @@ import { BalanceteTabela } from './BalanceteTabela'
 import { BalanceteCardsMes } from './BalanceteCardsMes'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './balancete.module.css'
+import { SkeletonBalancete } from './SkeletonBalancete'
 
 type Aba = 'MINHA_IGREJA' | 'CONSOLIDADO' | 'POR_CONGREGACAO'
 
@@ -36,11 +37,11 @@ export default function BalanceteAnualPage() {
   return (
     <div className={styles.pagina}>
       <header className={styles.header}>
-        <h1>Balancete Anual</h1>
+        <h1 className={styles.titulo}>Balancete Anual</h1>
         <div className={styles.seletorAno}>
-          <button onClick={() => setAno((a) => a - 1)}>‹</button>
+          <button className={styles.setaAno} aria-label="Ano anterior" onClick={() => setAno((a) => a - 1)}>‹</button>
           <strong>{ano}</strong>
-          <button onClick={() => setAno((a) => a + 1)}>›</button>
+          <button className={styles.setaAno} aria-label="Próximo ano" onClick={() => setAno((a) => a + 1)}>›</button>
         </div>
       </header>
 
@@ -59,7 +60,7 @@ export default function BalanceteAnualPage() {
       )}
 
       {aba === 'MINHA_IGREJA' && balancetePropria.isLoading && (
-        <p className={styles.carregando}>Carregando balancete...</p>
+        <SkeletonBalancete />
       )}
       {aba === 'MINHA_IGREJA' && balancetePropria.isError && (
         <p className={styles.erro}>
@@ -75,7 +76,7 @@ export default function BalanceteAnualPage() {
       )}
 
       {aba === 'CONSOLIDADO' && balanceteFamilia.isLoading && (
-        <p className={styles.carregando}>Carregando balancete...</p>
+        <SkeletonBalancete />
       )}
       {aba === 'CONSOLIDADO' && balanceteFamilia.isError && (
         <p className={styles.erro}>
@@ -91,7 +92,7 @@ export default function BalanceteAnualPage() {
       )}
 
       {aba === 'POR_CONGREGACAO' && balanceteFamilia.isLoading && (
-        <p className={styles.carregando}>Carregando balancete...</p>
+        <SkeletonBalancete />
       )}
       {aba === 'POR_CONGREGACAO' && balanceteFamilia.isError && (
         <p className={styles.erro}>

@@ -149,7 +149,7 @@ function UsuariosConteudo() {
 
       <div className={styles.containerTabela}>
        {/* Remonta só ao paginar; digitar na busca NÃO remonta — linhas atualizam no lugar
-           (cada nova entra com @starting-style) e a tabela só amortece durante o fetch. */}
+           e a tabela só amortece durante o fetch. */}
        <Transicao key={pagina} modo="fade">
         <table className={`${styles.tabela} ${isFetching && !isLoading ? styles.tabelaAtualizando : ''}`}>
           <CabecalhoTabela />

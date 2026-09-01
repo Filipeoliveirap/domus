@@ -13,7 +13,7 @@ function EsqueciSenhaConteudo() {
     useEsqueciSenha()
 
   return (
-      <div className={styles.card}>
+      <div className={styles.card} key={enviado ? 'enviado' : 'form'}>
         {enviado ? (
           <>
             <div className={styles.header}>

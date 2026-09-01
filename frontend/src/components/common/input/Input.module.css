@@ -66,6 +66,10 @@
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
+/* iOS dá zoom automático quando o campo tem menos de 16px ao focar. */
+@media (max-width: 767px) {
+  .input { font-size: 16px; }
+}
 
 .input::placeholder {
   color: var(--color-placeholder);

@@ -97,3 +97,11 @@
   .acoes { justify-content: flex-end; }
   .bloqueado { max-width: none; }
 }
+
+/* --- polish comum (arquivados): feedback de toque nos botoes --- */
+.botaoRestaurar,
+.botaoExcluir {
+  transition: background-color var(--transition-fast), background var(--transition-fast), transform 0.1s ease;
+}
+.botaoRestaurar:active:not(:disabled),
+.botaoExcluir:active:not(:disabled) { transform: scale(0.95); }

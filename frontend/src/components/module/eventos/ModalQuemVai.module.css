@@ -7,13 +7,16 @@
   justify-content: center;
   padding: 16px;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: qvSurgir 0.2s ease-out;
 }
 
 .modal {
+  position: relative;
   width: 100%;
   max-width: 420px;
-  max-height: min(80vh, 620px);
+  max-height: min(80dvh, 620px);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -21,6 +24,23 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card-login);
   overflow: hidden;
+  animation: qvSubir 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grabber { display: none; }
+
+@keyframes qvSurgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qvSubir { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
+@keyframes qvSumir { to { opacity: 0; } }
+@keyframes qvDescer { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+@keyframes qvSheetSobe { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes qvSheetDesce { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.saindo { animation: qvSumir 0.2s ease forwards; }
+.saindo .modal { animation: qvDescer 0.2s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
 }
 
 .cabecalho {
@@ -55,12 +75,16 @@
   background: var(--color-bg-page);
   color: var(--color-text-secondary);
   cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.1s ease;
 }
 
-.fechar:hover {
-  background: var(--color-border);
-  color: var(--color-text-primary);
+@media (hover: hover) {
+  .fechar:hover {
+    background: var(--color-border);
+    color: var(--color-text-primary);
+  }
 }
+.fechar:active { transform: scale(0.9); }
 
 .lista {
   flex: 1;
@@ -190,20 +214,28 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .overlay {
-    padding: 8px;
+    padding: 0;
     align-items: flex-end;
   }
 
   .modal {
     max-width: 100%;
-    max-height: 85vh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    animation: qvSheetSobe 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .saindo .modal { animation: qvSheetDesce 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .grabber {
+    display: block;
+    position: absolute;
+    top: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 2; width: 38px; height: 4px; border-radius: 999px; background: var(--color-border);
   }
 
   .cabecalho {
-    padding: 16px;
+    padding: 22px 16px 16px;
   }
 
   .lista {
@@ -255,3 +287,12 @@
 .confirmarNao:hover {
   background: var(--color-bg-page);
 }
+
+/* --- polish: feedback de toque + hover guardado --- */
+.cancelar, .confirmarSim, .confirmarNao {
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast), transform 0.1s ease;
+}
+.cancelar:active:not(:disabled),
+.confirmarSim:active:not(:disabled),
+.confirmarNao:active { transform: scale(0.94); }

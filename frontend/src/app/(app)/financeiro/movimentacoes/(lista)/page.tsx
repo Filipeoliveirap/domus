@@ -252,7 +252,7 @@ function MovimentacoesConteudo() {
       )}
 
       {/* Tabela — remonta ao trocar filtro/página; digitar na busca NÃO remonta:
-          as linhas atualizam no lugar (cada nova entra com @starting-style) e a
+          as linhas atualizam no lugar e a
           tabela só amortece enquanto o fetch corre. */}
       <div className={styles.painel}>
        <Transicao

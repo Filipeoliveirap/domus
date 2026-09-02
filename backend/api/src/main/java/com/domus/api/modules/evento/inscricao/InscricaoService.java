@@ -200,10 +200,11 @@ public class InscricaoService {
                             evento.getPreco(), criadoPorUsuarioId);
         }
 
-        // Nem quando o responsável se auto-inscreve, nem quando ele mesmo inscreve outra pessoa —
-        // quem fez a ação já sabe dela.
-        if (evento.getResponsavel() != null && !evento.getResponsavel().getId().equals(pessoaId)) {
-            usuarioRepository.findByPessoaId(evento.getResponsavel().getId())
+        // Avisa cada responsável — menos quem se auto-inscreveu e quem fez a inscrição
+        // (esse já sabe da ação).
+        for (var resp : evento.getResponsaveis()) {
+            if (resp.getPessoa() == null || resp.getPessoa().getId().equals(pessoaId)) continue;
+            usuarioRepository.findByPessoaId(resp.getPessoa().getId())
                     .filter(usuario -> !usuario.getId().equals(inscritoPorOuNull))
                     .ifPresent(usuario ->
                             notificacaoService.criar(

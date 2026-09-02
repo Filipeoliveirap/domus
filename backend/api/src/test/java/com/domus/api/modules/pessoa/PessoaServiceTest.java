@@ -65,7 +65,9 @@ class PessoaServiceTest {
         visitanteRepository = mock(com.domus.api.modules.visitante.VisitanteRepository.class);
         service = new PessoaService(pessoaRepository, igrejaRepository, usuarioService,
                 inscricaoService, cacheEvictor, outboxRegistrador, reindexacaoMovimentacaoService,
-                fotoService, eventoRepository, inscricaoRepository, celulaMembroRepository,
+                fotoService, eventoRepository,
+                mock(com.domus.api.modules.evento.EventoResponsavelRepository.class),
+                inscricaoRepository, celulaMembroRepository,
                 ministerioMembroRepository, movimentacaoContribuinteRepository, visitanteRepository);
 
         Igreja igreja = new Igreja();

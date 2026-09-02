@@ -42,7 +42,7 @@ type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> &
   isLoading: boolean
   ehEdicao: boolean
   eventoId?: string
-  responsavelNomeInicial?: string
+  responsaveisIniciais?: { id: string; nome: string }[]
   onSubmit: (data: EventoFormData) => void
   registrarSalvarCamposPersonalizados: (fn: ((eventoId: string) => Promise<void>) | null) => void
   impactoAfetados: InscritoImpactado[] | null
@@ -72,7 +72,7 @@ export function EventoForm(props: EventoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsavelNomeInicial,
+    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsaveisIniciais,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,
@@ -103,7 +103,7 @@ export function EventoForm(props: EventoFormProps) {
   const enderecoLocalAtual = watch('enderecoLocal') as import('@/types/pessoa.type').Endereco | undefined
   const novoLocalAtual = watch('novoLocal') as import('@/types/evento.type').LocalEventoRequest | undefined
   const tipoAtual = (watch('tipo') as string) ?? ''
-  const responsavelAtual = watch('responsavelPessoaId') as string | undefined
+  const responsavelIdsAtual = (watch('responsavelPessoaIds') as string[] | undefined) ?? []
   const vagasAtual = watch('vagas') as number | undefined
   const recorteEtarioAtual = watch('recorteEtario') as string | null | undefined
   const idadeMinAtual = watch('idadeMin') as number | undefined
@@ -453,9 +453,9 @@ export function EventoForm(props: EventoFormProps) {
               <h2 className={styles.secaoTitulo}>Organização</h2>
             </div>
             <SeletorResponsavel
-              valor={responsavelAtual}
-              nomeInicial={responsavelNomeInicial}
-              onChange={(id) => setValue('responsavelPessoaId', id, { shouldDirty: true })}
+              ids={responsavelIdsAtual}
+              iniciais={responsaveisIniciais}
+              onChange={(lista) => setValue('responsavelPessoaIds', lista, { shouldDirty: true })}
             />
 
             {temFamilia && (

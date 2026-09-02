@@ -8,49 +8,62 @@ import { Transicao } from '@/components/common/Transicao/Transicao'
 import styles from './SeletorResponsavel.module.css'
 
 interface SeletorResponsavelProps {
-  /** Id da pessoa responsável já escolhida (ou undefined). */
-  valor?: string
-  /** Nome a exibir quando já há um responsável — vem do evento em edição, para não
-   *  precisar buscar de novo só para mostrar quem já está escolhido. */
-  nomeInicial?: string
-  onChange: (pessoaId: string | undefined, nome: string | undefined) => void
+  /** Ids das pessoas responsáveis já escolhidas. */
+  ids: string[]
+  /** Nomes de quem já era responsável (edição), pra montar os chips sem buscar de novo. */
+  iniciais?: { id: string; nome: string }[]
+  onChange: (ids: string[]) => void
 }
 
-export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResponsavelProps) {
+export function SeletorResponsavel({ ids, iniciais = [], onChange }: SeletorResponsavelProps) {
   const [busca, setBusca] = useState('')
-  const [nomeEscolhido, setNomeEscolhido] = useState<string | undefined>(nomeInicial)
   const buscaDebounced = useDebounce(busca, 300)
-  const habilitado = !valor && buscaDebounced.trim().length >= 2
-  const { data, isLoading } = usePessoas({
-    q: habilitado ? buscaDebounced : '',
-    page: 0,
-    size: 8,
-  })
+  const habilitado = buscaDebounced.trim().length >= 2
+  const { data, isLoading } = usePessoas({ q: habilitado ? buscaDebounced : '', page: 0, size: 8 })
 
-  const resultados = habilitado ? (data?.content ?? []) : []
+  // Nome de cada id: dos iniciais (edição) + o que a pessoa foi escolhendo nesta sessão.
+  const [nomesEscolhidos, setNomesEscolhidos] = useState<Record<string, string>>({})
+  const nomePorId: Record<string, string> = {
+    ...Object.fromEntries(iniciais.map((r) => [r.id, r.nome])),
+    ...nomesEscolhidos,
+  }
 
-  if (valor) {
-    return (
-      <div className={styles.campo}>
-        <span className={styles.label}>RESPONSÁVEL</span>
-        <Transicao modo="escala" className={styles.chip}>
-          <span className={styles.chipNome}>{nomeEscolhido ?? 'Responsável selecionado'}</span>
-          <button
-            type="button"
-            className={styles.chipRemover}
-            onClick={() => { onChange(undefined, undefined); setNomeEscolhido(undefined); setBusca('') }}
-            aria-label="Remover responsável"
-          >
-            <X size={16} />
-          </button>
-        </Transicao>
-      </div>
-    )
+  const escolhidos = new Set(ids)
+  const resultados = habilitado ? (data?.content ?? []).filter((p) => !escolhidos.has(p.id)) : []
+
+  function adicionar(p: { id: string; nome: string }) {
+    setNomesEscolhidos((m) => ({ ...m, [p.id]: p.nome }))
+    onChange([...ids, p.id])
+    setBusca('')
+  }
+  function remover(id: string) {
+    onChange(ids.filter((v) => v !== id))
   }
 
   return (
     <div className={styles.campo}>
-      <span className={styles.label}>RESPONSÁVEL <span className={styles.opcional}>(opcional)</span></span>
+      <span className={styles.label}>
+        RESPONSÁVEIS <span className={styles.opcional}>(opcional)</span>
+      </span>
+
+      {ids.length > 0 && (
+        <div className={styles.chips}>
+          {ids.map((id) => (
+            <Transicao key={id} modo="escala" className={styles.chip}>
+              <span className={styles.chipNome}>{nomePorId[id] ?? 'Responsável'}</span>
+              <button
+                type="button"
+                className={styles.chipRemover}
+                onClick={() => remover(id)}
+                aria-label={`Remover ${nomePorId[id] ?? 'responsável'}`}
+              >
+                <X size={16} />
+              </button>
+            </Transicao>
+          ))}
+        </div>
+      )}
+
       <div className={styles.buscaWrap}>
         <Search size={16} className={styles.buscaIcone} aria-hidden="true" />
         <input
@@ -67,15 +80,10 @@ export function SeletorResponsavel({ valor, nomeInicial, onChange }: SeletorResp
           {isLoading ? (
             <p className={styles.aviso}>Buscando…</p>
           ) : resultados.length === 0 ? (
-            <p className={styles.aviso}>Ninguém encontrado com esse nome.</p>
+            <p className={styles.aviso}>Ninguém novo encontrado com esse nome.</p>
           ) : (
             resultados.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={styles.opcao}
-                onClick={() => { onChange(p.id, p.nome); setNomeEscolhido(p.nome); setBusca('') }}
-              >
+              <button key={p.id} type="button" className={styles.opcao} onClick={() => adicionar(p)}>
                 <span>{p.nome}</span>
                 <Check size={15} className={styles.opcaoCheck} aria-hidden="true" />
               </button>

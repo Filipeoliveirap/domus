@@ -30,8 +30,8 @@ public record EventoRequest(
         @Size(max = 80, message = "O tipo deve ter no máximo 80 caracteres.")
         String tipo,
 
-        /** Pessoa responsável pelo evento; null = sem responsável definido. */
-        UUID responsavelPessoaId,
+        /** Pessoas responsáveis pelo evento; null ou lista vazia = sem responsável. */
+        java.util.List<UUID> responsavelPessoaIds,
 
         /** Nome do recorte (Kids, Jovens...). Alimenta selo e filtro; não valida nada. */
         @Size(max = 40, message = "O recorte etário deve ter no máximo 40 caracteres.")

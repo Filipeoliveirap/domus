@@ -66,6 +66,7 @@ class PessoaExclusaoDefinitivaTest implements PostgresTestContainerSupport {
     @Autowired MinisterioRepository ministerioRepository;
     @Autowired MinisterioMembroRepository ministerioMembroRepository;
     @Autowired EventoRepository eventoRepository;
+    @Autowired com.domus.api.modules.evento.EventoResponsavelRepository eventoResponsavelRepository;
     @Autowired InscricaoRepository inscricaoRepository;
     @Autowired CategoriaFinanceiraRepository categoriaRepository;
     @Autowired MovimentacaoFinanceiraRepository movimentacaoRepository;
@@ -121,8 +122,10 @@ class PessoaExclusaoDefinitivaTest implements PostgresTestContainerSupport {
         Evento evento = eventoRepository.save(Evento.builder()
                 .igreja(igreja).titulo("Evento " + UUID.randomUUID())
                 .inicioEm(LocalDateTime.now().plusDays(1))
-                .responsavel(alvo).build());
+                .build());
         UUID eventoId = evento.getId();
+        eventoResponsavelRepository.save(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .igreja(igreja).evento(evento).pessoa(alvo).build());
         InscricaoEvento inscricao = inscricaoRepository.save(InscricaoEvento.builder()
                 .igreja(igreja).evento(evento).pessoa(alvo).status(StatusInscricao.CONFIRMADA).build());
         UUID inscricaoId = inscricao.getId();
@@ -171,8 +174,9 @@ class PessoaExclusaoDefinitivaTest implements PostgresTestContainerSupport {
 
         // Responsável de evento: desvincula com fallback de texto, igual ao arquivar.
         Evento eventoDepois = eventoRepository.findById(eventoId).orElseThrow();
-        assertThat(eventoDepois.getResponsavel()).isNull();
-        assertThat(eventoDepois.getResponsavelTexto()).isEqualTo(nomeAlvo);
+        assertThat(eventoDepois.getResponsaveis()).hasSize(1);
+        assertThat(eventoDepois.getResponsaveis().get(0).getPessoa()).isNull();
+        assertThat(eventoDepois.getResponsaveis().get(0).getNomeTexto()).isEqualTo(nomeAlvo);
 
         // Inscrição e contribuição: a linha sobrevive, pessoa anonimizada.
         InscricaoEvento inscricaoDepois = inscricaoRepository.findById(inscricaoId).orElseThrow();

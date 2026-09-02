@@ -106,7 +106,6 @@ public class EventoService {
         validarControlaPresenca(data);
         validarPreco(data);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
-        Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
@@ -125,7 +124,6 @@ public class EventoService {
                 .localTexto(loc.localTexto())
                 .enderecoLocal(loc.enderecoLocal())
                 .tipo(resolverTipo(data.tipo(), igrejaId))
-                .responsavel(responsavel)
                 .recorteEtario(data.recorteEtario())
                 .idadeMin(data.idadeMin())
                 .idadeMax(data.idadeMax())
@@ -141,6 +139,10 @@ public class EventoService {
                 .restritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()))
                 .build();
 
+        java.util.List<EventoResponsavel> respAdicionados =
+                resolverResponsaveis(data.responsavelPessoaIds(), igrejaId, igreja, evento);
+        evento.getResponsaveis().addAll(respAdicionados);
+
         Evento salvo = eventoRepository.save(evento);
 
         if (data.recorrencia() != null) {
@@ -155,7 +157,7 @@ public class EventoService {
                 salvo.getId(),
                 igrejaId
         );
-        notificarNovoResponsavel(salvo, igrejaId, usuarioId);
+        notificarResponsaveis(salvo, respAdicionados, usuarioId);
         notificarNovoEvento(salvo, igrejaId, usuarioId);
         log.info("Evento cadastrado. id={}, igreja_id={}", salvo.getId(), igrejaId);
         evictarCacheDeEventosDaFamilia(igrejaId);
@@ -179,7 +181,6 @@ public class EventoService {
         validarControlaPresenca(data);
         validarPreco(data);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
-        Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -200,7 +201,9 @@ public class EventoService {
 
         java.time.LocalDateTime inicioAntigo = evento.getInicioEm();
         String localExibicaoAntigo = evento.getLocalExibicao();
-        UUID responsavelIdAntigo = evento.getResponsavel() != null ? evento.getResponsavel().getId() : null;
+
+        java.util.List<EventoResponsavel> respAdicionados =
+                sincronizarResponsaveis(evento, data.responsavelPessoaIds(), igrejaId, evento.getIgreja());
 
         evento.setTitulo(TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
@@ -210,7 +213,6 @@ public class EventoService {
         evento.setLocalTexto(loc.localTexto());
         evento.setEnderecoLocal(loc.enderecoLocal());
         evento.setTipo(resolverTipo(data.tipo(), igrejaId));
-        evento.setResponsavel(responsavel);
         evento.setRecorteEtario(data.recorteEtario());
         evento.setIdadeMin(data.idadeMin());
         evento.setIdadeMax(data.idadeMax());
@@ -282,10 +284,7 @@ public class EventoService {
                     "/eventos?detalhe=" + salvo.getId());
         }
 
-        UUID responsavelIdNovo = responsavel != null ? responsavel.getId() : null;
-        if (!java.util.Objects.equals(responsavelIdAntigo, responsavelIdNovo)) {
-            notificarNovoResponsavel(salvo, igrejaId, usuarioId);
-        }
+        notificarResponsaveis(salvo, respAdicionados, usuarioId);
 
         // Remove a foto antiga só depois que o evento já aponta para a nova.
         boolean fotoMudou = !java.util.Objects.equals(
@@ -413,7 +412,12 @@ public class EventoService {
             ocorrencia.setLocalTexto(editado.getLocalTexto());
             ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
             ocorrencia.setTipo(editado.getTipo());
-            ocorrencia.setResponsavel(editado.getResponsavel());
+            ocorrencia.getResponsaveis().clear();
+            for (EventoResponsavel r : editado.getResponsaveis()) {
+                ocorrencia.getResponsaveis().add(EventoResponsavel.builder()
+                        .igreja(r.getIgreja()).evento(ocorrencia)
+                        .pessoa(r.getPessoa()).nomeTexto(r.getNomeTexto()).build());
+            }
             ocorrencia.setRecorteEtario(editado.getRecorteEtario());
             ocorrencia.setIdadeMin(editado.getIdadeMin());
             ocorrencia.setIdadeMax(editado.getIdadeMax());
@@ -471,17 +475,18 @@ public class EventoService {
         return eventoRepository.save(editado);
     }
 
-    /** {@code usuarioIdAtor} nunca recebe a própria notificação — quem se colocou como responsável já sabe. */
-    private void notificarNovoResponsavel(Evento evento, UUID igrejaId, UUID usuarioIdAtor) {
-        if (evento.getResponsavel() == null) return;
-        usuarioRepository.findByPessoaId(evento.getResponsavel().getId())
-                .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
-                .ifPresent(usuario ->
-                        notificacaoService.criar(
-                                com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO,
-                                igrejaId, usuario.getId(),
-                                "Você foi definido como responsável pelo evento \"" + evento.getTitulo() + "\".",
-                                "/eventos?detalhe=" + evento.getId()));
+    /** Notifica cada responsável ADICIONADO agora (menos o ator). Texto igual ao antigo. */
+    private void notificarResponsaveis(Evento evento, java.util.List<EventoResponsavel> adicionados, UUID usuarioIdAtor) {
+        for (EventoResponsavel r : adicionados) {
+            if (r.getPessoa() == null) continue;
+            usuarioRepository.findByPessoaId(r.getPessoa().getId())
+                    .filter(usuario -> !usuario.getId().equals(usuarioIdAtor))
+                    .ifPresent(usuario -> notificacaoService.criar(
+                            com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO,
+                            evento.getIgreja().getId(), usuario.getId(),
+                            "Você foi definido como responsável pelo evento \"" + evento.getTitulo() + "\".",
+                            "/eventos?detalhe=" + evento.getId()));
+        }
     }
 
     /** Convite pra todo mundo da igreja dar uma olhada no evento novo — exceto quem cadastrou. */
@@ -725,10 +730,47 @@ public class EventoService {
                 .build();
     }
 
-    private Pessoa resolverResponsavel(UUID responsavelPessoaId, UUID igrejaId) {
-        if (responsavelPessoaId == null) return null;
-        return pessoaRepository.findByIdAndIgrejaId(responsavelPessoaId, igrejaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
+    /** Monta as linhas de EventoResponsavel a partir dos ids do request (dedup). Cada id
+     *  precisa ser de uma pessoa da própria igreja. Não persiste — quem chama põe no
+     *  {@code evento.getResponsaveis()} e o cascade grava. */
+    private java.util.List<EventoResponsavel> resolverResponsaveis(
+            java.util.List<UUID> ids, UUID igrejaId, Igreja igreja, Evento evento) {
+        if (ids == null || ids.isEmpty()) return new java.util.ArrayList<>();
+        return ids.stream().distinct()
+                .map(id -> {
+                    Pessoa p = pessoaRepository.findByIdAndIgrejaId(id, igrejaId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
+                    return EventoResponsavel.builder().igreja(igreja).evento(evento).pessoa(p).build();
+                })
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+    }
+
+    /** Aplica a lista nova de responsáveis a um evento existente. Devolve as linhas
+     *  ADICIONADAS agora (pra notificar só elas). Não toca nas linhas de texto-fallback
+     *  ({@code pessoa == null}) — o form nunca as manda nem as remove. */
+    private java.util.List<EventoResponsavel> sincronizarResponsaveis(
+            Evento evento, java.util.List<UUID> idsRequest, UUID igrejaId, Igreja igreja) {
+        java.util.Set<UUID> idsNovos = idsRequest == null ? java.util.Set.of()
+                : new java.util.LinkedHashSet<>(idsRequest);
+
+        evento.getResponsaveis().removeIf(r ->
+                r.getPessoa() != null && !idsNovos.contains(r.getPessoa().getId()));
+
+        java.util.Set<UUID> idsAtuais = evento.getResponsaveis().stream()
+                .map(EventoResponsavel::getPessoa).filter(java.util.Objects::nonNull)
+                .map(Pessoa::getId).collect(java.util.stream.Collectors.toSet());
+
+        java.util.List<EventoResponsavel> adicionados = new java.util.ArrayList<>();
+        for (UUID id : idsNovos) {
+            if (idsAtuais.contains(id)) continue;
+            Pessoa p = pessoaRepository.findByIdAndIgrejaId(id, igrejaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Pessoa responsável não encontrada."));
+            EventoResponsavel novo = EventoResponsavel.builder()
+                    .igreja(igreja).evento(evento).pessoa(p).build();
+            evento.getResponsaveis().add(novo);
+            adicionados.add(novo);
+        }
+        return adicionados;
     }
 
     private com.domus.api.modules.evento.serie.EventoSerie criarSerie(

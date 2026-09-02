@@ -1,11 +1,16 @@
 'use client'
 
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { MapPin, X, Landmark } from 'lucide-react'
+import { clsx } from 'clsx'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useLocalEventoForm } from '@/hooks/evento/useLocalEventoForm'
+import { useLocaisEvento } from '@/hooks/evento/useLocaisEvento'
 import { useMinhaIgreja } from '@/hooks/igreja/useMinhaIgreja'
-import { enderecoIgrejaParaCamposCompactos } from '@/lib/formats/endereco'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { enderecoIgrejaParaCamposCompactos, jaExisteEnderecoDaIgreja } from '@/lib/formats/endereco'
 import { localEventoSchema, type LocalEventoFormData, type LocalEventoFormInput } from '@/lib/validators'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
@@ -16,14 +21,25 @@ interface Props {
   /** Presente = edição; ausente = criação. */
   local: LocalEventoResponse | null
   onClose: () => void
-  /** Chamado com o endereço recém-criado (só no modo criação), antes do onClose.
-   *  Usado pelo SeletorLocal para já selecionar o que a pessoa acabou de cadastrar. */
+  /** Chamado com o endereço recém-criado (só no modo criação, tela de Endereços), antes do onClose. */
   onCriado?: (local: LocalEventoResponse) => void
+  /** Quando presente (aberto pelo formulário de evento): NÃO persiste. Só devolve o payload
+   *  para o evento "segurar" — o cadastro de verdade acontece quando o evento é salvo. */
+  onDefinir?: (payload: LocalEventoRequest) => void
+  /** Reidrata os campos ao reabrir um endereço pendente (modo onDefinir) para editar. */
+  valoresIniciais?: LocalEventoRequest | null
 }
 
-export function ModalLocalForm({ local, onClose, onCriado }: Props) {
-  const { salvar, isLoading, erroGeral } = useLocalEventoForm(local, onClose, onCriado)
+export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIniciais }: Props) {
+  const { saindo, fechar } = useFecharAnimado(onClose, 260)
+  const { salvar, isLoading, erroGeral } = useLocalEventoForm(local, fechar, onCriado)
   const { data: igreja } = useMinhaIgreja()
+  const { data: locais = [] } = useLocaisEvento()
+
+  const modoDefinir = !!onDefinir
+  const editando = !!local || !!valoresIniciais
+  const mostrarUsarIgreja = !editando && !!igreja?.endereco
+    && !jaExisteEnderecoDaIgreja(locais, igreja.endereco)
 
   const {
     register,
@@ -33,15 +49,26 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
   } = useForm<LocalEventoFormInput, unknown, LocalEventoFormData>({
     resolver: zodResolver(localEventoSchema),
     defaultValues: {
-      nome: local?.nome ?? '',
-      capacidade: local?.capacidade ?? undefined,
+      nome: valoresIniciais?.nome ?? local?.nome ?? '',
+      capacidade: valoresIniciais?.capacidade ?? local?.capacidade ?? undefined,
       // Reidrata dos campos CRUS (não do `endereco` formatado, que colapsa tudo num texto).
-      // Vêm null quando o local herda o endereço da igreja — nesse caso o form abre vazio, e
-      // deixá-lo vazio no submit mantém a herança (não vira endereço próprio igual ao da igreja).
-      cepLogradouroNumero: local?.cepLogradouroNumero ?? '',
-      complementoBairroCidadeUf: local?.complementoBairroCidadeUf ?? '',
+      cepLogradouroNumero: valoresIniciais?.cepLogradouroNumero ?? local?.cepLogradouroNumero ?? '',
+      complementoBairroCidadeUf: valoresIniciais?.complementoBairroCidadeUf ?? local?.complementoBairroCidadeUf ?? '',
     },
   })
+
+  // Trava o scroll do fundo enquanto o modal está aberto (padrão dos outros modais).
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
+
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !isLoading) fechar() }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [fechar, isLoading])
 
   const onSubmit = (data: LocalEventoFormData) => {
     const payload: LocalEventoRequest = {
@@ -50,26 +77,39 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
       cepLogradouroNumero: data.cepLogradouroNumero || null,
       complementoBairroCidadeUf: data.complementoBairroCidadeUf || null,
     }
+    if (modoDefinir) {
+      onDefinir!(payload)
+      fechar()
+      return
+    }
     salvar(payload)
   }
 
-  return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      onMouseDown={() => !isLoading && fechar()}
+    >
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.header}>
           <div className={styles.iconBox}>
             <MapPin size={24} />
           </div>
-          <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Fechar">
+          <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
         <div className={styles.intro}>
-          <h2 className={styles.title}>{local ? 'Editar endereço' : 'Novo endereço'}</h2>
+          <h2 className={styles.title}>{editando ? 'Editar endereço' : 'Novo endereço'}</h2>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+        {/* stopPropagation: o modal está num portal, mas o submit ainda borbulha pela árvore
+            React até o <form> do EventoForm. Sem isto, salvar aqui dispara o submit do evento. */}
+        <form className={styles.form} onSubmit={(e) => { e.stopPropagation(); void handleSubmit(onSubmit)(e) }}>
           <Input
             id="local-nome"
             label="NOME"
@@ -78,7 +118,7 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
             {...register('nome')}
           />
 
-          {!local && igreja?.endereco && (
+          {mostrarUsarIgreja && (
             <button
               type="button"
               className={styles.btnUsarIgreja}
@@ -122,13 +162,14 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
           {erroGeral && <div className={styles.alertError}>{erroGeral}</div>}
 
           <div className={styles.footer}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
+            <button type="button" className={styles.btnCancel} onClick={fechar}>Cancelar</button>
             <Button type="submit" variant="primary" size="md" isLoading={isLoading}>
-              {local ? 'Salvar alterações' : 'Cadastrar endereço'}
+              {modoDefinir ? 'Salvar' : local ? 'Salvar alterações' : 'Cadastrar endereço'}
             </Button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

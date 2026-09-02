@@ -94,6 +94,8 @@ export interface EventoRequest {
   localTexto?: string
   /** Endereço estruturado ad-hoc — exclusivo com localId e localTexto. */
   enderecoLocal?: Endereco
+  /** Endereço a cadastrar junto com o evento (mesma transação no backend). Exclusivo com as outras formas. */
+  novoLocal?: LocalEventoRequest
   tipo?: string
   responsavelPessoaId?: string | null
   fotoId?: string | null

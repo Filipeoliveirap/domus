@@ -100,6 +100,7 @@ export function EventoForm(props: EventoFormProps) {
   const fotoIdAtual = watch('fotoId') as string | null | undefined
   const localIdAtual = watch('localId') as string | undefined
   const localTextoAtual = watch('localTexto') as string | undefined
+  const enderecoLocalAtual = watch('enderecoLocal') as import('@/types/pessoa.type').Endereco | undefined
   const tipoAtual = (watch('tipo') as string) ?? ''
   const responsavelAtual = watch('responsavelPessoaId') as string | undefined
   const vagasAtual = watch('vagas') as number | undefined
@@ -180,7 +181,17 @@ export function EventoForm(props: EventoFormProps) {
             <SeletorLocal
               localId={localIdAtual}
               localTexto={localTextoAtual}
-              error={errors.localId?.message ?? errors.localTexto?.message}
+              enderecoLocal={enderecoLocalAtual}
+              error={errors.localId?.message ?? errors.localTexto?.message ?? errors.enderecoLocal?.message}
+              errosEndereco={{
+                cep: errors.enderecoLocal?.cep?.message,
+                logradouro: errors.enderecoLocal?.logradouro?.message,
+                numero: errors.enderecoLocal?.numero?.message,
+                complemento: errors.enderecoLocal?.complemento?.message,
+                bairro: errors.enderecoLocal?.bairro?.message,
+                cidade: errors.enderecoLocal?.cidade?.message,
+                uf: errors.enderecoLocal?.uf?.message,
+              }}
               onChangeLocalId={(id) => {
                 setValue('localId', id, { shouldDirty: true })
                 if (id) setValue('localTexto', undefined, { shouldDirty: true })
@@ -189,6 +200,7 @@ export function EventoForm(props: EventoFormProps) {
                 setValue('localTexto', texto, { shouldDirty: true })
                 if (texto) setValue('localId', undefined, { shouldDirty: true })
               }}
+              onChangeEnderecoLocal={(e) => setValue('enderecoLocal', e, { shouldDirty: true, shouldValidate: true })}
               onCapacidadeSugerida={(cap) => {
                 if (requerInscricao && vagasAtual == null) {
                   setValue('vagas', cap, { shouldDirty: true, shouldValidate: true })

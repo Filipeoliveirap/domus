@@ -21,12 +21,16 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Controle segmentado: as duas formas de definir onde o evento acontece, visíveis de uma vez.
-   Mesmo visual do segmentado de SecaoNomenclatura. */
+/* Controle segmentado: as três formas de definir onde o evento acontece, visíveis de uma vez.
+   Mesmo visual do segmentado de SecaoNomenclatura. Empilha no mobile. */
 .segmentado {
   display: flex;
   gap: 6px;
   margin-bottom: 4px;
+}
+
+@media (max-width: 640px) {
+  .segmentado { flex-direction: column; }
 }
 
 .segmentoBtn {
@@ -111,4 +115,31 @@
 
 .botaoNovo:hover {
   text-decoration: underline;
+}
+
+/* Modo "endereço completo": grid de campos de endereço, colapsa para 1 coluna no mobile. */
+.enderecoCompleto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gridEndereco {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+.campoUf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .gridEndereco { grid-template-columns: 1fr; }
 }

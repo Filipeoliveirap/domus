@@ -124,6 +124,31 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
   "não deixava" digitar Enter — só apareceu quando a prévia virou interativa de verdade).
   Antes de dar uma tela como pronta, perguntar "uma pessoa leiga entenderia isso sem
   explicação?", não só "os testes passam?".
+- **Suavidade e animação são parte da entrega, não enfeite opcional.** Toda tela, modal,
+  drawer, aba, dropdown ou bloco condicional novo entra com o padrão de movimento já
+  adotado — nada "pipoca" na tela seco. Ferramentas do projeto (usar, não reinventar):
+  - `<Transicao modo="fade|subir|escala">` (`components/common/Transicao/`) para bloco que
+    aparece (resultado de filtro, seção condicional, card que substitui um formulário,
+    prévia). Anima só na montagem via `@starting-style`.
+  - `<Revelar>` para campos que expandem ao ligar um toggle (altura suave via
+    `grid-template-rows: 0fr→1fr`).
+  - `useFecharAnimado(onClose, ms)` + classe `.saindo` para a **saída** de modal/drawer —
+    a saída roda em `@keyframes` + classe, funciona em qualquer navegador (o `@starting-style`
+    da entrada não pega no iOS Safari < 17.4, então saída nunca depende dele).
+  - Modal em `createPortal(document.body)` quando renderizado dentro de outro `<form>`
+    (senão o submit borbulha pela árvore React e dispara o form de fora — corrigido com
+    `e.stopPropagation()` no `onSubmit` do modal).
+  - Micro-feedback de toque: `:active { transform: scale(0.9x) }` com `transition` curta
+    (~0.12s) em botões de ação; sempre com bloco `@media (prefers-reduced-motion: reduce)`
+    zerando os `transform`.
+- **Mobile de verdade (Android e iOS).** Além dos padrões de layout acima: modal/drawer
+  vira **bottom-sheet** no breakpoint mobile (`@media (max-width: 767px)`: cola no rodapé,
+  cantos de baixo retos, `.grabber`, `deslizarCima`/`deslizarBaixo`, `env(safe-area-inset-bottom)`,
+  botões do rodapé empilham full-width) — copiar de `ModalMinisterioForm`/`ModalLocalForm`.
+  `100dvh`/`dvh` para altura (não `vh`), `-webkit-backdrop-filter` sempre junto de
+  `backdrop-filter`, trava de scroll do fundo (`document.body.style.overflow = 'hidden'`)
+  enquanto o modal está aberto. Testar no viewport de iPhone **e** de Android antes de
+  dar como pronto.
 
 ---
 

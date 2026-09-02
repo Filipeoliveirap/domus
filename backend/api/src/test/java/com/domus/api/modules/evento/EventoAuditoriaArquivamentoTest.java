@@ -45,6 +45,7 @@ class EventoAuditoriaArquivamentoTest implements PostgresTestContainerSupport {
     @Autowired RoleRepository roleRepository;
     @Autowired IgrejaRepository igrejaRepository;
     @Autowired EventoRepository eventoRepository;
+    @Autowired com.domus.api.modules.evento.EventoResponsavelRepository eventoResponsavelRepository;
     @Autowired EntityManager entityManager;
 
     UUID igrejaId;
@@ -99,13 +100,15 @@ class EventoAuditoriaArquivamentoTest implements PostgresTestContainerSupport {
                 .igreja(igrejaDoTeste)
                 .titulo("Café dos Homens")
                 .inicioEm(LocalDateTime.now().plusDays(5))
-                .responsavel(responsavel)
                 .criadoPor(criador)
                 .exclusivoMembros(false)
                 .requerInscricao(false)
                 .build();
         evento = eventoRepository.save(evento);
         UUID eventoId = evento.getId();
+        eventoResponsavelRepository.save(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .igreja(igrejaDoTeste).evento(evento).pessoa(responsavel).build());
+        entityManager.flush();
 
         pessoaService.arquivarMembro(responsavel.getId(), igrejaId);
 
@@ -118,12 +121,14 @@ class EventoAuditoriaArquivamentoTest implements PostgresTestContainerSupport {
         // resolveria o proxy LAZY de responsavel.
         EventoResponse resposta = listarEIsolarEvento(eventoId);
 
-        assertThat(resposta.responsavel().nome()).isEqualTo("Ana Responsável");
-        assertThat(resposta.responsavel().id()).isNull(); // não é mais um cadastro navegável
+        assertThat(resposta.responsaveis()).hasSize(1);
+        assertThat(resposta.responsaveis().get(0).nome()).isEqualTo("Ana Responsável");
+        assertThat(resposta.responsaveis().get(0).id()).isNull(); // não é mais um cadastro navegável
 
         Evento recarregado = eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId).orElseThrow();
-        assertThat(recarregado.getResponsavel()).isNull();
-        assertThat(recarregado.getResponsavelTexto()).isEqualTo("Ana Responsável");
+        assertThat(recarregado.getResponsaveis()).hasSize(1);
+        assertThat(recarregado.getResponsaveis().get(0).getPessoa()).isNull();
+        assertThat(recarregado.getResponsaveis().get(0).getNomeTexto()).isEqualTo("Ana Responsável");
 
         // A pessoa em si foi arquivada — não aparece mais para a igreja.
         assertThat(pessoaRepository.findByIdAndIgrejaId(responsavel.getId(), igrejaId)).isEmpty();

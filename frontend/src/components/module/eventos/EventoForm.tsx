@@ -101,6 +101,7 @@ export function EventoForm(props: EventoFormProps) {
   const localIdAtual = watch('localId') as string | undefined
   const localTextoAtual = watch('localTexto') as string | undefined
   const enderecoLocalAtual = watch('enderecoLocal') as import('@/types/pessoa.type').Endereco | undefined
+  const novoLocalAtual = watch('novoLocal') as import('@/types/evento.type').LocalEventoRequest | undefined
   const tipoAtual = (watch('tipo') as string) ?? ''
   const responsavelAtual = watch('responsavelPessoaId') as string | undefined
   const vagasAtual = watch('vagas') as number | undefined
@@ -182,6 +183,8 @@ export function EventoForm(props: EventoFormProps) {
               localId={localIdAtual}
               localTexto={localTextoAtual}
               enderecoLocal={enderecoLocalAtual}
+              ehEdicao={ehEdicao}
+              novoLocal={novoLocalAtual}
               error={errors.localId?.message ?? errors.localTexto?.message ?? errors.enderecoLocal?.message}
               errosEndereco={{
                 cep: errors.enderecoLocal?.cep?.message,
@@ -201,6 +204,7 @@ export function EventoForm(props: EventoFormProps) {
                 if (texto) setValue('localId', undefined, { shouldDirty: true })
               }}
               onChangeEnderecoLocal={(e) => setValue('enderecoLocal', e, { shouldDirty: true, shouldValidate: true })}
+              onChangeNovoLocal={(p) => setValue('novoLocal', p, { shouldDirty: true, shouldValidate: true })}
               onCapacidadeSugerida={(cap) => {
                 if (requerInscricao && vagasAtual == null) {
                   setValue('vagas', cap, { shouldDirty: true, shouldValidate: true })

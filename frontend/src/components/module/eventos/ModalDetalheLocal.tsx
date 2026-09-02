@@ -60,13 +60,13 @@ export function ModalDetalheLocal({ local, onClose }: Props) {
           {local.endereco ? (
             <p className={styles.endereco}>{local.endereco}</p>
           ) : (
-            <p className={styles.semEndereco}>Este local ainda não tem endereço cadastrado.</p>
+            <p className={styles.semEndereco}>Ainda sem endereço cadastrado.</p>
           )}
 
           {local.enderecoHerdado && local.endereco && (
             <p className={styles.herdado}>
               <Building2 size={14} aria-hidden="true" />
-              Endereço da igreja — este local não tem um próprio.
+              Usa o endereço da igreja — não tem um próprio.
             </p>
           )}
         </div>

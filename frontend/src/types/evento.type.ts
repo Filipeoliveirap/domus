@@ -1,4 +1,5 @@
 import type { PagedResponse } from './pagedResponse.type'
+import type { Endereco } from './pessoa.type'
 
 export type SituacaoEvento = 'AGENDADO' | 'EM_ANDAMENTO' | 'ENCERRADO'
 
@@ -21,6 +22,9 @@ export interface EventoLocalInfo {
   nome: string
   endereco: string | null
   enderecoHerdado: boolean
+  /** Endereço estruturado ad-hoc do evento (não é um LocalEvento). Null nos outros casos.
+   *  Opcional no tipo porque o mesmo componente de detalhe recebe também um LocalEventoResponse. */
+  enderecoLocal?: Endereco | null
 }
 
 export interface EventoPessoaResumo {
@@ -88,6 +92,10 @@ export interface EventoRequest {
   fimEm?: string
   localId?: string
   localTexto?: string
+  /** Endereço estruturado ad-hoc — exclusivo com localId e localTexto. */
+  enderecoLocal?: Endereco
+  /** Endereço a cadastrar junto com o evento (mesma transação no backend). Exclusivo com as outras formas. */
+  novoLocal?: LocalEventoRequest
   tipo?: string
   responsavelPessoaId?: string | null
   fotoId?: string | null

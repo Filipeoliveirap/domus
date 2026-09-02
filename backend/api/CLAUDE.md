@@ -291,7 +291,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V32**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V36**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -321,7 +321,7 @@ erDiagram
     PESSOA }o--o| FOTO : tem
     EVENTO }o--o| FOTO : tem
     IGREJA }o--o| FOTO : "tem (logo)"
-    LOCAL_EVENTO ||--o{ EVENTO : "V3 - local cadastrado (ou local_texto ad-hoc)"
+    LOCAL_EVENTO ||--o{ EVENTO : "V3 - local cadastrado (ou local_texto / endereço ad-hoc V36)"
     PESSOA ||--o{ EVENTO : "V3 - responsável"
     USUARIO ||--o{ EVENTO : "V3 - criou/atualizou"
     IGREJA ||--o| CONTA_PAGAMENTO_IGREJA : "V29 - conta Mercado Pago conectada"
@@ -392,8 +392,15 @@ erDiagram
         text      descricao
         timestamp inicio_em
         timestamp fim_em "NULL = sem fim declarado"
-        uuid      local_id FK "V3 - local cadastrado; XOR com local_texto"
-        varchar   local_texto "V3 - era 'local' (RENAME); texto livre ad-hoc; XOR com local_id"
+        uuid      local_id FK "V3 - local cadastrado; XOR com local_texto e endereço ad-hoc (V36)"
+        varchar   local_texto "V3 - era 'local' (RENAME); texto livre ad-hoc; XOR com local_id e endereço ad-hoc"
+        varchar   cep "V36 - endereço estruturado ad-hoc (só deste evento, não vira LOCAL_EVENTO)"
+        varchar   logradouro "V36"
+        varchar   numero "V36"
+        varchar   complemento "V36"
+        varchar   bairro "V36"
+        varchar   cidade "V36 - XOR: qualquer de cep/logradouro/cidade preenchido = 3ª forma de local"
+        char      uf "V36"
         uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         integer   vagas "V15 - NULL = sem limite"
         numeric   preco "V15 - NULL = gratuito"
@@ -547,11 +554,15 @@ erDiagram
   `AGUARDANDO_PAGAMENTO` e só vira `CONFIRMADA` quando o pagamento é aprovado de verdade
   (ver `COBRANCA_EVENTO` abaixo).
 
-- **Cadastro de evento enriquecido (V3):** `local_texto` é o antigo `local` (RENAME, não
-  ADD, para preservar dado); `local_id` aponta para `LOCAL_EVENTO`, um local cadastrado
-  com endereço próprio ou, se `NULL`, o endereço é herdado do da própria igreja. O CHECK
-  `local_id IS NULL OR local_texto IS NULL` impede os dois ao mesmo tempo — um evento é ou
-  num local cadastrado, ou num texto livre ad-hoc, nunca ambos. `LOCAL_EVENTO.capacidade`
+- **Cadastro de evento enriquecido (V3, V36):** o local do evento tem **três formas
+  mutuamente exclusivas**: `local_id` (aponta para `LOCAL_EVENTO`, reutilizável, com
+  endereço próprio ou herdado do da igreja se `NULL`); `local_texto` (o antigo `local`,
+  RENAME não ADD; texto livre ad-hoc, ex. "Chácara do João"); e o endereço estruturado
+  ad-hoc de V36 (`@Embedded Endereco` — 7 colunas, só daquele evento, **não** vira
+  `LOCAL_EVENTO`). O CHECK `chk_evento_localizacao_unica` (V36, substitui o
+  `chk_evento_local_exclusivo` de V3) garante no máximo uma preenchida; a validação real
+  é `EventoService.resolverLocalizacao`. As três vazias = evento sem local declarado.
+  `LOCAL_EVENTO.capacidade`
   **sugere** o número de vagas do evento; não é limite imposto pelo banco nem pela regra de
   negócio (fica pro backlog). `tipo` é texto livre com autocomplete que aprende com o uso —
   deliberadamente não chamado de "categoria" (nome já ocupado por `categoria_financeira`).

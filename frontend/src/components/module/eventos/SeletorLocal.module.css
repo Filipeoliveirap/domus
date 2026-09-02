@@ -1,4 +1,4 @@
-/* O SeletorLocal reusa <Select> e <InputComSugestoes>, que já trazem o próprio estilo.
+/* O SeletorLocal reusa <SelectMenu> e <InputComSugestoes>, que já trazem o próprio estilo.
    Este wrapper existe só para o campo ocupar a largura e não vazar da coluna. */
 .wrapper {
   display: flex;
@@ -21,14 +21,332 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Link discreto para sair do modo "outro local" e voltar à lista cadastrada. */
-.voltar {
+/* Controle segmentado: as três formas de definir onde o evento acontece, visíveis de uma vez.
+   Mesmo visual do segmentado de SecaoNomenclatura. Empilha no mobile. */
+.segmentado {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 640px) {
+  .segmentado { flex-direction: column; }
+}
+
+.segmentoBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform 0.12s ease;
+}
+
+.segmentoBtn:hover {
+  border-color: var(--color-primary);
+}
+
+.segmentoBtn:active { transform: scale(0.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  .segmentoBtn:active { transform: none; }
+}
+
+.segmentoAtivo,
+.segmentoAtivo:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg-white);
+}
+
+/* Estado vazio: nenhum endereço cadastrado ainda. */
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle, var(--color-bg-white));
+}
+
+.vazioIcone {
+  color: var(--color-text-secondary);
+}
+
+.vazioTexto {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.botaoCadastrar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform 0.12s ease;
+}
+
+.botaoCadastrar:hover {
+  opacity: 0.9;
+}
+.botaoCadastrar:active { transform: scale(0.97); }
+
+/* Botão discreto abaixo do dropdown para cadastrar mais um endereço sem sair do formulário. */
+.botaoNovo {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
+  transition: opacity 0.12s ease;
 }
-.voltar:hover {
-  opacity: 0.8;
+
+.botaoNovo:hover {
+  text-decoration: underline;
+}
+.botaoNovo:active { opacity: 0.6; }
+
+/* Dropdown de endereços cadastrados — cada opção é um card (nome + endereço + capacidade). */
+.dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdownGatilho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.dropdownGatilho:hover { border-color: var(--color-primary); }
+.dropdownGatilho[aria-expanded='true'] {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.dropdownPlaceholder { color: var(--color-placeholder); }
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chevronAberto { transform: rotate(180deg); }
+
+.dropdownPainel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown, 50);
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.18), 0 4px 8px -6px rgba(0, 0, 0, 0.12);
+  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.dropdownOpcao {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+.dropdownOpcao:hover { background-color: var(--color-bg-table-header); }
+
+.opcaoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.opcaoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.opcaoInfo strong {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.opcaoEndereco {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+.opcaoMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdownPainel, .chevron { transition: none; }
+}
+
+/* Card de endereço já definido (selecionado no select, endereço completo salvo, ou pendente). */
+.cardEndereco {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle, var(--color-bg-white));
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* Saída animada ao clicar editar/remover — o bloco que entra no lugar usa <Transicao>. */
+.cardSaindo {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardEndereco { transition: opacity 0.12s ease; }
+  .cardSaindo { transform: none; }
+}
+
+.cardIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.cardTitulo {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.cardLinha {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+.cardNota {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cardAcoes {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.cardBotao,
+.cardBotaoPerigo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease;
+}
+.cardBotao:hover { background: var(--color-bg-page); color: var(--color-text-primary); }
+.cardBotaoPerigo:hover { background: var(--color-danger-bg); color: var(--color-danger); }
+.cardBotao:active { background: var(--color-bg-page); transform: scale(0.82); }
+.cardBotaoPerigo:active { background: var(--color-danger-bg); color: var(--color-danger); transform: scale(0.82); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cardBotao, .cardBotaoPerigo { transition: background 0.16s ease, color 0.16s ease; }
+  .cardBotao:active, .cardBotaoPerigo:active { transform: none; }
+}
+
+/* Modo "endereço completo": grid de campos de endereço, colapsa para 1 coluna no mobile. */
+.enderecoCompleto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gridEndereco {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+.campoUf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .gridEndereco { grid-template-columns: 1fr; }
 }

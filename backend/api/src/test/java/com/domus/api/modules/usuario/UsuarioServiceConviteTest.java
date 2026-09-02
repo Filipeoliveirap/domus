@@ -218,6 +218,34 @@ class UsuarioServiceConviteTest {
     }
 
     @Test
+    void concederAcesso_notificacaoNaoDuplicaAPalavraIgrejaQuandoONomeJaComecaComEla() {
+        // membroComEmail cria a igreja "Igreja Teste" — o texto não pode virar "da igreja Igreja Teste".
+        Pessoa membro = membroComEmail("joao@teste.com");
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
+
+        service.concederAcesso(new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId);
+
+        ArgumentCaptor<String> texto = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoService).criar(eq(TipoNotificacao.ACESSO_CONCEDIDO), any(), any(), texto.capture(), any());
+        assertThat(texto.getValue()).isEqualTo("Você recebeu acesso ao Domus da Igreja Teste.");
+    }
+
+    @Test
+    void concederAcesso_notificacaoAntepoeIgrejaQuandoONomeNaoComecaComEla() {
+        Pessoa membro = membroComEmail("joao@teste.com");
+        membro.getIgreja().setNome("Comunidade da Graça");
+        when(membroRepository.findByIdAndIgrejaId(pessoaId, igrejaId)).thenReturn(Optional.of(membro));
+        when(usuarioRepository.findByPessoaIdIncluindoArquivados(any())).thenReturn(Optional.empty());
+
+        service.concederAcesso(new ConcederAcessoRequestDTO(pessoaId, "ACESSO_COMUM", null), igrejaId);
+
+        ArgumentCaptor<String> texto = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoService).criar(eq(TipoNotificacao.ACESSO_CONCEDIDO), any(), any(), texto.capture(), any());
+        assertThat(texto.getValue()).isEqualTo("Você recebeu acesso ao Domus da igreja Comunidade da Graça.");
+    }
+
+    @Test
     void reenviarConvite_pendente_reenvia() {
         Pessoa membro = membroComEmail("joao@teste.com");
         Usuario pendente = Usuario.builder().pessoa(membro).igreja(membro.getIgreja()).ativo(true).build();

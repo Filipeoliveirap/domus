@@ -9,6 +9,7 @@ import com.domus.api.shared.exception.AcessoNegadoException;
 import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Optional;
@@ -139,6 +140,37 @@ class VinculoServiceTest {
         verify(notificacaoService).criar(
                 eq(com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_VINCULO_FAMILIA), eq(mae.getId()),
                 eq(usuarioIdAdminSede), anyString(), eq("/configuracoes/igrejas-vinculadas"));
+    }
+
+    @Test
+    void notificacaoDeVinculoUsaGrupoDeUnidadesPorPadrao() {
+        Usuario adminSede = new Usuario();
+        adminSede.setId(UUID.randomUUID());
+        when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(mae.getId(), "ADMIN_IGREJA"))
+                .thenReturn(List.of(adminSede));
+
+        service.entrarNaFamilia(filha.getId(), usuarioId, "XK4P-2M7Q");
+
+        ArgumentCaptor<String> texto = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoService).criar(any(), any(), any(), texto.capture(), any());
+        assertThat(texto.getValue())
+                .isEqualTo("Congregação A pediu pra entrar no seu grupo de unidades.")
+                .doesNotContain("família");
+    }
+
+    @Test
+    void notificacaoDeVinculoSegueORotuloCustomizadoDaSede() {
+        mae.setCongregacaoNomePlural("Congregações");
+        Usuario adminSede = new Usuario();
+        adminSede.setId(UUID.randomUUID());
+        when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(mae.getId(), "ADMIN_IGREJA"))
+                .thenReturn(List.of(adminSede));
+
+        service.entrarNaFamilia(filha.getId(), usuarioId, "XK4P-2M7Q");
+
+        ArgumentCaptor<String> texto = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoService).criar(any(), any(), any(), texto.capture(), any());
+        assertThat(texto.getValue()).isEqualTo("Congregação A pediu pra entrar no seu grupo de congregações.");
     }
 
     @Test

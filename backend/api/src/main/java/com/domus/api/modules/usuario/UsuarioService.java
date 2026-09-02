@@ -106,7 +106,8 @@ public class UsuarioService {
         notificacaoService.criar(
                 com.domus.api.modules.notificacao.TipoNotificacao.ACESSO_CONCEDIDO,
                 igrejaId, salvo.getId(),
-                "Você recebeu acesso ao Domus da igreja " + membro.getIgreja().getNome() + ".",
+                "Você recebeu acesso ao Domus da "
+                        + com.domus.api.shared.util.TextoUtil.prefixarSemDuplicar("igreja", membro.getIgreja().getNome()) + ".",
                 "/inicio");
         return UsuarioResponseDTO.from(salvo);
     }

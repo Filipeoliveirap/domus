@@ -1,9 +1,11 @@
 'use client'
 
-import { MapPin, X } from 'lucide-react'
+import { MapPin, X, Landmark } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useLocalEventoForm } from '@/hooks/evento/useLocalEventoForm'
+import { useMinhaIgreja } from '@/hooks/igreja/useMinhaIgreja'
+import { enderecoIgrejaParaCamposCompactos } from '@/lib/formats/endereco'
 import { localEventoSchema, type LocalEventoFormData, type LocalEventoFormInput } from '@/lib/validators'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
@@ -21,10 +23,12 @@ interface Props {
 
 export function ModalLocalForm({ local, onClose, onCriado }: Props) {
   const { salvar, isLoading, erroGeral } = useLocalEventoForm(local, onClose, onCriado)
+  const { data: igreja } = useMinhaIgreja()
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LocalEventoFormInput, unknown, LocalEventoFormData>({
     resolver: zodResolver(localEventoSchema),
@@ -63,9 +67,6 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
 
         <div className={styles.intro}>
           <h2 className={styles.title}>{local ? 'Editar endereço' : 'Novo endereço'}</h2>
-          <p className={styles.subtitle}>
-            Deixe o endereço em branco para herdar o endereço da igreja.
-          </p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
@@ -76,6 +77,21 @@ export function ModalLocalForm({ local, onClose, onCriado }: Props) {
             error={errors.nome?.message}
             {...register('nome')}
           />
+
+          {!local && igreja?.endereco && (
+            <button
+              type="button"
+              className={styles.btnUsarIgreja}
+              onClick={() => {
+                const { linha1, linha2 } = enderecoIgrejaParaCamposCompactos(igreja.endereco!)
+                setValue('cepLogradouroNumero', linha1, { shouldDirty: true })
+                setValue('complementoBairroCidadeUf', linha2, { shouldDirty: true })
+              }}
+            >
+              <Landmark size={16} aria-hidden="true" />
+              Usar o endereço da igreja
+            </button>
+          )}
 
           <Input
             id="local-capacidade"

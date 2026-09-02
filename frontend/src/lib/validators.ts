@@ -128,6 +128,15 @@ const eventoSchemaBase = z.object({
   fimHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use o formato hh:mm.')),
   localId: opcional(z.string()),
   localTexto: opcional(z.string()),
+  enderecoLocal: z.object({
+    cep: z.string().optional(),
+    logradouro: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    uf: z.string().max(2).optional(),
+  }).partial().optional(),
   tipo: opcional(z.string()),
   responsavelPessoaId: opcional(z.string()),
 
@@ -204,7 +213,25 @@ export const eventoSchema = eventoSchemaBase.refine(
 ).refine(
   (data) => !data.repetir || data.recorrenciaFimTipo !== 'CONTAGEM' || !!data.recorrenciaNumeroOcorrencias,
   { message: 'Informe quantas vezes repete.', path: ['recorrenciaNumeroOcorrencias'] }
-)
+).superRefine((data, ctx) => {
+  const temEndereco = !!data.enderecoLocal
+    && Object.values(data.enderecoLocal).some((v) => typeof v === 'string' && v.trim() !== '')
+  const formas = [!!data.localId, !!data.localTexto?.trim(), temEndereco].filter(Boolean).length
+  if (formas > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Escolha só uma forma de definir o local.',
+      path: ['enderecoLocal'],
+    })
+  }
+  if (temEndereco && !data.enderecoLocal?.cidade?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Informe ao menos a cidade.',
+      path: ['enderecoLocal', 'cidade'],
+    })
+  }
+})
 
 export const categoriaSchema = z.object({
   nome: z.string().trim().min(2, 'O nome da categoria deve ter pelo menos 2 caracteres').max(255, 'Máximo 255 caracteres.'),

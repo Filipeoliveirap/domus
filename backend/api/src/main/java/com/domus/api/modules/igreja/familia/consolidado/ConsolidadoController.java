@@ -29,7 +29,7 @@ public class ConsolidadoController {
             throw new AccessDeniedException("Só um administrador ou tesoureiro pode acessar o financeiro.");
         }
         if (familiaIgrejaService.ehFilha(usuarioAutenticado.getIgrejaId())) {
-            throw new AccessDeniedException("O consolidado da família só é visível pela igreja sede.");
+            throw new AccessDeniedException("O consolidado do grupo só é visível pela igreja sede.");
         }
         return service.gerar(usuarioAutenticado.getIgrejaId(), dataInicio, dataFim);
     }

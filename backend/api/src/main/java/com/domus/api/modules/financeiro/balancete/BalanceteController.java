@@ -34,7 +34,7 @@ public class BalanceteController {
     public BalanceteFamiliaResponseDTO balanceteFamilia(@RequestParam int ano) {
         exigirFinanceiro();
         if (familiaIgrejaService.ehFilha(usuarioAutenticado.getIgrejaId())) {
-            throw new AccessDeniedException("O balancete da família só é visível pela igreja sede.");
+            throw new AccessDeniedException("O balancete do grupo só é visível pela igreja sede.");
         }
         return service.gerarFamilia(usuarioAutenticado.getIgrejaId(), ano);
     }

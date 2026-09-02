@@ -58,8 +58,8 @@ export default function IgrejasVinculadasPage() {
         notificar.sucesso(
           rotacionando ? 'Novo código gerado' : 'Código gerado',
           rotacionando
-            ? `O código anterior deixou de funcionar. ${concordar(congregacao.genero, 'os')} ${congregacao.plural.toLowerCase()} já ${concordar(congregacao.genero, 'vinculados')} continuam na família.`
-            : `Compartilhe com ${concordar(congregacao.genero, 'os_min')} ${congregacao.plural.toLowerCase()} que devem entrar na sua família.`,
+            ? `O código anterior deixou de funcionar. ${concordar(congregacao.genero, 'os')} ${congregacao.plural.toLowerCase()} já ${concordar(congregacao.genero, 'vinculados')} continuam no grupo.`
+            : `Compartilhe com ${concordar(congregacao.genero, 'os_min')} ${congregacao.plural.toLowerCase()} que devem entrar no seu grupo.`,
         )
       },
       onError: (e) => notificar.erro('Não foi possível gerar o código', mensagemDeErro(e, 'Tente novamente.')),
@@ -72,7 +72,7 @@ export default function IgrejasVinculadasPage() {
       onSuccess: () => {
         setCodigoDigitado('')
         setMostrandoCampo(false)
-        notificar.sucesso('Vínculo criado', 'Sua igreja agora faz parte da família.')
+        notificar.sucesso('Vínculo criado', `Sua igreja agora faz parte do grupo de ${congregacao.plural.toLowerCase()}.`)
       },
       onError: (e) => notificar.erro('Não foi possível vincular', mensagemDeErro(e, 'Verifique o código e tente novamente.')),
     })
@@ -85,7 +85,7 @@ export default function IgrejasVinculadasPage() {
     desvincular.mutate(alvo.id, {
       onSuccess: () => {
         setCongregacaoParaRemover(null)
-        notificar.sucesso(`${congregacao.singular} ${concordar(congregacao.genero, 'removido')}`, `"${alvo.nome}" saiu da família.`)
+        notificar.sucesso(`${congregacao.singular} ${concordar(congregacao.genero, 'removido')}`, `"${alvo.nome}" saiu do grupo.`)
       },
       onError: (e) => notificar.erro('Não foi possível remover', mensagemDeErro(e, 'Tente novamente.')),
     })
@@ -95,7 +95,7 @@ export default function IgrejasVinculadasPage() {
     sair.mutate(undefined, {
       onSuccess: () => {
         setConfirmandoSaida(false)
-        notificar.sucesso('Você saiu da família', 'Sua igreja voltou a ser independente.')
+        notificar.sucesso('Você saiu do grupo', 'Sua igreja voltou a ser independente.')
       },
       onError: (e) => notificar.erro('Não foi possível sair', mensagemDeErro(e, 'Tente novamente.')),
     })
@@ -115,7 +115,7 @@ export default function IgrejasVinculadasPage() {
           <p className={styles.aviso}>
             <AlertTriangle size={14} aria-hidden="true" />
             A sede vê os números consolidados da sua igreja (membros, eventos e financeiro).
-            Você pode sair da família a qualquer momento.
+            Você pode sair do grupo a qualquer momento.
           </p>
 
           <div className={styles.faixaAcoes} style={{ marginTop: 20 }}>
@@ -125,14 +125,14 @@ export default function IgrejasVinculadasPage() {
               disabled={sair.isPending}
             >
               <Unlink size={14} aria-hidden="true" />
-              {sair.isPending ? 'Saindo...' : 'Sair da família'}
+              {sair.isPending ? 'Saindo...' : 'Sair do grupo'}
             </button>
           </div>
         </section>
 
         {confirmandoSaida && (
           <ModalConfirmacaoCritica
-            titulo="Sair da família"
+            titulo="Sair do grupo"
             mensagem={
               <>
                 Sua igreja deixará de ser {congregacao.singular.toLowerCase()} de{' '}
@@ -146,7 +146,7 @@ export default function IgrejasVinculadasPage() {
               { tipo: 'mantem', texto: 'Ninguém perde acesso ao sistema.' },
             ]}
             palavraConfirmacao={status.mae?.nome ?? 'SAIR'}
-            textoConfirmar="Sair da família"
+            textoConfirmar="Sair do grupo"
             isLoading={sair.isPending}
             onConfirmar={confirmarSaida}
             onClose={() => setConfirmandoSaida(false)}
@@ -167,7 +167,7 @@ export default function IgrejasVinculadasPage() {
           <p className={styles.faixaSubtitulo}>
             {ehMae
               ? `${congregacao.plural} ${concordar(congregacao.genero, 'vinculados')} compartilham os números delas com a sede.`
-              : `Gere um código para suas ${congregacao.plural.toLowerCase()} entrarem, ou entre na família de outra igreja usando o código dela.`}
+              : `Gere um código para suas ${congregacao.plural.toLowerCase()} entrarem, ou entre no grupo de outra igreja usando o código dela.`}
           </p>
         </div>
 
@@ -185,12 +185,12 @@ export default function IgrejasVinculadasPage() {
         </div>
       </section>
 
-      {/* Entrar numa família só faz sentido para quem ainda não tem congregações:
+      {/* Entrar num grupo só faz sentido para quem ainda não tem congregações:
           a regra dos 2 níveis impede que uma mãe vire filha. */}
       {!ehMae && mostrandoCampo && (
         <section className={styles.faixa}>
           <div className={styles.faixaTexto}>
-            <h2 className={styles.faixaTitulo}>Entrar numa família</h2>
+            <h2 className={styles.faixaTitulo}>Entrar num grupo</h2>
             <p className={styles.faixaSubtitulo}>
               Digite o código que a igreja sede gerou. Ao entrar, os números da sua igreja
               passam a aparecer nos relatórios dela.
@@ -294,7 +294,7 @@ export default function IgrejasVinculadasPage() {
       {!ehMae && !status.codigoVinculo && !mostrandoCampo && (
         <section className={styles.cartao}>
           <p className={styles.vazio}>
-            Sua igreja ainda não faz parte de nenhuma família.
+            Sua igreja ainda não faz parte de nenhum grupo.
           </p>
         </section>
       )}
@@ -304,8 +304,8 @@ export default function IgrejasVinculadasPage() {
           titulo={`Desvincular ${congregacao.singular.toLowerCase()}`}
           mensagem={
             <>
-              <strong>{congregacaoParaRemover.nome}</strong> deixará de fazer parte da sua
-              família de igrejas.
+              <strong>{congregacaoParaRemover.nome}</strong> deixará de fazer parte do seu
+              grupo de {congregacao.plural.toLowerCase()}.
             </>
           }
           consequencias={[

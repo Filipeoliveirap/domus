@@ -36,6 +36,23 @@ public final class TextoUtil {
         return digitos.isEmpty() ? null : digitos;
     }
 
+    /** Antepõe {@code prefixo} a {@code nome}, sem duplicar quando o nome já começa com esse
+     *  prefixo. Ex.: prefixo "igreja" + nome "Igreja Batista Central" → "Igreja Batista Central"
+     *  (não "igreja Igreja Batista Central"); prefixo "célula" + nome "Jovens" → "célula Jovens".
+     *  A comparação ignora acento e caixa. Usado em texto de notificação onde o nome digitado
+     *  pela pessoa pode ou não repetir o substantivo que vem antes dele na frase. */
+    public static String prefixarSemDuplicar(String prefixo, String nome) {
+        if (nome == null || nome.isBlank()) return prefixo;
+        String limpo = nome.trim().replaceAll("\\s+", " ");
+        String normNome = normalizarParaComparacao(limpo);
+        String normPrefixo = normalizarParaComparacao(prefixo);
+        if (normNome != null && normPrefixo != null
+                && (normNome.equals(normPrefixo) || normNome.startsWith(normPrefixo + " "))) {
+            return limpo;
+        }
+        return prefixo + " " + limpo;
+    }
+
     /** Normaliza para comparação: apara, colapsa espaços, remove acentos e vira minúsculo. */
     public static String normalizarParaComparacao(String texto) {
         if (texto == null) return null;

@@ -89,8 +89,15 @@
   color: var(--color-text-muted);
 }
 
-/* ── Chip do escolhido ── */
+/* ── Chips dos escolhidos ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .chip {
+  flex: 0 1 auto;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;

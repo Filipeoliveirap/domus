@@ -144,7 +144,7 @@ const eventoSchemaBase = z.object({
     complementoBairroCidadeUf: z.string().nullable().optional(),
   }).optional(),
   tipo: opcional(z.string()),
-  responsavelPessoaId: opcional(z.string()),
+  responsavelPessoaIds: z.array(z.string()).default([]),
 
   fotoId: z.string().nullable().default(null),
 

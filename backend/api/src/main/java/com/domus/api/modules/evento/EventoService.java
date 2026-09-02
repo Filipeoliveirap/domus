@@ -406,34 +406,36 @@ public class EventoService {
         for (Evento ocorrencia : futuras) {
             if (ocorrencia.getId().equals(editado.getId())) continue;
             if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO) continue;
-            ocorrencia.setTitulo(editado.getTitulo());
-            ocorrencia.setDescricao(editado.getDescricao());
-            ocorrencia.setLocal(editado.getLocal());
-            ocorrencia.setLocalTexto(editado.getLocalTexto());
-            ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
-            ocorrencia.setTipo(editado.getTipo());
-            ocorrencia.getResponsaveis().clear();
-            for (EventoResponsavel r : editado.getResponsaveis()) {
-                ocorrencia.getResponsaveis().add(EventoResponsavel.builder()
-                        .igreja(r.getIgreja()).evento(ocorrencia)
-                        .pessoa(r.getPessoa()).nomeTexto(r.getNomeTexto()).build());
-            }
-            ocorrencia.setRecorteEtario(editado.getRecorteEtario());
-            ocorrencia.setIdadeMin(editado.getIdadeMin());
-            ocorrencia.setIdadeMax(editado.getIdadeMax());
-            ocorrencia.setRestricaoEstadoCivil(editado.getRestricaoEstadoCivil());
-            ocorrencia.setRestricaoSexo(editado.getRestricaoSexo());
-            ocorrencia.setVagas(editado.getVagas());
-            ocorrencia.setPreco(editado.getPreco());
-            ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
-            ocorrencia.setRequerInscricao(editado.isRequerInscricao());
-            ocorrencia.setControlaPresenca(editado.isControlaPresenca());
-            ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());
+            copiarCamposEditaveisPara(editado, ocorrencia);
             ocorrencia.setDivergeDaSerie(false);
             eventoRepository.save(ocorrencia);
         }
         editado.setDivergeDaSerie(false);
         return eventoRepository.save(editado);
+    }
+
+    /** Campos que uma edição "toda a série" / "esta e seguintes" replica nas outras
+     *  ocorrências. Data/hora e foto ficam de fora de propósito: cada ocorrência tem a
+     *  sua data, e a foto é escolha por ocorrência. */
+    private void copiarCamposEditaveisPara(Evento editado, Evento ocorrencia) {
+        ocorrencia.setTitulo(editado.getTitulo());
+        ocorrencia.setDescricao(editado.getDescricao());
+        ocorrencia.setLocal(editado.getLocal());
+        ocorrencia.setLocalTexto(editado.getLocalTexto());
+        ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
+        ocorrencia.setTipo(editado.getTipo());
+        sincronizarResponsaveisPara(ocorrencia, editado.getResponsaveis());
+        ocorrencia.setRecorteEtario(editado.getRecorteEtario());
+        ocorrencia.setIdadeMin(editado.getIdadeMin());
+        ocorrencia.setIdadeMax(editado.getIdadeMax());
+        ocorrencia.setRestricaoEstadoCivil(editado.getRestricaoEstadoCivil());
+        ocorrencia.setRestricaoSexo(editado.getRestricaoSexo());
+        ocorrencia.setVagas(editado.getVagas());
+        ocorrencia.setPreco(editado.getPreco());
+        ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
+        ocorrencia.setRequerInscricao(editado.isRequerInscricao());
+        ocorrencia.setControlaPresenca(editado.isControlaPresenca());
+        ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());
     }
 
     /** "Esta e as seguintes": encerra a série atual na véspera desta ocorrência, cria uma
@@ -462,11 +464,7 @@ public class EventoService {
             ocorrencia.setSerie(nova);
             ocorrencia.setDivergeDaSerie(false);
             if (!ocorrencia.getId().equals(editado.getId())) {
-                ocorrencia.setTitulo(editado.getTitulo());
-                ocorrencia.setDescricao(editado.getDescricao());
-                ocorrencia.setLocal(editado.getLocal());
-                ocorrencia.setLocalTexto(editado.getLocalTexto());
-                ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
+                copiarCamposEditaveisPara(editado, ocorrencia);
             }
             eventoRepository.save(ocorrencia);
         }
@@ -748,6 +746,41 @@ public class EventoService {
     /** Aplica a lista nova de responsáveis a um evento existente. Devolve as linhas
      *  ADICIONADAS agora (pra notificar só elas). Não toca nas linhas de texto-fallback
      *  ({@code pessoa == null}) — o form nunca as manda nem as remove. */
+    /** Espelha os responsáveis de {@code alvo} nos de {@code desejados} por diferença:
+     *  mantém quem continua, remove quem saiu, cria só quem é novo. Nunca clear()+re-add —
+     *  a coleção é orphanRemoval, e o Hibernate emite o INSERT da linha nova antes do
+     *  DELETE da órfã: a unique parcial (evento_id, pessoa_id) estoura quando a mesma
+     *  pessoa já era responsável daquela ocorrência (bug real ao editar série, 2026-09-02). */
+    private void sincronizarResponsaveisPara(Evento alvo, java.util.List<EventoResponsavel> desejados) {
+        java.util.Set<UUID> pessoaIdsDesejados = desejados.stream()
+                .map(EventoResponsavel::getPessoa).filter(java.util.Objects::nonNull)
+                .map(Pessoa::getId).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> textosDesejados = desejados.stream()
+                .filter(r -> r.getPessoa() == null).map(EventoResponsavel::getNomeTexto)
+                .filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+
+        alvo.getResponsaveis().removeIf(r -> r.getPessoa() != null
+                ? !pessoaIdsDesejados.contains(r.getPessoa().getId())
+                : !textosDesejados.contains(r.getNomeTexto()));
+
+        java.util.Set<UUID> pessoaIdsAtuais = alvo.getResponsaveis().stream()
+                .map(EventoResponsavel::getPessoa).filter(java.util.Objects::nonNull)
+                .map(Pessoa::getId).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> textosAtuais = alvo.getResponsaveis().stream()
+                .filter(r -> r.getPessoa() == null).map(EventoResponsavel::getNomeTexto)
+                .filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+
+        for (EventoResponsavel r : desejados) {
+            boolean jaExiste = r.getPessoa() != null
+                    ? pessoaIdsAtuais.contains(r.getPessoa().getId())
+                    : textosAtuais.contains(r.getNomeTexto());
+            if (jaExiste) continue;
+            alvo.getResponsaveis().add(EventoResponsavel.builder()
+                    .igreja(r.getIgreja()).evento(alvo)
+                    .pessoa(r.getPessoa()).nomeTexto(r.getNomeTexto()).build());
+        }
+    }
+
     private java.util.List<EventoResponsavel> sincronizarResponsaveis(
             Evento evento, java.util.List<UUID> idsRequest, UUID igrejaId, Igreja igreja) {
         java.util.Set<UUID> idsNovos = idsRequest == null ? java.util.Set.of()

@@ -28,6 +28,17 @@ public class VinculoService {
     private final UsuarioRepository usuarioRepository;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
 
+    /** Rótulo plural do agrupamento de igrejas na cópia visível: o padrão do front é "Unidades",
+     *  mas a igreja pode ter customizado (ex.: "Congregações", "Redes"). Domínio, rotas e nomes de
+     *  classe continuam "família"/"congregação" — só o texto que a pessoa lê acompanha o rótulo. */
+    private static final String CONGREGACAO_PLURAL_PADRAO = "Unidades";
+
+    private static String grupoDe(Igreja sede) {
+        String custom = sede.getCongregacaoNomePlural();
+        String plural = custom != null && !custom.isBlank() ? custom : CONGREGACAO_PLURAL_PADRAO;
+        return "grupo de " + plural.toLowerCase();
+    }
+
     @Transactional(readOnly = true)
     public VinculoStatusResponse status(UUID igrejaId) {
         Igreja igreja = buscar(igrejaId);
@@ -122,7 +133,7 @@ public class VinculoService {
 
         if (filha.getIgrejaMae() != null) {
             throw new BusinessException("JA_VINCULADA",
-                    "Sua igreja já faz parte de uma família. Saia dela antes de entrar em outra.");
+                    "Sua igreja já faz parte de um grupo. Saia dele antes de entrar em outro.");
         }
 
         filha.setIgrejaMae(mae);
@@ -141,7 +152,7 @@ public class VinculoService {
             notificacaoService.criar(
                     com.domus.api.modules.notificacao.TipoNotificacao.PEDIDO_VINCULO_FAMILIA,
                     mae.getId(), admin.getId(),
-                    filha.getNome() + " pediu pra entrar na sua família de igrejas.",
+                    filha.getNome() + " pediu pra entrar no seu " + grupoDe(mae) + ".",
                     "/configuracoes/igrejas-vinculadas");
         }
 
@@ -172,7 +183,7 @@ public class VinculoService {
         Igreja filha = buscar(igrejaId);
 
         if (filha.getIgrejaMae() == null) {
-            throw new BusinessException("SEM_VINCULO", "Sua igreja não faz parte de nenhuma família.");
+            throw new BusinessException("SEM_VINCULO", "Sua igreja não faz parte de nenhum grupo.");
         }
 
         UUID maeId = filha.getIgrejaMae().getId();

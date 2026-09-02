@@ -350,7 +350,7 @@ class InscricaoServiceTest {
         UUID usuarioIdResponsavel = UUID.randomUUID();
         Pessoa responsavel = Pessoa.builder().id(pessoaIdResponsavel).build();
         Evento evento = evento(10);
-        evento.setResponsavel(responsavel);
+        evento.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder().evento(evento).pessoa(responsavel).build());
         dado(evento, membro(Vinculo.MEMBRO), 3);
         when(usuarioRepository.findByPessoaId(pessoaIdResponsavel))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdResponsavel).build()));
@@ -366,7 +366,7 @@ class InscricaoServiceTest {
     void inscreverNaoNotificaQuandoResponsavelInscreveASiMesmo() {
         Pessoa responsavelQueTambemSeInscreve = membro(Vinculo.MEMBRO);
         Evento evento = evento(10);
-        evento.setResponsavel(responsavelQueTambemSeInscreve);
+        evento.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder().evento(evento).pessoa(responsavelQueTambemSeInscreve).build());
         dado(evento, responsavelQueTambemSeInscreve, 3);
 
         service.inscrever(eventoId, pessoaId, null, pessoaId, null, false, igrejaId);
@@ -380,7 +380,7 @@ class InscricaoServiceTest {
         UUID usuarioIdResponsavel = UUID.randomUUID();
         Pessoa responsavel = Pessoa.builder().id(pessoaIdResponsavel).build();
         Evento evento = evento(10);
-        evento.setResponsavel(responsavel);
+        evento.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder().evento(evento).pessoa(responsavel).build());
         dado(evento, membro(Vinculo.MEMBRO), 3);
         when(usuarioRepository.findByPessoaId(pessoaIdResponsavel))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioIdResponsavel).build()));

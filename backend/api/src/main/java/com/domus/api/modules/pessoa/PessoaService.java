@@ -48,6 +48,7 @@ public class PessoaService {
     private final ReindexacaoMovimentacaoService  reindexacaoMovimentacaoService;
     private final FotoService fotoService;
     private final com.domus.api.modules.evento.EventoRepository eventoRepository;
+    private final com.domus.api.modules.evento.EventoResponsavelRepository eventoResponsavelRepository;
     private final InscricaoRepository inscricaoRepository;
     private final CelulaMembroRepository celulaMembroRepository;
     private final MinisterioMembroRepository ministerioMembroRepository;
@@ -295,7 +296,7 @@ public class PessoaService {
 
         // Soft delete não dispara FK ON DELETE (@SQLDelete/@SQLRestriction). Desvincula
         // o responsável manualmente para que o proxy LAZY não estoure EntityNotFoundException.
-        eventoRepository.desvincularResponsavel(membro.getId(), membro.getNome());
+        eventoResponsavelRepository.desvincularPessoa(membro.getId(), membro.getNome());
 
         // Mesmo motivo: sem isso, célula_membro/ministerio_membro ficam apontando pra uma
         // pessoa arquivada, e o próximo lazy-load de membro.getPessoa() estoura
@@ -358,7 +359,7 @@ public class PessoaService {
         celulaMembroRepository.deleteByPessoaId(id);
         ministerioMembroRepository.deleteByPessoaId(id);
         visitanteRepository.desvincularConvertido(id);
-        eventoRepository.desvincularResponsavel(id, nome);
+        eventoResponsavelRepository.desvincularPessoa(id, nome);
 
         membroRepository.hardDeleteById(id);
         outboxRegistrador.registrar(TipoEntidadeOutbox.PESSOA, TipoEventoOutbox.REMOVIDO, id, igrejaId);

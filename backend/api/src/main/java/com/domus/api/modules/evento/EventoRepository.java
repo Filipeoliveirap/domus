@@ -47,15 +47,6 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         """, nativeQuery = true)
     int desvincularLocal(@Param("localId") UUID localId);
 
-    // Mesmo padrão de desvincularLocal: responsavel_pessoa_id ON DELETE SET NULL nunca dispara (Pessoa usa soft delete).
-    @Modifying(clearAutomatically = true)
-    @Query(value = """
-        UPDATE evento
-           SET responsavel_texto = :nome, responsavel_pessoa_id = NULL
-         WHERE responsavel_pessoa_id = :pessoaId
-        """, nativeQuery = true)
-    int desvincularResponsavel(@Param("pessoaId") UUID pessoaId, @Param("nome") String nome);
-
     // Desvincula usuário de criado_por e atualizado_por (inclusive arquivados).
     // CASE WHEN independente: mesmo usuário pode aparecer nas duas colunas do mesmo evento.
     @Modifying(clearAutomatically = true)

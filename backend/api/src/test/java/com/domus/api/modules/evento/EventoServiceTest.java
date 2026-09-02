@@ -123,7 +123,7 @@ class EventoServiceTest {
                 null,
                 "Salão Social",
                 "Culto",
-                responsavelPessoaId,
+                responsavelPessoaId == null ? null : java.util.List.of(responsavelPessoaId),
                 null,
                 null,
                 null,
@@ -173,6 +173,77 @@ class EventoServiceTest {
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, null, "Culto", null, null, null, null, null, null,
                 null, null, false, false, false, false, null, null, null, novoLocal);
+    }
+
+    private EventoRequest requestComResponsaveis(java.util.List<UUID> ids) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, null, "Culto", ids, null, null, null, null, null,
+                null, null, false, false, false, false, null, null, null, null);
+    }
+
+    private Pessoa pessoaMock(UUID id, String nome) {
+        var p = new Pessoa();
+        p.setId(id);
+        p.setNome(nome);
+        when(pessoaRepository.findByIdAndIgrejaId(id, igrejaId)).thenReturn(Optional.of(p));
+        return p;
+    }
+
+    @Test
+    void cadastrarEventoComDoisResponsaveis_gravaOsDois() {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        pessoaMock(a, "Ana");
+        pessoaMock(b, "Bruno");
+
+        service.cadastrarEvento(requestComResponsaveis(java.util.List.of(a, b)), igrejaId, usuarioId);
+
+        verify(eventoRepository).save(argThat(e ->
+                e.getResponsaveis().size() == 2
+                && e.getResponsaveis().stream().allMatch(r -> r.getPessoa() != null && r.getNomeTexto() == null)));
+    }
+
+    @Test
+    void cadastrarEvento_idDeResponsavelRepetido_gravaUmSo() {
+        UUID a = UUID.randomUUID();
+        pessoaMock(a, "Ana");
+
+        service.cadastrarEvento(requestComResponsaveis(java.util.List.of(a, a)), igrejaId, usuarioId);
+
+        verify(eventoRepository).save(argThat(e -> e.getResponsaveis().size() == 1));
+    }
+
+    @Test
+    void cadastrarEvento_responsavelDeOutraIgreja_recusa() {
+        UUID a = UUID.randomUUID();
+        when(pessoaRepository.findByIdAndIgrejaId(a, igrejaId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.cadastrarEvento(requestComResponsaveis(java.util.List.of(a)), igrejaId, usuarioId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void atualizarEvento_removeUmResponsavel_semNotificacao() {
+        UUID eventoId = UUID.randomUUID();
+        UUID fica = UUID.randomUUID();
+        UUID sai = UUID.randomUUID();
+        Pessoa pFica = new Pessoa(); pFica.setId(fica);
+        Pessoa pSai = new Pessoa(); pSai.setId(sai);
+        Evento existente = Evento.builder().id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto").inicioEm(LocalDateTime.now().plusDays(1)).build();
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder().evento(existente).pessoa(pFica).build());
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder().evento(existente).pessoa(pSai).build());
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(pessoaRepository.findByIdAndIgrejaId(fica, igrejaId)).thenReturn(Optional.of(pFica));
+
+        service.atualizarEvento(eventoId, requestComResponsaveis(java.util.List.of(fica)), igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+
+        assertThat(existente.getResponsaveis()).hasSize(1);
+        assertThat(existente.getResponsaveis().get(0).getPessoa().getId()).isEqualTo(fica);
+        verify(notificacaoService, never()).criar(
+                eq(com.domus.api.modules.notificacao.TipoNotificacao.RESPONSAVEL_EVENTO), any(), any(), any(), any());
     }
 
     @Test
@@ -831,8 +902,9 @@ class EventoServiceTest {
                 .igreja(new Igreja() {{ setId(igrejaId); }})
                 .titulo("Culto Dominical")
                 .inicioEm(LocalDateTime.now().plusDays(1))
-                .responsavel(responsavelAntigo)
                 .build();
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(existente).pessoa(responsavelAntigo).build());
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
         Pessoa responsavelNovo = new Pessoa();
         responsavelNovo.setId(pessoaResponsavelNovaId);
@@ -860,8 +932,9 @@ class EventoServiceTest {
                 .igreja(new Igreja() {{ setId(igrejaId); }})
                 .titulo("Culto Dominical")
                 .inicioEm(LocalDateTime.now().plusDays(1))
-                .responsavel(responsavel)
                 .build();
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(existente).pessoa(responsavel).build());
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
         when(pessoaRepository.findByIdAndIgrejaId(pessoaResponsavelId, igrejaId)).thenReturn(Optional.of(responsavel));
 

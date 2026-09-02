@@ -59,12 +59,9 @@ public class Evento {
     @Column(name = "tipo", length = 80)
     private String tipo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "responsavel_pessoa_id")
-    private Pessoa responsavel;
-
-    @Column(name = "responsavel_texto")
-    private String responsavelTexto;
+    @OneToMany(mappedBy = "evento", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<EventoResponsavel> responsaveis = new java.util.ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "criado_por_usuario_id")

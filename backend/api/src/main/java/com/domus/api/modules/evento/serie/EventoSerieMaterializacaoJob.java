@@ -61,7 +61,7 @@ public class EventoSerieMaterializacaoJob {
     private Evento clonar(Evento origem, LocalDateTime novaData) {
         long duracaoMinutos = origem.getFimEm() == null ? -1
                 : java.time.Duration.between(origem.getInicioEm(), origem.getFimEm()).toMinutes();
-        return Evento.builder()
+        Evento clone = Evento.builder()
                 .igreja(origem.getIgreja())
                 .titulo(origem.getTitulo())
                 .descricao(origem.getDescricao())
@@ -70,7 +70,6 @@ public class EventoSerieMaterializacaoJob {
                 .local(origem.getLocal())
                 .localTexto(origem.getLocalTexto())
                 .tipo(origem.getTipo())
-                .responsavel(origem.getResponsavel())
                 .recorteEtario(origem.getRecorteEtario())
                 .idadeMin(origem.getIdadeMin())
                 .idadeMax(origem.getIdadeMax())
@@ -86,5 +85,11 @@ public class EventoSerieMaterializacaoJob {
                 .serie(origem.getSerie())
                 .divergeDaSerie(false)
                 .build();
+        for (com.domus.api.modules.evento.EventoResponsavel r : origem.getResponsaveis()) {
+            clone.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                    .igreja(r.getIgreja()).evento(clone)
+                    .pessoa(r.getPessoa()).nomeTexto(r.getNomeTexto()).build());
+        }
+        return clone;
     }
 }

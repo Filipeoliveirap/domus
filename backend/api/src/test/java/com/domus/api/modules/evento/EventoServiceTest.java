@@ -711,6 +711,79 @@ class EventoServiceTest {
     }
 
     @Test
+    void atualizarEventoComEscopoSerie_naoRecriaResponsavelJaExistenteNaOcorrenciaIrma() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        UUID responsavel = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Pessoa pResp = new Pessoa(); pResp.setId(responsavel);
+
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serie).build();
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(existente).igreja(existente.getIgreja()).pessoa(pResp).build());
+
+        Evento outraFutura = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .serie(serie).build();
+        var responsavelIrmaOriginal = com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(outraFutura).igreja(outraFutura.getIgreja()).pessoa(pResp).build();
+        outraFutura.getResponsaveis().add(responsavelIrmaOriginal);
+
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(pessoaRepository.findByIdAndIgrejaId(responsavel, igrejaId)).thenReturn(Optional.of(pResp));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+                .thenReturn(List.of(existente, outraFutura));
+
+        service.atualizarEvento(eventoId, requestComResponsaveis(List.of(responsavel)), igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        // A linha que já existia na irmã é preservada, não removida-e-recriada — senão o
+        // Hibernate insere antes de deletar e a unique (evento_id, pessoa_id) estoura.
+        assertThat(outraFutura.getResponsaveis()).hasSize(1);
+        assertThat(outraFutura.getResponsaveis().get(0)).isSameAs(responsavelIrmaOriginal);
+    }
+
+    @Test
+    void atualizarEventoComEscopoSerie_propagaAdicaoERemocaoDeResponsavelParaIrma() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        UUID sai = UUID.randomUUID();
+        UUID entra = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Pessoa pSai = new Pessoa(); pSai.setId(sai);
+        Pessoa pEntra = new Pessoa(); pEntra.setId(entra);
+
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serie).build();
+        existente.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(existente).igreja(existente.getIgreja()).pessoa(pSai).build());
+
+        Evento outraFutura = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .serie(serie).build();
+        outraFutura.getResponsaveis().add(com.domus.api.modules.evento.EventoResponsavel.builder()
+                .evento(outraFutura).igreja(outraFutura.getIgreja()).pessoa(pSai).build());
+
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(pessoaRepository.findByIdAndIgrejaId(entra, igrejaId)).thenReturn(Optional.of(pEntra));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+                .thenReturn(List.of(existente, outraFutura));
+
+        service.atualizarEvento(eventoId, requestComResponsaveis(List.of(entra)), igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(outraFutura.getResponsaveis()).hasSize(1);
+        assertThat(outraFutura.getResponsaveis().get(0).getPessoa().getId()).isEqualTo(entra);
+    }
+
+    @Test
     void atualizarEventoComEscopoEstaESeguintesDivideASerie() {
         UUID eventoId = UUID.randomUUID();
         UUID outraFuturaId = UUID.randomUUID();
@@ -745,6 +818,47 @@ class EventoServiceTest {
         assertThat(outraFutura.getSerie()).isNotSameAs(serieAntiga);
         assertThat(outraFutura.getSerie().getFrequencia())
                 .isEqualTo(com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL);
+    }
+
+    @Test
+    void atualizarEventoComEscopoEstaESeguintes_propagaResponsaveisEDemaisCamposParaFuturas() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieAntigaId = UUID.randomUUID();
+        UUID novoResponsavel = UUID.randomUUID();
+        var serieAntiga = com.domus.api.modules.evento.serie.EventoSerie.builder()
+                .id(serieAntigaId)
+                .frequencia(com.domus.api.modules.evento.serie.FrequenciaRecorrencia.SEMANAL)
+                .intervalo(1).diasSemana("QUINTA").build();
+        Pessoa pResp = new Pessoa(); pResp.setId(novoResponsavel);
+
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serieAntiga).build();
+        Evento outraFutura = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .serie(serieAntiga).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(pessoaRepository.findByIdAndIgrejaId(novoResponsavel, igrejaId)).thenReturn(Optional.of(pResp));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieAntigaId), any()))
+                .thenReturn(List.of(existente, outraFutura));
+        when(eventoSerieRepository.save(any())).thenAnswer(inv -> {
+            var s = (com.domus.api.modules.evento.serie.EventoSerie) inv.getArgument(0);
+            if (s.getId() == null) s.setId(UUID.randomUUID());
+            return s;
+        });
+
+        EventoRequest req = new EventoRequest(
+                "Culto Novo", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, null, "Culto", List.of(novoResponsavel), null, null, null, null, null,
+                null, null, false, false, false, false, null, null, null, null);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA_E_SEGUINTES);
+
+        assertThat(outraFutura.getResponsaveis()).hasSize(1);
+        assertThat(outraFutura.getResponsaveis().get(0).getPessoa().getId()).isEqualTo(novoResponsavel);
+        assertThat(outraFutura.getTitulo()).isEqualTo("Culto Novo");
     }
 
     @Test

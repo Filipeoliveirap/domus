@@ -59,11 +59,7 @@ public class MinisterioService {
     /** Rótulo + nome, sem duplicar quando quem cadastrou já incluiu o rótulo no próprio nome
      *  (ex.: nome = "Rede de Louvor" viraria "Rede Rede de Louvor" sem esta checagem). */
     private static String comRotulo(Ministerio ministerio) {
-        String rotulo = rotuloMinisterio(ministerio.getIgreja());
-        String normalizado = ministerio.getNome().trim();
-        boolean jaTemRotulo = normalizado.equalsIgnoreCase(rotulo)
-                || normalizado.toLowerCase().startsWith(rotulo.toLowerCase() + " ");
-        return jaTemRotulo ? normalizado : rotulo + " " + normalizado;
+        return TextoUtil.prefixarSemDuplicar(rotuloMinisterio(ministerio.getIgreja()), ministerio.getNome());
     }
 
     private final MinisterioRepository ministerioRepository;

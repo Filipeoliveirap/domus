@@ -165,7 +165,7 @@ public class CelulaService {
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.CELULA_ALTERADA,
                             igrejaId, usuario.getId(),
-                            "O dia ou horário da célula " + celula.getNome() + " mudou.",
+                            "O dia ou horário da " + TextoUtil.prefixarSemDuplicar("célula", celula.getNome()) + " mudou.",
                             "/celulas/" + celula.getId()));
         }
     }
@@ -240,7 +240,7 @@ public class CelulaService {
             notificarEntradaNaCelula(celula, igrejaId, pessoa.getNome(), pessoa.getId(), atorPessoaId);
             notificarEntranteNaCelula(celula, igrejaId, pessoa.getId(), atorPessoaId,
                     com.domus.api.modules.notificacao.TipoNotificacao.ADICIONADO_CELULA,
-                    "Você foi adicionado à célula " + celula.getNome() + ".");
+                    "Você foi adicionado à " + TextoUtil.prefixarSemDuplicar("célula", celula.getNome()) + ".");
         } else if (data.visitanteId() != null) {
             adicionarVisitante(celula, data.visitanteId(), igrejaId, usuarioId);
 
@@ -268,7 +268,7 @@ public class CelulaService {
                     notificacaoService.criar(
                             com.domus.api.modules.notificacao.TipoNotificacao.ENTRADA_CELULA,
                             igrejaId, usuario.getId(),
-                            nomeEntrante + " entrou na célula " + celula.getNome() + ".",
+                            nomeEntrante + " entrou na " + TextoUtil.prefixarSemDuplicar("célula", celula.getNome()) + ".",
                             "/celulas/" + celula.getId()));
         }
     }
@@ -335,7 +335,7 @@ public class CelulaService {
         if (pessoaId != null) {
             notificarEntranteNaCelula(celula, igrejaId, pessoaId, atorPessoaId,
                     com.domus.api.modules.notificacao.TipoNotificacao.REMOVIDO_CELULA,
-                    "Você foi removido da célula " + celula.getNome() + ".");
+                    "Você foi removido da " + TextoUtil.prefixarSemDuplicar("célula", celula.getNome()) + ".");
         }
 
         // VisitanteDocument.celulaId volta a null — busca precisa reindexar.
@@ -367,7 +367,7 @@ public class CelulaService {
                             notificacaoService.criar(
                                     com.domus.api.modules.notificacao.TipoNotificacao.PROMOVIDO_LIDER_CELULA,
                                     igrejaId, usuario.getId(),
-                                    "Você foi promovido a líder da célula " + celula.getNome() + ".",
+                                    "Você foi promovido a líder da " + TextoUtil.prefixarSemDuplicar("célula", celula.getNome()) + ".",
                                     "/celulas/" + celula.getId()));
         }
     }

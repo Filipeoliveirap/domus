@@ -20,7 +20,7 @@ export default function LocaisEventoLayout({ children }: { children: React.React
         <ChevronRight size={16} className={styles.breadcrumbSep} />
         <Link href="/eventos" className={styles.breadcrumbLink}>Eventos</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />
-        <span className={styles.breadcrumbAtual}>Locais</span>
+        <span className={styles.breadcrumbAtual}>Endereços</span>
       </nav>
 
       <div className={styles.abas}>

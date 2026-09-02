@@ -46,7 +46,7 @@ export interface EventoResponse {
   fimEm: string | null
   local: EventoLocalInfo | null
   tipo: string | null
-  responsavel: EventoPessoaResumo | null
+  responsaveis: EventoPessoaResumo[]
   criadoPor: EventoPessoaResumo | null
   atualizadoPor: EventoPessoaResumo | null
   fotoId: string | null
@@ -97,7 +97,7 @@ export interface EventoRequest {
   /** Endereço a cadastrar junto com o evento (mesma transação no backend). Exclusivo com as outras formas. */
   novoLocal?: LocalEventoRequest
   tipo?: string
-  responsavelPessoaId?: string | null
+  responsavelPessoaIds?: string[]
   fotoId?: string | null
   vagas?: number
   preco?: string

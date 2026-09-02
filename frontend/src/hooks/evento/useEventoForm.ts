@@ -73,7 +73,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
       localId: undefined, localTexto: undefined, enderecoLocal: undefined, novoLocal: undefined,
-      tipo: '', responsavelPessoaId: undefined,
+      tipo: '', responsavelPessoaIds: [],
       requerInscricao: false,
       controlaPresenca: false,
       vagas: undefined,
@@ -133,7 +133,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
             : undefined,
         enderecoLocal: eventoInicial.local?.enderecoLocal ?? undefined,
         tipo: eventoInicial.tipo ?? '',
-        responsavelPessoaId: eventoInicial.responsavel?.id ?? undefined,
+        responsavelPessoaIds: (eventoInicial.responsaveis ?? []).filter((r) => r.id).map((r) => r.id as string),
         requerInscricao: eventoInicial.requerInscricao,
         controlaPresenca: eventoInicial.controlaPresenca,
         vagas: eventoInicial.vagas ?? undefined,
@@ -232,7 +232,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
             : undefined,
         novoLocal: data.novoLocal?.nome?.trim() ? data.novoLocal : undefined,
         tipo: data.tipo || undefined,
-        responsavelPessoaId: data.responsavelPessoaId || null,
+        responsavelPessoaIds: data.responsavelPessoaIds ?? [],
         requerInscricao: data.requerInscricao,
         // Forçado a false quando requerInscricao=false, mesmo que o form tenha valor de edição anterior.
         controlaPresenca: data.requerInscricao ? data.controlaPresenca : false,
@@ -388,11 +388,13 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
     setPayloadPendenteMudancaPreco(null)
   }
 
-  // O <SeletorResponsavel> só recebe o id; o nome inicial (edição) vem daqui para ele
-  // poder exibir quem já é o responsável sem uma busca extra.
-  const responsavelNomeInicial = eventoInicial?.responsavel?.nome
+  // O <SeletorResponsavel> guarda só os ids; os nomes de quem já é responsável (edição)
+  // vêm daqui pra ele exibir os chips sem uma busca extra. Ids sem nome (texto-fallback
+  // LGPD) ficam de fora — não são editáveis.
+  const responsaveisIniciais = (eventoInicial?.responsaveis ?? [])
+    .filter((r): r is { id: string; nome: string } => !!r.id)
   return {
-    ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsavelNomeInicial,
+    ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsaveisIniciais,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,

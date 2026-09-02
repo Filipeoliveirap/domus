@@ -189,12 +189,12 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 </div>
               )}
 
-              {evento.responsavel && (
+              {evento.responsaveis.length > 0 && (
                 <div className={styles.infoItem}>
                   <span className={styles.infoIcone}><UserCircle size={20} /></span>
                   <div>
-                    <p className={styles.infoLabel}>Responsável</p>
-                    <p className={styles.infoValor}>{evento.responsavel.nome}</p>
+                    <p className={styles.infoLabel}>{evento.responsaveis.length > 1 ? 'Responsáveis' : 'Responsável'}</p>
+                    <p className={styles.infoValor}>{evento.responsaveis.map((r) => r.nome).join(', ')}</p>
                   </div>
                 </div>
               )}

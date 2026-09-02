@@ -136,6 +136,8 @@ class EventoServiceTest {
                 false,
                 restritoPropriaIgreja,
                 null,
+                null,
+                null,
                 null
         );
     }
@@ -148,14 +150,92 @@ class EventoServiceTest {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, preco, false, requerInscricao, false, false, null, null);
+                null, preco, false, requerInscricao, false, false, null, null, null, null);
     }
 
     private EventoRequest requestComRecorrencia(com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia) {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, false, false, false, null, recorrencia);
+                null, null, false, false, false, false, null, recorrencia, null, null);
+    }
+
+    private EventoRequest requestComLocalizacao(UUID localId, String localTexto,
+            com.domus.api.modules.pessoa.DTO.EnderecoDTO enderecoLocal) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, localId, localTexto, "Culto", null, null, null, null, null, null,
+                null, null, false, false, false, false, null, null, enderecoLocal, null);
+    }
+
+    private EventoRequest requestComNovoLocal(com.domus.api.modules.evento.local.DTOs.LocalEventoRequest novoLocal) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, null, "Culto", null, null, null, null, null, null,
+                null, null, false, false, false, false, null, null, null, novoLocal);
+    }
+
+    @Test
+    void recusaLocalCadastradoJuntoComEnderecoAdHoc() {
+        EventoRequest req = requestComLocalizacao(UUID.randomUUID(), null,
+                new com.domus.api.modules.pessoa.DTO.EnderecoDTO(null, "Rua X", null, null, null, "Recife", "PE"));
+        assertThatThrownBy(() -> service.cadastrarEvento(req, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasMessageContaining("uma forma");
+    }
+
+    @Test
+    void recusaTextoSimplesJuntoComEnderecoAdHoc() {
+        EventoRequest req = requestComLocalizacao(null, "Chácara do João",
+                new com.domus.api.modules.pessoa.DTO.EnderecoDTO(null, null, null, null, null, "Recife", "PE"));
+        assertThatThrownBy(() -> service.cadastrarEvento(req, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasMessageContaining("uma forma");
+    }
+
+    @Test
+    void aceitaSomenteEnderecoAdHoc_gravaOEnderecoELimpaOsOutros() {
+        var end = new com.domus.api.modules.pessoa.DTO.EnderecoDTO(
+                "50000-000", "Rua das Flores", "123", null, "Centro", "Recife", "PE");
+        service.cadastrarEvento(requestComLocalizacao(null, null, end), igrejaId, usuarioId);
+        verify(eventoRepository).save(argThat(e ->
+                e.getLocal() == null && e.getLocalTexto() == null
+                && e.getEnderecoLocal() != null && "Recife".equals(e.getEnderecoLocal().getCidade())));
+    }
+
+    @Test
+    void aceitaEventoSemLocalNenhum() {
+        service.cadastrarEvento(requestComLocalizacao(null, null, null), igrejaId, usuarioId);
+        verify(eventoRepository).save(argThat(e ->
+                e.getLocal() == null && e.getLocalTexto() == null
+                && (e.getEnderecoLocal() == null || !e.getEnderecoLocal().estaPreenchido())));
+    }
+
+    @Test
+    void novoLocal_criaOEnderecoNaMesmaTransacaoEVinculaAoEvento() {
+        var novoLocal = new com.domus.api.modules.evento.local.DTOs.LocalEventoRequest(
+                "Chácara Bethel", 80, null, null);
+        when(localEventoRepository.findByIgrejaIdOrderByNomeAsc(igrejaId)).thenReturn(List.of());
+        when(localEventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.cadastrarEvento(requestComNovoLocal(novoLocal), igrejaId, usuarioId);
+
+        verify(localEventoRepository).save(argThat(l -> "Chácara Bethel".equals(l.getNome()) && l.getCapacidade() == 80));
+        verify(eventoRepository).save(argThat(e -> e.getLocal() != null && "Chácara Bethel".equals(e.getLocal().getNome())));
+    }
+
+    @Test
+    void novoLocal_juntoComEnderecoAdHoc_ehRecusado() {
+        var novoLocal = new com.domus.api.modules.evento.local.DTOs.LocalEventoRequest("X", null, null, null);
+        EventoRequest req = new EventoRequest(
+                "Culto", "d", LocalDateTime.now().plusDays(1), null, null, null, "Culto", null,
+                null, null, null, null, null, null, null, false, false, false, false, null, null,
+                new com.domus.api.modules.pessoa.DTO.EnderecoDTO(null, null, null, null, null, "Recife", null),
+                novoLocal);
+        assertThatThrownBy(() -> service.cadastrarEvento(req, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .hasMessageContaining("uma forma");
+        verify(localEventoRepository, never()).save(any());
     }
 
     @Test

@@ -42,17 +42,29 @@ public record EventoResponse(
         UUID serieId,
         boolean divergeDaSerie
 ) {
-    public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado) {
+    public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado,
+                            com.domus.api.modules.pessoa.DTO.EnderecoDTO enderecoLocal) {
         static LocalInfo from(Evento e) {
             LocalEvento local = e.getLocal();
             if (local != null) {
                 var r = com.domus.api.modules.evento.local.DTOs.LocalEventoResponse.from(local);
-                return new LocalInfo(local.getId(), local.getNome(), r.endereco(), r.enderecoHerdado());
+                return new LocalInfo(local.getId(), local.getNome(), r.endereco(), r.enderecoHerdado(), null);
             }
             if (e.getLocalTexto() != null) {
-                return new LocalInfo(null, e.getLocalTexto(), null, false);
+                return new LocalInfo(null, e.getLocalTexto(), null, false, null);
+            }
+            var end = e.getEnderecoLocal();
+            if (end != null && end.estaPreenchido()) {
+                String fmt = com.domus.api.shared.dominio.EnderecoFormatter.emLinhaUnica(end);
+                return new LocalInfo(null, fmt, fmt, false, paraDTO(end));
             }
             return null;
+        }
+
+        private static com.domus.api.modules.pessoa.DTO.EnderecoDTO paraDTO(com.domus.api.shared.dominio.Endereco e) {
+            return new com.domus.api.modules.pessoa.DTO.EnderecoDTO(
+                    e.getCep(), e.getLogradouro(), e.getNumero(), e.getComplemento(),
+                    e.getBairro(), e.getCidade(), e.getUf());
         }
     }
 

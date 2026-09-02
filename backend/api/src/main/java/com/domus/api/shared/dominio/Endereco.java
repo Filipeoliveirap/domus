@@ -44,4 +44,14 @@ public class Endereco {
     @Column(name = "uf", length = 2)
     @JdbcTypeCode(SqlTypes.CHAR)
     private String uf;
+
+    /** Heurística de "tem endereço digitado": CEP, logradouro ou cidade preenchidos.
+     *  Complemento/número/bairro sozinhos não caracterizam um endereço. */
+    public boolean estaPreenchido() {
+        return temTexto(cep) || temTexto(logradouro) || temTexto(cidade);
+    }
+
+    private static boolean temTexto(String s) {
+        return s != null && !s.isBlank();
+    }
 }

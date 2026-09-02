@@ -17,7 +17,7 @@ export function ModalArquivarLocal({ local, onClose }: { local: LocalEventoRespo
   if (!local.temEvento) {
     return (
       <ModalConfirmacao
-        titulo="Arquivar local?"
+        titulo="Arquivar endereço?"
         mensagem={<>Isso vai arquivar <strong>{local.nome}</strong>. Ele deixa de aparecer na lista ao cadastrar um evento novo, mas pode ser restaurado depois.</>}
         textoConfirmar="Arquivar"
         perigo
@@ -30,22 +30,22 @@ export function ModalArquivarLocal({ local, onClose }: { local: LocalEventoRespo
 
   return (
     <ModalConfirmacaoCritica
-      titulo="Arquivar local?"
+      titulo="Arquivar endereço?"
       mensagem={
         <>
           <strong>{local.nome}</strong> está em uso por pelo menos um evento. Ao arquivar,
-          esse evento fica sem local nenhum.
+          esse evento fica sem endereço nenhum.
         </>
       }
       consequencias={[
         {
           tipo: 'perde',
-          texto: 'O evento que usa este local fica sem local: some o nome, a capacidade e o endereço — não vira texto livre',
+          texto: 'O evento que usa este endereço fica sem local definido: some o nome, a capacidade e o endereço — não vira texto livre',
         },
-        { tipo: 'perde', texto: 'Some da lista de locais do formulário de evento' },
+        { tipo: 'perde', texto: 'Some da lista de endereços do formulário de evento' },
       ]}
       palavraConfirmacao={local.nome}
-      textoConfirmar="Arquivar local"
+      textoConfirmar="Arquivar endereço"
       isLoading={isLoading}
       erro={erroGeral}
       onConfirmar={confirmar}

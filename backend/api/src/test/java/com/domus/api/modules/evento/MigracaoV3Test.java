@@ -57,7 +57,10 @@ class MigracaoV3Test implements PostgresTestContainerSupport {
                 "exclusivo_membros, requer_inscricao) " +
                 "VALUES (?::uuid, 'X', NOW(), ?::uuid, 'texto', false, false)",
                 igrejaId, localId))
-                .hasMessageContaining("chk_evento_local_exclusivo");
+                // Renomeado em V36 (chk_evento_local_exclusivo -> chk_evento_localizacao_unica)
+                // quando entrou a 3ª forma de localização (endereço ad-hoc). Mesma regra: no
+                // máximo uma forma preenchida.
+                .hasMessageContaining("chk_evento_localizacao_unica");
     }
 
     @Test

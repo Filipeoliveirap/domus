@@ -51,6 +51,11 @@ public class Evento {
     @Column(name = "local_texto")
     private String localTexto;
 
+    // Endereço estruturado AD-HOC (só deste evento, não vira LocalEvento).
+    // Terceira forma de localização — exclusiva com `local` e `localTexto` (ver EventoService).
+    @jakarta.persistence.Embedded
+    private com.domus.api.shared.dominio.Endereco enderecoLocal;
+
     @Column(name = "tipo", length = 80)
     private String tipo;
 
@@ -151,6 +156,7 @@ public class Evento {
 
     public String getLocalExibicao() {
         if (local != null) return local.getNome();
-        return localTexto;
+        if (localTexto != null) return localTexto;
+        return com.domus.api.shared.dominio.EnderecoFormatter.emLinhaUnica(enderecoLocal);
     }
 }

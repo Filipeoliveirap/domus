@@ -18,7 +18,7 @@ public record EventoResponse(
         LocalDateTime fimEm,
         LocalInfo local,
         String tipo,
-        PessoaResumo responsavel,
+        java.util.List<PessoaResumo> responsaveis,
         PessoaResumo criadoPor,
         PessoaResumo atualizadoPor,
         UUID fotoId,
@@ -92,10 +92,14 @@ public record EventoResponse(
 
     public static EventoResponse from(Evento e, Integer inscricoesRemovidas,
                                        UUID minhaIgrejaId, boolean podeGerenciar) {
+        java.util.List<PessoaResumo> responsaveis = e.getResponsaveis().stream()
+                .map(r -> PessoaResumo.dePessoa(r.getPessoa(), r.getNomeTexto()))
+                .filter(java.util.Objects::nonNull)
+                .toList();
         return new EventoResponse(
                 e.getId(), e.getTitulo(), e.getDescricao(),
                 e.getInicioEm(), e.getFimEm(), LocalInfo.from(e), e.getTipo(),
-                PessoaResumo.dePessoa(e.getResponsavel(), e.getResponsavelTexto()),
+                responsaveis,
                 PessoaResumo.deUsuario(e.getCriadoPor(), e.getCriadoPorTexto()),
                 PessoaResumo.deUsuario(e.getAtualizadoPor(), e.getAtualizadoPorTexto()),
                 e.getFoto() != null ? e.getFoto().getId() : null, e.getCreatedAt(),

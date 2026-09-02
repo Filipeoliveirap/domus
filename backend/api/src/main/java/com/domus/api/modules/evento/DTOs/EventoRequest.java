@@ -59,5 +59,9 @@ public record EventoRequest(
 
         /** {@code null} = evento avulso. Preenchido = cria uma EventoSerie junto. */
         @jakarta.validation.Valid
-        com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia
+        com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia,
+
+        /** Endereço estruturado ad-hoc — só deste evento. Exclusivo com {@code localId} e {@code localTexto}. */
+        @jakarta.validation.Valid
+        com.domus.api.modules.pessoa.DTO.EnderecoDTO enderecoLocal
 ) {}

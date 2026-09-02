@@ -72,7 +72,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       titulo: '', descricao: '',
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
-      localId: undefined, localTexto: undefined, enderecoLocal: undefined,
+      localId: undefined, localTexto: undefined, enderecoLocal: undefined, novoLocal: undefined,
       tipo: '', responsavelPessoaId: undefined,
       requerInscricao: false,
       controlaPresenca: false,
@@ -230,6 +230,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
           data.enderecoLocal && Object.values(data.enderecoLocal).some((v) => typeof v === 'string' && v.trim() !== '')
             ? data.enderecoLocal
             : undefined,
+        novoLocal: data.novoLocal?.nome?.trim() ? data.novoLocal : undefined,
         tipo: data.tipo || undefined,
         responsavelPessoaId: data.responsavelPessoaId || null,
         requerInscricao: data.requerInscricao,

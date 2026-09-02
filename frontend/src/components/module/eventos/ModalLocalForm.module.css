@@ -10,16 +10,40 @@
   background: rgba(19, 27, 46, 0.10);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  animation: surgir 0.2s ease-out;
 }
 
 .modal {
   position: relative;
   width: 100%;
   max-width: 480px;
+  min-width: 0;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--color-bg-white);
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(19, 27, 46, 0.12);
   padding: 32px;
+  animation: subir 0.22s ease-out;
+}
+
+@keyframes surgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes subir {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* saída (useFecharAnimado marca .saindo antes de desmontar) */
+.saindo { animation: sumir 0.24s ease forwards; }
+.saindo .modal { animation: descerLeve 0.24s ease forwards; }
+@keyframes sumir { to { opacity: 0; } }
+@keyframes descerLeve { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+
+.grabber { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
 }
 
 .header {
@@ -108,16 +132,35 @@
 }
 .btnCancel:hover { background: var(--color-bg-page); }
 
-/* ---- Mobile ---- */
-@media (max-width: 560px) {
+/* ---- Mobile: bottom-sheet, igual aos modais de evento/ministério ---- */
+@media (max-width: 767px) {
   .overlay {
-    padding: 12px;
-    align-items: flex-start;
+    padding: 0;
+    align-items: flex-end;
   }
   .modal {
-    padding: 22px 20px;
-    margin: auto 0;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 28px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: deslizarCima 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .saindo .modal { animation: deslizarBaixo 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+
+  .grabber {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+  }
+
   .footer {
     flex-direction: column-reverse;
     align-items: stretch;
@@ -126,4 +169,13 @@
     width: 100%;
     text-align: center;
   }
+}
+
+@keyframes deslizarCima {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes deslizarBaixo {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
 }

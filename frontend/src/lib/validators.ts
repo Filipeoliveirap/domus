@@ -137,6 +137,12 @@ const eventoSchemaBase = z.object({
     cidade: z.string().optional(),
     uf: z.string().max(2).optional(),
   }).partial().optional(),
+  novoLocal: z.object({
+    nome: z.string(),
+    capacidade: z.number().nullable().optional(),
+    cepLogradouroNumero: z.string().nullable().optional(),
+    complementoBairroCidadeUf: z.string().nullable().optional(),
+  }).optional(),
   tipo: opcional(z.string()),
   responsavelPessoaId: opcional(z.string()),
 
@@ -216,7 +222,8 @@ export const eventoSchema = eventoSchemaBase.refine(
 ).superRefine((data, ctx) => {
   const temEndereco = !!data.enderecoLocal
     && Object.values(data.enderecoLocal).some((v) => typeof v === 'string' && v.trim() !== '')
-  const formas = [!!data.localId, !!data.localTexto?.trim(), temEndereco].filter(Boolean).length
+  const temNovoLocal = !!data.novoLocal?.nome?.trim()
+  const formas = [!!data.localId, !!data.localTexto?.trim(), temEndereco, temNovoLocal].filter(Boolean).length
   if (formas > 1) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

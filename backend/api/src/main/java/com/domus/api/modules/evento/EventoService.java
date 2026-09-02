@@ -669,8 +669,10 @@ public class EventoService {
         boolean temTexto = data.localTexto() != null && !data.localTexto().isBlank();
         com.domus.api.shared.dominio.Endereco endereco = mapearEndereco(data.enderecoLocal());
         boolean temEndereco = endereco != null && endereco.estaPreenchido();
+        boolean temNovoLocal = data.novoLocal() != null;
 
-        int formas = (data.localId() != null ? 1 : 0) + (temTexto ? 1 : 0) + (temEndereco ? 1 : 0);
+        int formas = (data.localId() != null ? 1 : 0) + (temTexto ? 1 : 0)
+                + (temEndereco ? 1 : 0) + (temNovoLocal ? 1 : 0);
         if (formas > 1) {
             throw new BusinessException("LOCALIZACAO_AMBIGUA",
                     "Escolha só uma forma de definir o local: um endereço cadastrado, "
@@ -683,9 +685,36 @@ public class EventoService {
                     .orElseThrow(() -> new BusinessException("LOCAL_NAO_ENCONTRADO", "Local não encontrado."));
             return new Localizacao(local, null, null);
         }
+        if (temNovoLocal) {
+            // Cadastra o endereço agora, na mesma transação do evento: se o evento falhar,
+            // o rollback também desfaz o endereço. Não injeta LocalEventoService (ciclo:
+            // LocalEventoService -> EventoService), então repete a validação mínima aqui.
+            return new Localizacao(criarLocalDoEvento(data.novoLocal(), igrejaId), null, null);
+        }
         if (temTexto) return new Localizacao(null, TextoUtil.capitalizar(data.localTexto()), null);
         if (temEndereco) return new Localizacao(null, null, endereco);
         return new Localizacao(null, null, null);
+    }
+
+    /** Cria o LocalEvento a partir do que veio no formulário do evento. Mesma regra de nome
+     *  duplicado de LocalEventoService.criar (não dá pra chamá-lo direto — ciclo de bean). */
+    private LocalEvento criarLocalDoEvento(com.domus.api.modules.evento.local.DTOs.LocalEventoRequest data, UUID igrejaId) {
+        String nome = TextoUtil.capitalizar(data.nome());
+        String normalizado = TextoUtil.normalizarParaComparacao(nome);
+        boolean duplicado = localEventoRepository.findByIgrejaIdOrderByNomeAsc(igrejaId).stream()
+                .anyMatch(l -> TextoUtil.normalizarParaComparacao(l.getNome()).equals(normalizado));
+        if (duplicado) {
+            throw new BusinessException("LOCAL_DUPLICADO", "Já existe um endereço com esse nome.");
+        }
+        Igreja igreja = igrejaRepository.findById(igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+        return localEventoRepository.save(LocalEvento.builder()
+                .igreja(igreja)
+                .nome(nome)
+                .capacidade(data.capacidade())
+                .cepLogradouroNumero(data.cepLogradouroNumero())
+                .complementoBairroCidadeUf(data.complementoBairroCidadeUf())
+                .build());
     }
 
     private com.domus.api.shared.dominio.Endereco mapearEndereco(com.domus.api.modules.pessoa.DTO.EnderecoDTO dto) {

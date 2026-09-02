@@ -1,19 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { MapPin, Plus, Landmark } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { MapPin, Plus, Landmark, Pencil, Trash2, ChevronDown } from 'lucide-react'
+import { clsx } from 'clsx'
 import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputComSugestoes'
 import { Input } from '@/components/common/input/Input'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { useClickFora } from '@/hooks/useClickFora'
 import { useLocaisEvento } from '@/hooks/evento/useLocaisEvento'
 import { useMinhaIgreja } from '@/hooks/igreja/useMinhaIgreja'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { formatarCep } from '@/lib/masks'
+import { jaExisteEnderecoDaIgreja, enderecoParaLinhaUnica } from '@/lib/formats/endereco'
 import { UF_OPTIONS } from '@/lib/ufs'
 import { ModalLocalForm } from './ModalLocalForm'
 import styles from './SeletorLocal.module.css'
-import type { LocalEventoResponse } from '@/types/evento.type'
+import type { LocalEventoRequest } from '@/types/evento.type'
 import type { Endereco } from '@/types/pessoa.type'
 
 // Três caminhos, todos visíveis de uma vez num controle segmentado (não escondidos atrás de
@@ -22,15 +25,57 @@ import type { Endereco } from '@/types/pessoa.type'
 // As três formas são mutuamente exclusivas — trocar de modo sempre limpa as outras duas.
 type Modo = 'cadastrado' | 'simples' | 'completo'
 
+/** Card compacto de endereço já definido — ícone + endereço formatado + editar/remover.
+ *  `animarAoEditar`: true quando "Editar" TROCA o card por outro bloco (roda a saída animada);
+ *  false quando "Editar" só abre um modal por cima (o card continua ali). Remover sempre anima. */
+function CardEndereco({ titulo, linhas, nota, animarAoEditar = false, onEditar, onRemover }: {
+  titulo?: string
+  linhas: string[]
+  nota?: string
+  animarAoEditar?: boolean
+  onEditar: () => void
+  /** Ausente = sem botão de remover (ex.: só escolhendo no select, remover não faz nada útil). */
+  onRemover?: () => void
+}) {
+  const [saindo, setSaindo] = useState(false)
+  const sair = (fn: () => void) => { setSaindo(true); setTimeout(fn, 150) }
+
+  return (
+    <div className={clsx(styles.cardEndereco, saindo && styles.cardSaindo)}>
+      <span className={styles.cardIcone}><MapPin size={18} aria-hidden="true" /></span>
+      <div className={styles.cardInfo}>
+        {titulo && <strong className={styles.cardTitulo}>{titulo}</strong>}
+        {linhas.map((l, i) => <span key={i} className={styles.cardLinha}>{l}</span>)}
+        {nota && <span className={styles.cardNota}>{nota}</span>}
+      </div>
+      <div className={styles.cardAcoes}>
+        <button type="button" className={styles.cardBotao}
+          onClick={() => (animarAoEditar ? sair(onEditar) : onEditar())} aria-label="Editar endereço">
+          <Pencil size={15} aria-hidden="true" />
+        </button>
+        {onRemover && (
+          <button type="button" className={styles.cardBotaoPerigo} onClick={() => sair(onRemover)} aria-label="Remover endereço">
+            <Trash2 size={15} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface SeletorLocalProps {
   localId?: string
   localTexto?: string
   enderecoLocal?: Endereco
+  ehEdicao?: boolean
+  /** Endereço pendente, digitado pelo próprio formulário de evento — só é cadastrado quando o evento é salvo. */
+  novoLocal?: LocalEventoRequest
   error?: string
   errosEndereco?: Partial<Record<keyof Endereco, string>>
   onChangeLocalId: (id: string | undefined) => void
   onChangeLocalTexto: (texto: string | undefined) => void
   onChangeEnderecoLocal: (e: Endereco | undefined) => void
+  onChangeNovoLocal: (p: LocalEventoRequest | undefined) => void
   onCapacidadeSugerida?: (capacidade: number) => void
 }
 
@@ -39,42 +84,72 @@ function enderecoTemConteudo(e?: Endereco): boolean {
 }
 
 export function SeletorLocal({
-  localId, localTexto, enderecoLocal, error, errosEndereco,
-  onChangeLocalId, onChangeLocalTexto, onChangeEnderecoLocal, onCapacidadeSugerida,
+  localId, localTexto, enderecoLocal, ehEdicao, novoLocal, error, errosEndereco,
+  onChangeLocalId, onChangeLocalTexto, onChangeEnderecoLocal, onChangeNovoLocal, onCapacidadeSugerida,
 }: SeletorLocalProps) {
   const { data: locais = [] } = useLocaisEvento()
   const { data: igreja } = useMinhaIgreja()
   const { buscar, carregando: carregandoCep } = useBuscaCep()
+
+  const mostrarUsarIgreja = !!igreja?.endereco && !jaExisteEnderecoDaIgreja(locais, igreja.endereco)
+  const cadastradoSelecionado = localId ? locais.find((l) => l.id === localId) : undefined
 
   const [modo, setModo] = useState<Modo>(() => {
     if (enderecoTemConteudo(enderecoLocal)) return 'completo'
     if (localTexto && !localId) return 'simples'
     return 'cadastrado'
   })
-  const [modalAberto, setModalAberto] = useState(false)
+  // 'novo' = criar um pendente; 'editar-novo' = ajustar o pendente; 'editar-cadastrado' =
+  // editar (e persistir) o endereço cadastrado já selecionado; null = fechado.
+  const [modalAberto, setModalAberto] = useState<'novo' | 'editar-novo' | 'editar-cadastrado' | null>(null)
+
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [dropdownAberto, setDropdownAberto] = useState(false)
+  useClickFora(dropdownRef, () => setDropdownAberto(false))
+
+  // No modo "endereço completo": quando o evento JÁ tinha um endereço salvo (edição), mostra
+  // um card em vez de jogar o formulário na cara. Só colapsa o endereço que veio do evento —
+  // nunca o que a pessoa está digitando agora (usuarioMexeu trava isso).
+  const [enderecoEmCard, setEnderecoEmCard] = useState(false)
+  const jaColapsou = useRef(false)
+  const usuarioMexeu = useRef(false)
+  const temEnderecoCompleto = enderecoTemConteudo(enderecoLocal)
+  useEffect(() => {
+    if (!jaColapsou.current && !usuarioMexeu.current && ehEdicao && temEnderecoCompleto) {
+      jaColapsou.current = true
+      setEnderecoEmCard(true)
+      setModo('completo')
+    }
+  }, [ehEdicao, temEnderecoCompleto])
 
   function trocarModo(novo: Modo) {
     setModo(novo)
-    if (novo !== 'cadastrado') onChangeLocalId(undefined)
+    if (novo !== 'cadastrado') { onChangeLocalId(undefined); onChangeNovoLocal(undefined) }
     if (novo !== 'simples') onChangeLocalTexto(undefined)
     if (novo !== 'completo') onChangeEnderecoLocal(undefined)
   }
 
   function patchEndereco(patch: Partial<Endereco>) {
+    usuarioMexeu.current = true
     onChangeEnderecoLocal({ ...(enderecoLocal ?? {}), ...patch })
   }
 
   function selecionar(id: string) {
     onChangeLocalId(id || undefined)
+    onChangeNovoLocal(undefined)
     const l = locais.find((x) => x.id === id)
     if (l?.capacidade != null) onCapacidadeSugerida?.(l.capacidade)
   }
 
-  // Acabou de cadastrar pelo modal: já seleciona (a lista recarrega sozinha via cache).
-  function aoCriar(l: LocalEventoResponse) {
-    trocarModo('cadastrado')
-    onChangeLocalId(l.id)
-    if (l.capacidade != null) onCapacidadeSugerida?.(l.capacidade)
+  // No formulário de evento o endereço NÃO é cadastrado na hora — fica "segurado" no evento
+  // e só vira cadastro quando o evento é salvo (backend, mesma transação).
+  function aoDefinir(payload: LocalEventoRequest) {
+    setModo('cadastrado')
+    onChangeLocalId(undefined)
+    onChangeLocalTexto(undefined)
+    onChangeEnderecoLocal(undefined)
+    onChangeNovoLocal(payload)
+    if (payload.capacidade != null) onCapacidadeSugerida?.(payload.capacidade)
   }
 
   async function aoSairDoCep(valor: string) {
@@ -91,6 +166,7 @@ export function SeletorLocal({
 
   function usarEnderecoDaIgreja() {
     if (!igreja?.endereco) return
+    usuarioMexeu.current = true
     onChangeEnderecoLocal({ ...igreja.endereco })
   }
 
@@ -133,9 +209,20 @@ export function SeletorLocal({
           />
         )}
 
-        {modo === 'completo' && (
-          <div className={styles.enderecoCompleto}>
-            {igreja?.endereco && (
+        {modo === 'completo' && enderecoEmCard && enderecoTemConteudo(enderecoLocal) && (
+          <Transicao key="endereco-card" modo="subir">
+            <CardEndereco
+              linhas={[enderecoParaLinhaUnica(enderecoLocal!)]}
+              animarAoEditar
+              onEditar={() => setEnderecoEmCard(false)}
+              onRemover={() => { onChangeEnderecoLocal(undefined); setEnderecoEmCard(false) }}
+            />
+          </Transicao>
+        )}
+
+        {modo === 'completo' && !(enderecoEmCard && enderecoTemConteudo(enderecoLocal)) && (
+          <Transicao key="endereco-form" modo="subir" className={styles.enderecoCompleto}>
+            {mostrarUsarIgreja && (
               <button type="button" className={styles.botaoNovo} onClick={usarEnderecoDaIgreja}>
                 <Landmark size={16} aria-hidden="true" />
                 Usar o endereço da igreja
@@ -179,49 +266,111 @@ export function SeletorLocal({
                 {errosEndereco?.uf && <span className={styles.erro}>{errosEndereco.uf}</span>}
               </div>
             </div>
-          </div>
+          </Transicao>
         )}
 
         {modo === 'cadastrado' && (
-          locais.length === 0 ? (
-            <div className={styles.vazio}>
+          novoLocal ? (
+            <Transicao key="novo-local-card" modo="subir">
+              <CardEndereco
+                titulo={novoLocal.nome}
+                linhas={[
+                  novoLocal.cepLogradouroNumero ?? '',
+                  novoLocal.complementoBairroCidadeUf ?? '',
+                  novoLocal.capacidade != null ? `Capacidade: ${novoLocal.capacidade}` : '',
+                ].filter(Boolean)}
+                nota="Endereço novo · será cadastrado quando você salvar o evento."
+                onEditar={() => setModalAberto('editar-novo')}
+                onRemover={() => onChangeNovoLocal(undefined)}
+              />
+              {error && <span className={styles.erro}>{error}</span>}
+            </Transicao>
+          ) : locais.length === 0 ? (
+            <Transicao key="cadastrado-vazio" modo="subir" className={styles.vazio}>
               <MapPin size={22} aria-hidden="true" className={styles.vazioIcone} />
               <p className={styles.vazioTexto}>
                 Nenhum endereço cadastrado ainda. Cadastre um para reaproveitar
                 nos próximos eventos — ou use <strong>&quot;Digitar simples&quot;</strong> /
                 <strong> &quot;Endereço completo&quot;</strong> só para este.
               </p>
-              <button type="button" className={styles.botaoCadastrar} onClick={() => setModalAberto(true)}>
+              <button type="button" className={styles.botaoCadastrar} onClick={() => setModalAberto('novo')}>
                 <Plus size={16} aria-hidden="true" />
                 Cadastrar endereço
               </button>
               {error && <span className={styles.erro}>{error}</span>}
-            </div>
-          ) : (
-            <>
-              <label className={styles.label}>ENDEREÇO DO EVENTO</label>
-              <SelectMenu
-                value={localId ?? ''}
-                onChange={selecionar}
-                placeholder="Selecione um endereço"
-                ariaLabel="Endereço do evento"
-                options={locais.map((l) => ({
-                  value: l.id,
-                  label: l.capacidade != null ? `${l.nome} — cap. ${l.capacidade}` : l.nome,
-                }))}
+            </Transicao>
+          ) : cadastradoSelecionado ? (
+            <Transicao key="cadastrado-card" modo="subir">
+              <CardEndereco
+                titulo={cadastradoSelecionado.nome}
+                linhas={[
+                  cadastradoSelecionado.endereco ?? '',
+                  cadastradoSelecionado.capacidade != null ? `Capacidade: ${cadastradoSelecionado.capacidade}` : '',
+                  cadastradoSelecionado.enderecoHerdado ? 'Endereço da igreja' : '',
+                ].filter(Boolean)}
+                onEditar={() => setModalAberto('editar-cadastrado')}
+                onRemover={() => onChangeLocalId(undefined)}
               />
-              <button type="button" className={styles.botaoNovo} onClick={() => setModalAberto(true)}>
+              {error && <span className={styles.erro}>{error}</span>}
+            </Transicao>
+          ) : (
+            <Transicao key="cadastrado-dropdown" modo="subir">
+              <label className={styles.label}>ENDEREÇO DO EVENTO</label>
+              <div className={styles.dropdown} ref={dropdownRef}>
+                <button
+                  type="button"
+                  className={styles.dropdownGatilho}
+                  onClick={() => setDropdownAberto((v) => !v)}
+                  aria-haspopup="listbox"
+                  aria-expanded={dropdownAberto}
+                >
+                  <span className={styles.dropdownPlaceholder}>Selecione um endereço</span>
+                  <ChevronDown size={16} className={clsx(styles.chevron, dropdownAberto && styles.chevronAberto)} aria-hidden="true" />
+                </button>
+
+                {dropdownAberto && (
+                  <div className={styles.dropdownPainel} role="listbox">
+                    {locais.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        role="option"
+                        aria-selected={false}
+                        className={styles.dropdownOpcao}
+                        onClick={() => { selecionar(l.id); setDropdownAberto(false) }}
+                      >
+                        <span className={styles.opcaoIcone}><MapPin size={16} aria-hidden="true" /></span>
+                        <span className={styles.opcaoInfo}>
+                          <strong>{l.nome}</strong>
+                          {l.endereco && <span className={styles.opcaoEndereco}>{l.endereco}</span>}
+                          {l.capacidade != null && <span className={styles.opcaoMeta}>Capacidade: {l.capacidade}</span>}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button type="button" className={styles.botaoNovo} onClick={() => setModalAberto('novo')}>
                 <Plus size={16} aria-hidden="true" />
                 Novo endereço
               </button>
               {error && <span className={styles.erro}>{error}</span>}
-            </>
+            </Transicao>
           )
         )}
       </Transicao>
 
-      {modalAberto && (
-        <ModalLocalForm local={null} onClose={() => setModalAberto(false)} onCriado={aoCriar} />
+      {modalAberto === 'editar-cadastrado' && cadastradoSelecionado && (
+        <ModalLocalForm local={cadastradoSelecionado} onClose={() => setModalAberto(null)} />
+      )}
+      {(modalAberto === 'novo' || modalAberto === 'editar-novo') && (
+        <ModalLocalForm
+          local={null}
+          valoresIniciais={modalAberto === 'editar-novo' ? novoLocal : null}
+          onClose={() => setModalAberto(null)}
+          onDefinir={aoDefinir}
+        />
       )}
     </div>
   )

@@ -16,7 +16,7 @@ class EventoRequestTest {
                 null, localTexto, tipo, null, recorteEtario,
                 null, null, null, null,
                 null, null, null, null, null,
-                null, null, null);
+                null, null, null, null);
     }
 
     @Test

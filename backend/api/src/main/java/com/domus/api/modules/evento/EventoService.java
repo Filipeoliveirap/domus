@@ -105,7 +105,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
-        LocalEvento local = resolverLocal(data, igrejaId);
+        Localizacao loc = resolverLocalizacao(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
@@ -121,8 +121,9 @@ public class EventoService {
                 .descricao(data.descricao())
                 .inicioEm(data.inicioEm())
                 .fimEm(data.fimEm())
-                .local(local)
-                .localTexto(local == null ? TextoUtil.capitalizar(data.localTexto()) : null)
+                .local(loc.local())
+                .localTexto(loc.localTexto())
+                .enderecoLocal(loc.enderecoLocal())
                 .tipo(resolverTipo(data.tipo(), igrejaId))
                 .responsavel(responsavel)
                 .recorteEtario(data.recorteEtario())
@@ -177,7 +178,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
-        LocalEvento local = resolverLocal(data, igrejaId);
+        Localizacao loc = resolverLocalizacao(data, igrejaId);
         Pessoa responsavel = resolverResponsavel(data.responsavelPessoaId(), igrejaId);
 
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
@@ -198,16 +199,16 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         java.time.LocalDateTime inicioAntigo = evento.getInicioEm();
-        UUID localIdAntigo = evento.getLocal() != null ? evento.getLocal().getId() : null;
-        String localTextoAntigo = evento.getLocalTexto();
+        String localExibicaoAntigo = evento.getLocalExibicao();
         UUID responsavelIdAntigo = evento.getResponsavel() != null ? evento.getResponsavel().getId() : null;
 
         evento.setTitulo(TextoUtil.capitalizar(data.titulo()));
         evento.setDescricao(data.descricao());
         evento.setInicioEm(data.inicioEm());
         evento.setFimEm(data.fimEm());
-        evento.setLocal(local);
-        evento.setLocalTexto(local == null ? TextoUtil.capitalizar(data.localTexto()) : null);
+        evento.setLocal(loc.local());
+        evento.setLocalTexto(loc.localTexto());
+        evento.setEnderecoLocal(loc.enderecoLocal());
         evento.setTipo(resolverTipo(data.tipo(), igrejaId));
         evento.setResponsavel(responsavel);
         evento.setRecorteEtario(data.recorteEtario());
@@ -274,8 +275,7 @@ public class EventoService {
         }
 
         boolean dataOuLocalMudou = !java.util.Objects.equals(inicioAntigo, salvo.getInicioEm())
-                || !java.util.Objects.equals(localIdAntigo, salvo.getLocal() != null ? salvo.getLocal().getId() : null)
-                || !java.util.Objects.equals(localTextoAntigo, salvo.getLocalTexto());
+                || !java.util.Objects.equals(localExibicaoAntigo, salvo.getLocalExibicao());
         if (dataOuLocalMudou) {
             notificarInscritos(salvo, igrejaId, usuarioId,
                     "O evento \"" + salvo.getTitulo() + "\" mudou de data ou local.",
@@ -411,6 +411,7 @@ public class EventoService {
             ocorrencia.setDescricao(editado.getDescricao());
             ocorrencia.setLocal(editado.getLocal());
             ocorrencia.setLocalTexto(editado.getLocalTexto());
+            ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
             ocorrencia.setTipo(editado.getTipo());
             ocorrencia.setResponsavel(editado.getResponsavel());
             ocorrencia.setRecorteEtario(editado.getRecorteEtario());
@@ -461,6 +462,7 @@ public class EventoService {
                 ocorrencia.setDescricao(editado.getDescricao());
                 ocorrencia.setLocal(editado.getLocal());
                 ocorrencia.setLocalTexto(editado.getLocalTexto());
+                ocorrencia.setEnderecoLocal(editado.getEnderecoLocal());
             }
             eventoRepository.save(ocorrencia);
         }
@@ -657,20 +659,41 @@ public class EventoService {
         }
     }
 
-    /** Valida que localId e localTexto não vêm juntos (a constraint do banco é rede de segurança). */
-    private LocalEvento resolverLocal(EventoRequest data, UUID igrejaId) {
+    /** Record com no máximo um campo não-nulo — a forma de localização escolhida. */
+    public record Localizacao(LocalEvento local, String localTexto,
+                              com.domus.api.shared.dominio.Endereco enderecoLocal) {}
+
+    /** As três formas de dizer onde o evento acontece são mutuamente exclusivas.
+     *  A constraint do banco é rede de segurança; a validação de verdade é aqui. */
+    private Localizacao resolverLocalizacao(EventoRequest data, UUID igrejaId) {
         boolean temTexto = data.localTexto() != null && !data.localTexto().isBlank();
-        if (data.localId() != null && temTexto) {
-            throw new BusinessException("LOCAL_AMBIGUO",
-                    "Escolha um local cadastrado ou digite um local, não os dois.");
+        com.domus.api.shared.dominio.Endereco endereco = mapearEndereco(data.enderecoLocal());
+        boolean temEndereco = endereco != null && endereco.estaPreenchido();
+
+        int formas = (data.localId() != null ? 1 : 0) + (temTexto ? 1 : 0) + (temEndereco ? 1 : 0);
+        if (formas > 1) {
+            throw new BusinessException("LOCALIZACAO_AMBIGUA",
+                    "Escolha só uma forma de definir o local: um endereço cadastrado, "
+                    + "um texto simples, ou um endereço completo.");
         }
-        if (data.localId() == null) {
-            return null;
+
+        if (data.localId() != null) {
+            // localId de outra igreja é tratado como inexistente.
+            LocalEvento local = localEventoRepository.findByIdAndIgrejaId(data.localId(), igrejaId)
+                    .orElseThrow(() -> new BusinessException("LOCAL_NAO_ENCONTRADO", "Local não encontrado."));
+            return new Localizacao(local, null, null);
         }
-        // localId de outra igreja é tratado como inexistente.
-        return localEventoRepository.findByIdAndIgrejaId(data.localId(), igrejaId)
-                .orElseThrow(() -> new BusinessException("LOCAL_NAO_ENCONTRADO",
-                        "Local não encontrado."));
+        if (temTexto) return new Localizacao(null, TextoUtil.capitalizar(data.localTexto()), null);
+        if (temEndereco) return new Localizacao(null, null, endereco);
+        return new Localizacao(null, null, null);
+    }
+
+    private com.domus.api.shared.dominio.Endereco mapearEndereco(com.domus.api.modules.pessoa.DTO.EnderecoDTO dto) {
+        if (dto == null) return null;
+        return com.domus.api.shared.dominio.Endereco.builder()
+                .cep(dto.cep()).logradouro(dto.logradouro()).numero(dto.numero())
+                .complemento(dto.complemento()).bairro(dto.bairro()).cidade(dto.cidade()).uf(dto.uf())
+                .build();
     }
 
     private Pessoa resolverResponsavel(UUID responsavelPessoaId, UUID igrejaId) {

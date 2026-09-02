@@ -316,7 +316,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V36**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V37**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -347,7 +347,8 @@ erDiagram
     EVENTO }o--o| FOTO : tem
     IGREJA }o--o| FOTO : "tem (logo)"
     LOCAL_EVENTO ||--o{ EVENTO : "V3 - local cadastrado (ou local_texto / endereço ad-hoc V36)"
-    PESSOA ||--o{ EVENTO : "V3 - responsável"
+    EVENTO ||--o{ EVENTO_RESPONSAVEL : "V37 - zero, um ou vários responsáveis"
+    PESSOA ||--o{ EVENTO_RESPONSAVEL : "é responsável por (ou nome_texto se removida - LGPD)"
     USUARIO ||--o{ EVENTO : "V3 - criou/atualizou"
     IGREJA ||--o| CONTA_PAGAMENTO_IGREJA : "V29 - conta Mercado Pago conectada"
     INSCRICAO_EVENTO ||--o{ COBRANCA_EVENTO : "V29 - evento pago gera cobrança"
@@ -432,7 +433,6 @@ erDiagram
         boolean   exclusivo_membros "cobre batizados - vinculo=MEMBRO é quem é batizado"
         boolean   requer_inscricao "V16"
         varchar   tipo "V3 - texto livre que aprende (autocomplete); não é 'categoria'"
-        uuid      responsavel_pessoa_id FK "V3 - organizador, ON DELETE SET NULL"
         uuid      criado_por_usuario_id FK "V3 - auditoria, padrão de movimentacao_financeira"
         uuid      atualizado_por_usuario_id FK "V3"
         varchar   recorte_etario "V3 - rótulo do recorte (ex.: KIDS, JOVENS, 3A_IDADE), informativo"
@@ -495,6 +495,14 @@ erDiagram
         date      data_movimentacao
         text      descricao
         timestamp deleted_at "soft delete"
+    }
+
+    EVENTO_RESPONSAVEL {
+        uuid      id PK
+        uuid      igreja_id FK "isolamento multi-tenant"
+        uuid      evento_id FK "ON DELETE CASCADE"
+        uuid      pessoa_id FK "nulável - XOR com nome_texto"
+        varchar   nome_texto "V37 - 'Pessoa removida do sistema' quando a pessoa some (LGPD); XOR com pessoa_id"
     }
 
     MOVIMENTACAO_CONTRIBUINTE {
@@ -591,8 +599,12 @@ erDiagram
   **sugere** o número de vagas do evento; não é limite imposto pelo banco nem pela regra de
   negócio (fica pro backlog). `tipo` é texto livre com autocomplete que aprende com o uso —
   deliberadamente não chamado de "categoria" (nome já ocupado por `categoria_financeira`).
-  `responsavel_pessoa_id`, `criado_por_usuario_id` e `atualizado_por_usuario_id` reusam o
-  padrão de auditoria de `movimentacao_financeira`. `recorte_etario` + `idade_min`/
+  `criado_por_usuario_id` e `atualizado_por_usuario_id` reusam o padrão de auditoria de
+  `movimentacao_financeira`. **Responsável(is) (V37):** um evento tem zero, um ou vários,
+  via `EVENTO_RESPONSAVEL` — `pessoa_id` XOR `nome_texto` (mesmo padrão de
+  `MOVIMENTACAO_CONTRIBUINTE`); arquivar/excluir a pessoa converte o vínculo dela em texto
+  ("Pessoa removida do sistema") via `EventoResponsavelRepository.desvincularPessoa`.
+  Notificação só para os recém-adicionados numa edição. `recorte_etario` + `idade_min`/
   `idade_max` + `restricao_estado_civil` + `restricao_sexo` são a elegibilidade de
   inscrição: quatro regras independentes, avaliadas no momento de inscrever — não somam
   automaticamente, cada uma bloqueia por conta própria quando o dado da pessoa falta

@@ -41,7 +41,7 @@ export default function LocaisEventoArquivadosPage() {
   }
 
   if (!locais || locais.length === 0) {
-    return <EstadoVazio icone={Archive} titulo="Nenhum local arquivado" mensagem="Locais arquivados aparecem aqui." />
+    return <EstadoVazio icone={Archive} titulo="Nenhum endereço arquivado" mensagem="Endereços arquivados aparecem aqui." />
   }
 
   return (
@@ -88,7 +88,7 @@ function ModalExcluirDefinitivo({ local, onClose }: { local: LocalEventoResponse
 
   return (
     <ModalConfirmacao
-      titulo="Excluir local definitivamente?"
+      titulo="Excluir endereço definitivamente?"
       mensagem={<>Isso vai apagar <strong>{local.nome}</strong> de vez. Não tem como desfazer.</>}
       textoConfirmar="Excluir"
       perigo

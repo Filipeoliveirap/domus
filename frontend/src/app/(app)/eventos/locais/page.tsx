@@ -8,7 +8,7 @@ import { useLocaisEvento } from '@/hooks/evento/useLocaisEvento'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
-import { ModalLocalForm } from './ModalLocalForm'
+import { ModalLocalForm } from '@/components/module/eventos/ModalLocalForm'
 import { ModalArquivarLocal } from './ModalArquivarLocal'
 import { ModalDetalheLocal } from '@/components/module/eventos/ModalDetalheLocal'
 import type { LocalEventoResponse } from '@/types/evento.type'
@@ -43,20 +43,20 @@ export default function LocaisEventoPage() {
     <div className={styles.pagina}>
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>Locais</h1>
-          <p className={styles.subtitulo}>Locais cadastrados para os eventos da igreja</p>
+          <h1 className={styles.titulo}>Endereços</h1>
+          <p className={styles.subtitulo}>Endereços cadastrados para os eventos da igreja</p>
         </div>
         <button type="button" className={styles.botaoPrimario} onClick={() => setFormAberto('novo')}>
-          Novo local
+          Novo endereço
         </button>
       </header>
 
       {locais.length === 0 ? (
         <EstadoVazio
           icone={MapPinned}
-          titulo="Nenhum local cadastrado"
-          mensagem="Cadastre os locais mais usados para agilizar o cadastro de eventos."
-          acaoPrimaria={{ label: 'Novo local', onClick: () => setFormAberto('novo') }}
+          titulo="Nenhum endereço cadastrado"
+          mensagem="Cadastre os endereços mais usados para agilizar o cadastro de eventos."
+          acaoPrimaria={{ label: 'Novo endereço', onClick: () => setFormAberto('novo') }}
         />
       ) : (
         <div className={styles.containerTabela}>

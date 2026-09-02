@@ -72,7 +72,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       titulo: '', descricao: '',
       inicioData: '', inicioHora: '',
       fimData: '', fimHora: '',
-      localId: undefined, localTexto: undefined,
+      localId: undefined, localTexto: undefined, enderecoLocal: undefined, novoLocal: undefined,
       tipo: '', responsavelPessoaId: undefined,
       requerInscricao: false,
       controlaPresenca: false,
@@ -123,13 +123,15 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         inicioHora,
         fimData,
         fimHora,
-        // O backend devolve `local` já resolvido (objeto): se tem `id`, é um LocalEvento
-        // cadastrado e reidrata o select; se `id` é null, era texto ad-hoc e volta pro campo
-        // livre. Nunca os dois — espelha a mesma exclusividade do envio.
+        // O backend devolve `local` já resolvido: com `id` = LocalEvento cadastrado (reidrata
+        // o select); com `enderecoLocal` preenchido = endereço estruturado ad-hoc (modo
+        // completo); só `nome` sem os dois = texto livre simples. Nunca mais de um.
         localId: eventoInicial.local?.id ?? undefined,
-        localTexto: eventoInicial.local && eventoInicial.local.id == null
-          ? eventoInicial.local.nome
-          : undefined,
+        localTexto:
+          eventoInicial.local && eventoInicial.local.id == null && !eventoInicial.local.enderecoLocal
+            ? eventoInicial.local.nome
+            : undefined,
+        enderecoLocal: eventoInicial.local?.enderecoLocal ?? undefined,
         tipo: eventoInicial.tipo ?? '',
         responsavelPessoaId: eventoInicial.responsavel?.id ?? undefined,
         requerInscricao: eventoInicial.requerInscricao,
@@ -224,6 +226,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         // "" e cair no CHECK do banco por engano.
         localId: data.localId || undefined,
         localTexto: data.localTexto || undefined,
+        enderecoLocal:
+          data.enderecoLocal && Object.values(data.enderecoLocal).some((v) => typeof v === 'string' && v.trim() !== '')
+            ? data.enderecoLocal
+            : undefined,
+        novoLocal: data.novoLocal?.nome?.trim() ? data.novoLocal : undefined,
         tipo: data.tipo || undefined,
         responsavelPessoaId: data.responsavelPessoaId || null,
         requerInscricao: data.requerInscricao,

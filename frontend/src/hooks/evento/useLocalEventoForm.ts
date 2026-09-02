@@ -7,7 +7,11 @@ import { locaisEventoService } from '@/services/localEvento.service'
 import type { LocalEventoRequest, LocalEventoResponse } from '@/types/evento.type'
 import type { ApiError } from '@/types/api.types'
 
-export function useLocalEventoForm(local: LocalEventoResponse | null, onClose: () => void) {
+export function useLocalEventoForm(
+  local: LocalEventoResponse | null,
+  onClose: () => void,
+  onCriado?: (local: LocalEventoResponse) => void,
+) {
   const queryClient = useQueryClient()
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -20,8 +24,9 @@ export function useLocalEventoForm(local: LocalEventoResponse | null, onClose: (
         await locaisEventoService.atualizar(local.id, data)
         notificar.sucesso(`"${data.nome}" foi atualizado.`)
       } else {
-        await locaisEventoService.criar(data)
+        const criado = await locaisEventoService.criar(data)
         notificar.sucesso(`"${data.nome}" foi cadastrado.`)
+        onCriado?.(criado)
       }
       invalidarCache(queryClient, 'localEvento')
       onClose()

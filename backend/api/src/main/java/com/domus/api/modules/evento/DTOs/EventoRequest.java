@@ -59,5 +59,15 @@ public record EventoRequest(
 
         /** {@code null} = evento avulso. Preenchido = cria uma EventoSerie junto. */
         @jakarta.validation.Valid
-        com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia
+        com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia,
+
+        /** Endereço estruturado ad-hoc — só deste evento. Exclusivo com {@code localId} e {@code localTexto}. */
+        @jakarta.validation.Valid
+        com.domus.api.modules.pessoa.DTO.EnderecoDTO enderecoLocal,
+
+        /** Endereço a cadastrar junto com o evento (na mesma transação). Vira {@code localId}.
+         *  Exclusivo com as outras formas. Usado quando a pessoa cria o endereço pelo próprio
+         *  formulário de evento — o cadastro só acontece quando o evento é salvo. */
+        @jakarta.validation.Valid
+        com.domus.api.modules.evento.local.DTOs.LocalEventoRequest novoLocal
 ) {}

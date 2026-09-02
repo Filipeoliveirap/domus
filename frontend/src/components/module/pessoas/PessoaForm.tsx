@@ -14,6 +14,7 @@ import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { Revelar } from '@/components/common/Transicao/Revelar'
 import { SeletorRedes } from './SeletorRedes'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
+import { UF_OPTIONS } from '@/lib/ufs'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import styles from './PessoaForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
@@ -39,10 +40,6 @@ const ESTADO_CIVIL_OPTIONS = [
   { value: 'VIUVO', label: 'Viúvo(a)' },
 ]
 
-const UF_OPTIONS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-].map((uf) => ({ value: uf, label: uf }))
 
 type PessoaFormProps = UseFormReturn<PessoaFormInput, unknown, PessoaFormData> & {
   isFormIncomplete: boolean

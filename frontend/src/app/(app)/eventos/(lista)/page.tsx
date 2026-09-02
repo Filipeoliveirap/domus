@@ -123,7 +123,7 @@ function EventosConteudo() {
               Relatório de engajamento
             </Link>
             <Link href="/eventos/locais" className={styles.botaoSecundario}>
-              Locais
+              Endereços
             </Link>
             <Link href="/eventos/cadastrar" className={styles.botaoPrimario}>
               Novo evento

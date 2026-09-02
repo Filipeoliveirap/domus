@@ -169,7 +169,7 @@ class EventoTipoENormalizacaoTest {
 
     private EventoRequest requestComResponsavel(UUID pessoaId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
-                null, null, null, pessoaId,
+                null, null, null, java.util.List.of(pessoaId),
                 null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null);
     }
@@ -266,8 +266,9 @@ class EventoTipoENormalizacaoTest {
         UUID id = service.cadastrarEvento(requestComResponsavel(pessoaId), igrejaId, usuarioId).id();
 
         EventoResponse resposta = service.buscarPorId(id, igrejaId, "ADMIN_IGREJA");
-        assertThat(resposta.responsavel().id()).isEqualTo(pessoaId);
-        assertThat(resposta.responsavel().nome()).isEqualTo("Ana");
+        assertThat(resposta.responsaveis()).hasSize(1);
+        assertThat(resposta.responsaveis().get(0).id()).isEqualTo(pessoaId);
+        assertThat(resposta.responsaveis().get(0).nome()).isEqualTo("Ana");
     }
 
     @Test

@@ -1,4 +1,4 @@
-/* O SeletorLocal reusa <Select> e <InputComSugestoes>, que já trazem o próprio estilo.
+/* O SeletorLocal reusa <SelectMenu> e <InputComSugestoes>, que já trazem o próprio estilo.
    Este wrapper existe só para o campo ocupar a largura e não vazar da coluna. */
 .wrapper {
   display: flex;
@@ -21,14 +21,94 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Link discreto para sair do modo "outro local" e voltar à lista cadastrada. */
-.voltar {
+/* Controle segmentado: as duas formas de definir onde o evento acontece, visíveis de uma vez.
+   Mesmo visual do segmentado de SecaoNomenclatura. */
+.segmentado {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.segmentoBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.segmentoBtn:hover {
+  border-color: var(--color-primary);
+}
+
+.segmentoAtivo,
+.segmentoAtivo:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg-white);
+}
+
+/* Estado vazio: nenhum endereço cadastrado ainda. */
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle, var(--color-bg-white));
+}
+
+.vazioIcone {
+  color: var(--color-text-secondary);
+}
+
+.vazioTexto {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.botaoCadastrar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-bg-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.botaoCadastrar:hover {
+  opacity: 0.9;
+}
+
+/* Botão discreto abaixo do dropdown para cadastrar mais um endereço sem sair do formulário. */
+.botaoNovo {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
 }
-.voltar:hover {
-  opacity: 0.8;
+
+.botaoNovo:hover {
+  text-decoration: underline;
 }

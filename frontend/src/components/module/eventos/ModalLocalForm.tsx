@@ -14,10 +14,13 @@ interface Props {
   /** Presente = edição; ausente = criação. */
   local: LocalEventoResponse | null
   onClose: () => void
+  /** Chamado com o endereço recém-criado (só no modo criação), antes do onClose.
+   *  Usado pelo SeletorLocal para já selecionar o que a pessoa acabou de cadastrar. */
+  onCriado?: (local: LocalEventoResponse) => void
 }
 
-export function ModalLocalForm({ local, onClose }: Props) {
-  const { salvar, isLoading, erroGeral } = useLocalEventoForm(local, onClose)
+export function ModalLocalForm({ local, onClose, onCriado }: Props) {
+  const { salvar, isLoading, erroGeral } = useLocalEventoForm(local, onClose, onCriado)
 
   const {
     register,
@@ -59,9 +62,9 @@ export function ModalLocalForm({ local, onClose }: Props) {
         </div>
 
         <div className={styles.intro}>
-          <h2 className={styles.title}>{local ? 'Editar local' : 'Novo local'}</h2>
+          <h2 className={styles.title}>{local ? 'Editar endereço' : 'Novo endereço'}</h2>
           <p className={styles.subtitle}>
-            Deixe o endereço em branco para o local herdar o endereço da igreja.
+            Deixe o endereço em branco para herdar o endereço da igreja.
           </p>
         </div>
 
@@ -105,7 +108,7 @@ export function ModalLocalForm({ local, onClose }: Props) {
           <div className={styles.footer}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
             <Button type="submit" variant="primary" size="md" isLoading={isLoading}>
-              {local ? 'Salvar alterações' : 'Cadastrar local'}
+              {local ? 'Salvar alterações' : 'Cadastrar endereço'}
             </Button>
           </div>
         </form>

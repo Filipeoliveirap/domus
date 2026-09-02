@@ -11,6 +11,7 @@ import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
+import { UF_OPTIONS } from '@/lib/ufs'
 import styles from './VisitanteForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 
@@ -25,11 +26,6 @@ const ESTADO_CIVIL_OPTIONS = [
   { value: 'DIVORCIADO', label: 'Divorciado(a)' },
   { value: 'VIUVO', label: 'Viúvo(a)' },
 ]
-
-const UF_OPTIONS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-].map((uf) => ({ value: uf, label: uf }))
 
 export type VisitanteFormData = {
   nome: string

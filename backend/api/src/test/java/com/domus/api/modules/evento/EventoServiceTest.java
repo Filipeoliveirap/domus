@@ -182,6 +182,13 @@ class EventoServiceTest {
                 null, null, false, false, false, false, null, null, null, null);
     }
 
+    private EventoRequest requestComTitulo(String titulo) {
+        return new EventoRequest(
+                titulo, "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, null, "Culto", null, null, null, null, null, null,
+                null, null, false, false, false, false, null, null, null, null);
+    }
+
     private Pessoa pessoaMock(UUID id, String nome) {
         var p = new Pessoa();
         p.setId(id);
@@ -685,7 +692,7 @@ class EventoServiceTest {
     }
 
     @Test
-    void atualizarEventoComEscopoSerieAtualizaTodasAsFuturasAgendadas() {
+    void atualizarEventoComEscopoSerieAtualizaTodaASerie() {
         UUID eventoId = UUID.randomUUID();
         UUID outraOcorrenciaId = UUID.randomUUID();
         UUID serieId = UUID.randomUUID();
@@ -699,7 +706,7 @@ class EventoServiceTest {
                 .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
                 .serie(serie).divergeDaSerie(true).build(); // divergência antiga — deve ser limpa
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
-        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+        when(eventoRepository.findBySerieId(serieId))
                 .thenReturn(List.of(existente, outraFutura));
 
         EventoRequest req = requestComRestricao(false);
@@ -708,6 +715,52 @@ class EventoServiceTest {
 
         assertThat(outraFutura.getTitulo()).isEqualTo(req.titulo());
         assertThat(outraFutura.isDivergeDaSerie()).isFalse();
+    }
+
+    @Test
+    void atualizarEventoComEscopoSerie_reescreveOcorrenciaJaEncerrada() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Evento editado = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serie).build();
+        Evento jaEncerrada = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Nome antigo").inicioEm(LocalDateTime.now().minusDays(7))
+                .fimEm(LocalDateTime.now().minusDays(7).plusHours(2))
+                .serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(editado));
+        when(eventoRepository.findBySerieId(serieId)).thenReturn(List.of(editado, jaEncerrada));
+
+        service.atualizarEvento(eventoId, requestComTitulo("nome corrigido"), igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(jaEncerrada.getTitulo()).isEqualTo("Nome Corrigido"); // TextoUtil.capitalizar
+    }
+
+    @Test
+    void atualizarEventoComEscopoSerie_naoTocaOcorrenciaEmAndamento() {
+        UUID eventoId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Evento editado = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .serie(serie).build();
+        Evento emAndamento = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Título antigo").inicioEm(LocalDateTime.now().minusHours(1))
+                .fimEm(LocalDateTime.now().plusHours(1))
+                .serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(editado));
+        when(eventoRepository.findBySerieId(serieId)).thenReturn(List.of(editado, emAndamento));
+
+        service.atualizarEvento(eventoId, requestComRestricao(false), igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(emAndamento.getTitulo()).isEqualTo("Título antigo");
     }
 
     @Test
@@ -735,7 +788,7 @@ class EventoServiceTest {
 
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
         when(pessoaRepository.findByIdAndIgrejaId(responsavel, igrejaId)).thenReturn(Optional.of(pResp));
-        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+        when(eventoRepository.findBySerieId(serieId))
                 .thenReturn(List.of(existente, outraFutura));
 
         service.atualizarEvento(eventoId, requestComResponsaveis(List.of(responsavel)), igrejaId, usuarioId, false,
@@ -773,7 +826,7 @@ class EventoServiceTest {
 
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
         when(pessoaRepository.findByIdAndIgrejaId(entra, igrejaId)).thenReturn(Optional.of(pEntra));
-        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+        when(eventoRepository.findBySerieId(serieId))
                 .thenReturn(List.of(existente, outraFutura));
 
         service.atualizarEvento(eventoId, requestComResponsaveis(List.of(entra)), igrejaId, usuarioId, false,
@@ -1108,26 +1161,51 @@ class EventoServiceTest {
     }
 
     @Test
-    void arquivarEventoComEscopoSerieArquivaTodasAsFuturasEDesativaASerie() {
+    void arquivarEventoComEscopoSerieArquivaTodaASerieInclusiveEncerradasEDesativaASerie() {
         UUID eventoId = UUID.randomUUID();
-        UUID outraFuturaId = UUID.randomUUID();
         UUID serieId = UUID.randomUUID();
         var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).ativa(true).build();
         Evento existente = Evento.builder()
                 .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
                 .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1)).serie(serie).build();
-        Evento outraFutura = Evento.builder()
-                .id(outraFuturaId).igreja(new Igreja() {{ setId(igrejaId); }})
-                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8)).serie(serie).build();
+        Evento jaEncerrada = Evento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().minusDays(7))
+                .fimEm(LocalDateTime.now().minusDays(7).plusHours(2)).serie(serie).build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
-        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
-                .thenReturn(List.of(existente, outraFutura));
+        when(eventoRepository.findBySerieId(serieId))
+                .thenReturn(List.of(existente, jaEncerrada));
 
         service.arquivarEvento(eventoId, igrejaId, usuarioId,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
 
         verify(eventoRepository).delete(existente);
-        verify(eventoRepository).delete(outraFutura);
+        verify(eventoRepository).delete(jaEncerrada);
+        assertThat(serie.isAtiva()).isFalse();
+    }
+
+    @Test
+    void arquivarEventoComEscopoEstaESeguintesArquivaSoDaquiPraFrente() {
+        UUID eventoId = UUID.randomUUID();
+        UUID futuraId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).ativa(true).build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1)).serie(serie).build();
+        Evento futura = Evento.builder()
+                .id(futuraId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8)).serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(eq(serieId), any()))
+                .thenReturn(List.of(existente, futura));
+
+        service.arquivarEvento(eventoId, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA_E_SEGUINTES);
+
+        verify(eventoRepository).delete(existente);
+        verify(eventoRepository).delete(futura);
+        verify(eventoRepository, never()).findBySerieId(any());
         assertThat(serie.isAtiva()).isFalse();
     }
 
@@ -1146,6 +1224,7 @@ class EventoServiceTest {
 
         verify(eventoRepository).delete(existente);
         verify(eventoRepository, never()).findBySerieIdAndInicioEmGreaterThanEqual(any(), any());
+        verify(eventoRepository, never()).findBySerieId(any());
         assertThat(serie.isAtiva()).isTrue(); // série continua — só esta ocorrência sumiu
     }
 

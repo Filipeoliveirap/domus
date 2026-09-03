@@ -249,11 +249,14 @@ public class EventoService {
 
         if (evento.getSerie() != null) {
             switch (escopo) {
+                // ESTA: só esta ocorrência; marca divergência pra não ser sobrescrita depois.
+                // ESTA_E_SEGUINTES: desta data em diante (divide a série em duas).
+                // SERIE: a série inteira, inclusive as ocorrências que já aconteceram.
                 case ESTA -> {
                     evento.setDivergeDaSerie(true);
                     salvo = eventoRepository.save(evento);
                 }
-                case SERIE -> salvo = propagarParaSerie(salvo, igrejaId);
+                case SERIE -> salvo = propagarParaSerieInteira(salvo, igrejaId);
                 case ESTA_E_SEGUINTES -> salvo = dividirSerie(salvo, igrejaId);
             }
         }
@@ -351,8 +354,12 @@ public class EventoService {
         List<Evento> paraArquivar = List.of(evento);
         if (evento.getSerie() != null
                 && escopo != com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA) {
-            paraArquivar = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
-                    evento.getSerie().getId(), evento.getInicioEm());
+            UUID serieId = evento.getSerie().getId();
+            // SERIE = a série inteira, inclusive as ocorrências que já aconteceram.
+            // ESTA_E_SEGUINTES = só desta data em diante.
+            paraArquivar = escopo == com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE
+                    ? eventoRepository.findBySerieId(serieId)
+                    : eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(serieId, evento.getInicioEm());
             evento.getSerie().setAtiva(false);
             eventoSerieRepository.save(evento.getSerie());
         }
@@ -398,14 +405,15 @@ public class EventoService {
         }
     }
 
-    /** Copia os campos editáveis pra toda ocorrência AGENDADO da mesma série — limpa
-     *  divergeDaSerie de todas (edição de série sempre vence uma divergência antiga). */
-    private Evento propagarParaSerie(Evento editado, UUID igrejaId) {
-        List<Evento> futuras = eventoRepository.findBySerieIdAndInicioEmGreaterThanEqual(
-                editado.getSerie().getId(), editado.getInicioEm());
-        for (Evento ocorrencia : futuras) {
+    /** "Toda a série": copia os campos editáveis pra TODA ocorrência da mesma série —
+     *  inclusive as que já aconteceram (é registro histórico; só pula a que está em
+     *  andamento). Limpa divergeDaSerie de todas (edição de série vence divergência antiga).
+     *  Nunca toca em inscrição/cobrança. */
+    private Evento propagarParaSerieInteira(Evento editado, UUID igrejaId) {
+        List<Evento> ocorrencias = eventoRepository.findBySerieId(editado.getSerie().getId());
+        for (Evento ocorrencia : ocorrencias) {
             if (ocorrencia.getId().equals(editado.getId())) continue;
-            if (ocorrencia.getSituacao() != SituacaoEvento.AGENDADO) continue;
+            if (ocorrencia.getSituacao() == SituacaoEvento.EM_ANDAMENTO) continue;
             copiarCamposEditaveisPara(editado, ocorrencia);
             ocorrencia.setDivergeDaSerie(false);
             eventoRepository.save(ocorrencia);

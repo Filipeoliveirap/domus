@@ -30,7 +30,7 @@ export function ModalArquivarEvento({ evento, onClose }: { evento: EventoRespons
     return (
       <ModalEscopoEdicaoEvento
         titulo={evento.titulo}
-        pergunta="O que você quer arquivar?"
+        acao="arquivar"
         onEscolher={setEscopo}
         onClose={onClose}
       />

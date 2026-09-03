@@ -225,6 +225,9 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     List<Evento> findBySerieIdAndInicioEmGreaterThanEqual(UUID serieId, LocalDateTime de);
 
+    /** "Toda a série": todas as ocorrências, inclusive as que já aconteceram. */
+    List<Evento> findBySerieId(UUID serieId);
+
     /** Sem @SQLRestriction de propósito — soft-deletado (feriado cancelado) também conta,
      *  senão o job de materialização ressuscitaria a data no próximo dia de rodagem. */
     @Query(value = "SELECT COUNT(*) > 0 FROM evento WHERE serie_id = :serieId AND inicio_em = :inicioEm",

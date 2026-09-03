@@ -86,7 +86,7 @@ export default function EventosArquivadosPage() {
       {restaurandoComEscopo && (
         <ModalEscopoEdicaoEvento
           titulo={restaurandoComEscopo.titulo}
-          pergunta="O que você quer restaurar?"
+          acao="restaurar"
           onEscolher={(escopo) => {
             restaurar(restaurandoComEscopo.id, restaurandoComEscopo.titulo, escopo)
             setRestaurandoComEscopo(null)

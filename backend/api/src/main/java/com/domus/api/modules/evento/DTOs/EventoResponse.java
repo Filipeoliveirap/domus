@@ -40,7 +40,10 @@ public record EventoResponse(
         boolean restritoPropriaIgreja,
         boolean arquivado,
         UUID serieId,
-        boolean divergeDaSerie
+        boolean divergeDaSerie,
+        LocalDateTime inscricoesAte,
+        boolean permiteCancelarAposPrazo,
+        com.domus.api.modules.evento.SituacaoInscricao situacaoInscricao
 ) {
     public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado,
                             com.domus.api.modules.pessoa.DTO.EnderecoDTO enderecoLocal) {
@@ -110,7 +113,10 @@ public record EventoResponse(
                 IgrejaResumo.de(e.getIgreja()), podeGerenciar, e.isRestritoPropriaIgreja(),
                 e.getDeletedAt() != null,
                 e.getSerie() != null ? e.getSerie().getId() : null,
-                e.isDivergeDaSerie()
+                e.isDivergeDaSerie(),
+                e.getInscricoesAte(),
+                e.isPermiteCancelarAposPrazo(),
+                e.getSituacaoInscricao()
         );
     }
 }

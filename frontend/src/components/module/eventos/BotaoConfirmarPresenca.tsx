@@ -20,9 +20,18 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
-import type { SituacaoEvento } from '@/types/evento.type'
+import { rotuloRole } from '@/lib/formats/usuarioFormat'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import type { SituacaoEvento, SituacaoInscricao } from '@/types/evento.type'
 import type { Impedimento, MinhaInscricaoResponse } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
+
+/** Fora do corpo do componente: `new Date(...)` é impuro pro react-hooks/purity. */
+function formatarDiaMes(iso: string | null): string {
+  return iso
+    ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    : ''
+}
 
 interface Props {
   eventoId: string
@@ -30,6 +39,8 @@ interface Props {
   vagasRestantes: number | null
   requerInscricao: boolean
   situacao: SituacaoEvento
+  situacaoInscricao: SituacaoInscricao
+  inscricoesAte: string | null
   preco?: number | null
   /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo,
    *  SEM pagamento pendente — evento pago com sucesso navega pra rota de checkout em vez
@@ -38,7 +49,8 @@ interface Props {
 }
 
 export function BotaoConfirmarPresenca({
-  eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco, onInscritoComSucesso,
+  eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, situacaoInscricao,
+  inscricoesAte, preco, onInscritoComSucesso,
 }: Props) {
   const router = useRouter()
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
@@ -58,6 +70,11 @@ export function BotaoConfirmarPresenca({
   const role = useAuthStore((s) => s.role)
   // Gestor ignora restrições com confirmação extra
   const ehGestor = podeGerenciarInscricoes(role)
+
+  // Prazo de inscrição (Task 11): gestor "fura" o prazo, comum é barrado.
+  const podeFurarPrazo = ehGestor
+  const encerradoPorPrazo = situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+  const dataPrazo = formatarDiaMes(inscricoesAte)
 
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   // Status da conta MP da própria igreja — só importa quando o evento é pago.
@@ -174,6 +191,25 @@ export function BotaoConfirmarPresenca({
     )
   }
 
+  // Prazo encerrado + já inscrito não bloqueia (segue podendo ver/cancelar); só barra
+  // quem ainda não entrou e não pode furar o prazo.
+  const avisoPrazoGestor = encerradoPorPrazo && podeFurarPrazo && (
+    <Transicao modo="fade">
+      <p className={styles.avisoPrazo}>
+        O prazo de inscrição encerrou em {dataPrazo}, mas você como{' '}
+        {(rotuloRole(role ?? '') || 'gestor').toLowerCase()} pode inscrever assim mesmo.
+      </p>
+    </Transicao>
+  )
+
+  if (encerradoPorPrazo && !podeFurarPrazo && !minha?.inscrito) {
+    return (
+      <button type="button" className={styles.botao} disabled>
+        Inscrições encerradas em {dataPrazo}
+      </button>
+    )
+  }
+
   // Modo "Eu vou": alterna direto, sem diálogo de confirmação
   if (!requerInscricao) {
     const marcado = !!minha?.inscrito
@@ -205,6 +241,7 @@ export function BotaoConfirmarPresenca({
 
     return (
       <span className={styles.euVouWrap}>
+        {!marcado && avisoPrazoGestor}
         <button
           type="button"
           className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
@@ -357,6 +394,7 @@ export function BotaoConfirmarPresenca({
 
   return (
     <>
+      {avisoPrazoGestor}
       <button
         type="button"
         className={styles.botao}

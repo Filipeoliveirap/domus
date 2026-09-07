@@ -496,6 +496,7 @@ export default function InscritosPage() {
           // Titular e convidado agora são a mesma InscricaoEvento, cada um cancelado por
           // conta própria — cancelar um não leva mais nenhum outro junto (Task 4 Step 7).
           quantidadeConvidados={0}
+          semReembolso={evento?.preco != null && evento?.situacaoInscricao === 'ENCERRADA_POR_PRAZO' && inscritoCancelando.status === 'CONFIRMADA'}
           isLoading={cancelarInscricao.isPending}
           onConfirmar={aoConfirmarCancelamento}
           onClose={() => setInscritoCancelando(null)}

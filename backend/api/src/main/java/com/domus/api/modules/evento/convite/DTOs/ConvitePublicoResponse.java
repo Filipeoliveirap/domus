@@ -25,5 +25,7 @@ public record ConvitePublicoResponse(
         Integer vagasRestantes,
         BigDecimal preco,
         List<CampoPersonalizadoResponse> campos,
-        boolean requerInscricao
+        boolean requerInscricao,
+        com.domus.api.modules.evento.SituacaoInscricao situacaoInscricao,
+        java.time.LocalDateTime inscricoesAte
 ) {}

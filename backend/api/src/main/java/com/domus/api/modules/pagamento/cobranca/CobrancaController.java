@@ -138,7 +138,8 @@ public class CobrancaController {
 
     @PostMapping("/{id}/pagar")
     @Transactional
-    public PagarCobrancaResponse pagar(@PathVariable UUID id, @RequestBody PagarCobrancaRequest request) {
+    public PagarCobrancaResponse pagar(@PathVariable UUID id,
+                                       @jakarta.validation.Valid @RequestBody PagarCobrancaRequest request) {
         // Achado em revisão de segurança (2026-08-26): lock pessimista na PRIMEIRA leitura,
         // não só no evento — sem isto, duas requisições quase simultâneas (duplo clique,
         // retry de rede) liam mpPaymentId == null antes de qualquer uma travar nada, e as

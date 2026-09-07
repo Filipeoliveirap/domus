@@ -121,6 +121,25 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    void recusaPagarSemMeioDePagamento() throws Exception {
+        // @Valid dispara antes do corpo do controller — nem chega a procurar a cobrança.
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"installments\":1,\"payerEmail\":\"a@a.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.campos.paymentMethodId").exists());
+    }
+
+    @Test
+    void recusaPagarComEmailDoPagadorInvalido() throws Exception {
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"nao-e-email\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.campos.payerEmail").exists());
+    }
+
+    @Test
     @Sql(statements = {
         "INSERT INTO igreja (id, nome, email) VALUES " +
             "('11111111-1111-1111-1111-111111111113', 'Igreja Teste 3', 'igreja3@teste.com')",

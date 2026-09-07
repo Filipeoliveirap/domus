@@ -11,7 +11,15 @@ function formatarData(iso: string): string {
 }
 
 function diasAte(iso: string): number {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const alvo = new Date(iso)
+  alvo.setHours(0, 0, 0, 0)
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000)
+}
+
+function horaDe(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function SeloPrazoInscricao({ evento }: { evento: EventoResponse }) {
@@ -29,11 +37,21 @@ export function SeloPrazoInscricao({ evento }: { evento: EventoResponse }) {
 
   const diasRestantes = diasAte(evento.inscricoesAte)
   const destaque = diasRestantes >= 0 && diasRestantes <= DIAS_DESTAQUE
+
+  let sufixo = ''
+  if (diasRestantes === 0) {
+    sufixo = ` · encerra hoje às ${horaDe(evento.inscricoesAte)}`
+  } else if (diasRestantes === 1) {
+    sufixo = ` · encerra amanhã`
+  } else if (diasRestantes > 1 && diasRestantes <= DIAS_DESTAQUE) {
+    sufixo = ` · faltam ${diasRestantes} dias`
+  }
+
   return (
     <span className={destaque ? styles.destaque : styles.neutro} onClick={(e) => e.stopPropagation()}>
       <CalendarClock size={12} aria-hidden="true" />
       Inscrições até {data}
-      {destaque && ` · faltam ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'}`}
+      {sufixo}
     </span>
   )
 }

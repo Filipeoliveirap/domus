@@ -271,6 +271,8 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                 vagasRestantes={vagasRestantes}
                 requerInscricao={evento.requerInscricao}
                 situacao={evento.situacao}
+                situacaoInscricao={evento.situacaoInscricao}
+                inscricoesAte={evento.inscricoesAte}
                 preco={evento.preco}
                 onInscritoComSucesso={() => setAcabouDeInscrever(true)}
               />

@@ -174,6 +174,30 @@ private void validarCancelamentoPermitido(Evento evento, boolean souEu, boolean 
 A expiração automática de cobrança não paga (`CobrancaEventoExpiracaoJob`) **não** passa
 por essa guarda — é o sistema cancelando, não a pessoa.
 
+### Cancelamento sem reembolso após o prazo (adendo 2026-09-07)
+
+Quando `permiteCancelarAposPrazo == true` e o cancelamento acontece **depois** do prazo,
+num **evento pago**:
+
+- o cancelamento é permitido (self **e** gestor), mas **não** há estorno no Mercado Pago —
+  a cobrança PAGA fica como está (a igreja mantém o valor), a inscrição vira `CANCELADA`;
+- cobrança `PENDENTE` (nunca paga) continua sendo cancelada normalmente;
+- sem e-mail de reembolso, sem lançamento de "Reembolso" no financeiro (não houve).
+
+Vale **só** para o caminho `cancelar(...)` (`DELETE /inscricoes/{id}`, self ou gestor). Os
+caminhos automáticos (`removerInscritosNaoElegiveis`, `cancelarInscricoesEmEventos*`,
+`aplicarEventoVirouGratuito`) **continuam estornando** — não são "cancelamento após o
+prazo", são o sistema removendo por outro motivo.
+
+Implementação: `cancelarInterno(inscricao, boolean semReembolso)` — `semReembolso` só é
+`true` em `cancelar(...)` quando `evento.getInscricoesAte() != null && agora >
+inscricoesAte`. Com `semReembolso`, pula `estornarCobrancasDaInscricao` para cobranças
+`PAGO` (só cancela as `PENDENTE`). `cancelar` continua `void`/`204` — o front já tem os
+dados (`situacaoInscricao`, `preco`, status da inscrição) para exibir o aviso antes e a
+confirmação depois; a diferença de segundos no "agora" é irrelevante num prazo de dias.
+
+Antes do prazo, ou evento gratuito: estorno normal, como hoje.
+
 ### DTOs
 
 - `EventoResponse` / `EventoRequest`: `inscricoesAte`, `permiteCancelarAposPrazo`.

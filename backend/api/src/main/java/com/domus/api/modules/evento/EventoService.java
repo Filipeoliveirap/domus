@@ -449,6 +449,7 @@ public class EventoService {
         ocorrencia.setVagas(editado.getVagas());
         ocorrencia.setPreco(editado.getPreco());
         ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
+        ocorrencia.setPermiteCancelarAposPrazo(editado.isPermiteCancelarAposPrazo());
         ocorrencia.setRequerInscricao(editado.isRequerInscricao());
         ocorrencia.setControlaPresenca(editado.isControlaPresenca());
         ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());

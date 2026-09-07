@@ -916,6 +916,66 @@ class EventoServiceTest {
         assertThat(outraFutura.getTitulo()).isEqualTo("Culto Novo");
     }
 
+    @Test
+    void atualizarEventoComEscopoSerie_propagaPermiteCancelarAposPrazo() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraOcorrenciaId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(1))
+                .requerInscricao(true)
+                .serie(serie).build();
+        Evento outraFutura = Evento.builder()
+                .id(outraOcorrenciaId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .requerInscricao(true).permiteCancelarAposPrazo(true)
+                .serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(eventoRepository.findBySerieId(serieId)).thenReturn(List.of(existente, outraFutura));
+
+        EventoRequest req = new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, "Salão Social", "Culto", null, null, null, null, null, null,
+                null, null, false, true, false, false, null, null, null, null, null, false);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(outraFutura.isPermiteCancelarAposPrazo()).isFalse();
+    }
+
+    @Test
+    void atualizarEventoComEscopoSerie_naoPropagaInscricoesAte() {
+        UUID eventoId = UUID.randomUUID();
+        UUID outraOcorrenciaId = UUID.randomUUID();
+        UUID serieId = UUID.randomUUID();
+        var serie = com.domus.api.modules.evento.serie.EventoSerie.builder().id(serieId).build();
+        LocalDateTime inicioEm = LocalDateTime.now().plusDays(1);
+        Evento existente = Evento.builder()
+                .id(eventoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(inicioEm)
+                .requerInscricao(true)
+                .serie(serie).build();
+        Evento outraFutura = Evento.builder()
+                .id(outraOcorrenciaId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
+                .requerInscricao(true).inscricoesAte(null)
+                .serie(serie).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        when(eventoRepository.findBySerieId(serieId)).thenReturn(List.of(existente, outraFutura));
+
+        EventoRequest req = new EventoRequest(
+                "Culto Dominical", "Descrição do evento", inicioEm,
+                null, null, "Salão Social", "Culto", null, null, null, null, null, null,
+                null, null, false, true, false, false, null, null, null, null,
+                inicioEm.minusDays(1), true);
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
+
+        assertThat(outraFutura.getInscricoesAte()).isNull();
+    }
+
     private EventoRequest requestComPrazo(LocalDateTime inicioEm, boolean requerInscricao,
             LocalDateTime inscricoesAte) {
         return new EventoRequest(

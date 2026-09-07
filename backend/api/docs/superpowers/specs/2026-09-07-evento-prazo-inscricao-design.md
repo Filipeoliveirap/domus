@@ -94,10 +94,15 @@ escolher entre "botão desabilitado" e "botão ativo + aviso".
 
 ### Propagação de série
 
-`inscricoesAte` e `permiteCancelarAposPrazo` entram na lista de campos que "editar a
-série toda" propaga pras ocorrências, respeitando `divergeDaSerie` (mesma máquina dos
-demais campos de `Evento`). Os três carimbos de aviso **nunca** propagam — são estado
-local de cada ocorrência.
+- **`inscricoesAte` NÃO propaga** — é data absoluta, e cada ocorrência tem seu próprio
+  `inicioEm`; copiar a mesma data pras irmãs geraria prazo antes/depois sem sentido. Fica
+  de fora de `copiarCamposEditaveisPara`, pela mesma razão que `inicioEm` e `foto` já
+  ficam. Define-se por ocorrência (escopo `ESTA`). Sem forma de setar prazo pra série
+  inteira de uma vez nesta entrega — mesma limitação de não dar pra mudar a data de todas
+  as ocorrências de uma vez.
+- **`permiteCancelarAposPrazo` propaga** — é política, não data; entra em
+  `copiarCamposEditaveisPara` junto de `exclusivoMembros` etc.
+- Os três carimbos de aviso **nunca** propagam — estado local de cada ocorrência.
 
 ### Validação (`EventoService`, criação e edição)
 
@@ -311,8 +316,8 @@ Regra de ouro: o teste prova a feature. Camadas conforme `CLAUDE.md`.
 
 - `recusaPrazoDepoisDoInicio()` — `inscricoesAte > inicioEm` → `PRAZO_APOS_INICIO`.
 - `recusaPrazoSemRequerInscricao()` → `PRAZO_SEM_INSCRICAO`.
-- `edicaoDeSeriePropagaPrazoParaOcorrencias()`.
-- `ocorrenciaDivergenteMantemProprioPrazo()`.
+- `edicaoDeSerieNaoPropagaInscricoesAte()` — editar "série toda" não copia o `inscricoesAte` da editada pras irmãs.
+- `edicaoDeSeriePropagaPermiteCancelarAposPrazo()` — o flag de política, sim, propaga.
 
 ### `PrazoInscricaoJobTest` (novo — Mockito puro com mocks dos repositories)
 
@@ -343,9 +348,10 @@ Cada pedaço = commit único **depois** de o autor testar. Não construir tudo e
 fim (`CLAUDE.md`).
 
 1. **Modelo + validação (back).** Migration V38, campos nas entidades,
-   `SituacaoInscricao`, validação no `EventoService`, propagação de série. Testes:
-   `EventoServiceTest` + migration.
-   *Pronto quando:* criar/editar evento com prazo salva e valida; série propaga.
+   `SituacaoInscricao`, validação no `EventoService`, `permiteCancelarAposPrazo` em
+   `copiarCamposEditaveisPara`. Testes: `EventoServiceTest` + migration.
+   *Pronto quando:* criar/editar evento com prazo salva e valida; "série toda" propaga o
+   flag de política mas não a data.
 2. **Enforcement (back).** `validarPrazoInscricao` + `validarCancelamentoPermitido` nos
    caminhos certos, erros novos, DTOs de evento e do convite expõem os campos +
    `situacaoInscricao`. Testes: `InscricaoServiceTest` + 1 no `InscricaoControllerTest`.

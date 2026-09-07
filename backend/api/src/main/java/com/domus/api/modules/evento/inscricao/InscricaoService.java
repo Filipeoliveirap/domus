@@ -137,6 +137,7 @@ public class InscricaoService {
         }
 
         validarEventoAberto(evento);
+        validarPrazoInscricao(evento, role);
         boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
 
         InscricaoEvento inscricao = inscricaoRepository
@@ -275,6 +276,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
         validarEventoAberto(evento);
+        validarPrazoInscricao(evento, role);
 
         if (!pessoaIds.isEmpty()) {
             List<UUID> jaInscritos = inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, pessoaIds);
@@ -328,6 +330,19 @@ public class InscricaoService {
         if (!evento.isRequerInscricao()) {
             throw new BusinessException("INSCRICAO_NAO_HABILITADA", mensagem);
         }
+    }
+
+    /** Prazo de inscrição (V38). NULL = sem prazo. Admin/líder passam — pergunta pela
+     *  CAPACIDADE (podeGerenciarInscricoes), não pelo nome do perfil. O caminho público
+     *  não tem role (role == null), então nunca passa. */
+    private void validarPrazoInscricao(Evento evento, String role) {
+        if (evento.getInscricoesAte() == null) return;
+        if (!java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())) return;
+        if (Permissoes.podeGerenciarInscricoes(role)) return;
+        throw new BusinessException("PRAZO_INSCRICAO_ENCERRADO",
+                "O prazo de inscrição neste evento encerrou em "
+                + evento.getInscricoesAte().format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")) + ".");
     }
 
     /** Evento EM_ANDAMENTO ou ENCERRADO não aceita inscrição/convidado. */
@@ -475,6 +490,9 @@ public class InscricaoService {
                     "O e-mail é obrigatório para se inscrever em eventos.");
         }
         validarEventoAberto(evento);
+        // inscritoPorUsuarioId != null => gestor autenticado (endpoint /inscricoes/convidados exige ADMIN/LIDER);
+        // null => link público sem sessão. Derivamos a role pra guarda a partir disso.
+        validarPrazoInscricao(evento, inscritoPorUsuarioId != null ? "ADMIN_IGREJA" : null);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
         validarVaga(evento, 1);
 

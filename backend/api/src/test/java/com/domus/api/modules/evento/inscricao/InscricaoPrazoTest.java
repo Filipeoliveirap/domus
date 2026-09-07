@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Task 5 (V38): a guarda de prazo de inscrição ({@code inscricoes_ate}) barra o membro
@@ -120,7 +121,7 @@ class InscricaoPrazoTest {
         assertThatThrownBy(() -> service.inscrever(eventoId, pessoa.getId(), null, pessoa.getId(),
                 "ACESSO_COMUM", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("prazo");
+                .extracting("codigo").isEqualTo("PRAZO_INSCRICAO_ENCERRADO");
         verify(inscricaoRepository, never()).save(any());
     }
 
@@ -167,6 +168,50 @@ class InscricaoPrazoTest {
         assertThatThrownBy(() -> service.inscrever(eventoId, pessoa.getId(), null, pessoa.getId(),
                 "ACESSO_COMUM", false, igrejaId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("prazo");
+                .extracting("codigo").isEqualTo("PRAZO_INSCRICAO_ENCERRADO");
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    // --- Task 6: guarda de cancelamento ---
+
+    private InscricaoEvento inscricaoDe(Evento evento, Pessoa pessoa) {
+        var inscricao = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento).pessoa(pessoa)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(eq(inscricao.getId()), any()))
+                .thenReturn(Optional.of(inscricao));
+        return inscricao;
+    }
+
+    @Test
+    void cancelamentoBloqueadoQuandoToggleDesligadoEPrazoVencidoParaComum() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), false);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        assertThatThrownBy(() -> service.cancelar(inscricao.getId(), UUID.randomUUID(),
+                pessoa.getId(), "ACESSO_COMUM", igrejaId))
+                .isInstanceOf(BusinessException.class)
+                .extracting("codigo").isEqualTo("CANCELAMENTO_ENCERRADO_POR_PRAZO");
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelamentoLivreQuandoToggleLigado() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(),
+                "ACESSO_COMUM", igrejaId);
+        verify(inscricaoRepository).save(any());
+    }
+
+    @Test
+    void gestorCancelaMesmoComToggleDesligado() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), false);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), UUID.randomUUID(),
+                "ADMIN_IGREJA", igrejaId);
+        verify(inscricaoRepository).save(any());
     }
 }

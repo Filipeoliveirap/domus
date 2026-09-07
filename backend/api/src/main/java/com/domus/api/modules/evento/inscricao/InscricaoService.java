@@ -345,6 +345,19 @@ public class InscricaoService {
                     java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")) + ".");
     }
 
+    /** Depois do prazo, o auto-cancelamento respeita o toggle do evento. Gestor sempre
+     *  passa (remove alguém da lista pela gestão de inscritos). */
+    private void validarCancelamentoPermitido(Evento evento, boolean souEu, boolean ehGestor) {
+        if (ehGestor) return;
+        if (!souEu) return; // o SEM_PERMISSAO acima já barra esse caso
+        if (evento.getInscricoesAte() == null) return;
+        if (evento.isPermiteCancelarAposPrazo()) return;
+        if (!java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())) return;
+        throw new BusinessException("CANCELAMENTO_ENCERRADO_POR_PRAZO",
+                "Depois do prazo de inscrição não dá mais pra cancelar sua inscrição neste evento. "
+                + "Fale com a organização.");
+    }
+
     /** Evento EM_ANDAMENTO ou ENCERRADO não aceita inscrição/convidado. */
     private void validarEventoAberto(Evento evento) {
         SituacaoEvento situacao = evento.getSituacao();
@@ -578,6 +591,8 @@ public class InscricaoService {
                     "Você não pode cancelar a inscrição de outra pessoa. "
                     + "Peça a ela ou a um líder da igreja.");
         }
+
+        validarCancelamentoPermitido(inscricao.getEvento(), souEu, gestorDaMesmaIgreja);
 
         cancelarInterno(inscricao);
         log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",

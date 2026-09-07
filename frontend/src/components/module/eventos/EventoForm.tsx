@@ -536,6 +536,40 @@ export function EventoForm(props: EventoFormProps) {
                 </div>
 
                 <div className={styles.grupoData}>
+                  <label className={styles.labelData} htmlFor="inscricoesAte">Inscrições até (opcional)</label>
+                  <input
+                    id="inscricoesAte"
+                    type="datetime-local"
+                    className={styles.inputData}
+                    aria-describedby="inscricoesAte-ajuda"
+                    {...register('inscricoesAte')}
+                  />
+                  <span id="inscricoesAte-ajuda" className={styles.campoHint}>
+                    Ex.: 15/03/2026 23:59 — deixe vazio pra aceitar inscrições até o evento começar.
+                  </span>
+                  {errors.inscricoesAte && (
+                    <span className={styles.erroCampo}>{errors.inscricoesAte.message}</span>
+                  )}
+                </div>
+
+                <Revelar>
+                  {watch('inscricoesAte') ? (
+                    <label className={styles.toggleRow}>
+                      <span className={styles.toggleTexto}>
+                        <span className={styles.toggleTitulo}>Permitir cancelamento após o prazo</span>
+                        <span className={styles.toggleDescricao}>
+                          Desmarque para travar a lista de inscritos no prazo — ninguém entra nem sai depois.
+                        </span>
+                      </span>
+                      <span className={styles.switch}>
+                        <input type="checkbox" className={styles.switchInput} {...register('permiteCancelarAposPrazo')} />
+                        <span className={styles.switchTrilho} />
+                      </span>
+                    </label>
+                  ) : null}
+                </Revelar>
+
+                <div className={styles.grupoData}>
                   <span className={styles.labelData}>TIPO DE INSCRIÇÃO</span>
                   <div className={styles.segmentado}>
                     <button

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, FileText, MapPin, Info, Ticket, UserCog, ClipboardCheck, Users, Building2, Repeat } from 'lucide-react'
 import Link from 'next/link'
@@ -123,6 +123,7 @@ export function EventoForm(props: EventoFormProps) {
   // verdade é o próprio useEventoForm (registrado aqui), depois de criar/atualizar o
   // evento e já sabendo o id definitivo.
   const camposPersonalizadosRef = useRef<CamposPersonalizadosHandle>(null)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   useEffect(() => {
     registrarSalvarCamposPersonalizados((eventoIdSalvo) => (
@@ -132,7 +133,10 @@ export function EventoForm(props: EventoFormProps) {
   }, [registrarSalvarCamposPersonalizados])
 
   return (
-    <form className={styles.form} onSubmit={(e) => handleSubmit(onSubmit)(e)}>
+    <form className={styles.form} onSubmit={(e) => handleSubmit(
+      (data) => { setErroValidacao(null); onSubmit(data) },
+      () => setErroValidacao('Alguns campos precisam de atenção — confira os destaques em vermelho.'),
+    )(e)}>
       <div className={styles.colunas}>
         {/* ─── Coluna esquerda ─── */}
         <div className={styles.colunaEsquerda}>
@@ -536,24 +540,41 @@ export function EventoForm(props: EventoFormProps) {
                 </div>
 
                 <div className={styles.grupoData}>
-                  <label className={styles.labelData} htmlFor="inscricoesAte">Inscrições até (opcional)</label>
-                  <input
-                    id="inscricoesAte"
-                    type="datetime-local"
-                    className={styles.inputData}
-                    aria-describedby="inscricoesAte-ajuda"
-                    {...register('inscricoesAte')}
-                  />
-                  <span id="inscricoesAte-ajuda" className={styles.campoHint}>
+                  <span className={styles.labelData}>
+                    INSCRIÇÕES ATÉ <span className={styles.opcional}>(opcional)</span>
+                  </span>
+                  <div className={styles.linhaDataHora}>
+                    <div className={styles.campoDataWrap}>
+                      <CampoData
+                        id="inscricoes-ate-data"
+                        label="Data"
+                        value={(watch('inscricoesAteData') as string) ?? ''}
+                        onChange={(v) => setValue('inscricoesAteData', v, { shouldValidate: true })}
+                        erro={errors.inscricoesAteData?.message}
+                      />
+                    </div>
+                    <div className={styles.campoHoraWrap}>
+                      <span className={styles.subLabel}>Horário</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="hh:mm"
+                        maxLength={5}
+                        className={styles.inputData}
+                        aria-label="Horário do prazo de inscrição"
+                        {...register('inscricoesAteHora')}
+                        onChange={(e) => setValue('inscricoesAteHora', formatarHoraDigitada(e.target.value), { shouldValidate: true })}
+                      />
+                      {errors.inscricoesAteHora && <span className={styles.erroCampo}>{errors.inscricoesAteHora.message}</span>}
+                    </div>
+                  </div>
+                  <span className={styles.campoHint}>
                     Ex.: 15/03/2026 23:59 — deixe vazio pra aceitar inscrições até o evento começar.
                   </span>
-                  {errors.inscricoesAte && (
-                    <span className={styles.erroCampo}>{errors.inscricoesAte.message}</span>
-                  )}
                 </div>
 
                 <Revelar>
-                  {watch('inscricoesAte') ? (
+                  {watch('inscricoesAteData') ? (
                     <label className={styles.toggleRow}>
                       <span className={styles.toggleTexto}>
                         <span className={styles.toggleTitulo}>Permitir cancelamento após o prazo</span>
@@ -680,6 +701,7 @@ export function EventoForm(props: EventoFormProps) {
         )}
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+        {erroValidacao && <div className={styles.erroGeral}>{erroValidacao}</div>}
 
         <div className={styles.acoes}>
           <Button

@@ -75,7 +75,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       localId: undefined, localTexto: undefined, enderecoLocal: undefined, novoLocal: undefined,
       tipo: '', responsavelPessoaIds: [],
       requerInscricao: false,
-      inscricoesAte: '',
+      inscricoesAteData: '', inscricoesAteHora: '',
       permiteCancelarAposPrazo: true,
       controlaPresenca: false,
       vagas: undefined,
@@ -137,7 +137,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: eventoInicial.tipo ?? '',
         responsavelPessoaIds: (eventoInicial.responsaveis ?? []).filter((r) => r.id).map((r) => r.id as string),
         requerInscricao: eventoInicial.requerInscricao,
-        inscricoesAte: eventoInicial.inscricoesAte ? eventoInicial.inscricoesAte.slice(0, 16) : '',
+        inscricoesAteData: eventoInicial.inscricoesAte ? eventoInicial.inscricoesAte.slice(0, 10) : '',
+        inscricoesAteHora: eventoInicial.inscricoesAte ? eventoInicial.inscricoesAte.slice(11, 16) : '',
         permiteCancelarAposPrazo: eventoInicial.permiteCancelarAposPrazo ?? true,
         controlaPresenca: eventoInicial.controlaPresenca,
         vagas: eventoInicial.vagas ?? undefined,
@@ -238,7 +239,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: data.tipo || undefined,
         responsavelPessoaIds: data.responsavelPessoaIds ?? [],
         requerInscricao: data.requerInscricao,
-        inscricoesAte: (data.requerInscricao && data.inscricoesAte) ? data.inscricoesAte : null,
+        inscricoesAte: (data.requerInscricao && data.inscricoesAteData && data.inscricoesAteHora)
+          ? `${data.inscricoesAteData}T${data.inscricoesAteHora}` : null,
         permiteCancelarAposPrazo: data.permiteCancelarAposPrazo,
         // Forçado a false quando requerInscricao=false, mesmo que o form tenha valor de edição anterior.
         controlaPresenca: data.requerInscricao ? data.controlaPresenca : false,

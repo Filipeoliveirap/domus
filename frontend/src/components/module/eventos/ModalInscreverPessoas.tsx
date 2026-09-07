@@ -527,7 +527,7 @@ export function ModalInscreverPessoas({
         </div>
       )}
 
-      {situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
+      {!embutido && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
         <div className={styles.avisoPrazo}>
           O prazo de inscrição deste evento já encerrou. Como {(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.
         </div>

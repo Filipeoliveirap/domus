@@ -125,6 +125,24 @@ public class Evento {
     @Builder.Default
     private boolean divergeDaSerie = false;
 
+    /** Prazo de inscrição (V38). NULL = aceita inscrição até o evento começar (comportamento antigo). */
+    @Column(name = "inscricoes_ate")
+    private LocalDateTime inscricoesAte;
+
+    /** V38. Só tem efeito quando inscricoesAte != null. TRUE = quem já se inscreveu ainda
+     *  pode cancelar depois do prazo; FALSE = lista travada no prazo. */
+    @Column(name = "permite_cancelar_apos_prazo", nullable = false)
+    @Builder.Default
+    private boolean permiteCancelarAposPrazo = true;
+
+    /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "prazo chegando"). */
+    @Column(name = "aviso_prazo_proximo_em")
+    private LocalDateTime avisoPrazoProximoEm;
+
+    /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "prazo fechou"). */
+    @Column(name = "aviso_prazo_fechado_em")
+    private LocalDateTime avisoPrazoFechadoEm;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

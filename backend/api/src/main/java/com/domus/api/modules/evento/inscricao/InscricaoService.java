@@ -594,7 +594,15 @@ public class InscricaoService {
 
         validarCancelamentoPermitido(inscricao.getEvento(), souEu, gestorDaMesmaIgreja);
 
-        cancelarInterno(inscricao);
+        // Cancelamento depois do prazo (com o toggle "permite cancelar após o prazo" ligado,
+        // senão validarCancelamentoPermitido já teria barrado): num evento pago, a igreja
+        // mantém o que foi pago — não estorna. Antes do prazo, ou evento gratuito, estorna
+        // como sempre. Os segundos de diferença no "agora" são irrelevantes num prazo de dias.
+        Evento evento = inscricao.getEvento();
+        boolean semReembolso = evento.getInscricoesAte() != null
+                && java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte());
+
+        cancelarInterno(inscricao, semReembolso);
         log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
                 inscricaoId, usuarioId, igrejaId);
     }
@@ -606,13 +614,43 @@ public class InscricaoService {
      *  titular NÃO cancela em cascata quem ele convidou — cada convidado é sua própria
      *  {@code InscricaoEvento} e se cancela independentemente (decisão do usuário, 2026-08-26). */
     private void cancelarInterno(InscricaoEvento inscricao) {
-        // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
-        // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
-        // com o dinheiro ainda retido no Mercado Pago.
-        estornarCobrancasDaInscricao(inscricao);
+        cancelarInterno(inscricao, false);
+    }
+
+    /**
+     * @param semReembolso quando {@code true} (cancelamento pelo {@code cancelar(...)} depois
+     *   do prazo, com {@code permiteCancelarAposPrazo} ligado), NÃO estorna cobrança PAGA:
+     *   a igreja mantém o valor, sem e-mail de reembolso e sem lançamento de "Reembolso" no
+     *   financeiro (não houve). Cobrança PENDENTE (nunca paga) continua sendo cancelada.
+     *   Só o caminho manual {@code cancelar(...)} passa {@code true}; caminhos automáticos
+     *   (lote, evento virou gratuito, cancelarPorCobranca) continuam estornando.
+     */
+    private void cancelarInterno(InscricaoEvento inscricao, boolean semReembolso) {
+        if (semReembolso) {
+            // Sem estorno: a cobrança PAGA fica como está (igreja mantém). Só as PENDENTES
+            // são canceladas — nunca chegaram a debitar ninguém.
+            cancelarCobrancasPendentes(inscricao);
+        } else {
+            // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
+            // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
+            // com o dinheiro ainda retido no Mercado Pago.
+            estornarCobrancasDaInscricao(inscricao);
+        }
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
+    }
+
+    /** Cancela só as cobranças PENDENTE desta inscrição (sem tocar no Mercado Pago nem nas
+     *  PAGO). Usado no cancelamento após o prazo, que não estorna. */
+    private void cancelarCobrancasPendentes(InscricaoEvento inscricao) {
+        List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
+        List<CobrancaEvento> pendentes = cobrancas.stream()
+                .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
+                .toList();
+        if (pendentes.isEmpty()) return;
+        pendentes.forEach(CobrancaEvento::marcarComoCancelado);
+        cobrancaEventoRepository.saveAll(pendentes);
     }
 
     /**

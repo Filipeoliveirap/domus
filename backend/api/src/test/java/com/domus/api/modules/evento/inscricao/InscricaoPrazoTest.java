@@ -41,6 +41,8 @@ class InscricaoPrazoTest {
     com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository campoPersonalizadoRepository;
     com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository respostaCampoPersonalizadoRepository;
+    com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository cobrancaEventoRepository;
+    com.domus.api.modules.pagamento.MercadoPagoClient mercadoPagoClient;
     InscricaoService service;
 
     UUID igrejaId = UUID.randomUUID();
@@ -62,13 +64,15 @@ class InscricaoPrazoTest {
         notificacaoService = mock(com.domus.api.modules.notificacao.NotificacaoService.class);
         campoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.CampoPersonalizadoEventoRepository.class);
         respostaCampoPersonalizadoRepository = mock(com.domus.api.modules.evento.campopersonalizado.RespostaCampoPersonalizadoRepository.class);
+        cobrancaEventoRepository = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class);
+        mercadoPagoClient = mock(com.domus.api.modules.pagamento.MercadoPagoClient.class);
         service = new InscricaoService(eventoRepository, inscricaoRepository,
                 membroRepository, usuarioRepository, visitanteRepository,
                 elegibilidadeService, familiaIgrejaService, notificacaoService,
                 campoPersonalizadoRepository, respostaCampoPersonalizadoRepository,
                 mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class),
-                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoRepository.class),
-                mock(com.domus.api.modules.pagamento.MercadoPagoClient.class),
+                cobrancaEventoRepository,
+                mercadoPagoClient,
                 contaPagamentoIgrejaRepositoryComContaConectada(),
                 mock(com.domus.api.shared.email.EmailService.class),
                 mock(com.domus.api.modules.financeiro.movimentacao.MovimentacaoAutomaticaService.class));
@@ -213,5 +217,83 @@ class InscricaoPrazoTest {
         service.cancelar(inscricao.getId(), UUID.randomUUID(), UUID.randomUUID(),
                 "ADMIN_IGREJA", igrejaId);
         verify(inscricaoRepository).save(any());
+    }
+
+    // --- Adendo 2026-09-07: cancelamento após o prazo em evento pago não estorna ---
+
+    private Evento eventoPagoComPrazo(LocalDateTime inscricoesAte, boolean permiteCancelar) {
+        var e = eventoComPrazo(inscricoesAte, permiteCancelar);
+        e.setPreco(new java.math.BigDecimal("50.00"));
+        return e;
+    }
+
+    private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobranca(
+            UUID inscricaoId, com.domus.api.modules.pagamento.cobranca.StatusCobranca status) {
+        var c = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class);
+        when(c.getInscricaoId()).thenReturn(inscricaoId);
+        when(c.getStatus()).thenReturn(status);
+        when(c.getMpPaymentId()).thenReturn("mp-1");
+        when(c.valorRestanteParaEstornar()).thenReturn(new java.math.BigDecimal("50.00"));
+        return c;
+    }
+
+    @Test
+    void cancelamentoAntesDoPrazoEstornaNormalmente() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().plusDays(5), true);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
+        verify(pago).registrarEstorno(any());
+    }
+
+    @Test
+    void cancelamentoDepoisDoPrazoNaoEstorna() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+        verify(pago, never()).registrarEstorno(any());
+        verify(pago, never()).marcarComoCancelado();
+        org.assertj.core.api.Assertions.assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void cancelamentoDepoisDoPrazoCancelaCobrancaPendente() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        var pendente = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pendente));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ACESSO_COMUM", igrejaId);
+
+        verify(pendente).marcarComoCancelado();
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+        org.assertj.core.api.Assertions.assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void gestorCancelaDepoisDoPrazoTambemNaoEstorna() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+        verify(pago, never()).registrarEstorno(any());
     }
 }

@@ -149,6 +149,10 @@ const eventoSchemaBase = z.object({
   fotoId: z.string().nullable().default(null),
 
   requerInscricao: z.boolean().default(false),
+  inscricoesAte: opcional(
+    z.string().regex(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/, 'Data e hora inválidas.'),
+  ),
+  permiteCancelarAposPrazo: z.boolean().default(true),
   controlaPresenca: z.boolean().default(false),
   vagas: opcionalNumero(
     z.coerce.number().int().positive('Vagas deve ser um número inteiro positivo.'),
@@ -198,6 +202,15 @@ export const eventoSchema = eventoSchemaBase.refine(
     return data.idadeMin <= data.idadeMax
   },
   { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
+).refine(
+  (data) => {
+    if (!data.inscricoesAte) return true
+    const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
+    const prazo = new Date(data.inscricoesAte)
+    if (isNaN(inicio.getTime()) || isNaN(prazo.getTime())) return true
+    return prazo <= inicio
+  },
+  { message: 'O prazo tem que ser antes do início do evento.', path: ['inscricoesAte'] }
 ).refine(
   (data) => !data.requerInscricao || data.tipoInscricao !== 'PAGO' || !!data.preco,
   { message: 'Informe o valor da inscrição.', path: ['preco'] }

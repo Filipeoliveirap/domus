@@ -14,7 +14,10 @@ import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useDebounce } from '@/hooks/useDebounce'
 import { formatarTelefone } from '@/lib/masks'
+import { rotuloRole } from '@/lib/formats/usuarioFormat'
+import { useAuthStore } from '@/store/authStore'
 import type { RespostaRequest } from '@/types/campoPersonalizado.type'
+import type { SituacaoInscricao } from '@/types/evento.type'
 import styles from './ModalInscreverAlguem.module.css'
 import painelStyles from './ModalInscreverPessoas.module.css'
 
@@ -27,11 +30,15 @@ interface Props {
   /** Evento pago habilita a escolha de pagamento nas abas Visitantes/Pessoa de fora,
    *  além de "Pessoas da igreja" (ModalInscreverPessoas). */
   preco?: number | null
+  /** Situação do prazo de inscrição — habilita o aviso "prazo encerrado" no topo do modal.
+   *  O modal só é aberto por quem gerencia, então o fluxo de inscrever continua liberado. */
+  situacaoInscricao?: SituacaoInscricao
   onClose: () => void
 }
 
-export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, onClose }: Props) {
+export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, situacaoInscricao, onClose }: Props) {
   const router = useRouter()
+  const role = useAuthStore((s) => s.role)
   const [aba, setAba] = useState<Aba>('pessoas')
   const { saindo, fechar } = useFecharAnimado(onClose, 220)
 
@@ -232,6 +239,11 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
           </>
         ) : (
         <>
+        {situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
+          <div className={styles.avisoPrazo}>
+            O prazo de inscrição deste evento já encerrou. Como {(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.
+          </div>
+        )}
         <div className={styles.abas}>
           <button type="button" className={aba === 'pessoas' ? styles.abaAtiva : styles.aba} onClick={() => trocarAba('pessoas')}>
             Pessoas da igreja

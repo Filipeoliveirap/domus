@@ -293,3 +293,13 @@
     width: 100%;
   }
 }
+
+.avisoPrazo {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning, #d97706);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}

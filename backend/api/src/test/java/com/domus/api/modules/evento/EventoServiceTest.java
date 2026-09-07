@@ -1659,4 +1659,19 @@ class EventoServiceTest {
         assertThat(existente.getFoto()).isNull();
         verify(fotoService).remover(fotoAntigaId);
     }
+
+    @Test
+    void eventoResponseExpoeInscricoesAtePermiteCancelarESituacao() {
+        LocalDateTime agora = LocalDateTime.now();
+        Evento evento = evento(igrejaId, false);
+        evento.setInscricoesAte(agora.minusHours(1)); // prazo no passado
+        evento.setInicioEm(agora.plusDays(1));
+
+        EventoResponse resp = EventoResponse.from(evento, igrejaId, true);
+
+        assertThat(resp.inscricoesAte()).isNotNull();
+        assertThat(resp.inscricoesAte()).isEqualTo(agora.minusHours(1));
+        assertThat(resp.permiteCancelarAposPrazo()).isTrue();
+        assertThat(resp.situacaoInscricao()).isEqualTo(SituacaoInscricao.ENCERRADA_POR_PRAZO);
+    }
 }

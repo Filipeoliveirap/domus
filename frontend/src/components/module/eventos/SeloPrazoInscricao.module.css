@@ -1,0 +1,29 @@
+.neutro,
+.destaque,
+.encerrado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  align-self: flex-start;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.neutro {
+  background: var(--color-bg-sidebar, #f1f5f9);
+  color: var(--color-text-muted, #64748b);
+}
+
+.destaque {
+  background: var(--color-warning-bg, #fffbeb);
+  color: var(--color-warning, #d97706);
+}
+
+.encerrado {
+  background: var(--color-bg-sidebar, #f1f5f9);
+  color: var(--color-text-muted, #94a3b8);
+}

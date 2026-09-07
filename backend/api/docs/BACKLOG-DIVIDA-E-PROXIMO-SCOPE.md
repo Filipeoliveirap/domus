@@ -786,15 +786,22 @@ o suficiente pra implementar direto quando entrar na fila, sem brainstorm — ma
 sentido resolver junto do item acima (a decisão de quem absorve a taxa muda o que "registrar
 a taxa" significa na prática).
 
-### `PagarCobrancaRequest` sem validação de bean nos campos (2026-08-26, decisão consciente de não mexer)
+### ~~`PagarCobrancaRequest` sem validação de bean nos campos~~ (2026-08-26 → **RESOLVIDO** 2026-09-07)
 
 Achado na revisão de segurança do fluxo de pagamento: `token`/`paymentMethodId`/
-`payerEmail`/`issuerId`/`installments` chegam no `POST /cobrancas/{id}/pagar` sem
-`@NotBlank`/`@Size`/validação nenhuma antes de ir pro Mercado Pago. Não é explorável (o
-valor cobrado sempre vem de `cobranca.getValor()` no servidor, nunca do request do
-cliente) — decidido não mexer por ora. Se algum dia sobrar tempo de polimento: o único
-ganho real é uma mensagem de erro mais amigável em vez do erro genérico que o Mercado
-Pago devolve pra input malformado.
+`payerEmail`/`issuerId`/`installments` chegavam no `POST /cobrancas/{id}/pagar` sem
+`@NotBlank`/`@Size`/validação nenhuma antes de ir pro Mercado Pago. Nunca foi explorável
+(o valor cobrado sempre vem de `cobranca.getValor()` no servidor, nunca do request do
+cliente) — o ganho é só uma mensagem de erro mais amigável (400 com campo) em vez do erro
+genérico que o Mercado Pago devolve pra input malformado.
+
+Resolvido: `@Valid` no controller + anotações no record. Só `paymentMethodId`
+(`@NotBlank @Size`) e `payerEmail` (`@NotBlank @Email @Size`) são obrigatórios — existem
+nos dois fluxos (cartão e Pix) e o MP exige ambos de qualquer forma, então apertar aqui
+só converte uma chamada ao MP que já ia falhar num 400 limpo, sem risco de regressão.
+`token`/`installments`/`issuerId` chegam nulos no Pix, então só ganharam teto de
+tamanho/sinal (`@Size`/`@Positive`), nunca `@NotNull`. Testes em `CobrancaControllerTest`
+(`recusaPagarSemMeioDePagamento`, `recusaPagarComEmailDoPagadorInvalido`).
 
 ### ~~Unificar "acompanhante" e "convidado sem cadastro" — dois modelos pro mesmo conceito~~ (2026-08-26, **RESOLVIDO**)
 

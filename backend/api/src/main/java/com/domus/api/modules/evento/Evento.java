@@ -169,6 +169,19 @@ public class Evento {
         return SituacaoEvento.EM_ANDAMENTO;
     }
 
+    /** Ver {@link SituacaoInscricao}. ENCERRADA_POR_INICIO é testado primeiro: como a
+     *  validação garante inscricoesAte <= inicioEm, um evento já começado também está
+     *  "depois do prazo", mas o estado correto pra exibir é ENCERRADA_POR_INICIO. */
+    public SituacaoInscricao getSituacaoInscricao() {
+        if (getSituacao() != SituacaoEvento.AGENDADO) {
+            return SituacaoInscricao.ENCERRADA_POR_INICIO;
+        }
+        if (inscricoesAte != null && LocalDateTime.now().isAfter(inscricoesAte)) {
+            return SituacaoInscricao.ENCERRADA_POR_PRAZO;
+        }
+        return SituacaoInscricao.ABERTA;
+    }
+
     public String getLocalExibicao() {
         if (local != null) return local.getNome();
         if (localTexto != null) return localTexto;

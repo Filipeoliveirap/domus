@@ -336,6 +336,9 @@ export function BotaoConfirmarPresenca({
             // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
             // contagem embutida não existe mais (ver Task 10/11) — sem substituto por ora.
             quantidadeConvidados={0}
+            // minha.inscrito === true num evento pago já significa CONFIRMADA (pago); o
+            // estado AGUARDANDO_PAGAMENTO cai no bloco de pagamento pendente acima.
+            semReembolso={preco != null && situacaoInscricao === 'ENCERRADA_POR_PRAZO'}
             isLoading={cancelar.isPending}
             onConfirmar={() => {
               if (!minha.id) return

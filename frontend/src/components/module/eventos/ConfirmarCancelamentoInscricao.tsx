@@ -2,7 +2,10 @@
 
 import { XCircle } from 'lucide-react'
 import { ModalArquivar } from '@/components/common/modalArquivar/ModalArquivar'
-import { ModalConfirmacaoCritica } from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
+import {
+  ModalConfirmacaoCritica,
+  type Consequencia,
+} from '@/components/common/ModalConfirmacaoCritica/ModalConfirmacaoCritica'
 
 interface Props {
   nome: string
@@ -10,19 +13,35 @@ interface Props {
   quantidadeConvidados: number
   isLoading: boolean
   erro?: string | null
+  /** Evento pago cancelado após o prazo de inscrição: não há estorno do valor pago. */
+  semReembolso?: boolean
   onConfirmar: () => void
   onClose: () => void
 }
 
 export function ConfirmarCancelamentoInscricao({
-  nome, proprio, quantidadeConvidados, isLoading, erro, onConfirmar, onClose,
+  nome, proprio, quantidadeConvidados, isLoading, erro, semReembolso = false, onConfirmar, onClose,
 }: Props) {
   const temConvidados = quantidadeConvidados > 0
 
-  if (temConvidados) {
-    const textoConvidados = quantidadeConvidados === 1
-      ? `${proprio ? 'Seu convidado' : 'O convidado dessa pessoa'} será removido e não volta sozinho numa nova inscrição.`
-      : `${proprio ? 'Seus' : 'Os'} ${quantidadeConvidados} convidados ${proprio ? '' : 'dessa pessoa '}serão removidos e não voltam sozinhos numa nova inscrição.`
+  if (temConvidados || semReembolso) {
+    const consequencias: Consequencia[] = []
+
+    if (temConvidados) {
+      const textoConvidados = quantidadeConvidados === 1
+        ? `${proprio ? 'Seu convidado' : 'O convidado dessa pessoa'} será removido e não volta sozinho numa nova inscrição.`
+        : `${proprio ? 'Seus' : 'Os'} ${quantidadeConvidados} convidados ${proprio ? '' : 'dessa pessoa '}serão removidos e não voltam sozinhos numa nova inscrição.`
+      consequencias.push({ tipo: 'perde', texto: textoConvidados })
+    }
+
+    if (semReembolso) {
+      consequencias.push({
+        tipo: 'perde',
+        texto: proprio
+          ? 'O prazo de inscrição já passou — se cancelar agora, o valor pago NÃO será reembolsado.'
+          : 'O prazo de inscrição já passou — ao remover, o valor pago por esta pessoa NÃO será reembolsado.',
+      })
+    }
 
     return (
       <ModalConfirmacaoCritica
@@ -32,7 +51,7 @@ export function ConfirmarCancelamentoInscricao({
             ? 'Você está prestes a cancelar sua inscrição neste evento.'
             : <>Você está prestes a cancelar a inscrição de <strong>{nome}</strong>. Esta ação não pode ser desfeita pela pessoa.</>
         }
-        consequencias={[{ tipo: 'perde', texto: textoConvidados }]}
+        consequencias={consequencias}
         palavraConfirmacao={proprio ? 'CANCELAR' : nome}
         textoConfirmar="Cancelar inscrição"
         isLoading={isLoading}

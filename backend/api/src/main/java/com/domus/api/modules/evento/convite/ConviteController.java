@@ -76,7 +76,8 @@ public class ConviteController {
                 evento.getIgreja().getLogoFoto() != null ? evento.getIgreja().getLogoFoto().getId() : null,
                 convidante != null ? convidante.getNome() : null,
                 convidante != null && convidante.getFoto() != null ? convidante.getFoto().getId() : null,
-                vagasRestantes, evento.getPreco(), campos, evento.isRequerInscricao()
+                vagasRestantes, evento.getPreco(), campos, evento.isRequerInscricao(),
+                evento.getSituacaoInscricao(), evento.getInscricoesAte()
         ));
     }
 

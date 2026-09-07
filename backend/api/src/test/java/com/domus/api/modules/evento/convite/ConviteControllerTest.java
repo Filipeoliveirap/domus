@@ -69,7 +69,9 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
         mockMvc.perform(get("/convites/token-teste"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Culto de Jovens")))
-                .andExpect(content().string(containsString("Ana Convidante")));
+                .andExpect(content().string(containsString("Ana Convidante")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.situacaoInscricao").value("ABERTA"));
     }
 
     @Test

@@ -161,19 +161,25 @@
 }
 
 .tabela tbody tr {
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) {
   .tabela tbody tr:hover {
     background-color: var(--color-bg-table-head);
   }
 }
+.linhaClicavel {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 .linhaClicavel:active {
   background-color: var(--color-bg-table-head);
+  transform: scale(0.996);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tabela tbody tr { transition: background-color var(--transition-fast); }
+  .linhaClicavel:active { transform: none; }
 }
 
 .celulaPessoa {
@@ -415,3 +421,30 @@
 }
 
 
+
+/* Linha da pessoa recém-cadastrada/editada: fixada no topo nesta visita, com um realce
+   que entra e some sozinho (useDestaqueRecente). A ordem alfabética volta ao recarregar. */
+.destacada td {
+  animation: destaqueLinha 3.4s ease-out forwards;
+}
+.destacada td:first-child {
+  animation: destaqueLinha 3.4s ease-out forwards, destaqueBorda 3.4s ease-out forwards;
+}
+@keyframes destaqueLinha {
+  0%   { background-color: var(--color-primary-light); transform: translateY(-8px); }
+  16%  { background-color: var(--color-primary-light); transform: translateY(0); }
+  100% { background-color: transparent; transform: translateY(0); }
+}
+@keyframes destaqueBorda {
+  0%, 22% { box-shadow: inset 3px 0 0 var(--color-primary); }
+  100%    { box-shadow: inset 3px 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .destacada td, .destacada td:first-child {
+    animation: destaqueLinhaFade 2s ease forwards;
+  }
+  @keyframes destaqueLinhaFade {
+    from { background-color: var(--color-primary-light); }
+    to   { background-color: transparent; }
+  }
+}

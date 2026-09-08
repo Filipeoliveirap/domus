@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Pencil, KeyRound, Archive } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
@@ -11,11 +10,13 @@ import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { clsx } from 'clsx'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Avatar } from '@/components/common/Avatar/Avatar'
+import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
+import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
-  iniciais, rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
+  rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/pessoaFormat'
-import { urlFoto } from '@/lib/urlFoto'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { PessoaResponse } from '@/types/pessoa.type'
 import styles from './page.module.css'
@@ -49,6 +50,10 @@ function PessoasConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
   const { pagina, setPagina } = usePaginaUrl()
+  const { destaqueId } = useDestaqueRecente()
+  // A pessoa recém-salva pode estar noutra página (ordem alfabética) ou fora do filtro —
+  // busca ela à parte e fixa no topo nesta visita.
+  const { data: pessoaDestaque } = usePessoa(destaqueId ?? undefined)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -71,7 +76,11 @@ function PessoasConteudo() {
     setPagina(0)
   }
 
-  const pessoas = data?.content ?? []
+  const pessoasPagina = data?.content ?? []
+  const pessoas =
+    destaqueId && pessoaDestaque
+      ? [pessoaDestaque, ...pessoasPagina.filter((p) => p.id !== destaqueId)]
+      : pessoasPagina
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
@@ -182,19 +191,17 @@ function PessoasConteudo() {
 
                 return (
                   <tr key={p.id}
-                    className={styles.linhaClicavel}
+                    className={clsx(styles.linhaClicavel, destaqueId === p.id && styles.destacada)}
                     onClick={() => setPessoaDetalheId(p.id)}
                   >
                     <td>
                       <div className={styles.celulaPessoa}>
-                        <span className={styles.avatar}>
-                          {urlFoto(p.fotoId, 'THUMB') ? (
-                            <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={40} height={40} unoptimized className={styles.avatarFoto}
-                              onClick={(e) => { e.stopPropagation(); setFotoVisualizando(p.fotoId) }} />
-                          ) : (
-                            iniciais(p.nome)
-                          )}
-                        </span>
+                        <Avatar
+                          fotoId={p.fotoId}
+                          nome={p.nome}
+                          tamanho={40}
+                          onVerFoto={p.fotoId ? () => setFotoVisualizando(p.fotoId) : undefined}
+                        />
                         <div className={styles.pessoaInfo}>
                           <span className={styles.nome}>{p.nome}</span>
                           {p.cargo && <span className={styles.email}>{p.cargo}</span>}
@@ -228,7 +235,7 @@ function PessoasConteudo() {
         {!isLoading && !isError && pessoas.length > 0 && (
           <footer className={styles.rodape}>
             <span className={styles.contagem}>
-              Exibindo {pessoas.length} de {totalElementos} pessoas
+              Exibindo {pessoasPagina.length} de {totalElementos} pessoas
             </span>
             <div className={styles.paginacao}>
               <button

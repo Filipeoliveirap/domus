@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { clsx } from 'clsx'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
-import { X, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarPessoas } from '@/lib/permissoes'
+import { Avatar } from '@/components/common/Avatar/Avatar'
+import { X, Pencil, Phone, Cake, Heart, Church, MapPin, FileText, CalendarClock, Droplet, Briefcase, Archive, type LucideIcon } from 'lucide-react'
 import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import { usePessoaMinisterios } from '@/hooks/pessoa/usePessoaMinisterios'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import {
-  iniciais, rotuloVinculo, varianteVinculo, formatarData,
+  rotuloVinculo, varianteVinculo, formatarData,
   formatarTelefoneExibicao, rotuloEstadoCivil, formatarDataNascimento, formatarEndereco,
 } from '@/lib/formats/pessoaFormat'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { SkeletonDrawerPessoa } from './SkeletonDrawerPessoa'
-import { urlFoto } from '@/lib/urlFoto'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import styles from './DrawerDetalhePessoa.module.css'
 
@@ -40,6 +41,9 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
   const { ministerio: rotuloMinisterio } = useRotulos()
   const [ampliada, setAmpliada] = useState(false)
   const { saindo, fechar } = useFecharAnimado(onClose, 260)
+  const role = useAuthStore((s) => s.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
+  const podeEditar = podeGerenciarPessoas(role, capacidadesExtras) && !pessoa?.arquivada
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -61,6 +65,16 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
         role="dialog"
         aria-modal="true"
       >
+        {podeEditar && (
+          <Link
+            href={`/pessoas/${pessoaId}`}
+            className={styles.btnEditar}
+            onClick={onClose}
+            aria-label="Editar pessoa"
+          >
+            <Pencil size={16} />
+          </Link>
+        )}
         <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>
@@ -83,23 +97,12 @@ export function DrawerDetalhePessoa({ pessoaId, onClose, contextoExtra }: Drawer
                 </Link>
               )}
               <div className={styles.topo}>
-                {/*
-                  Vira <button> só quando HÁ foto. Sem foto o avatar mostra iniciais, e
-                  não há nada para ampliar — um botão ali prometeria uma ação que não
-                  existe, e no teclado viraria uma parada inútil na navegação.
-                */}
-                {pessoa.fotoId ? (
-                  <button
-                    type="button"
-                    className={`${styles.avatar} ${styles.avatarClicavel}`}
-                    onClick={() => setAmpliada(true)}
-                    aria-label={`Ampliar foto de ${pessoa.nome}`}
-                  >
-                    <Image src={urlFoto(pessoa.fotoId, 'DISPLAY')!} alt="" width={56} height={56} unoptimized className={styles.avatarFoto} />
-                  </button>
-                ) : (
-                  <span className={styles.avatar}>{iniciais(pessoa.nome)}</span>
-                )}
+                <Avatar
+                  fotoId={pessoa.fotoId}
+                  nome={pessoa.nome}
+                  tamanho={56}
+                  onVerFoto={pessoa.fotoId ? () => setAmpliada(true) : undefined}
+                />
                 <div className={styles.identidade}>
                   <span className={styles.nome}>{pessoa.nome}</span>
                   {pessoa.email && <span className={styles.email}>{pessoa.email}</span>}

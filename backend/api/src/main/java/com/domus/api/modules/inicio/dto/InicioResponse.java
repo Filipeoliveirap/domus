@@ -8,5 +8,5 @@ public record InicioResponse(
         List<EventoResumoDTO> proximosEventos
 ) {
     /** {@code fotoId} é nulo enquanto o upload (Fase 2) não existir — a tela cai nas iniciais. */
-    public record Aniversariante(UUID id, String nome, int dia, UUID fotoId) {}
+    public record Aniversariante(UUID id, String nome, int dia, UUID fotoId, String telefone) {}
 }

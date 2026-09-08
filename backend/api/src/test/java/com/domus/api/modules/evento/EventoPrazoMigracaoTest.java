@@ -20,12 +20,27 @@ class EventoPrazoMigracaoTest implements PostgresTestContainerSupport {
         var colunas = jdbc.queryForList(
             "SELECT column_name, is_nullable, column_default FROM information_schema.columns " +
             "WHERE table_name = 'evento' AND column_name IN " +
-            "('inscricoes_ate','permite_cancelar_apos_prazo','aviso_prazo_proximo_em','aviso_prazo_fechado_em')");
-        assertThat(colunas).hasSize(4);
-        var permiteCancelar = colunas.stream()
-            .filter(c -> c.get("column_name").equals("permite_cancelar_apos_prazo")).findFirst().orElseThrow();
-        assertThat(permiteCancelar.get("is_nullable")).isEqualTo("NO");
-        assertThat(String.valueOf(permiteCancelar.get("column_default"))).contains("true");
+            "('inscricoes_ate','aviso_prazo_proximo_em','aviso_prazo_fechado_em')");
+        assertThat(colunas).hasSize(3);
+    }
+
+    @Test
+    void v39_troca_boolean_por_enum_de_politica() {
+        var colunas = jdbc.queryForList(
+            "SELECT is_nullable, data_type, character_maximum_length, column_default " +
+            "FROM information_schema.columns WHERE table_name = 'evento' " +
+            "AND column_name = 'politica_cancelamento_apos_prazo'");
+        assertThat(colunas).hasSize(1);
+        var col = colunas.get(0);
+        assertThat(col.get("is_nullable")).isEqualTo("NO");
+        assertThat(col.get("data_type")).isEqualTo("character varying");
+        assertThat(col.get("character_maximum_length")).isEqualTo(30);
+        assertThat(String.valueOf(col.get("column_default"))).contains("PERMITIDO_COM_REEMBOLSO");
+
+        var boolCount = jdbc.queryForObject(
+            "SELECT count(*) FROM information_schema.columns WHERE table_name = 'evento' " +
+            "AND column_name = 'permite_cancelar_apos_prazo'", Integer.class);
+        assertThat(boolCount).isEqualTo(0);
     }
 
     @Test

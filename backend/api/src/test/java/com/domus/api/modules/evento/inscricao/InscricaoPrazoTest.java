@@ -106,7 +106,9 @@ class InscricaoPrazoTest {
                 .titulo("Congresso").inicioEm(LocalDateTime.now().plusDays(20))
                 .requerInscricao(true)
                 .inscricoesAte(inscricoesAte)
-                .permiteCancelarAposPrazo(permiteCancelar)
+                .politicaCancelamentoAposPrazo(permiteCancelar
+                        ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
+                        : com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.NAO_PERMITIDO)
                 .build();
     }
 

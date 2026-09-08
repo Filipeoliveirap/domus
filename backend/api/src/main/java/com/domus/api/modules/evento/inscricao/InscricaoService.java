@@ -351,7 +351,8 @@ public class InscricaoService {
         if (ehGestor) return;
         if (!souEu) return; // o SEM_PERMISSAO acima já barra esse caso
         if (evento.getInscricoesAte() == null) return;
-        if (evento.isPermiteCancelarAposPrazo()) return;
+        if (evento.getPoliticaCancelamentoAposPrazo()
+                != com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.NAO_PERMITIDO) return;
         if (!java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())) return;
         throw new BusinessException("CANCELAMENTO_ENCERRADO_POR_PRAZO",
                 "Depois do prazo de inscrição não dá mais pra cancelar sua inscrição neste evento. "

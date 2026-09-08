@@ -94,8 +94,10 @@ export function PainelWizard({ passoAtual, totalPassos, primeiroNome }: Props) {
                 >
                   {feito ? '✓' : n}
                 </span>
-                <span className={styles.progLinha}>
-                  <i style={{ width: feito || atual ? '100%' : '0%' }} />
+                {/* a linha só preenche quando o passo foi CONCLUÍDO (você já passou dele).
+                    O passo atual: halo no círculo (desktop) / trilho destacado (mobile). */}
+                <span className={`${styles.progLinha} ${atual ? styles.progLinhaAtual : ''}`}>
+                  <i style={{ width: feito ? '100%' : '0%' }} />
                 </span>
               </li>
             )

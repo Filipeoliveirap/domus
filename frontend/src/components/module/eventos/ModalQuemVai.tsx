@@ -5,6 +5,7 @@ import { clsx } from 'clsx'
 import Image from 'next/image'
 import { X, Users } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
@@ -101,16 +102,24 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
         </header>
 
         <div className={styles.lista}>
+          <Transicao key={carregando ? 'load' : linhas.length ? 'cheio' : 'vazio'} modo="fade">
           {carregando ? (
-            <p className={styles.estado}>Carregando…</p>
+            <>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className={styles.skeletonLinha}>
+                  <span className={styles.skeletonAvatar} />
+                  <span className={styles.skeletonNome} style={{ width: `${58 - i * 7}%` }} />
+                </div>
+              ))}
+            </>
           ) : linhas.length === 0 ? (
             <div className={styles.vazio}>
               <Users size={28} aria-hidden="true" />
               <p>Ninguém confirmou ainda.</p>
             </div>
           ) : (
-            linhas.map((l) => (
-              <div key={l.id} className={styles.grupo}>
+            linhas.map((l, i) => (
+              <div key={l.id} className={styles.grupo} style={{ '--i': i } as React.CSSProperties}>
                 <div className={styles.linha}>
                   <span className={styles.avatar}>
                     {urlFoto(l.fotoId, 'THUMB') ? (
@@ -168,6 +177,7 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
               </div>
             ))
           )}
+          </Transicao>
         </div>
       </div>
     </div>

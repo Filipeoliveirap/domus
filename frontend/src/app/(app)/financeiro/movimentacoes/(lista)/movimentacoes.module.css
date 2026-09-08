@@ -214,6 +214,25 @@
 
 @media (prefers-reduced-motion: reduce) {
   .linha { transition: background-color var(--transition-fast), transform var(--transition-fast); }
+  .linha:active { transform: none; }
+}
+
+/* Movimentação recém-registrada/editada: fixada no topo nesta visita, com um realce que
+   entra e some sozinho (useDestaqueRecente). A ordem por data volta ao recarregar. */
+.destacada {
+  animation: mvDestaque 3.4s ease-out forwards;
+}
+@keyframes mvDestaque {
+  0%   { background-color: var(--color-primary-light); box-shadow: inset 3px 0 0 var(--color-primary); transform: translateY(-6px); }
+  16%  { background-color: var(--color-primary-light); box-shadow: inset 3px 0 0 var(--color-primary); transform: translateY(0); }
+  100% { background-color: var(--color-bg-white); box-shadow: inset 3px 0 0 transparent; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .destacada { animation: mvDestaqueFade 2s ease forwards; }
+  @keyframes mvDestaqueFade {
+    from { background-color: var(--color-primary-light); }
+    to   { background-color: var(--color-bg-white); }
+  }
 }
 
 /* ─── Colunas ─── */

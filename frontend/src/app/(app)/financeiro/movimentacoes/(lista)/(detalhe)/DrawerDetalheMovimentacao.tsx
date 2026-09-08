@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { clsx } from 'clsx'
-import { X, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, History, Archive } from 'lucide-react'
+import { X, Pencil, Calendar, Tag, User, FileText, ArrowDownCircle, ArrowUpCircle, History, Archive } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao'
 import { formatarMoeda, formatarData, rotuloTipo, varianteTipo } from '@/lib/formats/financeiro/movimentacaoFormat'
@@ -36,6 +36,16 @@ export function DrawerDetalheMovimentacao({ movimentacaoId, onClose }: DrawerDet
         role="dialog"
         aria-modal="true"
       >
+        {mov && !mov.arquivada && (
+          <Link
+            href={`/financeiro/movimentacoes/${movimentacaoId}`}
+            className={styles.btnEditar}
+            onClick={onClose}
+            aria-label="Editar movimentação"
+          >
+            <Pencil size={16} />
+          </Link>
+        )}
         <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>

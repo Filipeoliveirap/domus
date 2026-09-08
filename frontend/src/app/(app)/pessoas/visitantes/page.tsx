@@ -7,6 +7,8 @@ import { ChevronRight, Pencil, Trash2, Phone as PhoneIcon, Grid3x3 } from 'lucid
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useVisitantes } from '@/hooks/visitante/useVisitantes'
+import { useVisitante } from '@/hooks/visitante/useVisitante'
+import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
 import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { useFiltrosUrl } from '@/hooks/busca/useFiltrosUrl'
@@ -63,6 +65,8 @@ function VisitantesConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ contato: '', visita: '', acompanhamento: '' })
   const { pagina, setPagina } = usePaginaUrl()
+  const { destaqueId } = useDestaqueRecente()
+  const { data: visitanteDestaque } = useVisitante(destaqueId ?? undefined)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -114,7 +118,11 @@ function VisitantesConteudo() {
     setPagina(0)
   }
 
-  const visitantes = data?.content ?? []
+  const visitantesPagina = data?.content ?? []
+  const visitantes =
+    destaqueId && visitanteDestaque
+      ? [visitanteDestaque, ...visitantesPagina.filter((v) => v.id !== destaqueId)]
+      : visitantesPagina
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
@@ -253,7 +261,7 @@ function VisitantesConteudo() {
 
                 return (
                   <tr key={v.id}
-                    className={styles.linhaClicavel}
+                    className={clsx(styles.linhaClicavel, destaqueId === v.id && styles.destacada)}
                     onClick={() => setVisitanteDetalheId(v.id)}
                   >
                     <td>
@@ -324,7 +332,7 @@ function VisitantesConteudo() {
         {!isLoading && !isError && visitantes.length > 0 && (
           <footer className={styles.rodape}>
             <span className={styles.contagem}>
-              Exibindo {visitantes.length} de {totalElementos} visitantes
+              Exibindo {visitantesPagina.length} de {totalElementos} visitantes
             </span>
             <div className={styles.paginacao}>
               <button

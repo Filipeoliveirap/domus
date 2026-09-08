@@ -190,7 +190,7 @@ export function ModalQuemVai({
                       aria-label={`Cancelar inscrição de ${l.nome}`}
                     >
                       <XCircle size={14} aria-hidden="true" />
-                      Cancelar inscrição
+                      <span>Cancelar inscrição</span>
                     </button>
                   )}
                 </div>

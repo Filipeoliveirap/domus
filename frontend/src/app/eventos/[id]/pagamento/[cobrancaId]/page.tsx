@@ -11,7 +11,7 @@ import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
-import { Transicao } from '@/components/common/Transicao/Transicao'
+import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './PagamentoEvento.module.css'
 
@@ -124,6 +124,11 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
       : finalizando || querAguardando || (pixCarregado && !temQr)
         ? 'aguardando'
         : 'qr'
+
+  // Cena de fato renderizada — igual a `etapaPix`, mas 'qr' só quando o QR já chegou
+  // (senão mostra 'aguardando' e a troca pra 'qr' quando o pix carrega fica suave).
+  const cenaVisivel: 'qr' | 'aguardando' | 'confirmado' =
+    etapaPix === 'qr' && !(temQr && pix) ? 'aguardando' : etapaPix
 
   // Pausa de "finalizando" antes de revelar o check verde.
   useEffect(() => {
@@ -240,8 +245,8 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
         )}
 
         {resultadoEfetivo && !indisponivel && (
-          etapaPix === 'confirmado' ? (
-            <Transicao key="confirmado" modo="escala">
+          <TrocaCena cenaKey={cenaVisivel}>
+            {cenaVisivel === 'confirmado' ? (
               <div className={styles.cardAprovado}>
                 <div className={styles.aneisAprovado}>
                   <span className={styles.anelAprovado} aria-hidden="true" />
@@ -261,9 +266,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
                   sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
                 )}
               </div>
-            </Transicao>
-          ) : etapaPix === 'qr' && temQr && pix ? (
-            <Transicao key="qr" modo="fade">
+            ) : cenaVisivel === 'qr' && temQr && pix ? (
               <div className={styles.card}>
                 <TelaPix
                   qrCode={pix.qrCode!}
@@ -273,9 +276,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
                   reiniciando={reiniciando}
                 />
               </div>
-            </Transicao>
-          ) : (
-            <Transicao key="aguardando" modo="fade">
+            ) : (
               <div className={styles.card}>
                 <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
                 <h1>Confirmando pagamento…</h1>
@@ -294,8 +295,8 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
                   </button>
                 )}
               </div>
-            </Transicao>
-          )
+            )}
+          </TrocaCena>
         )}
 
         {!resultadoEfetivo && !indisponivel && (

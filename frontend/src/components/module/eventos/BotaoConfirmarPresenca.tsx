@@ -77,6 +77,12 @@ export function BotaoConfirmarPresenca({
   const encerradoPorPrazo = situacaoInscricao === 'ENCERRADA_POR_PRAZO'
   const dataPrazo = formatarDiaMes(inscricoesAte)
 
+  // Task 11: membro comum não pode cancelar depois do prazo quando a política é NAO_PERMITIDO.
+  const cancelamentoTravadoPorPrazo =
+    situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+    && politicaCancelamentoAposPrazo === 'NAO_PERMITIDO'
+    && !podeGerenciarInscricoes(role)
+
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   // Status da conta MP da própria igreja — só importa quando o evento é pago.
   const { data: contaPagamento } = useContaPagamento()
@@ -307,7 +313,7 @@ export function BotaoConfirmarPresenca({
   }
 
   if (minha?.inscrito) {
-    const podeCancelar = podeCancelarInscricao(situacao)
+    const podeCancelar = podeCancelarInscricao(situacao) && !cancelamentoTravadoPorPrazo
 
     return (
       <div className={styles.inscrito}>
@@ -328,6 +334,12 @@ export function BotaoConfirmarPresenca({
             <XCircle size={14} aria-hidden="true" />
             Cancelar inscrição
           </button>
+        )}
+
+        {cancelamentoTravadoPorPrazo && (
+          <p className={styles.motivo}>
+            Cancelamento encerrado (o prazo passou). Fale com a organização.
+          </p>
         )}
 
         {confirmandoCancelamento && (

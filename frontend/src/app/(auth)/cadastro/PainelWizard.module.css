@@ -1,0 +1,204 @@
+.painel {
+  position: relative;
+  color: #fff;
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.foto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.veu {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(3, 17, 48, 0.35) 0%, rgba(3, 17, 48, 0.74) 100%);
+}
+
+.celebra::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 32% 34%, rgba(96, 165, 253, 0.45), transparent 62%);
+  animation: brilho 2.6s ease-in-out infinite alternate;
+}
+@keyframes brilho {
+  to {
+    opacity: 0.4;
+  }
+}
+
+.conteudo {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  gap: 32px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo {
+  width: auto;
+  height: 40px;
+}
+.marcaNome {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.rotulo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #93c5fd;
+  margin-bottom: 10px;
+}
+.headline {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  max-width: 12ch;
+}
+.texto {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 32ch;
+}
+
+/* progresso — círculos numerados */
+.progresso {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.progItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.progItem:last-child .progLinha {
+  display: none;
+}
+.progNum {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background-color 0.35s, border-color 0.35s, box-shadow 0.35s, color 0.35s;
+}
+.progFeito {
+  background: #fff;
+  color: #1d4ed8;
+  border-color: #fff;
+}
+.progAtual {
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+}
+.progLinha {
+  width: 34px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progLinha i {
+  display: block;
+  height: 100%;
+  background: #fff;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- Mobile: vira barra no topo do form, sem foto ---- */
+@media (max-width: 900px) {
+  .painel {
+    padding: 16px 20px 14px;
+    color: inherit;
+    border-bottom: 1px solid var(--color-border-subtle, #eef2f7);
+  }
+  .foto,
+  .veu,
+  .celebra::after {
+    display: none;
+  }
+  .conteudo {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+  .marca {
+    flex-shrink: 0;
+  }
+  .logo {
+    height: 24px;
+  }
+  .marcaNome {
+    color: var(--color-text-dark, #1e293b);
+    font-size: 12px;
+  }
+  .meio {
+    display: none;
+  }
+  .progresso {
+    flex: 1;
+    gap: 6px;
+  }
+  .progItem {
+    flex: 1;
+    gap: 0;
+  }
+  .progItem:last-child .progLinha {
+    display: block;
+  }
+  .progNum {
+    display: none;
+  }
+  .progLinha {
+    width: auto;
+    flex: 1;
+    height: 4px;
+    border-radius: 3px;
+    background: var(--color-border, #e2e8f0);
+  }
+  .progLinha i {
+    background: linear-gradient(90deg, var(--color-primary, #2563eb), var(--color-primary-dark, #1d4ed8));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebra::after {
+    animation: none;
+  }
+  .progNum,
+  .progLinha i {
+    transition: none;
+  }
+}

@@ -120,7 +120,7 @@ public class ConviteController {
         // regra do titular em inscreverInterno).
         var resultado = inscricaoService.inscreverConvidado(
                 evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), data.email(),
-                resolvido.convidante().getId(), null, null, false);
+                resolvido.convidante().getId(), null, null, null, false);
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responderComoConvidado(

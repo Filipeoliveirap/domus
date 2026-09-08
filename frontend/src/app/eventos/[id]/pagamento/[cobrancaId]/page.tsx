@@ -145,11 +145,11 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
     return () => clearTimeout(t)
   }, [etapaPix, temQr])
 
-  // Pergunta de tempos em tempos se o pagamento já foi confirmado — é a única forma de saber
-  // (o navegador não recebe callback nenhum do lado do Mercado Pago). O endpoint /status, além
-  // de ler o banco, reconfere no Mercado Pago quando a cobrança ainda está PENDENTE (cobre o
-  // caso do webhook atrasar e o poll do backend, de ~1min, já ter acabado) — por isso o
-  // intervalo é de 6s, não menos: cada tick pode custar uma chamada à API do MP. Some sozinho
+  // Pergunta de 3 em 3s se o pagamento já foi confirmado — é a única forma de saber (o
+  // navegador não recebe callback nenhum do lado do Mercado Pago). O endpoint /status lê o
+  // banco e, quando a cobrança ainda está PENDENTE, reconfere no Mercado Pago (cobre webhook
+  // atrasado / poll do backend já esgotado) — mas o backend limita essa reconsulta a uma a
+  // cada ~10s por cobrança, então pollar rápido aqui não martela a API do MP. Some sozinho
   // quando chega numa resposta final.
   useEffect(() => {
     if (resultadoEfetivo !== 'enviado') return
@@ -174,7 +174,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
       } catch {
         // Falha de rede pontual no poll não é motivo pra desistir — tenta de novo no próximo tick.
       }
-    }, 6000)
+    }, 3000)
 
     return () => clearInterval(intervalo)
   }, [resultadoEfetivo, cobrancaId])
@@ -245,58 +245,61 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
         )}
 
         {resultadoEfetivo && !indisponivel && (
-          <TrocaCena cenaKey={cenaVisivel}>
-            {cenaVisivel === 'confirmado' ? (
-              <div className={styles.cardAprovado}>
-                <div className={styles.aneisAprovado}>
-                  <span className={styles.anelAprovado} aria-hidden="true" />
-                  <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
+          <TrocaCena
+            cenaKey={cenaVisivel}
+            renderCena={(cena) =>
+              cena === 'confirmado' ? (
+                <div className={styles.cardAprovado}>
+                  <div className={styles.aneisAprovado}>
+                    <span className={styles.anelAprovado} aria-hidden="true" />
+                    <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
+                  </div>
+                  <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
+                  <p className={styles.aprovadoTexto}>
+                    Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
+                  </p>
+                  <div className={styles.aprovadoResumo}>
+                    <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
+                    <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
+                  </div>
+                  {sessaoVerificada && sessao ? (
+                    <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+                  ) : (
+                    sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
+                  )}
                 </div>
-                <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
-                <p className={styles.aprovadoTexto}>
-                  Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
-                </p>
-                <div className={styles.aprovadoResumo}>
-                  <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
-                  <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
+              ) : cena === 'qr' && temQr && pix ? (
+                <div className={styles.card}>
+                  <TelaPix
+                    qrCode={pix.qrCode!}
+                    qrCodeBase64={pix.qrCodeBase64!}
+                    expiraEm={pix.expiraEm ?? cobranca.expiraEm}
+                    onReiniciar={aoReiniciar}
+                    reiniciando={reiniciando}
+                  />
                 </div>
-                {sessaoVerificada && sessao ? (
-                  <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
-                ) : (
-                  sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
-                )}
-              </div>
-            ) : cenaVisivel === 'qr' && temQr && pix ? (
-              <div className={styles.card}>
-                <TelaPix
-                  qrCode={pix.qrCode!}
-                  qrCodeBase64={pix.qrCodeBase64!}
-                  expiraEm={pix.expiraEm ?? cobranca.expiraEm}
-                  onReiniciar={aoReiniciar}
-                  reiniciando={reiniciando}
-                />
-              </div>
-            ) : (
-              <div className={styles.card}>
-                <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
-                <h1>Confirmando pagamento…</h1>
-                <p>
-                  {finalizando
-                    ? 'Pagamento recebido. Confirmando sua inscrição…'
-                    : 'Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.'}
-                </p>
-                {temQr && !finalizando && (
-                  <button
-                    type="button"
-                    className={styles.verQrDeNovo}
-                    onClick={() => setQuerAguardando(false)}
-                  >
-                    Ver QR Code de novo
-                  </button>
-                )}
-              </div>
-            )}
-          </TrocaCena>
+              ) : (
+                <div className={styles.card}>
+                  <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
+                  <h1>Confirmando pagamento…</h1>
+                  <p>
+                    {finalizando
+                      ? 'Pagamento recebido. Confirmando sua inscrição…'
+                      : 'Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.'}
+                  </p>
+                  {temQr && !finalizando && cena === 'aguardando' && (
+                    <button
+                      type="button"
+                      className={styles.verQrDeNovo}
+                      onClick={() => setQuerAguardando(false)}
+                    >
+                      Ver QR Code de novo
+                    </button>
+                  )}
+                </div>
+              )
+            }
+          />
         )}
 
         {!resultadoEfetivo && !indisponivel && (

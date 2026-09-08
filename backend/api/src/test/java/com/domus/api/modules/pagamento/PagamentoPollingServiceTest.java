@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,6 +67,19 @@ class PagamentoPollingServiceTest {
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
         verify(webhookService).confirmarPagamento(cobrancaId, mpPaymentId, "rejected");
+    }
+
+    @Test
+    void naoMartelaOMercadoPagoEmChamadasSeguidas() {
+        when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
+            .thenReturn(new InformacoesPagamento(cobrancaId, "pending"));
+
+        service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
+        service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
+        service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
+
+        // front pode pollar de 3 em 3s; o MP só é consultado uma vez na janela de throttle
+        verify(mercadoPagoClient, times(1)).buscarInformacoesPagamento(igrejaId, mpPaymentId);
     }
 
     @Test

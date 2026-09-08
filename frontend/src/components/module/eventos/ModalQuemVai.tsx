@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import Image from 'next/image'
 import { X, XCircle, Users } from 'lucide-react'
@@ -197,24 +198,30 @@ export function ModalQuemVai({
       </div>
     </div>
 
-    {/* Irmãos do overlay: dentro dele, o clique pra fechar fecharia o modal junto. */}
-    {fotoAberta && (
-      <VisualizadorFoto
-        fotoId={fotoAberta.id}
-        descricao={`Foto de ${fotoAberta.nome}`}
-        onClose={() => setFotoAberta(null)}
-      />
-    )}
-
-    {aRemover && (
-      <ConfirmarCancelamentoInscricao
-        nome={aRemover.nome}
-        proprio={false}
-        quantidadeConvidados={0}
-        isLoading={cancelar.isPending}
-        onConfirmar={confirmarCancelamento}
-        onClose={() => setARemover(null)}
-      />
+    {/* Portal pro body + z-index acima do próprio "Quem vai" (z 1100): este modal costuma
+        abrir por cima do drawer/modal de detalhe, que criam contexto de empilhamento —
+        sem isto o modal de confirmação e a foto abriam ATRÁS. */}
+    {typeof document !== 'undefined' && createPortal(
+      <div style={{ position: 'relative', zIndex: 1300 }}>
+        {fotoAberta && (
+          <VisualizadorFoto
+            fotoId={fotoAberta.id}
+            descricao={`Foto de ${fotoAberta.nome}`}
+            onClose={() => setFotoAberta(null)}
+          />
+        )}
+        {aRemover && (
+          <ConfirmarCancelamentoInscricao
+            nome={aRemover.nome}
+            proprio={false}
+            quantidadeConvidados={0}
+            isLoading={cancelar.isPending}
+            onConfirmar={confirmarCancelamento}
+            onClose={() => setARemover(null)}
+          />
+        )}
+      </div>,
+      document.body,
     )}
     </>
   )

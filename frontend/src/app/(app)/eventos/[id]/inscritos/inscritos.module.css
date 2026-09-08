@@ -263,13 +263,30 @@
   justify-content: center;
   width: 36px;
   height: 36px;
+  border: none;
+  padding: 0;
   border-radius: 50%;
   background: var(--color-bg-igreja-card);
   color: var(--color-primary);
+  font-family: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
   overflow: hidden;
+}
+button.avatar {
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+button.avatar:hover {
+  transform: scale(1.06);
+}
+button.avatar:active {
+  transform: scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+  button.avatar { transition: none; }
+  button.avatar:hover, button.avatar:active { transform: none; }
 }
 .avatarFoto {
   width: 100%;

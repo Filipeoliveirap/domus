@@ -1,7 +1,10 @@
 package com.domus.api.modules.pagamento;
 
 import com.domus.api.modules.pagamento.webhook.MercadoPagoWebhookService;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -38,6 +41,16 @@ public class PagamentoPollingService {
     private static final java.util.Set<String> STATUS_AINDA_EM_ABERTO =
         java.util.Set.of("pending", "in_process");
 
+    /** O front pode pollar o {@code GET /status} de poucos em poucos segundos; a
+     *  reconferência no Mercado Pago só acontece uma vez a cada esta janela, por cobrança —
+     *  o resto das chamadas responde só com o status do banco. */
+    private static final Duration INTERVALO_MIN_RECONFERENCIA = Duration.ofSeconds(10);
+
+    /** Última vez que {@link #reconferirAgora} chamou o MP pra cada cobrança. Cresce só
+     *  enquanto há cobranças pendentes sendo acompanhadas (poucas dezenas por dia no
+     *  piloto) e cada entrada é um par id→Instant; não vale a pena um cache com expiração. */
+    private final ConcurrentHashMap<String, Instant> ultimaReconferencia = new ConcurrentHashMap<>();
+
     private final MercadoPagoClient mercadoPagoClient;
     private final MercadoPagoWebhookService webhookService;
 
@@ -49,12 +62,19 @@ public class PagamentoPollingService {
     /**
      * Reconferência única e imediata (síncrona) do pagamento no Mercado Pago — chamada pelo
      * {@code GET /cobrancas/{id}/status} enquanto a cobrança ainda está PENDENTE. Cobre o
-     * intervalo em que {@link #pollarConfirmacao} (janela de ~1min) já se esgotou mas a
+     * intervalo em que {@link #pollarConfirmacao} (janela de ~2min) já se esgotou mas a
      * pessoa continua na tela esperando e o webhook não chegou. Idempotente via
      * {@link MercadoPagoWebhookService#confirmarPagamento}; falha de rede/MP não propaga —
-     * o chamador segue com o status do banco.
+     * o chamador segue com o status do banco. Consultas ao MP são limitadas a uma a cada
+     * {@link #INTERVALO_MIN_RECONFERENCIA} por cobrança.
      */
     public void reconferirAgora(UUID igrejaId, String cobrancaId, String mpPaymentId) {
+        var agora = Instant.now();
+        var anterior = ultimaReconferencia.get(cobrancaId);
+        if (anterior != null && Duration.between(anterior, agora).compareTo(INTERVALO_MIN_RECONFERENCIA) < 0) {
+            return;
+        }
+        ultimaReconferencia.put(cobrancaId, agora);
         try {
             var info = mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId);
             if (!STATUS_AINDA_EM_ABERTO.contains(info.status())) {

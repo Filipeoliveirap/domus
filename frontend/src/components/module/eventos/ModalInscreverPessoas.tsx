@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Search, X, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { Search, X, Check, AlertTriangle, ArrowLeft, SearchX } from 'lucide-react'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
 import { Transicao } from '@/components/common/Transicao/Transicao'
@@ -425,7 +426,7 @@ export function ModalInscreverPessoas({
       {isLoading ? (
         <p className={styles.estado}>Carregando pessoas…</p>
       ) : pessoas.length === 0 ? (
-        <p className={styles.estado}>Nenhuma pessoa encontrada.</p>
+        <EstadoVazio compacta icone={SearchX} titulo="Nenhuma pessoa encontrada" />
       ) : (
         pessoas.map((p) => {
           const bloqueado = jaInscrita(p, jaInscritos)

@@ -39,3 +39,6 @@ backend/target/
 *.log
 deploy/.env.prod
 .worktrees/
+
+# superpowers scratch (brainstorm mockups, SDD ledgers)
+.superpowers/

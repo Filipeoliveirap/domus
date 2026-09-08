@@ -129,6 +129,15 @@
   border-color: var(--color-primary);
 }
 
+/* Palco das cenas (<Transicao>): precisa repassar o "flex:1 + coluna" do .modal pra que a
+   .lista lá dentro continue esticando e rolando. */
+.cena {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---- Lista ---- */
 
 .lista {

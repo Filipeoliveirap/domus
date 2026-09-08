@@ -34,6 +34,30 @@
 }
 .btnClose:hover { color: var(--color-text-primary); }
 
+.btnEditar {
+  position: absolute;
+  top: 18px;
+  right: 52px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast), background-color var(--transition-fast), transform 0.1s ease;
+}
+.btnEditar:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.btnEditar:active { transform: scale(0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .btnEditar { transition: color var(--transition-fast), background-color var(--transition-fast); }
+  .btnEditar:active { transform: none; }
+}
+
 .carregando,
 .erro {
   padding: 48px 32px;
@@ -250,6 +274,7 @@
   }
   .saindo .drawer { animation: sheetDesce 0.26s cubic-bezier(0.4, 0, 1, 1) forwards; }
   .btnClose { top: 14px; }
+  .btnEditar { top: 12px; }
   .conteudo { padding-top: 32px; }
 }
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) {

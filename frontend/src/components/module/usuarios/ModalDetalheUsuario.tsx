@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
-import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import { X, Shield, Clock, CalendarPlus, KeyRound } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useUsuario } from '@/hooks/usuario/useUsuario'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
-import { rotuloRole, varianteRole, iniciais, formatarUltimoAcesso } from '@/lib/formats/usuarioFormat'
-import { urlFoto } from '@/lib/urlFoto'
+import { Avatar } from '@/components/common/Avatar/Avatar'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
+import { rotuloRole, varianteRole, formatarUltimoAcesso } from '@/lib/formats/usuarioFormat'
 import styles from './ModalDetalheUsuario.module.css'
 
 interface Props {
@@ -19,6 +19,7 @@ interface Props {
 export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
   const { data: usuario, isPending, isError, refetch } = useUsuario(usuarioId)
   const { saindo, fechar } = useFecharAnimado(onClose, 200)
+  const [fotoAberta, setFotoAberta] = useState(false)
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -35,6 +36,7 @@ export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
   }, [])
 
   return (
+    <>
     <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
@@ -58,13 +60,12 @@ export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
         ) : (
           <>
             <div className={styles.cabecalho}>
-              <span className={styles.avatar}>
-                {urlFoto(usuario.fotoId, 'THUMB') ? (
-                  <Image src={urlFoto(usuario.fotoId, 'THUMB')!} alt="" width={48} height={48} unoptimized className={styles.avatarFoto} />
-                ) : (
-                  iniciais(usuario.nome)
-                )}
-              </span>
+              <Avatar
+                fotoId={usuario.fotoId}
+                nome={usuario.nome}
+                tamanho={48}
+                onVerFoto={usuario.fotoId ? () => setFotoAberta(true) : undefined}
+              />
               <div>
                 <h2 className={styles.nome}>{usuario.nome}</h2>
                 <p className={styles.email}>{usuario.email}</p>
@@ -107,5 +108,13 @@ export function ModalDetalheUsuario({ usuarioId, onClose }: Props) {
         )}
       </div>
     </div>
+    {fotoAberta && usuario?.fotoId && (
+      <VisualizadorFoto
+        fotoId={usuario.fotoId}
+        descricao={`Foto de ${usuario.nome}`}
+        onClose={() => setFotoAberta(false)}
+      />
+    )}
+    </>
   )
 }

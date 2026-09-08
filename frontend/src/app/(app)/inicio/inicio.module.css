@@ -346,6 +346,23 @@
   min-width: 0;
 }
 
+.itemAnivClicavel {
+  padding: 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .itemAnivClicavel:hover { background: var(--color-bg-page); }
+}
+.itemAnivClicavel:active { transform: scale(0.99); }
+@media (prefers-reduced-motion: reduce) {
+  .itemAnivClicavel { transition: background-color var(--transition-fast); }
+  .itemAnivClicavel:active { transform: none; }
+}
+
 .avatar {
   display: flex;
   align-items: center;
@@ -353,12 +370,46 @@
   flex-shrink: 0;
   width: 40px;
   height: 40px;
+  border: none;
+  padding: 0;
   border-radius: var(--radius-full);
   overflow: hidden;
   background: var(--color-primary-light);
   color: var(--color-primary);
+  font-family: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+}
+button.avatar {
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+button.avatar:hover { transform: scale(1.06); }
+button.avatar:active { transform: scale(0.92); }
+@media (prefers-reduced-motion: reduce) {
+  button.avatar { transition: none; }
+  button.avatar:hover, button.avatar:active { transform: none; }
+}
+
+.parabens {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: opacity var(--transition-fast), transform 0.12s ease;
+}
+.parabens:hover { opacity: 0.9; }
+.parabens:active { transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) {
+  .parabens { transition: opacity var(--transition-fast); }
+  .parabens:active { transform: none; }
 }
 
 .avatarFoto {
@@ -432,9 +483,11 @@
   background: rgba(19, 27, 46, 0.30);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  animation: anivSurgir 0.2s ease-out;
 }
 
 .modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -446,6 +499,23 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 40px rgba(19, 27, 46, 0.15);
   overflow: hidden;
+  animation: anivSubir 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grabber { display: none; }
+
+@keyframes anivSurgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes anivSubir { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
+@keyframes anivSumir { to { opacity: 0; } }
+@keyframes anivDescer { to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+@keyframes anivSheetSobe { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes anivSheetDesce { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.saindo { animation: anivSumir 0.2s ease forwards; }
+.saindo .modal { animation: anivDescer 0.2s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .saindo, .saindo .modal { animation: none; }
 }
 
 .modalHeader {
@@ -548,4 +618,38 @@
   .cardLateral {
     padding: 20px;
   }
+
+  /* Modal de aniversariantes vira bottom-sheet */
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: 100%;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    animation: anivSheetSobe 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .saindo .modal { animation: anivSheetDesce 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  .grabber {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+  }
+  .modalHeader {
+    padding: 22px 20px 16px;
+  }
+  .modalCorpo {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .modal, .saindo .modal { animation: none; }
 }

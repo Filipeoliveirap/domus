@@ -1,35 +1,35 @@
 .palco {
   position: relative;
   overflow: hidden;
-  /* a altura é setada em px via JS durante a troca; aqui só a curva da animação */
-  transition: height 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  /* altura é setada em px via JS durante a troca; aqui só a curva/tempo da animação */
+  transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Cena que sai: tirada do fluxo (não conta pra altura do palco, que já mira a cena nova)
-   e desliza pra cima sumindo. */
+/* Cena que sai: fora do fluxo (não conta pra altura do palco, que já mira a cena nova) e
+   desliza pra cima sumindo. */
 .cenaSai {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  animation: cenaSair 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: cenaSair 0.42s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }
 
-/* Cena que entra: sobe e aparece. */
+/* Cena que entra: sobe e aparece, com um respiro pra a saída ser lida primeiro. */
 .cenaEntra {
-  animation: cenaEntrar 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cenaEntrar 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 
 @keyframes cenaSair {
   to {
     opacity: 0;
-    transform: translateY(-8px) scale(0.985);
+    transform: translateY(-14px) scale(0.97);
   }
 }
 
 @keyframes cenaEntrar {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.985);
+    transform: translateY(22px) scale(0.97);
   }
 }
 
@@ -44,9 +44,9 @@
     transition-duration: 0.01s;
   }
   .cenaSai {
-    animation: cenaFade 0.14s linear reverse forwards;
+    animation: cenaFade 0.2s linear reverse forwards;
   }
   .cenaEntra {
-    animation: cenaFade 0.14s linear;
+    animation: cenaFade 0.2s linear both;
   }
 }

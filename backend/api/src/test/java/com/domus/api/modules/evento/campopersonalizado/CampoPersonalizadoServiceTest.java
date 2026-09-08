@@ -514,7 +514,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByIdAndIgrejaIdIncluindoArquivados(campo.getId(), igrejaId))
                 .thenReturn(Optional.of(campo));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).label()).isEqualTo("Tamanho da camiseta");
@@ -543,7 +543,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByIdAndIgrejaIdIncluindoArquivados(campoArquivado.getId(), igrejaId))
                 .thenReturn(Optional.empty());
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).isEmpty();
     }
@@ -566,7 +566,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoEstadoCivil));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).label()).isEqualTo("Estado civil");
@@ -589,7 +589,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campo));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).origem()).isEqualTo(OrigemResposta.RESPONDIDO);
@@ -612,7 +612,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoLivre));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).origem()).isEqualTo(OrigemResposta.SEM_RESPOSTA);
@@ -635,7 +635,7 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId))
                 .thenReturn(List.of(campoSexo));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).origem()).isEqualTo(OrigemResposta.SEM_RESPOSTA);
@@ -657,10 +657,84 @@ class CampoPersonalizadoServiceTest {
         when(campoRepository.findByIdAndIgrejaIdIncluindoArquivados(campoArquivado.getId(), igrejaId))
                 .thenReturn(Optional.of(campoArquivado));
 
-        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId);
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, null, "LIDER");
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).valor()).isEqualTo("Resposta antiga");
         assertThat(resultado.get(0).origem()).isEqualTo(OrigemResposta.RESPONDIDO);
+    }
+
+    @Test
+    void respostasPorInscricao_gestorVeRespostasDeQualquerInscrito() {
+        UUID inscricaoId = UUID.randomUUID();
+        var dono = new Pessoa();
+        dono.setId(UUID.randomUUID());
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }}).evento(evento()).pessoa(dono).build();
+        var campo = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Tamanho da camiseta").tipo(TipoCampoPersonalizado.OPCAO_UNICA).build();
+        var resposta = RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).valor("M").build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(respostaRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(resposta));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of(campo));
+
+        // gestor (ADMIN_IGREJA) vendo inscrição de outra pessoa
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, UUID.randomUUID(), "ADMIN_IGREJA");
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).valor()).isEqualTo("M");
+    }
+
+    @Test
+    void respostasPorInscricao_donoVeAsProprias() {
+        UUID inscricaoId = UUID.randomUUID();
+        UUID donoId = UUID.randomUUID();
+        var dono = new Pessoa();
+        dono.setId(donoId);
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }}).evento(evento()).pessoa(dono).build();
+        var campo = CampoPersonalizadoEvento.builder()
+                .id(UUID.randomUUID()).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).label("Tamanho da camiseta").tipo(TipoCampoPersonalizado.OPCAO_UNICA).build();
+        var resposta = RespostaCampoPersonalizado.builder().campo(campo).inscricao(inscricao).valor("G").build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+        when(respostaRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(resposta));
+        when(campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(eventoId, igrejaId)).thenReturn(List.of(campo));
+
+        var resultado = service.respostasPorInscricao(inscricaoId, igrejaId, donoId, "ACESSO_COMUM");
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).valor()).isEqualTo("G");
+    }
+
+    @Test
+    void respostasPorInscricao_comumNaoVeInscricaoDeTerceiro() {
+        UUID inscricaoId = UUID.randomUUID();
+        var dono = new Pessoa();
+        dono.setId(UUID.randomUUID());
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }}).evento(evento()).pessoa(dono).build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() -> service.respostasPorInscricao(inscricaoId, igrejaId, UUID.randomUUID(), "ACESSO_COMUM"))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
+        verify(respostaRepository, never()).findByInscricaoId(any());
+    }
+
+    @Test
+    void respostasPorInscricao_comumNaoVeInscricaoDeConvidadoSemCadastro() {
+        UUID inscricaoId = UUID.randomUUID();
+        var inscricao = com.domus.api.modules.evento.inscricao.InscricaoEvento.builder()
+                .id(inscricaoId).igreja(new Igreja() {{ setId(igrejaId); }})
+                .evento(evento()).nomeConvidado("Maria de Fora").build();
+
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(inscricao));
+
+        assertThatThrownBy(() -> service.respostasPorInscricao(inscricaoId, igrejaId, UUID.randomUUID(), "ACESSO_COMUM"))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class);
     }
 }

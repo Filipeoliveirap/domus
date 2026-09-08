@@ -4,6 +4,10 @@ import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.evento.EventoRepository;
 import com.domus.api.modules.evento.campopersonalizado.DTOs.CampoPersonalizadoRequest;
 import com.domus.api.modules.evento.campopersonalizado.DTOs.CampoPersonalizadoResponse;
+import com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse;
+import com.domus.api.modules.evento.campopersonalizado.OrigemResposta;
+import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.security.Permissoes;
 import com.domus.api.modules.evento.inscricao.InscricaoRepository;
 import com.domus.api.modules.evento.inscricao.StatusInscricao;
 import com.domus.api.modules.notificacao.NotificacaoService;
@@ -18,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -250,12 +255,20 @@ public class CampoPersonalizadoService {
      *  admin só aparecem se houver resposta persistida (snapshot). {@code @Transactional} pra
      *  ler {@code inscricao.getPessoa()}/{@code getEvento()} lazy dentro da sessão. */
     @Transactional(readOnly = true)
-    public List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse> respostasPorInscricao(
-            UUID inscricaoId, UUID igrejaId) {
+    public List<RespostaResponse> respostasPorInscricao(
+            UUID inscricaoId, UUID igrejaId, UUID pessoaId, String role) {
         var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
-        Map<UUID, RespostaCampoPersonalizado> respostasPorCampo = new HashMap<>();
+        boolean ehGestor = Permissoes.podeGerenciarInscricoes(role);
+        boolean souEu = inscricao.getPessoa() != null
+                && inscricao.getPessoa().getId().equals(pessoaId);
+        if (!ehGestor && !souEu) {
+            throw new BusinessException("SEM_PERMISSAO",
+                    "Você não pode ver as respostas da inscrição de outra pessoa.");
+        }
+
+        Map<UUID, RespostaCampoPersonalizado> respostasPorCampo = new LinkedHashMap<>();
         for (var r : respostaRepository.findByInscricaoId(inscricaoId)) {
             respostasPorCampo.put(r.getCampo().getId(), r);
         }
@@ -264,27 +277,27 @@ public class CampoPersonalizadoService {
         var campos = campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(
                 inscricao.getEvento().getId(), igrejaId);
 
-        List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse> resultado = new ArrayList<>();
+        List<RespostaResponse> resultado = new ArrayList<>();
         Set<UUID> jaIncluidos = new HashSet<>();
 
         for (var campo : campos) {
             jaIncluidos.add(campo.getId());
             var resp = respostasPorCampo.get(campo.getId());
             if (resp != null && resp.getValor() != null && !resp.getValor().isBlank()) {
-                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                resultado.add(new RespostaResponse(
                         campo.getId(), campo.getLabel(), campo.getTipo(), resp.getValor(),
-                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.RESPONDIDO));
+                        OrigemResposta.RESPONDIDO));
                 continue;
             }
             var doCadastro = valorJaConhecido(campo.getMapeamento(), pessoa);
             if (doCadastro.isPresent()) {
-                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                resultado.add(new RespostaResponse(
                         campo.getId(), campo.getLabel(), campo.getTipo(), doCadastro.get(),
-                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.CADASTRO));
+                        OrigemResposta.CADASTRO));
             } else {
-                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                resultado.add(new RespostaResponse(
                         campo.getId(), campo.getLabel(), campo.getTipo(), null,
-                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.SEM_RESPOSTA));
+                        OrigemResposta.SEM_RESPOSTA));
             }
         }
 
@@ -296,9 +309,9 @@ public class CampoPersonalizadoService {
             if (jaIncluidos.contains(r.getCampo().getId())) continue;
             campoRepository.findByIdAndIgrejaIdIncluindoArquivados(r.getCampo().getId(), igrejaId)
                     .ifPresent(campo -> resultado.add(
-                            new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                            new RespostaResponse(
                                     campo.getId(), campo.getLabel(), campo.getTipo(), r.getValor(),
-                                    com.domus.api.modules.evento.campopersonalizado.OrigemResposta.RESPONDIDO)));
+                                    OrigemResposta.RESPONDIDO)));
         }
         return resultado;
     }

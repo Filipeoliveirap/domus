@@ -11,6 +11,7 @@ import { clsx } from 'clsx'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { Avatar } from '@/components/common/Avatar/Avatar'
+import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
   rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
@@ -48,6 +49,7 @@ function PessoasConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
   const { pagina, setPagina } = usePaginaUrl()
+  const { destaqueId, ordenar } = useDestaqueRecente()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -172,7 +174,7 @@ function PessoasConteudo() {
                 </td>
               </tr>
             ) : (
-              pessoas.map((p) => {
+              ordenar(pessoas, (p) => p.id).map((p) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => router.push(`/pessoas/${p.id}`) },
                   { label: 'Convidar ao sistema', icone: KeyRound, onClick: () => setPessoaConcedendo(p) },
@@ -181,7 +183,7 @@ function PessoasConteudo() {
 
                 return (
                   <tr key={p.id}
-                    className={styles.linhaClicavel}
+                    className={clsx(styles.linhaClicavel, destaqueId === p.id && styles.destacada)}
                     onClick={() => setPessoaDetalheId(p.id)}
                   >
                     <td>

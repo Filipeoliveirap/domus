@@ -124,7 +124,7 @@ export function usePessoaForm({ pessoaId, pessoaInicial }: UsePessoaFormParams =
         notificar.erro(`Pessoa salva, mas não foi possível atualizar as ${ministerio.plural.toLowerCase()} dela.`)
       }
 
-      sairAnimado(() => router.back())
+      sairAnimado(() => router.push(`/pessoas?destaque=${pessoaSalvaId}`))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

@@ -9,6 +9,7 @@ import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { useUiStore } from '@/store/uiStore'
 import { useMinhaPessoa } from '@/hooks/pessoa/useMinhaPessoa'
 import { useDefinirEmailInicial } from '@/hooks/pessoa/useDefinirEmailInicial'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
@@ -47,13 +48,33 @@ interface Props {
    *  SEM pagamento pendente — evento pago com sucesso navega pra rota de checkout em vez
    *  de chamar isto (o drawer não teria o que abrir; a pessoa já saiu da tela). */
   onInscritoComSucesso?: () => void
+  /** Evento pago: chamado no instante em que a navegação pro checkout começa, atrás da
+   *  ponte de transição — o drawer/modal usa pra animar a própria saída antes do route push. */
+  onAntesDeNavegar?: () => void
 }
 
 export function BotaoConfirmarPresenca({
   eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, situacaoInscricao,
-  inscricoesAte, preco, politicaCancelamentoAposPrazo, onInscritoComSucesso,
+  inscricoesAte, preco, politicaCancelamentoAposPrazo, onInscritoComSucesso, onAntesDeNavegar,
 }: Props) {
   const router = useRouter()
+  const abrirPonteCheckout = useUiStore((s) => s.abrirPonteCheckout)
+  const fecharPonteCheckout = useUiStore((s) => s.fecharPonteCheckout)
+
+  // Evento pago: leva pro checkout com uma "ponte" — mostra o selo "Inscrição feita!",
+  // deixa o drawer/modal animar a saída atrás do vidro fosco (~0,5s) e só então faz o route
+  // push, que troca pra uma rota full-screen fora do app shell. A ponte vive no uiStore
+  // porque este componente desmonta junto com o drawer no meio da transição.
+  function irParaCheckout(cobrancaId: string) {
+    setNavegandoParaCheckout(true)
+    abrirPonteCheckout()
+    onAntesDeNavegar?.()
+    window.setTimeout(() => {
+      router.push(`/eventos/${eventoId}/pagamento/${cobrancaId}`)
+    }, 550)
+    // Segurança: se a navegação não acontecer (erro), não deixa o véu preso.
+    window.setTimeout(fecharPonteCheckout, 5000)
+  }
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [semConta, setSemConta] = useState(false)
   // A mutation já resolveu (isPending vira false) antes do router.push completar a
@@ -170,7 +191,7 @@ export function BotaoConfirmarPresenca({
           setImpedimentosParaConfirmar(null)
           await aoInscreverComSucesso(resposta)
           if (resposta.cobrancaPendenteId) {
-            router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+            irParaCheckout(resposta.cobrancaPendenteId)
           } else {
             onInscritoComSucesso?.()
           }
@@ -398,8 +419,7 @@ export function BotaoConfirmarPresenca({
       onSuccess: async (resposta) => {
         await aoInscreverComSucesso(resposta)
         if (resposta.cobrancaPendenteId) {
-          setNavegandoParaCheckout(true)
-          router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+          irParaCheckout(resposta.cobrancaPendenteId)
         } else {
           // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
           onInscritoComSucesso?.()

@@ -6,6 +6,7 @@ import { BannerExclusaoAgendada } from '@/components/common/BannerExclusaoAgenda
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { NavProgress } from '@/components/layout/NavProgress/NavProgress'
 import { TransicaoRota } from '@/components/common/Transicao/TransicaoRota'
+import { PonteParaCheckout } from '@/components/module/pagamento/PonteParaCheckout'
 
 export default function AppLayout({
   children,
@@ -15,6 +16,7 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <NavProgress />
+      <PonteParaCheckout />
       <FaixaOffline />
       <BannerExclusaoAgendada />
       <Sidebar />

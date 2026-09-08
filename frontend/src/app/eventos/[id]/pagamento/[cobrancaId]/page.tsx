@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaCheckout } from '@/hooks/cobranca/useCobrancaCheckout'
+import { useUiStore } from '@/store/uiStore'
 import { cobrancaService } from '@/services/cobranca.service'
 import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
@@ -43,6 +44,13 @@ export default function PagamentoEventoPage({
 
 function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobrancaId: string }) {
   const queryClient = useQueryClient()
+
+  // A rota abriu — some com a "ponte" que cobriu a transição de dentro do app shell.
+  const fecharPonteCheckout = useUiStore((s) => s.fecharPonteCheckout)
+  useEffect(() => {
+    fecharPonteCheckout()
+  }, [fecharPonteCheckout])
+
   const { data: cobranca, isLoading, isError } = useCobrancaCheckout(cobrancaId)
   const [reiniciando, setReiniciando] = useState(false)
 
@@ -231,7 +239,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
         </div>
       </header>
 
-      <div className={styles.conteudo}>
+      <div className={`${styles.conteudo} ${styles.conteudoEntra}`}>
         <StepperPagamento etapaAtual={resultadoEfetivo || indisponivel ? 'confirmado' : 'pagamento'} />
 
         {indisponivel && (

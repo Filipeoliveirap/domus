@@ -42,7 +42,7 @@ public record EventoResponse(
         UUID serieId,
         boolean divergeDaSerie,
         LocalDateTime inscricoesAte,
-        boolean permiteCancelarAposPrazo,
+        com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo politicaCancelamentoAposPrazo,
         com.domus.api.modules.evento.SituacaoInscricao situacaoInscricao
 ) {
     public record LocalInfo(UUID id, String nome, String endereco, boolean enderecoHerdado,
@@ -115,7 +115,7 @@ public record EventoResponse(
                 e.getSerie() != null ? e.getSerie().getId() : null,
                 e.isDivergeDaSerie(),
                 e.getInscricoesAte(),
-                e.isPermiteCancelarAposPrazo(),
+                e.getPoliticaCancelamentoAposPrazo(),
                 e.getSituacaoInscricao()
         );
     }

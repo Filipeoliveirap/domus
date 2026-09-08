@@ -917,7 +917,7 @@ class EventoServiceTest {
     }
 
     @Test
-    void atualizarEventoComEscopoSerie_propagaPermiteCancelarAposPrazo() {
+    void atualizarEventoComEscopoSerie_propagaPoliticaCancelamento() {
         UUID eventoId = UUID.randomUUID();
         UUID outraOcorrenciaId = UUID.randomUUID();
         UUID serieId = UUID.randomUUID();
@@ -930,7 +930,8 @@ class EventoServiceTest {
         Evento outraFutura = Evento.builder()
                 .id(outraOcorrenciaId).igreja(new Igreja() {{ setId(igrejaId); }})
                 .titulo("Culto Dominical").inicioEm(LocalDateTime.now().plusDays(8))
-                .requerInscricao(true).permiteCancelarAposPrazo(true)
+                .requerInscricao(true)
+                .politicaCancelamentoAposPrazo(com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO)
                 .serie(serie).build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
         when(eventoRepository.findBySerieId(serieId)).thenReturn(List.of(existente, outraFutura));
@@ -938,11 +939,13 @@ class EventoServiceTest {
         EventoRequest req = new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, true, false, false, null, null, null, null, null, false);
+                null, null, false, true, false, false, null, null, null, null, null,
+                com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO);
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
 
-        assertThat(outraFutura.isPermiteCancelarAposPrazo()).isFalse();
+        assertThat(outraFutura.getPoliticaCancelamentoAposPrazo())
+                .isEqualTo(com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO);
     }
 
     @Test
@@ -969,7 +972,7 @@ class EventoServiceTest {
                 "Culto Dominical", "Descrição do evento", inicioEm,
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
                 null, null, false, true, false, false, null, null, null, null,
-                inicioEm.minusDays(1), true);
+                inicioEm.minusDays(1), com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO);
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
 
@@ -1014,7 +1017,8 @@ class EventoServiceTest {
         var req = requestComPrazo(inicio, true, prazo);
         service.cadastrarEvento(req, igrejaId, usuarioId);
         verify(eventoRepository).save(argThat(e ->
-                prazo.equals(e.getInscricoesAte()) && e.isPermiteCancelarAposPrazo()));
+                prazo.equals(e.getInscricoesAte())
+                && e.getPoliticaCancelamentoAposPrazo() == com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO));
     }
 
     @Test
@@ -1671,7 +1675,8 @@ class EventoServiceTest {
 
         assertThat(resp.inscricoesAte()).isNotNull();
         assertThat(resp.inscricoesAte()).isEqualTo(agora.minusHours(1));
-        assertThat(resp.permiteCancelarAposPrazo()).isTrue();
+        assertThat(resp.politicaCancelamentoAposPrazo())
+                .isEqualTo(com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO);
         assertThat(resp.situacaoInscricao()).isEqualTo(SituacaoInscricao.ENCERRADA_POR_PRAZO);
     }
 }

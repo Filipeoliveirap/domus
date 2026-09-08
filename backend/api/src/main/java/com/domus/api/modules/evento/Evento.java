@@ -129,11 +129,13 @@ public class Evento {
     @Column(name = "inscricoes_ate")
     private LocalDateTime inscricoesAte;
 
-    /** V38. Só tem efeito quando inscricoesAte != null. TRUE = quem já se inscreveu ainda
-     *  pode cancelar depois do prazo; FALSE = lista travada no prazo. */
-    @Column(name = "permite_cancelar_apos_prazo", nullable = false)
+    /** V39. Só tem efeito quando inscricoesAte != null. Decide o que acontece quando
+     *  alguém tenta cancelar a inscrição depois do prazo (ver enum). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "politica_cancelamento_apos_prazo", nullable = false, length = 30)
     @Builder.Default
-    private boolean permiteCancelarAposPrazo = true;
+    private PoliticaCancelamentoAposPrazo politicaCancelamentoAposPrazo =
+        PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO;
 
     /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "prazo chegando"). */
     @Column(name = "aviso_prazo_proximo_em")

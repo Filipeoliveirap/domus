@@ -74,6 +74,6 @@ public record EventoRequest(
         /** Prazo de inscrição (V38). {@code null} = aceita até o evento começar. */
         LocalDateTime inscricoesAte,
 
-        /** V38. {@code null} tratado como {@code true}. Só relevante com {@code inscricoesAte} preenchido. */
-        Boolean permiteCancelarAposPrazo
+        /** V39. {@code null} tratado como {@code PERMITIDO_COM_REEMBOLSO}. Só relevante com {@code inscricoesAte} preenchido. */
+        com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo politicaCancelamentoAposPrazo
 ) {}

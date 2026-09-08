@@ -33,7 +33,8 @@ public class InicioService {
                 pessoaRepository.aniversariantesDoMes(igrejaId, mes).stream()
                         .map(m -> new InicioResponse.Aniversariante(
                                 m.getId(), m.getNome(), m.getDataNascimento().getDayOfMonth(),
-                                m.getFoto() != null ? m.getFoto().getId() : null))
+                                m.getFoto() != null ? m.getFoto().getId() : null,
+                                m.getTelefone()))
                         .toList();
 
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);

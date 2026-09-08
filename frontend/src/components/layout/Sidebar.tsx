@@ -5,18 +5,19 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, User, LogOut, ChevronDown, UsersRound, Grid3x3,
+  Home, LayoutDashboard, Users, Calendar, Wallet, UserCog, Settings, LogOut, ChevronDown, UsersRound, Grid3x3,
 } from 'lucide-react'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
 import { useUiStore } from '@/store/uiStore'
 import { authService } from '@/services/auth.service'
 import type { Role } from '@/types/usuario.types'
-import { urlFoto } from '@/lib/urlFoto'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { podeGerenciarVisitantes, podeVerFinanceiro } from '@/lib/permissoes'
 import { MODO_INDICADOR_NAV } from '@/config/navIndicator'
 import { Loader } from '@/components/common/Loader/Loader'
+import { Avatar } from '@/components/common/Avatar/Avatar'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { useArrastarParaFechar } from '@/hooks/useArrastarParaFechar'
 import styles from './Sidebar.module.css'
 
@@ -135,6 +136,7 @@ export function Sidebar() {
   const [pessoasAberto, setPessoasAberto] = useState(
     () => pathname.startsWith('/pessoas'),
   )
+  const [fotoPerfilAberta, setFotoPerfilAberta] = useState(false)
 
   // ── Drawer mobile: arrastar pra fechar + trava de scroll do body ──
   const { handlers, estiloArraste } = useArrastarParaFechar({ aberta: navAberta, aoFechar: fecharNav })
@@ -334,22 +336,28 @@ export function Sidebar() {
         </button>
       </div>
 
-      <Link href="/perfil" className={styles.profile} onClick={fecharNav}>
-        {urlFoto(fotoId, 'THUMB') ? (
-          <Image src={urlFoto(fotoId, 'THUMB')!} alt={nome ?? 'Perfil'} width={40} height={40} unoptimized className={styles.profileAvatar} />
-        ) : (
-          <div className={styles.profileAvatar}>
-            <User size={20} />
-          </div>
-        )}
-        <div className={styles.profileInfo}>
+      <div className={styles.profile}>
+        <Avatar
+          fotoId={fotoId}
+          nome={nome ?? 'Perfil'}
+          tamanho={40}
+          onVerFoto={fotoId ? () => setFotoPerfilAberta(true) : undefined}
+        />
+        <Link href="/perfil" className={styles.profileInfo} onClick={fecharNav}>
           <p className={styles.profileName}>{primeirosDoisNomes(nome)}</p>
           <span className={`${styles.profileRole} ${role ? roleStyles[role] : styles.roleComum}`}>
             {cargo ?? (role ? roleLabels[role] : '')}
           </span>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </aside>
+    {fotoPerfilAberta && fotoId && (
+      <VisualizadorFoto
+        fotoId={fotoId}
+        descricao="Foto de perfil"
+        onClose={() => setFotoPerfilAberta(false)}
+      />
+    )}
     </>
   )
 }

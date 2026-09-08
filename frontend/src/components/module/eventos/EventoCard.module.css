@@ -1,4 +1,5 @@
 .card {
+  --cor: var(--cat-eventos);
   display: flex;
   flex-direction: column;
   background: var(--color-bg-white);
@@ -6,22 +7,6 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
-}
-@media (prefers-reduced-motion: reduce) {
-  .card { transition: box-shadow var(--transition-fast); }
-  .card:active { transform: none; }
-}
-/* hover só em quem tem mouse — no touch o :hover "gruda" depois do tap e o card fica
-   levantado como se estivesse pressionado. */
-@media (hover: hover) {
-  .card:hover {
-    box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
-    transform: translateY(-2px);
-  }
-}
-.card:active {
-  transform: scale(0.99);
 }
 .cardEncerrado {
   opacity: 0.7;
@@ -31,6 +16,7 @@
 .imagem {
   position: relative;
   height: 140px;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--color-primary-light), #DAE2FD);
 }
 .imagemFoto {
@@ -82,8 +68,8 @@
 .statusEncerrado { color: var(--color-text-muted); }
 .statusEncerrado .seloDot { background: var(--color-text-muted); }
 .seloRecorte {
-  color: var(--color-primary);
-  background: rgba(255, 255, 255, 0.85);
+  color: hsl(var(--cor));
+  background: hsl(var(--cor) / 0.14);
 }
 .seloIgreja {
   color: var(--color-text-muted);

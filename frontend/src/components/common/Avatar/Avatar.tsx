@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, type CSSProperties } from 'react'
-import { Maximize2 } from 'lucide-react'
 import styles from './Avatar.module.css'
 import { urlFoto } from '@/lib/urlFoto'
 import { iniciais } from '@/lib/formats/pessoaFormat'
@@ -12,8 +11,8 @@ interface AvatarProps {
   /** `'sm'|'md'|'lg'` usam os tamanhos padrão; um número dá px exatos (ex.: 40). */
   tamanho?: 'sm' | 'md' | 'lg' | number
   /** Passado = a foto vira clicável (abre em tamanho grande via VisualizadorFoto) e ganha
-   *  o feedback de "dá pra clicar": cursor, leve zoom no hover com ícone de ampliar, e
-   *  encolhida no toque. Sem foto real (só iniciais), fica sem interação. */
+   *  o feedback de "dá pra clicar": leve zoom no hover, encolhida no toque. Sem foto real
+   *  (só iniciais), fica sem interação. */
   onVerFoto?: () => void
 }
 
@@ -54,9 +53,6 @@ export function Avatar({ fotoId, nome, tamanho = 'md', onVerFoto }: AvatarProps)
         aria-label={`Ver foto de ${nome}`}
       >
         {conteudo}
-        <span className={styles.lupa} aria-hidden="true">
-          <Maximize2 size={typeof tamanho === 'number' ? Math.max(12, tamanho * 0.35) : 14} />
-        </span>
       </button>
     )
   }

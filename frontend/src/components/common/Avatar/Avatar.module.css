@@ -29,11 +29,10 @@
   line-height: 1;
 }
 
-/* ── Foto clicável: "dá pra abrir" — mesmo efeito do card/lista/aniversariantes:
-      um leve zoom no hover, encolhida no toque, e o cursor de lupa do próprio
-      navegador (`zoom-in`) como sinal, sem overlay pesado por cima da foto. ── */
+/* ── Foto clicável: só o leve zoom no hover e a encolhida no toque, igual ao
+      card/lista/aniversariantes — nenhum ícone/overlay por cima da foto. ── */
 .clicavel {
-  cursor: zoom-in;
+  cursor: pointer;
   transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .clicavel:hover {
@@ -45,26 +44,6 @@
 .clicavel:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-}
-
-/* Só no touch (sem cursor pra sinalizar): uma marca discreta de "ampliar" no canto. */
-.lupa {
-  display: none;
-}
-@media (hover: none) {
-  .lupa {
-    display: flex;
-    position: absolute;
-    right: -1px;
-    bottom: -1px;
-    width: 42%;
-    height: 42%;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: rgba(15, 23, 42, 0.5);
-    border-radius: 50% 0 0 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

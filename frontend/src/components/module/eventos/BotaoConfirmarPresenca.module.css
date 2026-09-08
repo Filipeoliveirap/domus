@@ -98,6 +98,7 @@
 /* ---- F1: "Eu vou" (curtida leve, não é CTA formal) ---- */
 
 .euVou {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -145,6 +146,36 @@
   100% { transform: scale(1); }
 }
 
+/* Faíscas radiais no clique — o ícone fica centrado num wrapper e as faíscas partem dele. */
+.euVouIcone {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.faiscas {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.faiscas i {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transform: rotate(var(--a)) translateY(0) scale(0.2);
+  animation: faiscar 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes faiscar {
+  0%   { opacity: 1; transform: rotate(var(--a)) translateY(-2px) scale(0.3); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(-15px) scale(1); }
+}
+
 /*
   Quem pediu menos movimento no sistema não recebe o pulo — a mudança de cor e de texto
   já comunica o estado sozinha.
@@ -152,6 +183,9 @@
 @media (prefers-reduced-motion: reduce) {
   .euVouAtivo .icone {
     animation: none;
+  }
+  .faiscas {
+    display: none;
   }
 }
 

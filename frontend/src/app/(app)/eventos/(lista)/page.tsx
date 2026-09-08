@@ -225,7 +225,7 @@ function EventosConteudo() {
 
 export default function EventosPage() {
   return (
-    <Suspense fallback={<div>Carregando…</div>}>
+    <Suspense fallback={<div className={styles.pagina} />}>
       <EventosConteudo />
     </Suspense>
   )

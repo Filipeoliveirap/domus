@@ -9,6 +9,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useDashboard } from '@/hooks/dashboard/useDashboard'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { formatarMoeda, formatarData } from '@/lib/formats/financeiro/movimentacaoFormat'
 import type { MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
@@ -77,10 +79,16 @@ export default function DashboardPage() {
                 <Link href="/financeiro/movimentacoes" className={styles.verMais}>Ver todas</Link>
               </div>
 
+              <Transicao key={isLoading || !data ? 'load' : data.movimentacoesRecentes.length ? 'cheio' : 'vazio'} modo="fade">
               {isLoading || !data ? (
                 <SkeletonLista />
               ) : data.movimentacoesRecentes.length === 0 ? (
-                <p className={styles.vazio}>Nenhuma movimentação registrada.</p>
+                <EstadoVazio
+                  icone={Wallet}
+                  titulo="Nenhuma movimentação ainda"
+                  mensagem="Os últimos lançamentos financeiros aparecem aqui."
+                  acaoPrimaria={{ label: 'Ir para o financeiro', onClick: () => router.push('/financeiro/movimentacoes') }}
+                />
               ) : (
                 <ul className={styles.listaMov}>
                   {data.movimentacoesRecentes.map((m: MovimentacaoResponse) => {
@@ -102,6 +110,7 @@ export default function DashboardPage() {
                   })}
                 </ul>
               )}
+              </Transicao>
             </section>
 
             {/* Próximos eventos */}
@@ -110,10 +119,16 @@ export default function DashboardPage() {
                 <h2 className={styles.cardTitulo}>Próximos eventos</h2>
               </div>
 
+              <Transicao key={isLoading || !data ? 'load' : data.proximosEventos.length ? 'cheio' : 'vazio'} modo="fade">
               {isLoading || !data ? (
                 <SkeletonLista />
               ) : data.proximosEventos.length === 0 ? (
-                <p className={styles.vazio}>Nenhum evento próximo.</p>
+                <EstadoVazio
+                  icone={Calendar}
+                  titulo="Nenhum evento próximo"
+                  mensagem="Os próximos eventos da agenda aparecem aqui."
+                  acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
+                />
               ) : (
                 <ul className={styles.listaEventos}>
                   {data.proximosEventos.map((e: EventoResumo) => {
@@ -139,6 +154,7 @@ export default function DashboardPage() {
                   })}
                 </ul>
               )}
+              </Transicao>
             </section>
           </div>
         </>

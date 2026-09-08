@@ -12,7 +12,7 @@ import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
-import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
+import { TrocaCena } from '@/components/common/TrocaCena/TrocaCena'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './PagamentoEvento.module.css'
 

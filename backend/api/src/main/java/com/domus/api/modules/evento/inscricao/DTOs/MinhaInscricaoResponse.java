@@ -15,7 +15,10 @@ import java.util.UUID;
 public record MinhaInscricaoResponse(
         UUID id,
         boolean inscrito,
-        UUID cobrancaPendenteId
+        UUID cobrancaPendenteId,
+        /** Evento formal (inscrição) vs. só "marcar presença" ("Eu vou") — o front usa pra
+         *  não mostrar o selo "Você está inscrito" quando a pessoa só confirmou presença. */
+        boolean requerInscricao
 ) {
     public static MinhaInscricaoResponse from(InscricaoEvento i) {
         return from(i, null);
@@ -25,11 +28,12 @@ public record MinhaInscricaoResponse(
         return new MinhaInscricaoResponse(
                 i.getId(),
                 i.estaConfirmada(),
-                cobrancaPendenteId
+                cobrancaPendenteId,
+                i.getEvento() != null && i.getEvento().isRequerInscricao()
         );
     }
 
     public static MinhaInscricaoResponse naoInscrito() {
-        return new MinhaInscricaoResponse(null, false, null);
+        return new MinhaInscricaoResponse(null, false, null, false);
     }
 }

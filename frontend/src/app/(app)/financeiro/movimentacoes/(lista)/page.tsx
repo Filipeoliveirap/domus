@@ -341,7 +341,7 @@ function MovimentacoesConteudo() {
 
 export default function MovimentacoesPage() {
   return (
-    <Suspense fallback={<div>Carregando…</div>}>
+    <Suspense fallback={<div className={styles.pagina} />}>
       <MovimentacoesConteudo />
     </Suspense>
   )

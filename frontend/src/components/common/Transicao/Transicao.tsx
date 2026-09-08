@@ -12,10 +12,12 @@ export function Transicao({
   children,
   modo = 'fade',
   className,
+  ref,
 }: {
   children: React.ReactNode
   modo?: 'fade' | 'subir' | 'escala'
   className?: string
+  ref?: React.Ref<HTMLDivElement>
 }) {
-  return <div className={clsx(styles.bloco, styles[modo], className)}>{children}</div>
+  return <div ref={ref} className={clsx(styles.bloco, styles[modo], className)}>{children}</div>
 }

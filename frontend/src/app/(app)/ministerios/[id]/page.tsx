@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { clsx } from 'clsx'
-import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Crown, Star, Users, Archive, ArrowLeft, Pencil } from 'lucide-react'
+import { ChevronRight, Check, X as XIcon, UserPlus, UserMinus, Users, Archive, ArrowLeft, Pencil } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterioDetalhe } from '@/hooks/ministerio/useMinisterioDetalhe'
@@ -20,6 +20,8 @@ import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { ModalAdicionarMembro } from './ModalAdicionarMembro'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
+import { SeloLider, EstrelaLider } from '@/components/common/SeloLider/SeloLider'
+import { useReordenacaoAnimada } from '@/hooks/useReordenacaoAnimada'
 import styles from './detalhe.module.css'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 
@@ -52,6 +54,10 @@ export default function MinisterioDetalhePage() {
     n.delete(id)
     return n
   }
+
+  const listaRef = useReordenacaoAnimada<HTMLUListElement>(
+    (ministerio?.membros ?? []).map((m) => `${m.pessoaId}:${m.papel}`).join(','),
+  )
 
   function removerComAnimacao(pessoaId: string) {
     if (removendo.has(pessoaId)) return // só ignora re-clique na MESMA pessoa
@@ -113,8 +119,12 @@ export default function MinisterioDetalhePage() {
       <header className={styles.cabecalho}>
         <div className={styles.fotoDetalhe}>
           {ministerio.fotoId ? (
-            <img src={urlFoto(ministerio.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg}
-              onClick={() => setFotoVisualizando(ministerio.fotoId)} />
+            <button type="button" className={styles.fotoDetalheBtn}
+              onClick={() => setFotoVisualizando(ministerio.fotoId)}
+              aria-label={`Ver foto de ${ministerio.nome}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+              <img src={urlFoto(ministerio.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg} />
+            </button>
           ) : (
             <div className={styles.fotoDetalheFallback}>
               <Users size={32} />
@@ -173,27 +183,29 @@ export default function MinisterioDetalhePage() {
         {ministerio.membros.length === 0 ? (
           <EstadoVazio titulo="Nenhum membro ainda" mensagem={`Adicione pessoas a esta ${rotuloMinisterio.singular.toLowerCase()}.`} />
         ) : (
-          <ul className={styles.lista}>
+          <ul className={styles.lista} ref={listaRef}>
             {ministerio.membros.map((membro) => (
               <li
                 key={membro.pessoaId}
+                data-flip-id={membro.pessoaId}
                 className={clsx(styles.itemMembro, removendo.has(membro.pessoaId) && styles.itemMembroSaindo)}
                 onClick={() => setPessoaDetalheId(membro.pessoaId)}
               >
                 <div className={styles.itemMembroInfo}>
                   {urlFoto(membro.fotoId, 'THUMB') ? (
-                    <Image src={urlFoto(membro.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatar}
-                      onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }} />
+                    <button type="button" className={styles.avatarBtn}
+                      onClick={(e) => { e.stopPropagation(); setFotoVisualizando(membro.fotoId) }}
+                      aria-label={`Ver foto de ${membro.nome}`}>
+                      <Image src={urlFoto(membro.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatarImg} />
+                    </button>
                   ) : (
                     <span className={styles.avatarIniciais}>{iniciais(membro.nome)}</span>
                   )}
                   <span className={styles.nomeMembro}>
                     {membro.nome}
-                    {membro.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
+                    <EstrelaLider ativo={membro.papel === 'LIDER'} />
                   </span>
-                  {membro.papel === 'LIDER' && (
-                    <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
-                  )}
+                  <SeloLider ativo={membro.papel === 'LIDER'} />
                 </div>
                 <div className={styles.itemMembroAcoes}>
                   {podeGerenciar && (

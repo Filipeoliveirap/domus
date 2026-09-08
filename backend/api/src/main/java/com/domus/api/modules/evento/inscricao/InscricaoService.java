@@ -345,7 +345,8 @@ public class InscricaoService {
                     java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")) + ".");
     }
 
-    /** Depois do prazo, o auto-cancelamento respeita o toggle do evento. Gestor sempre
+    /** Depois do prazo, o auto-cancelamento (self) só passa quando a política de
+     *  cancelamento após o prazo do evento é diferente de NAO_PERMITIDO. Gestor sempre
      *  passa (remove alguém da lista pela gestão de inscritos). */
     private void validarCancelamentoPermitido(Evento evento, boolean souEu, boolean ehGestor) {
         if (ehGestor) return;
@@ -595,13 +596,17 @@ public class InscricaoService {
 
         validarCancelamentoPermitido(inscricao.getEvento(), souEu, gestorDaMesmaIgreja);
 
-        // Cancelamento depois do prazo (com o toggle "permite cancelar após o prazo" ligado,
-        // senão validarCancelamentoPermitido já teria barrado): num evento pago, a igreja
-        // mantém o que foi pago — não estorna. Antes do prazo, ou evento gratuito, estorna
-        // como sempre. Os segundos de diferença no "agora" são irrelevantes num prazo de dias.
+        // Cancelamento depois do prazo: só NÃO estorna quando a política do evento é
+        // PERMITIDO_SEM_REEMBOLSO — aí, num evento pago, a igreja mantém o que foi pago.
+        // Com PERMITIDO_COM_REEMBOLSO (padrão), estorna normal mesmo depois do prazo. Com
+        // NAO_PERMITIDO a guarda (validarCancelamentoPermitido) já barrou o self. Antes do
+        // prazo, ou evento gratuito, estorna como sempre. Vale pra self E gestor. Os segundos
+        // de diferença no "agora" são irrelevantes num prazo de dias.
         Evento evento = inscricao.getEvento();
         boolean semReembolso = evento.getInscricoesAte() != null
-                && java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte());
+                && java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())
+                && evento.getPoliticaCancelamentoAposPrazo()
+                        == com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO;
 
         cancelarInterno(inscricao, semReembolso);
         log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
@@ -620,7 +625,7 @@ public class InscricaoService {
 
     /**
      * @param semReembolso quando {@code true} (cancelamento pelo {@code cancelar(...)} depois
-     *   do prazo, com {@code permiteCancelarAposPrazo} ligado), NÃO estorna cobrança PAGA:
+     *   do prazo, com a política do evento em {@code PERMITIDO_SEM_REEMBOLSO}), NÃO estorna cobrança PAGA:
      *   a igreja mantém o valor, sem e-mail de reembolso e sem lançamento de "Reembolso" no
      *   financeiro (não houve). Cobrança PENDENTE (nunca paga) continua sendo cancelada.
      *   Só o caminho manual {@code cancelar(...)} passa {@code true}; caminhos automáticos

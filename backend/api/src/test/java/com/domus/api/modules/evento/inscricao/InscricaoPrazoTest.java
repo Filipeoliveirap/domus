@@ -112,6 +112,13 @@ class InscricaoPrazoTest {
                 .build();
     }
 
+    private Evento eventoComPrazo(LocalDateTime inscricoesAte,
+            com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo politica) {
+        var e = eventoComPrazo(inscricoesAte, true);
+        e.setPoliticaCancelamentoAposPrazo(politica);
+        return e;
+    }
+
     private Pessoa pessoaComum() {
         return Pessoa.builder()
                 .id(UUID.randomUUID()).igreja(igreja()).nome("Fulano").email("f@e.com")
@@ -229,6 +236,13 @@ class InscricaoPrazoTest {
         return e;
     }
 
+    private Evento eventoPagoSemReembolsoAposPrazo(LocalDateTime inscricoesAte) {
+        var e = eventoComPrazo(inscricoesAte,
+                com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO);
+        e.setPreco(new java.math.BigDecimal("50.00"));
+        return e;
+    }
+
     private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobranca(
             UUID inscricaoId, com.domus.api.modules.pagamento.cobranca.StatusCobranca status) {
         var c = mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class);
@@ -255,7 +269,7 @@ class InscricaoPrazoTest {
 
     @Test
     void cancelamentoDepoisDoPrazoNaoEstorna() {
-        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var evento = eventoPagoSemReembolsoAposPrazo(LocalDateTime.now().minusHours(1));
         var pessoa = pessoaComum();
         var inscricao = inscricaoDe(evento, pessoa);
         var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
@@ -271,7 +285,7 @@ class InscricaoPrazoTest {
 
     @Test
     void cancelamentoDepoisDoPrazoCancelaCobrancaPendente() {
-        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var evento = eventoPagoSemReembolsoAposPrazo(LocalDateTime.now().minusHours(1));
         var pessoa = pessoaComum();
         var inscricao = inscricaoDe(evento, pessoa);
         inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
@@ -287,7 +301,7 @@ class InscricaoPrazoTest {
 
     @Test
     void gestorCancelaDepoisDoPrazoTambemNaoEstorna() {
-        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var evento = eventoPagoSemReembolsoAposPrazo(LocalDateTime.now().minusHours(1));
         var pessoa = pessoaComum();
         var inscricao = inscricaoDe(evento, pessoa);
         var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
@@ -297,5 +311,33 @@ class InscricaoPrazoTest {
 
         verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
         verify(pago, never()).registrarEstorno(any());
+    }
+
+    @Test
+    void cancelamentoDepoisDoPrazoComPoliticaDeReembolsoEstornaNormalmente() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true); // PERMITIDO_COM_REEMBOLSO
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
+        verify(pago).registrarEstorno(any());
+    }
+
+    @Test
+    void gestorCancelaDepoisDoPrazoComReembolsoEstorna() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true); // PERMITIDO_COM_REEMBOLSO
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), UUID.randomUUID(), "ADMIN_IGREJA", igrejaId);
+
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
+        verify(pago).registrarEstorno(any());
     }
 }

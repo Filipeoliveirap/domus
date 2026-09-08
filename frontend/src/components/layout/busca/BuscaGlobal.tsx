@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { Search, X, Users, Calendar, UserCog, Wallet, Tag, Loader2, Home, UserPlus, Network } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, X, Users, Calendar, UserCog, Wallet, Tag, Loader2, Home, UserPlus, Network, SearchX } from 'lucide-react'
 import { useBuscaGlobal, type ResultadoBusca } from '@/hooks/busca/useBuscaGlobal'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import styles from './BuscaGlobal.module.css'
 
 const ORDEM_TIPOS: ResultadoBusca['tipo'][] = ['PESSOA', 'EVENTO', 'VISITANTE', 'CELULA', 'MINISTERIO', 'MOVIMENTACAO', 'CATEGORIA', 'USUARIO']
@@ -13,7 +14,6 @@ export function BuscaGlobal() {
   const [termo, setTermo] = useState('')
   const [aberto, setAberto] = useState(false)
   const router = useRouter()
-  const pathname = usePathname()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const { ministerio, celula } = useRotulos()
 
@@ -56,15 +56,11 @@ export function BuscaGlobal() {
 
   function selecionar(r: ResultadoBusca) {
     const rota = TIPO_CONFIG[r.tipo].rota(r)
-    const [novoPathname] = rota.split('?')
     setTermo('')
     setAberto(false)
-    if (novoPathname === pathname) {
-      // Mesma rota: router.push só troca querystring e a página não reage (estado lido uma vez na montagem); precisa de reload de verdade.
-      window.location.href = rota
-    } else {
-      router.push(rota)
-    }
+    // `router.push` mesmo pra rota atual: os hooks de busca por URL (useBuscaUrl) agora
+    // reagem à mudança da querystring, sem precisar de reload duro (que perdia o app shell).
+    router.push(rota)
   }
 
   return (
@@ -88,9 +84,12 @@ export function BuscaGlobal() {
       </div>
 
       {mostrarDropdown && (
-        <div className={styles.dropdown}>
+        <Transicao modo="subir" className={styles.dropdown}>
           {!temResultados && !isFetching && (
-            <div className={styles.vazio}>Nenhum resultado para “{termo}”.</div>
+            <div className={styles.vazio}>
+              <SearchX size={20} aria-hidden="true" />
+              <span>Nenhum resultado para “{termo}”.</span>
+            </div>
           )}
 
           {ORDEM_TIPOS.map((tipo) => {
@@ -114,7 +113,7 @@ export function BuscaGlobal() {
               </div>
             )
           })}
-        </div>
+        </Transicao>
       )}
     </div>
   )

@@ -267,7 +267,7 @@ function PessoasConteudo() {
 
 export default function PessoasPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+    <Suspense fallback={<div className={styles.pagina} />}>
       <PessoasConteudo />
     </Suspense>
   )

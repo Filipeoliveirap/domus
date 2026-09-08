@@ -304,7 +304,7 @@ function UsuariosConteudo() {
 
 export default function UsuariosPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+    <Suspense fallback={<div className={styles.pagina} />}>
       <UsuariosConteudo />
     </Suspense>
   )

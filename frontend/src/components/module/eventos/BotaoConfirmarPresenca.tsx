@@ -114,13 +114,13 @@ export function BotaoConfirmarPresenca({
   const definirEmail = useDefinirEmailInicial()
   const { responder } = useResponderCampos()
 
-  // Modo "Eu vou": sem toast, feedback é o próprio botão. Evento pago também silencia o
-  // toast genérico ("Inscrição confirmada!" seria enganoso — o pagamento ainda não foi
-  // feito; a rota de checkout mostra o próprio feedback quando o pagamento é aprovado).
-  const inscrever = useInscrever(eventoId, !requerInscricao || !!preco, {
+  // Ação da própria pessoa: nunca notifica — o resultado já está na tela (o botão vira
+  // "Inscrito" / volta pra "Se inscrever", com animação). Toast só pros erros (dentro do
+  // hook). Evento pago mostra o próprio feedback na rota de checkout.
+  const inscrever = useInscrever(eventoId, true, {
     onContornavel: ehGestor ? (imps) => setImpedimentosParaConfirmar(imps) : undefined,
   })
-  const cancelar = useCancelarInscricao(!requerInscricao)
+  const cancelar = useCancelarInscricao(true)
 
   // Gestor vê o motivo, mas o botão segue ativo (422 abre confirmação)
   const { data: elegibilidade } = useElegibilidade(eventoId)

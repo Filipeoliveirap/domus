@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, UserPlus, UserX, Star, Pencil, Crown, ArrowLeftRight, TrendingUp, Grid3X3, Archive, ArrowLeft } from 'lucide-react'
+import { ChevronRight, UserPlus, UserX, Pencil, Crown, ArrowLeftRight, TrendingUp, Grid3X3, Archive, ArrowLeft } from 'lucide-react'
 import { useCelula } from '@/hooks/celula/useCelula'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
@@ -28,6 +28,8 @@ import { iniciaisVisitante } from '@/lib/formats/visitanteFormat'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { DrawerDetalheVisitante } from '@/app/(app)/pessoas/visitantes/(detalhe)/DrawerDetalheVisitante'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
+import { SeloLider, EstrelaLider } from '@/components/common/SeloLider/SeloLider'
+import { useReordenacaoAnimada } from '@/hooks/useReordenacaoAnimada'
 import { VisitanteForm, type VisitanteFormData } from '@/components/module/visitantes/VisitanteForm'
 import { useVisitanteForm } from '@/hooks/visitante/useVisitanteForm'
 import type { MembroCelulaResponse } from '@/types/celula.type'
@@ -135,6 +137,11 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
   const totalPessoas = celula?.membros.filter(m => m.tipo === 'PESSOA').length ?? 0
   const totalVisitantes = celula?.membros.filter(m => m.tipo === 'VISITANTE').length ?? 0
 
+  const membrosVisiveis = membrosFiltrados()
+  const listaRef = useReordenacaoAnimada<HTMLDivElement>(
+    membrosVisiveis.map(m => `${m.id}:${m.papel}`).join(','),
+  )
+
   return (
     <div className={styles.pagina}>
       <nav className={styles.breadcrumb}>
@@ -163,8 +170,12 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
           <header className={styles.cabecalho}>
             <div className={styles.fotoDetalhe}>
               {celula.fotoId ? (
-                <img src={urlFoto(celula.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg}
-                  onClick={() => setFotoVisualizando(celula.fotoId)} />
+                <button type="button" className={styles.fotoDetalheBtn}
+                  onClick={() => setFotoVisualizando(celula.fotoId)}
+                  aria-label={`Ver foto de ${celula.nome}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+                  <img src={urlFoto(celula.fotoId, 'DISPLAY')!} alt="" className={styles.fotoDetalheImg} />
+                </button>
               ) : (
                 <div className={styles.fotoDetalheFallback}>
                   <Grid3X3 size={32} />
@@ -218,8 +229,8 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             ))}
           </div>
 
-          <Transicao key={filtro} modo="fade" className={styles.lista}>
-            {membrosFiltrados().map(m => {
+          <Transicao key={filtro} modo="fade" className={styles.lista} ref={listaRef}>
+            {membrosVisiveis.map(m => {
               const podeGerenciar = podeGerenciarCelula
 
               const acoes: ItemAcao[] = []
@@ -249,6 +260,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
 
               return (
                 <div key={m.id}
+                  data-flip-id={m.id}
                   className={clsx(styles.membro, m.tipo === 'VISITANTE' && styles.membroVisitante, removendo.has(m.id) && styles.membroSaindo)}
                   onClick={() => {
                     if (m.tipo === 'PESSOA' && m.pessoaId) setPessoaDetalheId(m.pessoaId)
@@ -257,8 +269,12 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                 >
                   <div className={styles.membroInfo}>
                     {m.fotoId ? (
-                      <img src={urlFoto(m.fotoId, 'THUMB')!} alt="" className={styles.membroAvatar}
-                        onClick={(e) => { e.stopPropagation(); setFotoVisualizando(m.fotoId) }} />
+                      <button type="button" className={styles.membroAvatarBtn}
+                        onClick={(e) => { e.stopPropagation(); setFotoVisualizando(m.fotoId) }}
+                        aria-label={`Ver foto de ${m.nome}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+                        <img src={urlFoto(m.fotoId, 'THUMB')!} alt="" className={styles.membroAvatarImg} />
+                      </button>
                     ) : (
                       <span className={styles.membroAvatar}>
                         {m.tipo === 'PESSOA' ? iniciais(m.nome) : iniciaisVisitante(m.nome)}
@@ -266,13 +282,11 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
                     )}
                     <span className={styles.membroNome}>
                       {m.nome}
-                      {m.papel === 'LIDER' && <Star size={14} className={styles.estrela} />}
+                      <EstrelaLider ativo={m.papel === 'LIDER'} />
                     </span>
                   </div>
                   <div className={styles.membroAcoes}>
-                    {m.papel === 'LIDER' && (
-                      <span className={styles.badgeLider}><Crown size={12} /> Líder</span>
-                    )}
+                    <SeloLider ativo={m.papel === 'LIDER'} />
                     <span className={`${styles.membroBadge} ${m.tipo === 'PESSOA' ? styles.badgePessoa : styles.badgeVisitante}`}>
                       {m.tipo === 'PESSOA' ? 'Pessoa da igreja' : 'Visitante'}
                     </span>

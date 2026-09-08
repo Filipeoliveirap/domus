@@ -122,8 +122,12 @@ export default function CelulasPage() {
                   </div>
                 )}
                 {c.fotoId ? (
-                  <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto}
-                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) }} />
+                  <button type="button" className={styles.cardFotoBtn}
+                    onClick={(e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) }}
+                    aria-label={`Ver foto de ${c.nome}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+                    <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
+                  </button>
                 ) : (
                   <div className={styles.cardIcon}>
                     <Grid3X3 size={24} />

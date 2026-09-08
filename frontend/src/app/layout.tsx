@@ -3,6 +3,7 @@ import { Inter, Geist } from 'next/font/google'
 import { Providers } from '@/components/common/Providers'
 import '@/styles/globals.css'
 import { Toaster } from 'sonner'
+import { PonteParaCheckout } from '@/components/module/pagamento/PonteParaCheckout'
 import { cn } from "@/lib/utils";
 
 // viewportFit: 'cover' é o que habilita `env(safe-area-inset-*)` no CSS — sem isso o header
@@ -37,6 +38,9 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
+          {/* Véu "Inscrição feita! / Abrindo o pagamento…" — no root porque o checkout
+              também é alcançado de rotas fora do app shell (convite público). */}
+          <PonteParaCheckout />
           {/*
             Sem `richColors`: a aparência dos toasts é nossa, definida em
             components/common/Notificacao. O sonner fica só com a mecânica

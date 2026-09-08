@@ -36,3 +36,18 @@
   color: var(--color-text-muted);
 }
 
+.carregandoTitulo {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.carregandoLista {
+  margin: 0;
+  padding-left: 1.1rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 380px;
+}
+

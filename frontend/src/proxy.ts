@@ -19,7 +19,11 @@ export function proxy(request: NextRequest) {
     // trava com "eval() is not supported" no Console.
     // https://sdk.mercadopago.com carrega o SDK JS do Payment Brick; https://http2.mlstatic.com
     // serve os assets estáticos que o Brick injeta (fontes/scripts do form de cartão tokenizado).
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client https://sdk.mercadopago.com https://http2.mlstatic.com`,
+    // `strict-dynamic` faz os navegadores modernos ignorarem a lista de hosts abaixo (a
+    // confiança propaga do script com nonce). Os hosts ficam de fallback pra navegadores
+    // sem suporte a strict-dynamic. `*.mlstatic.com` (não só http2) + `www.mercadolibre.com`
+    // porque o Brick e o script de antifraude do MP carregam de vários subdomínios/da matriz.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client https://sdk.mercadopago.com https://*.mlstatic.com https://www.mercadolibre.com`,
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
     // O Payment Brick monta os campos de cartão (número/CVV) em iframes próprios servidos
     // pelo domínio do Mercado Pago — sem isso o navegador recusa renderizar o Brick.

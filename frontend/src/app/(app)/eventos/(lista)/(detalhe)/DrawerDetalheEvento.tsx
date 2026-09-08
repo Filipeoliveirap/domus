@@ -413,6 +413,8 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
             {modalAberto === 'lista' && (
               <ModalQuemVai
                 eventoId={evento.id}
+                situacao={evento.situacao}
+                requerInscricao={evento.requerInscricao}
                 restritoPropriaIgreja={evento.restritoPropriaIgreja}
                 podeGerenciarEsteEvento={podeGerenciar}
                 aoFechar={() => setModalAberto(null)}

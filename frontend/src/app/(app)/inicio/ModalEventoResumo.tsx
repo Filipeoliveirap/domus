@@ -352,6 +352,8 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
       {modalAberto === 'lista' && evento && (
         <ModalQuemVai
           eventoId={eventoId}
+          situacao={evento.situacao}
+          requerInscricao={evento.requerInscricao}
           restritoPropriaIgreja={evento.restritoPropriaIgreja}
           podeGerenciarEsteEvento={podeGerenciar}
           aoFechar={() => setModalAberto(null)}

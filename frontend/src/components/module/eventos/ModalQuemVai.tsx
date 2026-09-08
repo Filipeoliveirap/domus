@@ -1,35 +1,50 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import Image from 'next/image'
 import { X, Users } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
+import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
+import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
+import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './ModalQuemVai.module.css'
 
 interface Props {
   eventoId: string
+  situacao: SituacaoEvento
+  /** Evento formal (inscrição) vs. só "marcar presença". Cancelar inscrição só aparece
+   *  quando há inscrição de verdade — na lista de "quem vai" (presença) não faz sentido. */
+  requerInscricao: boolean
   restritoPropriaIgreja?: boolean
   podeGerenciarEsteEvento: boolean
   aoFechar: () => void
 }
 
-export function ModalQuemVai({ eventoId, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar }: Props) {
+export function ModalQuemVai({
+  eventoId, situacao, requerInscricao, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar,
+}: Props) {
   const role = useAuthStore((s) => s.role)
-  // Gestor puxa a lista completa (inclui quem ainda não é da própria igreja); os demais
-  // veem só os participantes confirmados. É uma lista de interação — sem ação de cancelar.
   const ehGestor = podeGerenciarInscricoes(role) && podeGerenciarEsteEvento
+  // Cancelar inscrição só num evento com inscrição, por quem gerencia, e só enquanto o
+  // backend ainda aceita cancelamento.
+  const podeCancelar = ehGestor && requerInscricao && podeCancelarInscricao(situacao)
+  const eventoEncerrado = requerInscricao && !podeCancelarInscricao(situacao)
 
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(eventoId, !ehGestor)
   // size=500: "quem vai" mostra todos de uma vez, não pagina
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(eventoId, ehGestor, '', 0, 500)
+  const cancelar = useCancelarInscricao()
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+  const [fotoAberta, setFotoAberta] = useState<{ id: string; nome: string } | null>(null)
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
 
   useEffect(() => {
@@ -67,10 +82,11 @@ export function ModalQuemVai({ eventoId, restritoPropriaIgreja, podeGerenciarEst
   const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
 
   return (
+    <>
     <div
       className={clsx(styles.overlay, saindo && styles.saindo)}
-      // Este modal costuma abrir por cima do drawer/modal de detalhe do evento — sem parar
-      // a propagação, o clique fora fecharia todos eles de uma vez.
+      // Costuma abrir por cima do drawer/modal de detalhe do evento — sem parar a
+      // propagação, o clique fora fecharia todos eles de uma vez.
       onMouseDown={(e) => {
         e.stopPropagation()
         fechar()
@@ -118,19 +134,60 @@ export function ModalQuemVai({ eventoId, restritoPropriaIgreja, podeGerenciarEst
             linhas.map((l, i) => (
               <div key={l.id} className={styles.grupo} style={{ '--i': i } as React.CSSProperties}>
                 <div className={styles.linha}>
-                  <span className={styles.avatar}>
-                    {urlFoto(l.fotoId, 'THUMB') ? (
+                  {urlFoto(l.fotoId, 'THUMB') ? (
+                    <button
+                      type="button"
+                      className={styles.avatar}
+                      onClick={() => setFotoAberta({ id: l.fotoId!, nome: l.nome })}
+                      aria-label={`Ver foto de ${l.nome}`}
+                    >
                       <Image src={urlFoto(l.fotoId, 'THUMB')!} alt="" width={36} height={36} unoptimized className={styles.avatarFoto} />
-                    ) : (
-                      iniciais(l.nome)
-                    )}
-                  </span>
+                    </button>
+                  ) : (
+                    <span className={styles.avatar}>{iniciais(l.nome)}</span>
+                  )}
                   <span className={styles.nome}>{l.nome}</span>
 
                   {mostrarIgreja && l.igrejaDaPessoa && (
                     <span className={styles.selo}>
                       {l.igrejaDaPessoa.sigla ?? l.igrejaDaPessoa.nome}
                     </span>
+                  )}
+
+                  {eventoEncerrado && ehGestor && (
+                    <span className={styles.selo}>Participou</span>
+                  )}
+
+                  {podeCancelar && (
+                    confirmandoId === l.id ? (
+                      <span className={styles.confirmacao}>
+                        <span className={styles.confirmacaoTexto}>Cancelar?</span>
+                        <button
+                          type="button"
+                          className={styles.confirmarSim}
+                          onClick={() => cancelar.mutate(l.id, { onSuccess: () => setConfirmandoId(null) })}
+                          disabled={cancelar.isPending}
+                        >
+                          Sim
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.confirmarNao}
+                          onClick={() => setConfirmandoId(null)}
+                        >
+                          Não
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.cancelar}
+                        onClick={() => setConfirmandoId(l.id)}
+                        disabled={cancelar.isPending}
+                      >
+                        Cancelar inscrição
+                      </button>
+                    )
                   )}
                 </div>
               </div>
@@ -140,5 +197,15 @@ export function ModalQuemVai({ eventoId, restritoPropriaIgreja, podeGerenciarEst
         </div>
       </div>
     </div>
+
+    {/* Irmão do overlay: dentro dele, o clique pra fechar a foto fecharia o modal junto. */}
+    {fotoAberta && (
+      <VisualizadorFoto
+        fotoId={fotoAberta.id}
+        descricao={`Foto de ${fotoAberta.nome}`}
+        onClose={() => setFotoAberta(null)}
+      />
+    )}
+    </>
   )
 }

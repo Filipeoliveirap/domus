@@ -27,9 +27,11 @@ public class PagamentoPollingService {
 
     private static final Logger log = LoggerFactory.getLogger(PagamentoPollingService.class);
 
-    /** ~1 minuto de tentativas (20 x 3s) — cobre a maioria dos casos reais sem segurar
-     *  thread ocupada indefinidamente; depois disso, só o webhook resolve. */
-    private static final int MAX_TENTATIVAS = 20;
+    /** ~2 minutos de tentativas (40 x 3s) — cobre a maioria dos Pix reais (inclusive quem
+     *  demora pra abrir o app do banco) sem segurar thread ocupada indefinidamente. Depois
+     *  disso resolvem o webhook do Mercado Pago ou a reconferência do GET /status
+     *  ({@link #reconferirAgora}) enquanto a tela do checkout segue aberta. */
+    private static final int MAX_TENTATIVAS = 40;
     private static final long INTERVALO_MS = 3000;
 
     /** Status do Mercado Pago que ainda podem virar "approved" — continuar tentando. */

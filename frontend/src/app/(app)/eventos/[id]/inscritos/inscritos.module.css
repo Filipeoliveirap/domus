@@ -238,7 +238,7 @@
    é um efeito só de CSS do navegador em cima do ancestral clicável, não segue o JS. */
 .linhaClicavel {
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) {
@@ -248,6 +248,11 @@
 }
 .linhaClicavel:active {
   background: var(--color-bg-page);
+  transform: scale(0.996);
+}
+@media (prefers-reduced-motion: reduce) {
+  .linhaClicavel { transition: background-color var(--transition-fast); }
+  .linhaClicavel:active { transform: none; }
 }
 
 /* ─── Colunas ─── */

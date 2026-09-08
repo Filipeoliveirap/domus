@@ -1,0 +1,52 @@
+.palco {
+  position: relative;
+  overflow: hidden;
+  /* a altura é setada em px via JS durante a troca; aqui só a curva da animação */
+  transition: height 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cena que sai: tirada do fluxo (não conta pra altura do palco, que já mira a cena nova)
+   e desliza pra cima sumindo. */
+.cenaSai {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: cenaSair 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Cena que entra: sobe e aparece. */
+.cenaEntra {
+  animation: cenaEntrar 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cenaSair {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@keyframes cenaEntrar {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes cenaFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palco {
+    transition-duration: 0.01s;
+  }
+  .cenaSai {
+    animation: cenaFade 0.14s linear reverse forwards;
+  }
+  .cenaEntra {
+    animation: cenaFade 0.14s linear;
+  }
+}

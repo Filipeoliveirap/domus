@@ -83,8 +83,9 @@
   .overlay {
     padding: 12px;
   }
+  /* respeita o notch / Dynamic Island / status bar — senão o X fica atrás deles */
   .fechar {
-    top: 12px;
-    right: 12px;
+    top: calc(12px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
   }
 }

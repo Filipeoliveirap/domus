@@ -9,6 +9,8 @@ import { useBalanceteAnual } from '@/hooks/financeiro/balancete/useBalanceteAnua
 import { useBalanceteFamilia } from '@/hooks/financeiro/balancete/useBalanceteFamilia'
 import { BalanceteTabela } from './BalanceteTabela'
 import { BalanceteCardsMes } from './BalanceteCardsMes'
+import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import styles from './balancete.module.css'
 import { SkeletonBalancete } from './SkeletonBalancete'
@@ -59,58 +61,63 @@ export default function BalanceteAnualPage() {
         </div>
       )}
 
-      {aba === 'MINHA_IGREJA' && balancetePropria.isLoading && (
-        <SkeletonBalancete />
-      )}
-      {aba === 'MINHA_IGREJA' && balancetePropria.isError && (
-        <p className={styles.erro}>
-          Não foi possível carregar o balancete.{' '}
-          <button onClick={() => balancetePropria.refetch()}>Tentar novamente</button>
-        </p>
-      )}
-      {aba === 'MINHA_IGREJA' && balancetePropria.data && (
-        <>
-          <BalanceteTabela balancete={balancetePropria.data} />
-          <BalanceteCardsMes balancete={balancetePropria.data} />
-        </>
-      )}
+      <Transicao key={aba} modo="fade">
+        {aba === 'MINHA_IGREJA' && (
+          balancetePropria.isLoading ? (
+            <SkeletonBalancete />
+          ) : balancetePropria.isError ? (
+            <EstadoErro
+              titulo="Não foi possível carregar o balancete"
+              mensagem="Tente novamente."
+              aoTentarNovamente={() => balancetePropria.refetch()}
+            />
+          ) : balancetePropria.data ? (
+            <>
+              <BalanceteTabela balancete={balancetePropria.data} />
+              <BalanceteCardsMes balancete={balancetePropria.data} />
+            </>
+          ) : null
+        )}
 
-      {aba === 'CONSOLIDADO' && balanceteFamilia.isLoading && (
-        <SkeletonBalancete />
-      )}
-      {aba === 'CONSOLIDADO' && balanceteFamilia.isError && (
-        <p className={styles.erro}>
-          Não foi possível carregar o balancete.{' '}
-          <button onClick={() => balanceteFamilia.refetch()}>Tentar novamente</button>
-        </p>
-      )}
-      {aba === 'CONSOLIDADO' && balanceteFamilia.data && (
-        <>
-          <BalanceteTabela balancete={balanceteFamilia.data.consolidado} />
-          <BalanceteCardsMes balancete={balanceteFamilia.data.consolidado} />
-        </>
-      )}
+        {aba === 'CONSOLIDADO' && (
+          balanceteFamilia.isLoading ? (
+            <SkeletonBalancete />
+          ) : balanceteFamilia.isError ? (
+            <EstadoErro
+              titulo="Não foi possível carregar o balancete"
+              mensagem="Tente novamente."
+              aoTentarNovamente={() => balanceteFamilia.refetch()}
+            />
+          ) : balanceteFamilia.data ? (
+            <>
+              <BalanceteTabela balancete={balanceteFamilia.data.consolidado} />
+              <BalanceteCardsMes balancete={balanceteFamilia.data.consolidado} />
+            </>
+          ) : null
+        )}
 
-      {aba === 'POR_CONGREGACAO' && balanceteFamilia.isLoading && (
-        <SkeletonBalancete />
-      )}
-      {aba === 'POR_CONGREGACAO' && balanceteFamilia.isError && (
-        <p className={styles.erro}>
-          Não foi possível carregar o balancete.{' '}
-          <button onClick={() => balanceteFamilia.refetch()}>Tentar novamente</button>
-        </p>
-      )}
-      {aba === 'POR_CONGREGACAO' && balanceteFamilia.data && (
-        <div className={styles.listaIgrejas}>
-          {balanceteFamilia.data.porIgreja.map((item) => (
-            <section key={item.igrejaId} className={styles.blocoIgreja}>
-              <h2>{item.nomeIgreja}{item.ehSede ? ' (Sede)' : ''}</h2>
-              <BalanceteTabela balancete={item.balancete} />
-              <BalanceteCardsMes balancete={item.balancete} />
-            </section>
-          ))}
-        </div>
-      )}
+        {aba === 'POR_CONGREGACAO' && (
+          balanceteFamilia.isLoading ? (
+            <SkeletonBalancete />
+          ) : balanceteFamilia.isError ? (
+            <EstadoErro
+              titulo="Não foi possível carregar o balancete"
+              mensagem="Tente novamente."
+              aoTentarNovamente={() => balanceteFamilia.refetch()}
+            />
+          ) : balanceteFamilia.data ? (
+            <div className={styles.listaIgrejas}>
+              {balanceteFamilia.data.porIgreja.map((item) => (
+                <section key={item.igrejaId} className={styles.blocoIgreja}>
+                  <h2>{item.nomeIgreja}{item.ehSede ? ' (Sede)' : ''}</h2>
+                  <BalanceteTabela balancete={item.balancete} />
+                  <BalanceteCardsMes balancete={item.balancete} />
+                </section>
+              ))}
+            </div>
+          ) : null
+        )}
+      </Transicao>
     </div>
   )
 }

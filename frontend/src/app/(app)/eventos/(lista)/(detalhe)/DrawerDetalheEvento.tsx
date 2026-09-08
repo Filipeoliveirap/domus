@@ -236,8 +236,8 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                   aria-label="Ver quem vai a este evento"
                 >
                   <div className={styles.pilhaAvatares}>
-                    {participantes.slice(0, MAX_AVATARES).map((p) => (
-                      <span key={p.id} className={styles.avatarPresenca} title={p.nome}>
+                    {participantes.slice(0, MAX_AVATARES).map((p, i) => (
+                      <span key={p.id} className={styles.avatarPresenca} title={p.nome} style={{ '--i': i } as React.CSSProperties}>
                         {urlFoto(p.fotoId, 'THUMB') ? (
                           <img src={urlFoto(p.fotoId, 'THUMB')!} alt="" className={styles.avatarPresencaFoto} />
                         ) : (
@@ -414,6 +414,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
               <ModalQuemVai
                 eventoId={evento.id}
                 situacao={evento.situacao}
+                requerInscricao={evento.requerInscricao}
                 restritoPropriaIgreja={evento.restritoPropriaIgreja}
                 podeGerenciarEsteEvento={podeGerenciar}
                 aoFechar={() => setModalAberto(null)}

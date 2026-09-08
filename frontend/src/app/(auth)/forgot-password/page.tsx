@@ -6,6 +6,7 @@ import { Mail, KeyRound, MailCheck, ArrowLeft } from 'lucide-react'
 import { useEsqueciSenha } from '@/hooks/auth/useEsqueciSenha'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
+import { TrocaCena } from '@/components/common/TrocaCena/TrocaCena'
 import styles from './page.module.css'
 
 function EsqueciSenhaConteudo() {
@@ -13,8 +14,12 @@ function EsqueciSenhaConteudo() {
     useEsqueciSenha()
 
   return (
-      <div className={styles.card} key={enviado ? 'enviado' : 'form'}>
-        {enviado ? (
+      <div className={styles.card}>
+      <TrocaCena
+        cenaKey={enviado ? 'enviado' : 'form'}
+        renderCena={(cena) => (
+        <div className={styles.cardInner}>
+        {cena === 'enviado' ? (
           <>
             <div className={styles.header}>
               <span className={styles.iconBadge}>
@@ -83,6 +88,9 @@ function EsqueciSenhaConteudo() {
             </div>
           </>
         )}
+        </div>
+        )}
+      />
       </div>
   )
 }

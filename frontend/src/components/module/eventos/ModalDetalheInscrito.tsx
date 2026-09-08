@@ -9,6 +9,7 @@ import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { formatarData, iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { ModalRespostasInscrito } from './ModalRespostasInscrito'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import styles from './ModalDetalheInscrito.module.css'
 import type { InscritoResponse } from '@/types/inscricao.type'
 
@@ -27,13 +28,14 @@ export function ModalDetalheInscrito({
   onClose: () => void
 }) {
   const [verRespostas, setVerRespostas] = useState(false)
+  const [verFoto, setVerFoto] = useState(false)
   const { saindo, fechar } = useFecharAnimado(onClose, 180)
 
   useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !verRespostas) fechar() }
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !verRespostas && !verFoto) fechar() }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [fechar, verRespostas])
+  }, [fechar, verRespostas, verFoto])
 
   useEffect(() => {
     const anterior = document.body.style.overflow
@@ -57,15 +59,20 @@ export function ModalDetalheInscrito({
         >
           <span className={styles.grabber} aria-hidden="true" />
           <div className={styles.cabecalho}>
-            <span className={styles.avatar}>
-              {foto ? (
+            {foto ? (
+              <button
+                type="button"
+                className={styles.avatar}
+                onClick={() => setVerFoto(true)}
+                aria-label={`Ver foto de ${inscrito.nome}`}
+              >
                 <Image src={foto} alt="" width={44} height={44} unoptimized className={styles.avatarFoto} />
-              ) : ehConvidado ? (
-                iniciais(inscrito.nome)
-              ) : (
-                <User size={20} aria-hidden="true" />
-              )}
-            </span>
+              </button>
+            ) : (
+              <span className={styles.avatar}>
+                {ehConvidado ? iniciais(inscrito.nome) : <User size={20} aria-hidden="true" />}
+              </span>
+            )}
             <div className={styles.cabecalhoTextos}>
               <h2 className={styles.titulo} id="modal-detalhe-inscrito-titulo">{inscrito.nome}</h2>
               {ehConvidado && <span className={styles.pillConvidado}>Convidado</span>}
@@ -118,6 +125,14 @@ export function ModalDetalheInscrito({
           nome={inscrito.nome}
           inscricaoId={inscrito.id}
           onClose={() => setVerRespostas(false)}
+        />
+      )}
+
+      {verFoto && inscrito.fotoId && (
+        <VisualizadorFoto
+          fotoId={inscrito.fotoId}
+          descricao={`Foto de ${inscrito.nome}`}
+          onClose={() => setVerFoto(false)}
         />
       )}
     </>,

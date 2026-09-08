@@ -184,7 +184,11 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
               {minha?.inscrito && (
                 <span className={styles.seloInscrito}>
                   <CheckCircle2 size={12} aria-hidden="true" />
-                  {evento.situacao === 'ENCERRADO' ? 'Você participou desse evento' : 'Você está inscrito'}
+                  {evento.situacao === 'ENCERRADO'
+                    ? 'Você participou desse evento'
+                    : evento.requerInscricao
+                      ? 'Você está inscrito'
+                      : 'Você vai'}
                 </span>
               )}
             </header>
@@ -214,8 +218,8 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                   aria-label="Ver quem vai a este evento"
                 >
                   <div className={styles.pilhaAvatares}>
-                    {participantes.slice(0, MAX_AVATARES).map((p) => (
-                      <span key={p.id} className={styles.avatarPresenca} title={p.nome}>
+                    {participantes.slice(0, MAX_AVATARES).map((p, i) => (
+                      <span key={p.id} className={styles.avatarPresenca} title={p.nome} style={{ '--i': i } as React.CSSProperties}>
                         {urlFoto(p.fotoId, 'THUMB') ? (
                           <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={32} height={32} unoptimized className={styles.avatarPresencaFoto} />
                         ) : (
@@ -349,6 +353,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
         <ModalQuemVai
           eventoId={eventoId}
           situacao={evento.situacao}
+          requerInscricao={evento.requerInscricao}
           restritoPropriaIgreja={evento.restritoPropriaIgreja}
           podeGerenciarEsteEvento={podeGerenciar}
           aoFechar={() => setModalAberto(null)}

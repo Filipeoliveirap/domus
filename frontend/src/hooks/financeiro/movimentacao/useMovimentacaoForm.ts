@@ -92,7 +92,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
-      sairAnimado(() => router.back())
+      sairAnimado(() => ehEdicao ? router.back() : router.push('/financeiro/movimentacoes'))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

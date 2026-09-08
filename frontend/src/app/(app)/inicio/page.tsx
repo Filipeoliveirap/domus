@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2, CheckCircle2 } from 'lucide-react'
+import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
@@ -87,16 +89,24 @@ function ModalAniversariantes({
   hoje: number
   aoFechar: () => void
 }) {
+  const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
+
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') aoFechar()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [aoFechar])
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={aoFechar}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -104,11 +114,12 @@ function ModalAniversariantes({
         aria-modal="true"
         aria-labelledby="titulo-aniversariantes"
       >
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitulo} id="titulo-aniversariantes">
             Aniversariantes do mês ({aniversariantes.length})
           </h2>
-          <button type="button" className={styles.modalFechar} onClick={aoFechar} aria-label="Fechar">
+          <button type="button" className={styles.modalFechar} onClick={fechar} aria-label="Fechar">
             <X size={18} />
           </button>
         </div>

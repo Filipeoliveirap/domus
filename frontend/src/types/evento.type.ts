@@ -9,6 +9,8 @@ export type RestricaoSexo = 'HOMEM' | 'MULHER'
 
 export type SituacaoInscricao = 'ABERTA' | 'ENCERRADA_POR_PRAZO' | 'ENCERRADA_POR_INICIO'
 
+export type PoliticaCancelamentoAposPrazo = 'NAO_PERMITIDO' | 'PERMITIDO_COM_REEMBOLSO' | 'PERMITIDO_SEM_REEMBOLSO'
+
 export interface EventoArquivadoResponse {
   id: string
   titulo: string
@@ -72,7 +74,7 @@ export interface EventoResponse {
   serieId: string | null
   divergeDaSerie: boolean
   inscricoesAte: string | null
-  permiteCancelarAposPrazo: boolean
+  politicaCancelamentoAposPrazo: PoliticaCancelamentoAposPrazo
   situacaoInscricao: SituacaoInscricao
 }
 
@@ -109,7 +111,7 @@ export interface EventoRequest {
   exclusivoMembros?: boolean
   requerInscricao?: boolean
   inscricoesAte?: string | null
-  permiteCancelarAposPrazo?: boolean
+  politicaCancelamentoAposPrazo?: PoliticaCancelamentoAposPrazo
   controlaPresenca?: boolean
   recorteEtario?: string | null
   idadeMin?: number | null

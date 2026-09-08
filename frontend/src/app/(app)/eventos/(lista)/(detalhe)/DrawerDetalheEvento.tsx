@@ -342,6 +342,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 situacaoInscricao={evento.situacaoInscricao}
                 inscricoesAte={evento.inscricoesAte}
                 preco={evento.preco}
+                politicaCancelamentoAposPrazo={evento.politicaCancelamentoAposPrazo}
                 onInscritoComSucesso={() => setAcabouDeInscrever(true)}
               />
 

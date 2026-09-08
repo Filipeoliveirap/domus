@@ -322,6 +322,13 @@
   border-radius: var(--radius-md);
   overflow: hidden;
 }
+.segmentadoTriplo {
+  flex-wrap: wrap;
+}
+.segmentadoTriplo .segmentoBtn {
+  flex: 1 1 auto;
+  min-width: 33%;
+}
 .segmentoBtn {
   flex: 1;
   padding: 10px 14px;

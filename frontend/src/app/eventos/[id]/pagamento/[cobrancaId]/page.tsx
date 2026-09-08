@@ -11,6 +11,7 @@ import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './PagamentoEvento.module.css'
 
@@ -82,12 +83,51 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
   // o dado só vinha na resposta de `pagar`, que não pode ser chamado de novo (cai em
   // COBRANCA_JA_EM_PROCESSAMENTO). Busca uma vez, junto com "confirmando"; nulos nos dois
   // campos = o pagamento em andamento é cartão, não Pix — mostra a tela genérica de sempre.
-  const { data: pix } = useQuery({
+  // O QR/copia-e-cola não muda depois de criado — busca UMA vez e nunca re-busca. Sem isto,
+  // cada refetch deixava `pix` momentaneamente `undefined` e a tela piscava entre o QR e
+  // "Confirmando pagamento…". Agora quem decide a tela é só a máquina de estados local
+  // (`etapaPix`) abaixo — esta query só alimenta o `<TelaPix>`.
+  const { data: pix, isFetched: pixCarregado } = useQuery({
     queryKey: ['cobranca-pix', cobrancaId],
     queryFn: () => cobrancaService.pix(cobrancaId),
     enabled: resultadoEfetivo === 'enviado',
     retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
+
+  const temQr = !!(pix?.qrCode && pix?.qrCodeBase64)
+
+  // Máquina de estados EXPLÍCITA do checkout Pix — antes era um `pix ? A : B` que piscava a
+  // cada refetch. 'qr' mostra o QR Code; 'aguardando' é a tela "Confirmando pagamento…"
+  // DELIBERADA (com botão pra voltar ao QR); 'confirmado' é a tela de sucesso.
+  //   qr  →  aguardando  →  confirmado
+  // Transições: timer de 40s ou botão "Já fiz o pagamento" (qr→aguardando); botão "Ver QR
+  // Code de novo" (aguardando→qr, rearmando o timer); poll retorna PAGO (→confirmado, de
+  // qualquer estado). Cartão / cobrança sem Pix cai direto em 'aguardando', sem timer e sem
+  // o botão de voltar ao QR.
+  // Único estado de fato: "a pessoa (ou o timer) pediu a tela de aguardando". O resto é
+  // derivado — 'confirmado' sai do poll, e cobrança sem Pix força 'aguardando' sozinha.
+  const [querAguardando, setQuerAguardando] = useState(false)
+
+  const etapaPix: 'qr' | 'aguardando' | 'confirmado' =
+    resultado === 'aprovado'
+      ? 'confirmado'
+      : querAguardando || (pixCarregado && !temQr)
+        ? 'aguardando'
+        : 'qr'
+
+  // Deixou o QR aberto ~40s sem agir → assume que já pagou (o Mercado Pago não avisa "QR
+  // lido") e mostra a tela de aguardando. "Ver QR Code de novo" zera `querAguardando`, o
+  // effect re-roda (etapaPix volta a 'qr') e o timer rearma.
+  useEffect(() => {
+    if (etapaPix !== 'qr' || !temQr) return
+    const t = setTimeout(() => setQuerAguardando(true), 40_000)
+    return () => clearTimeout(t)
+  }, [etapaPix, temQr])
 
   // Assim que o Mercado Pago recebe a tentativa de pagamento, pergunta a cada poucos
   // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
@@ -208,22 +248,36 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
         )}
 
         {resultadoEfetivo === 'enviado' && !indisponivel && (
-          pix?.qrCode && pix?.qrCodeBase64 ? (
-            <div className={styles.card}>
-              <TelaPix
-                qrCode={pix.qrCode}
-                qrCodeBase64={pix.qrCodeBase64}
-                expiraEm={pix.expiraEm ?? cobranca.expiraEm}
-                onReiniciar={aoReiniciar}
-                reiniciando={reiniciando}
-              />
-            </div>
+          etapaPix === 'qr' && temQr && pix ? (
+            <Transicao key="qr" modo="fade">
+              <div className={styles.card}>
+                <TelaPix
+                  qrCode={pix.qrCode!}
+                  qrCodeBase64={pix.qrCodeBase64!}
+                  expiraEm={pix.expiraEm ?? cobranca.expiraEm}
+                  onReiniciar={aoReiniciar}
+                  reiniciando={reiniciando}
+                  onJaPaguei={() => setQuerAguardando(true)}
+                />
+              </div>
+            </Transicao>
           ) : (
-            <div className={styles.card}>
-              <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
-              <h1>Confirmando pagamento…</h1>
-              <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
-            </div>
+            <Transicao key="aguardando" modo="fade">
+              <div className={styles.card}>
+                <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
+                <h1>Confirmando pagamento…</h1>
+                <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
+                {temQr && (
+                  <button
+                    type="button"
+                    className={styles.verQrDeNovo}
+                    onClick={() => setQuerAguardando(false)}
+                  >
+                    Ver QR Code de novo
+                  </button>
+                )}
+              </div>
+            </Transicao>
           )
         )}
 

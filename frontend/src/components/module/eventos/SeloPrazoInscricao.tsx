@@ -36,22 +36,27 @@ export function SeloPrazoInscricao({ evento }: { evento: EventoResponse }) {
   }
 
   const diasRestantes = diasAte(evento.inscricoesAte)
-  const destaque = diasRestantes >= 0 && diasRestantes <= DIAS_DESTAQUE
 
-  let sufixo = ''
+  let texto: string
+  let classe: string
   if (diasRestantes === 0) {
-    sufixo = ` · encerra hoje às ${horaDe(evento.inscricoesAte)}`
+    texto = `Encerra hoje às ${horaDe(evento.inscricoesAte)}`
+    classe = styles.hoje
   } else if (diasRestantes === 1) {
-    sufixo = ` · encerra amanhã`
+    texto = 'Inscrições encerram amanhã'
+    classe = styles.destaque
   } else if (diasRestantes > 1 && diasRestantes <= DIAS_DESTAQUE) {
-    sufixo = ` · faltam ${diasRestantes} dias`
+    texto = `Inscrições até ${data} · faltam ${diasRestantes} dias`
+    classe = styles.destaque
+  } else {
+    texto = `Inscrições até ${data}`
+    classe = styles.neutro
   }
 
   return (
-    <span className={destaque ? styles.destaque : styles.neutro} onClick={(e) => e.stopPropagation()}>
+    <span className={classe} onClick={(e) => e.stopPropagation()}>
       <CalendarClock size={12} aria-hidden="true" />
-      Inscrições até {data}
-      {sufixo}
+      {texto}
     </span>
   )
 }

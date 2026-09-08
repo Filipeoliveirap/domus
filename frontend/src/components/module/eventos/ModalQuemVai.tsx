@@ -206,7 +206,14 @@ export function ModalQuemVai({
         abrir por cima do drawer/modal de detalhe, que criam contexto de empilhamento —
         sem isto o modal de confirmação e a foto abriam ATRÁS. */}
     {typeof document !== 'undefined' && createPortal(
-      <div style={{ position: 'relative', zIndex: 1300 }}>
+      // Portal segue a árvore do React pra bubbling de evento: sem parar aqui, o clique
+      // fora do VisualizadorFoto / do modal de confirmação subia até o overlay do
+      // drawer/detalhe e fechava tudo.
+      <div
+        style={{ position: 'relative', zIndex: 1300 }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         {fotoAberta && (
           <VisualizadorFoto
             fotoId={fotoAberta.id}

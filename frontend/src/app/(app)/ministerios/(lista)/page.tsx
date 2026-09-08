@@ -125,7 +125,7 @@ export default function MinisteriosPage() {
             return (
               <div
                 key={ministerio.id}
-                className={styles.card}
+                className={`${styles.card} card-interativo`}
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/ministerios/${ministerio.id}`)}
@@ -143,7 +143,7 @@ export default function MinisteriosPage() {
                     onClick={(e) => { e.stopPropagation(); setFotoVisualizando(ministerio.fotoId) }}
                     aria-label={`Ver foto de ${ministerio.nome}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
-                    <img src={urlFoto(ministerio.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
+                    <img src={urlFoto(ministerio.fotoId, 'THUMB')!} alt="" className={`${styles.cardFoto} card-midia`} />
                   </button>
                 ) : (
                   <div className={styles.cardIcon}>

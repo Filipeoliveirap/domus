@@ -69,6 +69,9 @@ export function PainelWizard({ passoAtual, totalPassos, primeiroNome }: Props) {
             className={styles.logo}
           />
           <span className={styles.marcaNome}>DOMUS</span>
+          <span className={styles.passoMobile}>
+            Passo {passoExibido} de {totalPassos}
+          </span>
         </div>
 
         <div className={styles.meio}>
@@ -92,7 +95,7 @@ export function PainelWizard({ passoAtual, totalPassos, primeiroNome }: Props) {
                   {feito ? '✓' : n}
                 </span>
                 <span className={styles.progLinha}>
-                  <i style={{ width: feito ? '100%' : atual ? '55%' : '0%' }} />
+                  <i style={{ width: feito || atual ? '100%' : '0%' }} />
                 </span>
               </li>
             )

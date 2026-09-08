@@ -199,6 +199,10 @@
     border-radius: 3px;
     background: var(--color-border, #e2e8f0);
   }
+  /* passo atual no mobile (sem círculo): trilho tingido de primária */
+  .progLinhaAtual {
+    background: var(--color-primary-light, #dbeafe);
+  }
   .progLinha i {
     background: linear-gradient(90deg, var(--color-primary, #2563eb), var(--color-primary-dark, #1d4ed8));
   }

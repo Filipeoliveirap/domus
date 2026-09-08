@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation'
+import { useSaidaFormulario } from '@/hooks/forms/useSaidaFormulario'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
@@ -33,6 +34,7 @@ interface UseEventoFormParams {
 
 export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams = {}) {
   const router = useRouter()
+  const { saindo, sairAnimado } = useSaidaFormulario()
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
@@ -195,7 +197,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         invalidarCache(queryClient, 'evento')
         notificar.sucesso('Evento cadastrado com sucesso!')
       }
-      router.back()
+      sairAnimado(() => router.back())
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data
@@ -404,7 +406,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
   const responsaveisIniciais = (eventoInicial?.responsaveis ?? [])
     .filter((r): r is { id: string; nome: string } => !!r.id)
   return {
-    ...form, onSubmit, erroGeral, isLoading, ehEdicao, responsaveisIniciais,
+    ...form, onSubmit, erroGeral, isLoading, ehEdicao, saindo, responsaveisIniciais,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,

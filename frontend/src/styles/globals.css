@@ -139,3 +139,15 @@ ul, ol {
     width: 100% !important;
   }
 }
+/* ─── Saída de formulário: fade + subida curta antes do router.back() (useSaidaFormulario) ─── */
+.saida-formulario {
+  animation: domusSaidaFormulario 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+@keyframes domusSaidaFormulario {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saida-formulario { animation-name: domusSaidaFormularioFade; }
+  @keyframes domusSaidaFormularioFade { to { opacity: 0; } }
+}

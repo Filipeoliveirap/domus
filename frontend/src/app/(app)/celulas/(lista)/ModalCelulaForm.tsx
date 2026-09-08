@@ -76,7 +76,7 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
       else await celulaService.criar(payload)
       invalidarCache(queryClient, 'celula')
       notificar.sucesso(celula ? `${rotulo.singular} atualizada!` : `${rotulo.singular} criada!`)
-      onClose()
+      fechar()
     } catch {
       notificar.erro(`Erro ao salvar ${rotulo.singular.toLowerCase()}.`)
     } finally {

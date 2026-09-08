@@ -575,18 +575,47 @@ export function EventoForm(props: EventoFormProps) {
 
                 <Revelar>
                   {watch('inscricoesAteData') ? (
-                    <label className={styles.toggleRow}>
-                      <span className={styles.toggleTexto}>
-                        <span className={styles.toggleTitulo}>Permitir cancelamento após o prazo</span>
-                        <span className={styles.toggleDescricao}>
-                          Desmarque para travar a lista de inscritos no prazo — ninguém entra nem sai depois.
-                        </span>
+                    <div className={styles.grupoData}>
+                      <span className={styles.labelData}>Depois do prazo, o participante pode cancelar?</span>
+                      {tipoInscricao === 'PAGO' ? (
+                        <div className={`${styles.segmentado} ${styles.segmentadoTriplo}`}>
+                          {([
+                            ['NAO_PERMITIDO', 'Não'],
+                            ['PERMITIDO_COM_REEMBOLSO', 'Sim, com reembolso'],
+                            ['PERMITIDO_SEM_REEMBOLSO', 'Sim, sem reembolso'],
+                          ] as const).map(([valor, rotulo]) => (
+                            <button
+                              key={valor}
+                              type="button"
+                              className={`${styles.segmentoBtn} ${watch('politicaCancelamentoAposPrazo') === valor ? styles.segmentoAtivo : ''}`}
+                              onClick={() => setValue('politicaCancelamentoAposPrazo', valor, { shouldValidate: true })}
+                            >
+                              {rotulo}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <label className={styles.toggleRow}>
+                          <span className={styles.toggleTexto}>
+                            <span className={styles.toggleTitulo}>Permitir cancelamento após o prazo</span>
+                            <span className={styles.toggleDescricao}>Desmarque para travar a lista de inscritos no prazo.</span>
+                          </span>
+                          <span className={styles.switch}>
+                            <input
+                              type="checkbox"
+                              className={styles.switchInput}
+                              checked={watch('politicaCancelamentoAposPrazo') !== 'NAO_PERMITIDO'}
+                              onChange={(e) => setValue('politicaCancelamentoAposPrazo',
+                                e.target.checked ? 'PERMITIDO_COM_REEMBOLSO' : 'NAO_PERMITIDO', { shouldValidate: true })}
+                            />
+                            <span className={styles.switchTrilho} />
+                          </span>
+                        </label>
+                      )}
+                      <span className={styles.campoHint}>
+                        Antes do prazo, o cancelamento é sempre livre e com reembolso total.
                       </span>
-                      <span className={styles.switch}>
-                        <input type="checkbox" className={styles.switchInput} {...register('permiteCancelarAposPrazo')} />
-                        <span className={styles.switchTrilho} />
-                      </span>
-                    </label>
+                    </div>
                   ) : null}
                 </Revelar>
 
@@ -599,6 +628,9 @@ export function EventoForm(props: EventoFormProps) {
                       onClick={() => {
                         setValue('tipoInscricao', 'GRATUITO', { shouldValidate: true })
                         setValue('preco', undefined, { shouldValidate: true })
+                        if (watch('politicaCancelamentoAposPrazo') === 'PERMITIDO_SEM_REEMBOLSO') {
+                          setValue('politicaCancelamentoAposPrazo', 'PERMITIDO_COM_REEMBOLSO', { shouldValidate: true })
+                        }
                       }}
                     >
                       Gratuito

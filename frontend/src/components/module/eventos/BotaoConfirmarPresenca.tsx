@@ -22,7 +22,7 @@ import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { rotuloRole } from '@/lib/formats/usuarioFormat'
 import { Transicao } from '@/components/common/Transicao/Transicao'
-import type { SituacaoEvento, SituacaoInscricao } from '@/types/evento.type'
+import type { SituacaoEvento, SituacaoInscricao, PoliticaCancelamentoAposPrazo } from '@/types/evento.type'
 import type { Impedimento, MinhaInscricaoResponse } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
 
@@ -42,6 +42,7 @@ interface Props {
   situacaoInscricao: SituacaoInscricao
   inscricoesAte: string | null
   preco?: number | null
+  politicaCancelamentoAposPrazo: PoliticaCancelamentoAposPrazo
   /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo,
    *  SEM pagamento pendente — evento pago com sucesso navega pra rota de checkout em vez
    *  de chamar isto (o drawer não teria o que abrir; a pessoa já saiu da tela). */
@@ -50,7 +51,7 @@ interface Props {
 
 export function BotaoConfirmarPresenca({
   eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, situacaoInscricao,
-  inscricoesAte, preco, onInscritoComSucesso,
+  inscricoesAte, preco, politicaCancelamentoAposPrazo, onInscritoComSucesso,
 }: Props) {
   const router = useRouter()
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
@@ -338,7 +339,7 @@ export function BotaoConfirmarPresenca({
             quantidadeConvidados={0}
             // minha.inscrito === true num evento pago já significa CONFIRMADA (pago); o
             // estado AGUARDANDO_PAGAMENTO cai no bloco de pagamento pendente acima.
-            semReembolso={preco != null && situacaoInscricao === 'ENCERRADA_POR_PRAZO'}
+            semReembolso={preco != null && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && politicaCancelamentoAposPrazo === 'PERMITIDO_SEM_REEMBOLSO'}
             isLoading={cancelar.isPending}
             onConfirmar={() => {
               if (!minha.id) return

@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Pencil, Archive, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useMovimentacoes } from '@/hooks/financeiro/movimentacao/useMovimentacoes'
+import { useMovimentacao } from '@/hooks/financeiro/movimentacao/useMovimentacao'
+import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
+import { clsx } from 'clsx'
 import { useMovimentacaoTotais } from '@/hooks/financeiro/movimentacao/useMovimentacaoTotais'
 import { useCategoriasSelect } from '@/hooks/financeiro/categoria/useCategoriaSelect'
 import { SelecaoPessoa } from '@/components/module/movimentacoes/SelecaoPessoa'
@@ -72,6 +75,8 @@ function MovimentacoesConteudo() {
   })
 
   const { pagina, setPagina } = usePaginaUrl()
+  const { destaqueId } = useDestaqueRecente()
+  const { data: movDestaque } = useMovimentacao(destaqueId ?? undefined)
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
   // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
   // refresh de página, o que é aceitável: o filtro continua aplicado, só perde o rótulo.
@@ -91,7 +96,11 @@ function MovimentacoesConteudo() {
     size: TAMANHO_PAGINA,
   }, autorizado)
 
-  const movimentacoes = data?.content ?? []
+  const movimentacoesPagina = data?.content ?? []
+  const movimentacoes =
+    destaqueId && movDestaque
+      ? [movDestaque, ...movimentacoesPagina.filter((m) => m.id !== destaqueId)]
+      : movimentacoesPagina
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
@@ -288,7 +297,7 @@ function MovimentacoesConteudo() {
 
             <div className={`${styles.linhas} ${isFetching && !isLoading ? styles.listaAtualizando : ''}`}>
               {movimentacoes.map((mov) => (
-                <div key={mov.id} className={styles.linha} onClick={() => abrirDetalhe(mov)}>
+                <div key={mov.id} className={clsx(styles.linha, destaqueId === mov.id && styles.destacada)} onClick={() => abrirDetalhe(mov)}>
                   <div className={styles.colDesc}>
                     <span className={styles.descTexto}>{mov.descricao || '—'}</span>
                     {mov.contribuintes.length > 0 && (
@@ -317,7 +326,7 @@ function MovimentacoesConteudo() {
             </div>
 
             <footer className={styles.rodape}>
-              <span className={styles.contagem}>Exibindo {movimentacoes.length} de {totalElementos}</span>
+              <span className={styles.contagem}>Exibindo {movimentacoesPagina.length} de {totalElementos}</span>
               <div className={styles.paginacao}>
                 <button onClick={() => setPagina((p) => Math.max(0, p - 1))} disabled={pagina === 0} className={styles.botaoPagina}>‹</button>
                 <span className={styles.infoPagina}>{pagina + 1} de {totalPaginas}</span>

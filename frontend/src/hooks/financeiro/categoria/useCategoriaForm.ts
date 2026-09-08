@@ -13,7 +13,7 @@ import type { ApiError } from '@/types/api.types'
 interface UseCategoriaFormParams {
   categoriaId?: string
   categoriaInicial?: CategoriaResponse
-  onSuccess?: () => void    
+  onSuccess?: (categoriaSalvaId?: string) => void
 }
 
 export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: UseCategoriaFormParams = {}) {
@@ -43,11 +43,12 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
     }
   }, [categoriaInicial, reset])
 
-  async function salvarEdicao(payload: CategoriaRequest) {
-    await categoriasService.atualizar(categoriaId!, payload)
+  async function salvarEdicao(payload: CategoriaRequest): Promise<string> {
+    const atualizada = await categoriasService.atualizar(categoriaId!, payload)
     invalidarCache(queryClient, 'categoria')
     queryClient.invalidateQueries({ queryKey: ['categoria', categoriaId] })
     notificar.sucesso('Categoria atualizada com sucesso!')
+    return atualizada?.id ?? categoriaId!
   }
 
   const onSubmit = async (data: CategoriaFormData) => {
@@ -64,13 +65,15 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
           setConfirmacaoPendente({ payload, totalMovimentacoes: total })
           return
         }
-        await salvarEdicao(payload)
+        const id = await salvarEdicao(payload)
+        onSuccess?.(id)
+        return
       } else {
-        await categoriasService.criar(payload)
+        const criada = await categoriasService.criar(payload)
         invalidarCache(queryClient, 'categoria')
         notificar.sucesso('Categoria cadastrada com sucesso!')
+        onSuccess?.(criada.id)
       }
-      onSuccess?.()
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar categoria. Tente novamente.')
@@ -87,9 +90,9 @@ export function useCategoriaForm({ categoriaId, categoriaInicial, onSuccess }: U
     setErroGeral(null)
     setIsLoading(true)
     try {
-      await salvarEdicao(confirmacaoPendente.payload)
+      const id = await salvarEdicao(confirmacaoPendente.payload)
       setConfirmacaoPendente(null)
-      onSuccess?.()
+      onSuccess?.(id)
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar categoria. Tente novamente.')

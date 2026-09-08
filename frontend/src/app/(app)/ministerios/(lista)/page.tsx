@@ -139,11 +139,12 @@ export default function MinisteriosPage() {
                   </div>
                 )}
                 {ministerio.fotoId ? (
-                  <img
-                    src={urlFoto(ministerio.fotoId, 'THUMB')!} alt=""
-                    className={styles.cardFoto}
+                  <button type="button" className={styles.cardFotoBtn}
                     onClick={(e) => { e.stopPropagation(); setFotoVisualizando(ministerio.fotoId) }}
-                  />
+                    aria-label={`Ver foto de ${ministerio.nome}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
+                    <img src={urlFoto(ministerio.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
+                  </button>
                 ) : (
                   <div className={styles.cardIcon}>
                     <Users size={24} />

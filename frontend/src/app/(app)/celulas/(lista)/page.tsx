@@ -111,7 +111,7 @@ export default function CelulasPage() {
                 : []),
             ]
             return (
-              <div key={c.id} className={styles.card}
+              <div key={c.id} className={`${styles.card} card-interativo`}
                 role="button" tabIndex={0}
                 onClick={() => router.push(`/celulas/${c.id}`)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/celulas/${c.id}`) }}
@@ -126,7 +126,7 @@ export default function CelulasPage() {
                     onClick={(e) => { e.stopPropagation(); setFotoVisualizando(c.fotoId) }}
                     aria-label={`Ver foto de ${c.nome}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos */}
-                    <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={styles.cardFoto} />
+                    <img src={urlFoto(c.fotoId, 'THUMB')!} alt="" className={`${styles.cardFoto} card-midia`} />
                   </button>
                 ) : (
                   <div className={styles.cardIcon}>

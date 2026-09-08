@@ -15,9 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -241,22 +244,62 @@ public class CampoPersonalizadoService {
         }
     }
 
+    /** Modal read-only do gestor. Devolve TODOS os campos ativos do evento — mesmo os que a
+     *  pessoa nunca "respondeu" porque são mapeados (idade/estado civil/sexo/endereço) e o
+     *  dado já estava no cadastro dela ({@code origem = CADASTRO}). Campos já arquivados pelo
+     *  admin só aparecem se houver resposta persistida (snapshot). {@code @Transactional} pra
+     *  ler {@code inscricao.getPessoa()}/{@code getEvento()} lazy dentro da sessão. */
+    @Transactional(readOnly = true)
     public List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse> respostasPorInscricao(
             UUID inscricaoId, UUID igrejaId) {
-        inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
+        var inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
-        // A resposta guarda um snapshot da pergunta (ver comentário em salvar()) — o campo
-        // pode já ter sido removido pelo admin depois que a pessoa respondeu. Resolver via
-        // findByIdAndIgrejaIdIncluindoArquivados (nativa, bypassa @SQLRestriction) em vez de
-        // r.getCampo() direto: acessar um campo arquivado pela associação lazy normal
-        // estoura EntityNotFoundException (Hibernate filtra ele da query de resolução).
-        return respostaRepository.findByInscricaoId(inscricaoId).stream()
-                .map(r -> campoRepository.findByIdAndIgrejaIdIncluindoArquivados(r.getCampo().getId(), igrejaId)
-                        .map(campo -> new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
-                                campo.getId(), campo.getLabel(), campo.getTipo(), r.getValor()))
-                        .orElse(null))
-                .filter(java.util.Objects::nonNull)
-                .toList();
+        Map<UUID, RespostaCampoPersonalizado> respostasPorCampo = new HashMap<>();
+        for (var r : respostaRepository.findByInscricaoId(inscricaoId)) {
+            respostasPorCampo.put(r.getCampo().getId(), r);
+        }
+
+        var pessoa = inscricao.getPessoa(); // lazy ok dentro do @Transactional
+        var campos = campoRepository.findByEventoIdAndIgrejaIdOrderByOrdemAsc(
+                inscricao.getEvento().getId(), igrejaId);
+
+        List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse> resultado = new ArrayList<>();
+        Set<UUID> jaIncluidos = new HashSet<>();
+
+        for (var campo : campos) {
+            jaIncluidos.add(campo.getId());
+            var resp = respostasPorCampo.get(campo.getId());
+            if (resp != null && resp.getValor() != null && !resp.getValor().isBlank()) {
+                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                        campo.getId(), campo.getLabel(), campo.getTipo(), resp.getValor(),
+                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.RESPONDIDO));
+                continue;
+            }
+            var doCadastro = valorJaConhecido(campo.getMapeamento(), pessoa);
+            if (doCadastro.isPresent()) {
+                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                        campo.getId(), campo.getLabel(), campo.getTipo(), doCadastro.get(),
+                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.CADASTRO));
+            } else {
+                resultado.add(new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                        campo.getId(), campo.getLabel(), campo.getTipo(), null,
+                        com.domus.api.modules.evento.campopersonalizado.OrigemResposta.SEM_RESPOSTA));
+            }
+        }
+
+        // A resposta guarda um snapshot da pergunta — o campo pode já ter sido arquivado/removido
+        // pelo admin depois que a pessoa respondeu. Resolver via findByIdAndIgrejaIdIncluindoArquivados
+        // (nativa, bypassa @SQLRestriction): acessar um campo arquivado pela associação lazy normal
+        // estoura EntityNotFoundException.
+        for (var r : respostasPorCampo.values()) {
+            if (jaIncluidos.contains(r.getCampo().getId())) continue;
+            campoRepository.findByIdAndIgrejaIdIncluindoArquivados(r.getCampo().getId(), igrejaId)
+                    .ifPresent(campo -> resultado.add(
+                            new com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse(
+                                    campo.getId(), campo.getLabel(), campo.getTipo(), r.getValor(),
+                                    com.domus.api.modules.evento.campopersonalizado.OrigemResposta.RESPONDIDO)));
+        }
+        return resultado;
     }
 }

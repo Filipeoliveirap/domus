@@ -137,6 +137,7 @@ public class InscricaoService {
         }
 
         validarEventoAberto(evento);
+        validarPrazoInscricao(evento, role);
         boolean porExcecao = validarElegibilidade(evento, membro, role, confirmado, igrejaId);
 
         InscricaoEvento inscricao = inscricaoRepository
@@ -275,6 +276,7 @@ public class InscricaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         validarOrganizaInscricao(evento, "Este evento não organiza inscrição de outras pessoas.");
         validarEventoAberto(evento);
+        validarPrazoInscricao(evento, role);
 
         if (!pessoaIds.isEmpty()) {
             List<UUID> jaInscritos = inscricaoRepository.listarPessoaIdsJaInscritos(eventoId, pessoaIds);
@@ -328,6 +330,34 @@ public class InscricaoService {
         if (!evento.isRequerInscricao()) {
             throw new BusinessException("INSCRICAO_NAO_HABILITADA", mensagem);
         }
+    }
+
+    /** Prazo de inscrição (V38). NULL = sem prazo. Admin/líder passam — pergunta pela
+     *  CAPACIDADE (podeGerenciarInscricoes), não pelo nome do perfil. O caminho público
+     *  não tem role (role == null), então nunca passa. */
+    private void validarPrazoInscricao(Evento evento, String role) {
+        if (evento.getInscricoesAte() == null) return;
+        if (!java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())) return;
+        if (Permissoes.podeGerenciarInscricoes(role)) return;
+        throw new BusinessException("PRAZO_INSCRICAO_ENCERRADO",
+                "O prazo de inscrição neste evento encerrou em "
+                + evento.getInscricoesAte().format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")) + ".");
+    }
+
+    /** Depois do prazo, o auto-cancelamento (self) só passa quando a política de
+     *  cancelamento após o prazo do evento é diferente de NAO_PERMITIDO. Gestor sempre
+     *  passa (remove alguém da lista pela gestão de inscritos). */
+    private void validarCancelamentoPermitido(Evento evento, boolean souEu, boolean ehGestor) {
+        if (ehGestor) return;
+        if (!souEu) return; // o SEM_PERMISSAO acima já barra esse caso
+        if (evento.getInscricoesAte() == null) return;
+        if (evento.getPoliticaCancelamentoAposPrazo()
+                != com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.NAO_PERMITIDO) return;
+        if (!java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())) return;
+        throw new BusinessException("CANCELAMENTO_ENCERRADO_POR_PRAZO",
+                "Depois do prazo de inscrição não dá mais pra cancelar sua inscrição neste evento. "
+                + "Fale com a organização.");
     }
 
     /** Evento EM_ANDAMENTO ou ENCERRADO não aceita inscrição/convidado. */
@@ -452,7 +482,7 @@ public class InscricaoService {
     @Transactional
     public ResultadoConvidado inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
                                                String telefone, String email, UUID convidadoPorPessoaId,
-                                               UUID inscritoPorUsuarioId, UUID visitanteId,
+                                               UUID inscritoPorUsuarioId, String role, UUID visitanteId,
                                                boolean gerarLink) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
@@ -475,6 +505,7 @@ public class InscricaoService {
                     "O e-mail é obrigatório para se inscrever em eventos.");
         }
         validarEventoAberto(evento);
+        validarPrazoInscricao(evento, role);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
         validarVaga(evento, 1);
 
@@ -561,7 +592,21 @@ public class InscricaoService {
                     + "Peça a ela ou a um líder da igreja.");
         }
 
-        cancelarInterno(inscricao);
+        validarCancelamentoPermitido(inscricao.getEvento(), souEu, gestorDaMesmaIgreja);
+
+        // Cancelamento depois do prazo: só NÃO estorna quando a política do evento é
+        // PERMITIDO_SEM_REEMBOLSO — aí, num evento pago, a igreja mantém o que foi pago.
+        // Com PERMITIDO_COM_REEMBOLSO (padrão), estorna normal mesmo depois do prazo. Com
+        // NAO_PERMITIDO a guarda (validarCancelamentoPermitido) já barrou o self. Antes do
+        // prazo, ou evento gratuito, estorna como sempre. Vale pra self E gestor. Os segundos
+        // de diferença no "agora" são irrelevantes num prazo de dias.
+        Evento evento = inscricao.getEvento();
+        boolean semReembolso = evento.getInscricoesAte() != null
+                && java.time.LocalDateTime.now().isAfter(evento.getInscricoesAte())
+                && evento.getPoliticaCancelamentoAposPrazo()
+                        == com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO;
+
+        cancelarInterno(inscricao, semReembolso);
         log.info("Inscrição cancelada. id={}, por_usuario={}, igreja_id={}",
                 inscricaoId, usuarioId, igrejaId);
     }
@@ -573,13 +618,43 @@ public class InscricaoService {
      *  titular NÃO cancela em cascata quem ele convidou — cada convidado é sua própria
      *  {@code InscricaoEvento} e se cancela independentemente (decisão do usuário, 2026-08-26). */
     private void cancelarInterno(InscricaoEvento inscricao) {
-        // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
-        // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
-        // com o dinheiro ainda retido no Mercado Pago.
-        estornarCobrancasDaInscricao(inscricao);
+        cancelarInterno(inscricao, false);
+    }
+
+    /**
+     * @param semReembolso quando {@code true} (cancelamento pelo {@code cancelar(...)} depois
+     *   do prazo, com a política do evento em {@code PERMITIDO_SEM_REEMBOLSO}), NÃO estorna cobrança PAGA:
+     *   a igreja mantém o valor, sem e-mail de reembolso e sem lançamento de "Reembolso" no
+     *   financeiro (não houve). Cobrança PENDENTE (nunca paga) continua sendo cancelada.
+     *   Só o caminho manual {@code cancelar(...)} passa {@code true}; caminhos automáticos
+     *   (lote, evento virou gratuito, cancelarPorCobranca) continuam estornando.
+     */
+    private void cancelarInterno(InscricaoEvento inscricao, boolean semReembolso) {
+        if (semReembolso) {
+            // Sem estorno: a cobrança PAGA fica como está (igreja mantém). Só as PENDENTES
+            // são canceladas — nunca chegaram a debitar ninguém.
+            cancelarCobrancasPendentes(inscricao);
+        } else {
+            // Roda ANTES de marcar CANCELADA: se o estorno falhar, o BusinessException aborta a
+            // transação inteira e a inscrição continua CONFIRMADA — nunca "cancelada no Domus"
+            // com o dinheiro ainda retido no Mercado Pago.
+            estornarCobrancasDaInscricao(inscricao);
+        }
         inscricao.setStatus(StatusInscricao.CANCELADA);
         inscricaoRepository.save(inscricao);
         respostaCampoPersonalizadoRepository.deleteByInscricaoId(inscricao.getId());
+    }
+
+    /** Cancela só as cobranças PENDENTE desta inscrição (sem tocar no Mercado Pago nem nas
+     *  PAGO). Usado no cancelamento após o prazo, que não estorna. */
+    private void cancelarCobrancasPendentes(InscricaoEvento inscricao) {
+        List<CobrancaEvento> cobrancas = cobrancaEventoRepository.findByInscricaoId(inscricao.getId());
+        List<CobrancaEvento> pendentes = cobrancas.stream()
+                .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
+                .toList();
+        if (pendentes.isEmpty()) return;
+        pendentes.forEach(CobrancaEvento::marcarComoCancelado);
+        cobrancaEventoRepository.saveAll(pendentes);
     }
 
     /**

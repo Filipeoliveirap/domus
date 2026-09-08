@@ -121,6 +121,25 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    void recusaPagarSemMeioDePagamento() throws Exception {
+        // @Valid dispara antes do corpo do controller — nem chega a procurar a cobrança.
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"installments\":1,\"payerEmail\":\"a@a.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.campos.paymentMethodId").exists());
+    }
+
+    @Test
+    void recusaPagarComEmailDoPagadorInvalido() throws Exception {
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"nao-e-email\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.campos.payerEmail").exists());
+    }
+
+    @Test
     @Sql(statements = {
         "INSERT INTO igreja (id, nome, email) VALUES " +
             "('11111111-1111-1111-1111-111111111113', 'Igreja Teste 3', 'igreja3@teste.com')",
@@ -475,6 +494,41 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.nomePagador", is("Convidado Sem Cadastro")))
             .andExpect(jsonPath("$.emailPagador").doesNotExist());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('41111111-1111-1111-1111-111111111111', 'Igreja Teste Status', 'igrejastatus@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('43333333-3333-3333-3333-333333333333', '41111111-1111-1111-1111-111111111111', 'Beltrano', 'beltrano@teste.com')",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('47777777-7777-7777-7777-777777777777', '41111111-1111-1111-1111-111111111111', 'Salão Status')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES " +
+            "('45555555-5555-5555-5555-555555555555', '41111111-1111-1111-1111-111111111111', " +
+            "'Seminário', '2026-09-20 19:00:00', '47777777-7777-7777-7777-777777777777', true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('46666666-6666-6666-6666-666666666666', '41111111-1111-1111-1111-111111111111', " +
+            "'45555555-5555-5555-5555-555555555555', '43333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void statusReconfereNoMercadoPagoMasNaoQuebraQuandoAContaNaoEstaConectada() throws Exception {
+        // Cobrança PENDENTE com tentativa de pagamento já registrada (mpPaymentId != null):
+        // o /status agora dispara uma reconferência síncrona no Mercado Pago. Sem conta MP
+        // conectada nesta igreja, essa reconferência falha lá dentro — e tem que ser
+        // engolida (reconferirAgora captura), devolvendo o status do banco em vez de 500.
+        UUID igrejaId = UUID.fromString("41111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("45555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("46666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("43333333-3333-3333-3333-333333333333");
+
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("90.00"), Instant.now().plus(1, ChronoUnit.HOURS), pessoaId, null);
+        cobranca.registrarTentativaPagamento("mp-payment-abc");
+        cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(get("/cobrancas/" + cobranca.getId() + "/status"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status", is("PENDENTE")));
     }
 
     @Test

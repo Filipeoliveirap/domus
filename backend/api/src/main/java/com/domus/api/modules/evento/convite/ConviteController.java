@@ -76,7 +76,8 @@ public class ConviteController {
                 evento.getIgreja().getLogoFoto() != null ? evento.getIgreja().getLogoFoto().getId() : null,
                 convidante != null ? convidante.getNome() : null,
                 convidante != null && convidante.getFoto() != null ? convidante.getFoto().getId() : null,
-                vagasRestantes, evento.getPreco(), campos, evento.isRequerInscricao()
+                vagasRestantes, evento.getPreco(), campos, evento.isRequerInscricao(),
+                evento.getSituacaoInscricao(), evento.getInscricoesAte()
         ));
     }
 
@@ -119,7 +120,7 @@ public class ConviteController {
         // regra do titular em inscreverInterno).
         var resultado = inscricaoService.inscreverConvidado(
                 evento.getId(), evento.getIgreja().getId(), data.nome(), data.telefone(), data.email(),
-                resolvido.convidante().getId(), null, null, false);
+                resolvido.convidante().getId(), null, null, null, false);
 
         if (data.respostas() != null && !data.respostas().isEmpty()) {
             campoPersonalizadoService.responderComoConvidado(

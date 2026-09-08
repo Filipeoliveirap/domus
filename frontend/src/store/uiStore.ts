@@ -14,6 +14,13 @@ interface UiState {
   navegando: boolean
   iniciarNav: () => void
   finalizarNav: () => void
+
+  // "Ponte" mostrada entre criar a inscrição de um evento pago e a rota de checkout abrir
+  // (fora do app shell). Vive aqui, e não no botão, pra sobreviver ao drawer/modal que
+  // dispara a navegação desmontar no meio da transição.
+  ponteCheckout: boolean
+  abrirPonteCheckout: () => void
+  fecharPonteCheckout: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -25,4 +32,8 @@ export const useUiStore = create<UiState>((set) => ({
   navegando: false,
   iniciarNav: () => set((s) => (s.navegando ? s : { navegando: true })),
   finalizarNav: () => set((s) => (s.navegando ? { navegando: false } : s)),
+
+  ponteCheckout: false,
+  abrirPonteCheckout: () => set({ ponteCheckout: true }),
+  fecharPonteCheckout: () => set((s) => (s.ponteCheckout ? { ponteCheckout: false } : s)),
 }))

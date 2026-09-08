@@ -7,6 +7,10 @@ export type RestricaoEstadoCivil = 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO
 
 export type RestricaoSexo = 'HOMEM' | 'MULHER'
 
+export type SituacaoInscricao = 'ABERTA' | 'ENCERRADA_POR_PRAZO' | 'ENCERRADA_POR_INICIO'
+
+export type PoliticaCancelamentoAposPrazo = 'NAO_PERMITIDO' | 'PERMITIDO_COM_REEMBOLSO' | 'PERMITIDO_SEM_REEMBOLSO'
+
 export interface EventoArquivadoResponse {
   id: string
   titulo: string
@@ -69,6 +73,9 @@ export interface EventoResponse {
   arquivado: boolean
   serieId: string | null
   divergeDaSerie: boolean
+  inscricoesAte: string | null
+  politicaCancelamentoAposPrazo: PoliticaCancelamentoAposPrazo
+  situacaoInscricao: SituacaoInscricao
 }
 
 export type FrequenciaRecorrencia = 'DIARIA' | 'SEMANAL' | 'MENSAL'
@@ -103,6 +110,8 @@ export interface EventoRequest {
   preco?: string
   exclusivoMembros?: boolean
   requerInscricao?: boolean
+  inscricoesAte?: string | null
+  politicaCancelamentoAposPrazo?: PoliticaCancelamentoAposPrazo
   controlaPresenca?: boolean
   recorteEtario?: string | null
   idadeMin?: number | null

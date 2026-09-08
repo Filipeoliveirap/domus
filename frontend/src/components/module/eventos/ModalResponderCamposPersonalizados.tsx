@@ -23,7 +23,7 @@ export function ModalResponderCamposPersonalizados({
 }: Props) {
   const { responder, isLoading, erro } = useResponderCampos()
   const [valores, setValores] = useState<Record<string, string>>(
-    () => Object.fromEntries(respostasIniciais.map((r) => [r.campoId, r.valor])),
+    () => Object.fromEntries(respostasIniciais.map((r) => [r.campoId, r.valor ?? ''])),
   )
   // Só mostra erro por campo depois da primeira tentativa de salvar — não antes, enquanto a
   // pessoa ainda está preenchendo pela primeira vez.
@@ -38,6 +38,13 @@ export function ModalResponderCamposPersonalizados({
   }, [onClose])
 
   const pendentes = campos.filter((c) => c.obrigatorio && !(valores[c.id]?.trim()))
+
+  // Campos que a pessoa não edita aqui mas tem valor: os que vieram do cadastro dela
+  // (idade / estado civil / sexo / endereço — `origem: 'CADASTRO'`) e respostas antigas de
+  // campos já arquivados. O back manda todos; a lista de responder (`campos`) filtra estes.
+  const soLeitura = respostasIniciais.filter(
+    (r) => !campos.some((c) => c.id === r.campoId) && !!r.valor?.trim(),
+  )
 
   async function aoSalvar() {
     setTentouSalvar(true)
@@ -158,6 +165,23 @@ export function ModalResponderCamposPersonalizados({
               </div>
             )
           })}
+
+          {soLeitura.length > 0 && (
+            <div className={styles.blocoCadastro}>
+              <p className={styles.blocoCadastroTitulo}>Já preenchidos</p>
+              {soLeitura.map((r) => (
+                <div key={r.campoId} className={styles.itemCadastro}>
+                  <span className={styles.perguntaCadastro}>
+                    {r.label}
+                    {r.origem === 'CADASTRO' && <span className={styles.chipCadastro}>do cadastro</span>}
+                  </span>
+                  <span className={styles.valorCadastro}>
+                    {r.tipo === 'MULTIPLA_ESCOLHA' ? r.valor!.split(' | ').filter(Boolean).join(', ') : r.valor}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {erro && <p className={styles.erro}>{erro}</p>}
         </div>

@@ -1,4 +1,5 @@
 import type { CampoPersonalizadoResponse, RespostaRequest } from './campoPersonalizado.type'
+import type { SituacaoInscricao } from './evento.type'
 
 export interface GerarConviteResponse {
   token: string
@@ -22,6 +23,8 @@ export interface ConvitePublico {
   preco: number | null
   campos: CampoPersonalizadoResponse[]
   requerInscricao: boolean
+  situacaoInscricao: SituacaoInscricao
+  inscricoesAte: string | null
 }
 
 export interface EntrarConviteRequest {

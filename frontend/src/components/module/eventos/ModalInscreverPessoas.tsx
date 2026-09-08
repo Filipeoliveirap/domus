@@ -18,6 +18,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { iniciais, rotuloVinculo } from '@/lib/formats/pessoaFormat'
+import { rotuloRole } from '@/lib/formats/usuarioFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
@@ -27,6 +28,7 @@ import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
 import { ModalCompletarDadosInscricao } from './ModalCompletarDadosInscricao'
 import type { PessoaResponse } from '@/types/pessoa.type'
 import type { Impedimento } from '@/types/inscricao.type'
+import type { SituacaoInscricao } from '@/types/evento.type'
 import styles from './ModalInscreverPessoas.module.css'
 
 interface Props {
@@ -37,6 +39,9 @@ interface Props {
   /** Evento pago habilita o fluxo pessoa a pessoa antes de confirmar. `null`/`undefined`
    *  = evento gratuito, fluxo antigo (seleção múltipla) sem mudança. */
   preco?: number | null
+  /** Situação do prazo — habilita o aviso "prazo encerrado" no topo (só usado quando
+   *  o modal roda sozinho; embutido, o pai ModalInscreverAlguem já mostra o aviso). */
+  situacaoInscricao?: SituacaoInscricao
   onClose: () => void
   /** Usado dentro de ModalInscreverAlguem (aba "Pessoas da igreja") — sem overlay nem
    *  cabeçalho próprios, porque o modal pai já mostra os dois. */
@@ -56,7 +61,7 @@ function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): strin
 }
 
 export function ModalInscreverPessoas({
-  eventoId, tituloEvento, exclusivoMembros, preco, onClose, embutido = false,
+  eventoId, tituloEvento, exclusivoMembros, preco, situacaoInscricao, onClose, embutido = false,
 }: Props) {
   const router = useRouter()
   const [busca, setBusca] = useState('')
@@ -91,6 +96,8 @@ export function ModalInscreverPessoas({
 
   const role = useAuthStore((s) => s.role)
   const ehGestor = podeGerenciarInscricoes(role)
+  // Task 11: depois do prazo, só gestor inscreve; o backend barra o comum em todos os caminhos.
+  const prazoBloqueiaComum = situacaoInscricao === 'ENCERRADA_POR_PRAZO' && !ehGestor
 
   const buscaDebounced = useDebounce(busca, 300)
   const { data, isLoading } = usePessoas({ q: buscaDebounced, page: 0, size: 30 })
@@ -403,7 +410,7 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoPagar}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
               onClick={() => confirmarPessoa(false)}
             >
               {inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
@@ -411,7 +418,7 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoLink}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
               onClick={() => confirmarPessoa(true)}
             >
               Enviar link pra {pessoaClicada.nome} pagar
@@ -522,6 +529,14 @@ export function ModalInscreverPessoas({
         </div>
       )}
 
+      {!embutido && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
+        <div className={styles.avisoPrazo}>
+          {ehGestor
+            ? `O prazo de inscrição deste evento já encerrou. Como ${(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.`
+            : 'As inscrições deste evento já encerraram.'}
+        </div>
+      )}
+
       <div className={styles.buscaWrap}>
         <Search size={16} className={styles.buscaIcone} />
         <input
@@ -549,7 +564,7 @@ export function ModalInscreverPessoas({
               type="button"
               className={styles.btnConfirmar}
               onClick={aoConfirmarSelecaoGratuita}
-              disabled={selecionados.size === 0 || inscreverPessoas.isPending}
+              disabled={selecionados.size === 0 || inscreverPessoas.isPending || prazoBloqueiaComum}
             >
               {inscreverPessoas.isPending ? 'Inscrevendo…' : 'Inscrever'}
             </button>

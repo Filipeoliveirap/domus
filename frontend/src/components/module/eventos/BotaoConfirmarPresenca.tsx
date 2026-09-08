@@ -9,6 +9,7 @@ import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { useUiStore } from '@/store/uiStore'
 import { useMinhaPessoa } from '@/hooks/pessoa/useMinhaPessoa'
 import { useDefinirEmailInicial } from '@/hooks/pessoa/useDefinirEmailInicial'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
@@ -20,9 +21,19 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
-import type { SituacaoEvento } from '@/types/evento.type'
+import { rotuloRole } from '@/lib/formats/usuarioFormat'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
+import type { SituacaoEvento, SituacaoInscricao, PoliticaCancelamentoAposPrazo } from '@/types/evento.type'
 import type { Impedimento, MinhaInscricaoResponse } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
+
+/** Fora do corpo do componente: `new Date(...)` é impuro pro react-hooks/purity. */
+function formatarDiaMes(iso: string | null): string {
+  return iso
+    ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    : ''
+}
 
 interface Props {
   eventoId: string
@@ -30,17 +41,41 @@ interface Props {
   vagasRestantes: number | null
   requerInscricao: boolean
   situacao: SituacaoEvento
+  situacaoInscricao: SituacaoInscricao
+  inscricoesAte: string | null
   preco?: number | null
+  politicaCancelamentoAposPrazo: PoliticaCancelamentoAposPrazo
   /** Chamado só quando a inscrição exige confirmação prévia (requerInscricao) e deu certo,
    *  SEM pagamento pendente — evento pago com sucesso navega pra rota de checkout em vez
    *  de chamar isto (o drawer não teria o que abrir; a pessoa já saiu da tela). */
   onInscritoComSucesso?: () => void
+  /** Evento pago: chamado no instante em que a navegação pro checkout começa, atrás da
+   *  ponte de transição — o drawer/modal usa pra animar a própria saída antes do route push. */
+  onAntesDeNavegar?: () => void
 }
 
 export function BotaoConfirmarPresenca({
-  eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, preco, onInscritoComSucesso,
+  eventoId, inicioEm, vagasRestantes, requerInscricao, situacao, situacaoInscricao,
+  inscricoesAte, preco, politicaCancelamentoAposPrazo, onInscritoComSucesso, onAntesDeNavegar,
 }: Props) {
   const router = useRouter()
+  const abrirPonteCheckout = useUiStore((s) => s.abrirPonteCheckout)
+  const fecharPonteCheckout = useUiStore((s) => s.fecharPonteCheckout)
+
+  // Evento pago: leva pro checkout com uma "ponte" — mostra o selo "Inscrição feita!",
+  // deixa o drawer/modal animar a saída atrás do vidro fosco (~0,5s) e só então faz o route
+  // push, que troca pra uma rota full-screen fora do app shell. A ponte vive no uiStore
+  // porque este componente desmonta junto com o drawer no meio da transição.
+  function irParaCheckout(cobrancaId: string) {
+    setNavegandoParaCheckout(true)
+    abrirPonteCheckout()
+    onAntesDeNavegar?.()
+    window.setTimeout(() => {
+      router.push(`/eventos/${eventoId}/pagamento/${cobrancaId}`)
+    }, 550)
+    // Segurança: se a navegação não acontecer (erro), não deixa o véu preso.
+    window.setTimeout(fecharPonteCheckout, 5000)
+  }
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [semConta, setSemConta] = useState(false)
   // A mutation já resolveu (isPending vira false) antes do router.push completar a
@@ -59,6 +94,17 @@ export function BotaoConfirmarPresenca({
   // Gestor ignora restrições com confirmação extra
   const ehGestor = podeGerenciarInscricoes(role)
 
+  // Prazo de inscrição (Task 11): gestor "fura" o prazo, comum é barrado.
+  const podeFurarPrazo = ehGestor
+  const encerradoPorPrazo = situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+  const dataPrazo = formatarDiaMes(inscricoesAte)
+
+  // Task 11: membro comum não pode cancelar depois do prazo quando a política é NAO_PERMITIDO.
+  const cancelamentoTravadoPorPrazo =
+    situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+    && politicaCancelamentoAposPrazo === 'NAO_PERMITIDO'
+    && !podeGerenciarInscricoes(role)
+
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   // Status da conta MP da própria igreja — só importa quando o evento é pago.
   const { data: contaPagamento } = useContaPagamento()
@@ -69,13 +115,13 @@ export function BotaoConfirmarPresenca({
   const definirEmail = useDefinirEmailInicial()
   const { responder } = useResponderCampos()
 
-  // Modo "Eu vou": sem toast, feedback é o próprio botão. Evento pago também silencia o
-  // toast genérico ("Inscrição confirmada!" seria enganoso — o pagamento ainda não foi
-  // feito; a rota de checkout mostra o próprio feedback quando o pagamento é aprovado).
-  const inscrever = useInscrever(eventoId, !requerInscricao || !!preco, {
+  // Ação da própria pessoa: nunca notifica — o resultado já está na tela (o botão vira
+  // "Inscrito" / volta pra "Se inscrever", com animação). Toast só pros erros (dentro do
+  // hook). Evento pago mostra o próprio feedback na rota de checkout.
+  const inscrever = useInscrever(eventoId, true, {
     onContornavel: ehGestor ? (imps) => setImpedimentosParaConfirmar(imps) : undefined,
   })
-  const cancelar = useCancelarInscricao(!requerInscricao)
+  const cancelar = useCancelarInscricao(true)
 
   // Gestor vê o motivo, mas o botão segue ativo (422 abre confirmação)
   const { data: elegibilidade } = useElegibilidade(eventoId)
@@ -146,7 +192,7 @@ export function BotaoConfirmarPresenca({
           setImpedimentosParaConfirmar(null)
           await aoInscreverComSucesso(resposta)
           if (resposta.cobrancaPendenteId) {
-            router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+            irParaCheckout(resposta.cobrancaPendenteId)
           } else {
             onInscritoComSucesso?.()
           }
@@ -170,6 +216,25 @@ export function BotaoConfirmarPresenca({
     return (
       <button type="button" className={styles.botao} disabled>
         Carregando…
+      </button>
+    )
+  }
+
+  // Prazo encerrado + já inscrito não bloqueia (segue podendo ver/cancelar); só barra
+  // quem ainda não entrou e não pode furar o prazo.
+  const avisoPrazoGestor = encerradoPorPrazo && podeFurarPrazo && (
+    <Transicao modo="fade">
+      <p className={styles.avisoPrazo}>
+        O prazo de inscrição encerrou em {dataPrazo}, mas você como{' '}
+        {(rotuloRole(role ?? '') || 'gestor').toLowerCase()} pode inscrever assim mesmo.
+      </p>
+    </Transicao>
+  )
+
+  if (encerradoPorPrazo && !podeFurarPrazo && !minha?.inscrito) {
+    return (
+      <button type="button" className={styles.botao} disabled>
+        Inscrições encerradas em {dataPrazo}
       </button>
     )
   }
@@ -205,6 +270,7 @@ export function BotaoConfirmarPresenca({
 
     return (
       <span className={styles.euVouWrap}>
+        {!marcado && avisoPrazoGestor}
         <button
           type="button"
           className={`${styles.euVou} ${marcado ? styles.euVouAtivo : ''}`}
@@ -227,103 +293,26 @@ export function BotaoConfirmarPresenca({
     )
   }
 
-  // Pagamento em aberto: inscrição existe como AGUARDANDO_PAGAMENTO. Vem de dado do
-  // servidor (não de state local), então sobrevive a reload/fechar e reabrir o drawer —
-  // ao contrário do antigo `etapaPagamento`, que se perdia ao desmontar o componente.
-  // Cobre os três casos que caem neste mesmo estado (evento virou pago, preço aumentou —
-  // complemento pendente —, ou checkout iniciado e não terminado): até agora só dava pra
-  // cancelar pelo link do e-mail de lembrete; achado ao vivo, 2026-08-27.
-  if (!minha?.inscrito && minha?.cobrancaPendenteId) {
-    return (
-      <div className={styles.pagamentoPendenteBloco}>
-        <Link href={`/eventos/${eventoId}/pagamento/${minha.cobrancaPendenteId}`} className={styles.pagamentoPendente}>
-          <Clock size={16} aria-hidden="true" />
-          <span>Pagamento pendente — continuar</span>
-        </Link>
-        <button
-          type="button"
-          className={styles.cancelarLink}
-          onClick={() => setConfirmandoCancelamento(true)}
-        >
-          <XCircle size={14} aria-hidden="true" />
-          Cancelar inscrição
-        </button>
+  // A área de ação troca entre "inscrito", "pagamento pendente" e "se inscrever". Antes
+  // cada estado era um `return` seco — o bloco antigo sumia na hora e o novo pipocava.
+  // <TrocaCena> anima essas trocas (crossfade + altura acompanhando o conteúdo novo).
+  // Pagamento pendente: inscrição AGUARDANDO_PAGAMENTO, vinda de dado do servidor (sobrevive
+  // a reload) — cobre evento que virou pago, preço aumentado, ou checkout não terminado.
+  const cenaAcao: 'inscrito' | 'pendente' | 'esgotado' | 'seinscrever' | null =
+    minha?.inscrito
+      ? 'inscrito'
+      : minha?.cobrancaPendenteId
+        ? 'pendente'
+        : inscricaoBloqueadaPelaSituacao || eventoEncerrado
+          ? null
+          : semVagas
+            ? 'esgotado'
+            : 'seinscrever'
 
-        {confirmandoCancelamento && (
-          <ConfirmarCancelamentoInscricao
-            nome=""
-            proprio
-            quantidadeConvidados={0}
-            isLoading={cancelar.isPending}
-            onConfirmar={() => {
-              if (!minha.id) return
-              cancelar.mutate(minha.id, {
-                onSuccess: () => setConfirmandoCancelamento(false),
-              })
-            }}
-            onClose={() => setConfirmandoCancelamento(false)}
-          />
-        )}
-      </div>
-    )
-  }
+  if (cenaAcao === null) return null
 
-  if (minha?.inscrito) {
-    const podeCancelar = podeCancelarInscricao(situacao)
-
-    return (
-      <div className={styles.inscrito}>
-        <div className={styles.inscritoStatus}>
-          <CheckCircle2 size={18} aria-hidden="true" />
-          <div className={styles.inscritoTexto}>
-            <strong>Inscrito</strong>
-            <span>{podeCancelar ? 'Tudo certo pra você!' : 'Você participou deste evento'}</span>
-          </div>
-        </div>
-
-        {podeCancelar && (
-          <button
-            type="button"
-            className={styles.cancelarLink}
-            onClick={() => setConfirmandoCancelamento(true)}
-          >
-            <XCircle size={14} aria-hidden="true" />
-            Cancelar inscrição
-          </button>
-        )}
-
-        {confirmandoCancelamento && (
-          <ConfirmarCancelamentoInscricao
-            nome=""
-            proprio
-            // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
-            // contagem embutida não existe mais (ver Task 10/11) — sem substituto por ora.
-            quantidadeConvidados={0}
-            isLoading={cancelar.isPending}
-            onConfirmar={() => {
-              if (!minha.id) return
-              cancelar.mutate(minha.id, {
-                onSuccess: () => setConfirmandoCancelamento(false),
-              })
-            }}
-            onClose={() => setConfirmandoCancelamento(false)}
-          />
-        )}
-      </div>
-    )
-  }
-
-  if (inscricaoBloqueadaPelaSituacao || eventoEncerrado) {
-    return null
-  }
-
-  if (semVagas) {
-    return (
-      <button type="button" className={styles.botao} disabled>
-        Vagas esgotadas
-      </button>
-    )
-  }
+  const podeCancelar = podeCancelarInscricao(situacao) && !cancelamentoTravadoPorPrazo
+  const inscricaoId = minha?.id
 
   function inscreverDeVerdade() {
     if (!preco) {
@@ -345,8 +334,7 @@ export function BotaoConfirmarPresenca({
       onSuccess: async (resposta) => {
         await aoInscreverComSucesso(resposta)
         if (resposta.cobrancaPendenteId) {
-          setNavegandoParaCheckout(true)
-          router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaPendenteId}`)
+          irParaCheckout(resposta.cobrancaPendenteId)
         } else {
           // Não deveria acontecer (evento tem preço), mas não trava a pessoa numa tela morta.
           onInscritoComSucesso?.()
@@ -357,39 +345,121 @@ export function BotaoConfirmarPresenca({
 
   return (
     <>
-      <button
-        type="button"
-        className={styles.botao}
-        disabled={inscrever.isPending || navegandoParaCheckout || !!impedimento}
-        onClick={() => tentarInscrever(inscreverDeVerdade)}
-      >
-        <CheckCircle2 size={18} aria-hidden="true" />
-        {inscrever.isPending || navegandoParaCheckout ? 'Inscrevendo…' : 'Se inscrever'}
-      </button>
+      <TrocaCena
+        cenaKey={cenaAcao}
+        renderCena={(cena) =>
+          cena === 'inscrito' ? (
+            <div className={styles.inscrito}>
+              <div className={styles.inscritoStatus}>
+                <CheckCircle2 size={18} aria-hidden="true" />
+                <div className={styles.inscritoTexto}>
+                  <strong>Inscrito</strong>
+                  <span>{podeCancelar ? 'Tudo certo pra você!' : 'Você participou deste evento'}</span>
+                </div>
+              </div>
 
-      {impedimento && (
-        <span className={styles.motivo}>
-          <AlertTriangle size={14} aria-hidden="true" />
-          {impedimento}
-        </span>
-      )}
+              {podeCancelar && (
+                <button
+                  type="button"
+                  className={styles.cancelarLink}
+                  onClick={() => setConfirmandoCancelamento(true)}
+                >
+                  <XCircle size={14} aria-hidden="true" />
+                  Cancelar inscrição
+                </button>
+              )}
 
-      {semConta && preco && (
-        <div className={styles.avisoSemConta}>
-          <AlertTriangle size={16} aria-hidden="true" />
-          <span>
-            Este evento é pago, mas a igreja ainda não conectou uma conta para receber
-            pagamentos.{' '}
-            {ehGestor ? (
-              <Link href="/configuracoes/igreja">Conectar agora</Link>
-            ) : (
-              'Fale com a secretaria da igreja.'
-            )}
-          </span>
-          <button type="button" className={styles.cancelarLink} onClick={() => setSemConta(false)}>
-            Fechar
-          </button>
-        </div>
+              {cancelamentoTravadoPorPrazo && (
+                <p className={styles.motivo}>
+                  Cancelamento encerrado (o prazo passou). Fale com a organização.
+                </p>
+              )}
+            </div>
+          ) : cena === 'pendente' ? (
+            <div className={styles.pagamentoPendenteBloco}>
+              <Link
+                href={`/eventos/${eventoId}/pagamento/${minha?.cobrancaPendenteId}`}
+                className={styles.pagamentoPendente}
+              >
+                <Clock size={16} aria-hidden="true" />
+                <span>Pagamento pendente — continuar</span>
+              </Link>
+              <button
+                type="button"
+                className={styles.cancelarLink}
+                onClick={() => setConfirmandoCancelamento(true)}
+              >
+                <XCircle size={14} aria-hidden="true" />
+                Cancelar inscrição
+              </button>
+            </div>
+          ) : cena === 'esgotado' ? (
+            <button type="button" className={styles.botao} disabled>
+              Vagas esgotadas
+            </button>
+          ) : (
+            <>
+              {avisoPrazoGestor}
+              <button
+                type="button"
+                className={styles.botao}
+                disabled={inscrever.isPending || navegandoParaCheckout || !!impedimento}
+                onClick={() => tentarInscrever(inscreverDeVerdade)}
+              >
+                <CheckCircle2 size={18} aria-hidden="true" />
+                {inscrever.isPending || navegandoParaCheckout ? 'Inscrevendo…' : 'Se inscrever'}
+              </button>
+
+              {impedimento && (
+                <span className={styles.motivo}>
+                  <AlertTriangle size={14} aria-hidden="true" />
+                  {impedimento}
+                </span>
+              )}
+
+              {semConta && preco && (
+                <div className={styles.avisoSemConta}>
+                  <AlertTriangle size={16} aria-hidden="true" />
+                  <span>
+                    Este evento é pago, mas a igreja ainda não conectou uma conta para receber
+                    pagamentos.{' '}
+                    {ehGestor ? (
+                      <Link href="/configuracoes/igreja">Conectar agora</Link>
+                    ) : (
+                      'Fale com a secretaria da igreja.'
+                    )}
+                  </span>
+                  <button type="button" className={styles.cancelarLink} onClick={() => setSemConta(false)}>
+                    Fechar
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        }
+      />
+
+      {confirmandoCancelamento && inscricaoId && (
+        <ConfirmarCancelamentoInscricao
+          nome=""
+          proprio
+          // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
+          // contagem embutida não existe mais (ver Task 10/11) — sem substituto por ora.
+          quantidadeConvidados={0}
+          // Só o cartão "Inscrito" de evento pago encerrado por prazo perde o reembolso; o
+          // "pagamento pendente" ainda não pagou nada.
+          semReembolso={
+            cenaAcao === 'inscrito'
+            && preco != null
+            && situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+            && politicaCancelamentoAposPrazo === 'PERMITIDO_SEM_REEMBOLSO'
+          }
+          isLoading={cancelar.isPending}
+          onConfirmar={() =>
+            cancelar.mutate(inscricaoId, { onSuccess: () => setConfirmandoCancelamento(false) })
+          }
+          onClose={() => setConfirmandoCancelamento(false)}
+        />
       )}
 
       {modalContorno}

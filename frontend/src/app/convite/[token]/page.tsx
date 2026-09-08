@@ -75,6 +75,20 @@ export default function ConvitePublicoPage({ params }: { params: Promise<{ token
     )
   }
 
+  if (convite.situacaoInscricao === 'ENCERRADA_POR_PRAZO') {
+    const prazoFmt = convite.inscricoesAte
+      ? new Date(convite.inscricoesAte).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      : ''
+    return (
+      <div className={styles.pagina}>
+        <div className={styles.erroCard}>
+          <h1>Inscrições encerradas</h1>
+          <p>As inscrições para &quot;{convite.titulo}&quot; encerraram{prazoFmt && ` em ${prazoFmt}`}.</p>
+        </div>
+      </div>
+    )
+  }
+
   const logoUrl = urlFotoConvite(token, convite.igrejaLogoFotoId, 'THUMB')
   const bannerUrl = urlFotoConvite(token, convite.fotoId, 'DISPLAY')
   const convidanteFotoUrl = urlFotoConvite(token, convite.convidadoPorFotoId, 'THUMB')

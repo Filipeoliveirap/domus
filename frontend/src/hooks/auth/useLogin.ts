@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from 'next/navigation'
 import { useState } from "react";
-import axios from 'axios'
+import axios, { type AxiosError } from 'axios'
 import { useAppForm } from "../forms/useAppForm";
 import type { ApiError } from "@/types/api.types";
 import type { Sessao } from "@/types/auth.types";
@@ -16,7 +16,7 @@ function destinoSeguro(next: string | null) {
 }
 
 // Mensagem de rate limit (429), enriquecida com o tempo de espera do header Retry-After.
-function mensagemRateLimit(error: import('axios').AxiosError<ApiError>) {
+function mensagemRateLimit(error: AxiosError<ApiError>) {
     const retryAfter = Number(error.response?.headers?.['retry-after'])
     if (Number.isFinite(retryAfter) && retryAfter > 0) {
         return `Muitas tentativas em pouco tempo. Aguarde ${retryAfter} segundos e tente novamente.`

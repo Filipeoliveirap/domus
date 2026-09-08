@@ -6,11 +6,13 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaCheckout } from '@/hooks/cobranca/useCobrancaCheckout'
+import { useUiStore } from '@/store/uiStore'
 import { cobrancaService } from '@/services/cobranca.service'
 import { authService } from '@/services/auth.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
 import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { StepperPagamento } from '@/components/module/pagamento/StepperPagamento'
+import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './PagamentoEvento.module.css'
 
@@ -42,6 +44,13 @@ export default function PagamentoEventoPage({
 
 function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobrancaId: string }) {
   const queryClient = useQueryClient()
+
+  // A rota abriu — some com a "ponte" que cobriu a transição de dentro do app shell.
+  const fecharPonteCheckout = useUiStore((s) => s.fecharPonteCheckout)
+  useEffect(() => {
+    fecharPonteCheckout()
+  }, [fecharPonteCheckout])
+
   const { data: cobranca, isLoading, isError } = useCobrancaCheckout(cobrancaId)
   const [reiniciando, setReiniciando] = useState(false)
 
@@ -82,16 +91,74 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
   // o dado só vinha na resposta de `pagar`, que não pode ser chamado de novo (cai em
   // COBRANCA_JA_EM_PROCESSAMENTO). Busca uma vez, junto com "confirmando"; nulos nos dois
   // campos = o pagamento em andamento é cartão, não Pix — mostra a tela genérica de sempre.
-  const { data: pix } = useQuery({
+  // O QR/copia-e-cola não muda depois de criado — busca UMA vez e nunca re-busca. Sem isto,
+  // cada refetch deixava `pix` momentaneamente `undefined` e a tela piscava entre o QR e
+  // "Confirmando pagamento…". Agora quem decide a tela é só a máquina de estados local
+  // (`etapaPix`) abaixo — esta query só alimenta o `<TelaPix>`.
+  const { data: pix, isFetched: pixCarregado } = useQuery({
     queryKey: ['cobranca-pix', cobrancaId],
     queryFn: () => cobrancaService.pix(cobrancaId),
     enabled: resultadoEfetivo === 'enviado',
     retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 
-  // Assim que o Mercado Pago recebe a tentativa de pagamento, pergunta a cada poucos
-  // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
-  // callback nenhum do lado do Mercado Pago). Some sozinho quando chega numa resposta final.
+  const temQr = !!(pix?.qrCode && pix?.qrCodeBase64)
+
+  // Máquina de estados EXPLÍCITA do checkout Pix:
+  //   qr  →  aguardando  →  confirmado
+  // - 'qr': mostra o QR Code. Depois de ~40s sem confirmação, vai sozinho pra 'aguardando'
+  //   (o Mercado Pago não avisa "QR lido", então só dá pra ir por tempo).
+  // - 'aguardando': tela "Confirmando pagamento…", com botão "Ver QR Code de novo" (volta
+  //   pra 'qr' e rearma o timer). Cartão / cobrança sem Pix já entra aqui direto.
+  // - 'confirmado': tela de sucesso (check verde).
+  // Quando o pagamento aprova (poll → resultado='aprovado'), NUNCA pula direto pro check:
+  // passa por 'aguardando' com uma pausa curta ('finalizando') pra dar a sensação de
+  // "processando a transação" antes de revelar o sucesso — mesmo se a pessoa pagou com o
+  // QR ainda na tela.
+  const DWELL_FINALIZANDO_MS = 1800
+  const [querAguardando, setQuerAguardando] = useState(false)
+  const [confirmadoRevelado, setConfirmadoRevelado] = useState(false)
+
+  const finalizando = resultado === 'aprovado' && !confirmadoRevelado
+
+  const etapaPix: 'qr' | 'aguardando' | 'confirmado' =
+    confirmadoRevelado
+      ? 'confirmado'
+      : finalizando || querAguardando || (pixCarregado && !temQr)
+        ? 'aguardando'
+        : 'qr'
+
+  // Cena de fato renderizada — igual a `etapaPix`, mas 'qr' só quando o QR já chegou
+  // (senão mostra 'aguardando' e a troca pra 'qr' quando o pix carrega fica suave).
+  const cenaVisivel: 'qr' | 'aguardando' | 'confirmado' =
+    etapaPix === 'qr' && !(temQr && pix) ? 'aguardando' : etapaPix
+
+  // Pausa de "finalizando" antes de revelar o check verde.
+  useEffect(() => {
+    if (resultado !== 'aprovado') return
+    const t = setTimeout(() => setConfirmadoRevelado(true), DWELL_FINALIZANDO_MS)
+    return () => clearTimeout(t)
+  }, [resultado])
+
+  // QR aberto ~40s sem confirmação → vai pra 'aguardando'. "Ver QR Code de novo" zera
+  // `querAguardando` (etapaPix volta a 'qr') e o timer rearma.
+  useEffect(() => {
+    if (etapaPix !== 'qr' || !temQr) return
+    const t = setTimeout(() => setQuerAguardando(true), 40_000)
+    return () => clearTimeout(t)
+  }, [etapaPix, temQr])
+
+  // Pergunta de 3 em 3s se o pagamento já foi confirmado — é a única forma de saber (o
+  // navegador não recebe callback nenhum do lado do Mercado Pago). O endpoint /status lê o
+  // banco e, quando a cobrança ainda está PENDENTE, reconfere no Mercado Pago (cobre webhook
+  // atrasado / poll do backend já esgotado) — mas o backend limita essa reconsulta a uma a
+  // cada ~10s por cobrança, então pollar rápido aqui não martela a API do MP. Some sozinho
+  // quando chega numa resposta final.
   useEffect(() => {
     if (resultadoEfetivo !== 'enviado') return
     resolvidoRef.current = false
@@ -115,7 +182,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
       } catch {
         // Falha de rede pontual no poll não é motivo pra desistir — tenta de novo no próximo tick.
       }
-    }, 4000)
+    }, 3000)
 
     return () => clearInterval(intervalo)
   }, [resultadoEfetivo, cobrancaId])
@@ -172,30 +239,8 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
         </div>
       </header>
 
-      <div className={styles.conteudo}>
+      <div className={`${styles.conteudo} ${styles.conteudoEntra}`}>
         <StepperPagamento etapaAtual={resultadoEfetivo || indisponivel ? 'confirmado' : 'pagamento'} />
-
-        {resultadoEfetivo === 'aprovado' && (
-          <div className={styles.cardAprovado}>
-            <div className={styles.aneisAprovado}>
-              <span className={styles.anelAprovado} aria-hidden="true" />
-              <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
-            </div>
-            <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
-            <p className={styles.aprovadoTexto}>
-              Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
-            </p>
-            <div className={styles.aprovadoResumo}>
-              <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
-              <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
-            </div>
-            {sessaoVerificada && sessao ? (
-              <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
-            ) : (
-              sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
-            )}
-          </div>
-        )}
 
         {indisponivel && (
           <div className={styles.card}>
@@ -207,24 +252,62 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
           </div>
         )}
 
-        {resultadoEfetivo === 'enviado' && !indisponivel && (
-          pix?.qrCode && pix?.qrCodeBase64 ? (
-            <div className={styles.card}>
-              <TelaPix
-                qrCode={pix.qrCode}
-                qrCodeBase64={pix.qrCodeBase64}
-                expiraEm={pix.expiraEm ?? cobranca.expiraEm}
-                onReiniciar={aoReiniciar}
-                reiniciando={reiniciando}
-              />
-            </div>
-          ) : (
-            <div className={styles.card}>
-              <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
-              <h1>Confirmando pagamento…</h1>
-              <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
-            </div>
-          )
+        {resultadoEfetivo && !indisponivel && (
+          <TrocaCena
+            cenaKey={cenaVisivel}
+            renderCena={(cena) =>
+              cena === 'confirmado' ? (
+                <div className={styles.cardAprovado}>
+                  <div className={styles.aneisAprovado}>
+                    <span className={styles.anelAprovado} aria-hidden="true" />
+                    <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
+                  </div>
+                  <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
+                  <p className={styles.aprovadoTexto}>
+                    Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
+                  </p>
+                  <div className={styles.aprovadoResumo}>
+                    <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
+                    <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
+                  </div>
+                  {sessaoVerificada && sessao ? (
+                    <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+                  ) : (
+                    sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
+                  )}
+                </div>
+              ) : cena === 'qr' && temQr && pix ? (
+                <div className={styles.card}>
+                  <TelaPix
+                    qrCode={pix.qrCode!}
+                    qrCodeBase64={pix.qrCodeBase64!}
+                    expiraEm={pix.expiraEm ?? cobranca.expiraEm}
+                    onReiniciar={aoReiniciar}
+                    reiniciando={reiniciando}
+                  />
+                </div>
+              ) : (
+                <div className={styles.card}>
+                  <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
+                  <h1>Confirmando pagamento…</h1>
+                  <p>
+                    {finalizando
+                      ? 'Pagamento recebido. Confirmando sua inscrição…'
+                      : 'Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.'}
+                  </p>
+                  {temQr && !finalizando && cena === 'aguardando' && (
+                    <button
+                      type="button"
+                      className={styles.verQrDeNovo}
+                      onClick={() => setQuerAguardando(false)}
+                    >
+                      Ver QR Code de novo
+                    </button>
+                  )}
+                </div>
+              )
+            }
+          />
         )}
 
         {!resultadoEfetivo && !indisponivel && (

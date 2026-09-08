@@ -69,5 +69,11 @@ public record EventoRequest(
          *  Exclusivo com as outras formas. Usado quando a pessoa cria o endereço pelo próprio
          *  formulário de evento — o cadastro só acontece quando o evento é salvo. */
         @jakarta.validation.Valid
-        com.domus.api.modules.evento.local.DTOs.LocalEventoRequest novoLocal
+        com.domus.api.modules.evento.local.DTOs.LocalEventoRequest novoLocal,
+
+        /** Prazo de inscrição (V38). {@code null} = aceita até o evento começar. */
+        LocalDateTime inscricoesAte,
+
+        /** V39. {@code null} tratado como {@code PERMITIDO_COM_REEMBOLSO}. Só relevante com {@code inscricoesAte} preenchido. */
+        com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo politicaCancelamentoAposPrazo
 ) {}

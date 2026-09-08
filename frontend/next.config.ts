@@ -18,6 +18,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Empacota um servidor mínimo (sem node_modules inteiro) — imagem Docker enxuta (~150MB).
   output: "standalone",
+  // Só dev: o Next 15+ bloqueia requisições internas (/_next/*, HMR, RSC) vindas de uma
+  // origem diferente do dev server. Ao acessar o dev via túnel (ngrok, pra testar o OAuth
+  // do Mercado Pago), a origem é o domínio do túnel — sem isto os chunks não carregam e a
+  // página não hidrata (botões ficam mortos). Sem efeito em produção.
+  allowedDevOrigins: ["shank-drained-scrambled.ngrok-free.dev", "*.ngrok-free.dev"],
   // O front chama /api/* na PRÓPRIA origem e o Next repassa pro Spring. Assim o cookie de
   // sessão é sempre first-party (SameSite=Lax) independente de onde a API for hospedada —
   // e a decisão de hospedagem sai do caminho crítico. Custo: um salto de rede a mais.

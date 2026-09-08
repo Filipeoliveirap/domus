@@ -271,8 +271,12 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
                 vagasRestantes={vagasRestantes}
                 requerInscricao={evento.requerInscricao}
                 situacao={evento.situacao}
+                situacaoInscricao={evento.situacaoInscricao}
+                inscricoesAte={evento.inscricoesAte}
                 preco={evento.preco}
+                politicaCancelamentoAposPrazo={evento.politicaCancelamentoAposPrazo}
                 onInscritoComSucesso={() => setAcabouDeInscrever(true)}
+                onAntesDeNavegar={fechar}
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
@@ -329,6 +333,7 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
           tituloEvento={evento?.titulo ?? ''}
           exclusivoMembros={evento?.exclusivoMembros ?? false}
           preco={evento?.preco}
+          situacaoInscricao={evento?.situacaoInscricao}
           onClose={() => setModalAberto(null)}
         />
       )}

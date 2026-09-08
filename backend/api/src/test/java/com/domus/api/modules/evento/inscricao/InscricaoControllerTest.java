@@ -85,6 +85,23 @@ class InscricaoControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    void recusaAutoInscricaoQuandoPrazoEncerrado() throws Exception {
+        Evento comPrazoVencido = eventoRepository.save(Evento.builder().igreja(igreja).titulo("Congresso")
+                .inicioEm(LocalDateTime.now().plusDays(5))
+                .requerInscricao(true)
+                .inscricoesAte(LocalDateTime.now().minusHours(1))
+                .build());
+        entityManager.flush();
+
+        mockMvc.perform(auth.autenticado(
+                        post("/eventos/" + comPrazoVencido.getId() + "/inscricoes"), usuarioComum)
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.error").value("PRAZO_INSCRICAO_ENCERRADO"));
+    }
+
+    @Test
     void semAutenticacaoRecusa() throws Exception {
         mockMvc.perform(post("/eventos/" + evento.getId() + "/inscricoes/convidados")
                         .contentType(MediaType.APPLICATION_JSON)

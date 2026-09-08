@@ -26,7 +26,6 @@ export function Passo2({
   register, handleSubmit, errors, passo2Incompleto, watch,
   erroGeral, isLoading, onSubmit, onVoltar,
 }: Passo2Props) {
-
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
 
@@ -34,16 +33,6 @@ export function Passo2({
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
-
-      {/* Header — título + subtítulo */}
-      <header className={styles.header}>
-        <h2 className={styles.title}>Crie sua conta de administrador</h2>
-        <p className={styles.subtitle}>
-          Preencha seus dados pessoais para gerenciar o Domus.
-        </p>
-      </header>
-
-      {/* Nome completo */}
       <Input
         id="nomeAdmin"
         label="NOME COMPLETO*"
@@ -54,7 +43,6 @@ export function Passo2({
         {...register('nomeAdmin')}
       />
 
-      {/* E-mail */}
       <Input
         id="emailAdmin"
         type="email"
@@ -66,7 +54,6 @@ export function Passo2({
         {...register('emailAdmin')}
       />
 
-      {/* Senha + indicador de força */}
       <div className={styles.senhaGroup}>
         <Input
           id="senhaAdmin"
@@ -92,7 +79,6 @@ export function Passo2({
         <PasswordStrengthIndicator senha={senha} />
       </div>
 
-      {/* Confirmar senha */}
       <Input
         id="confirmarSenha"
         type={mostrarConfirmar ? 'text' : 'password'}
@@ -114,7 +100,6 @@ export function Passo2({
         {...register('confirmarSenha')}
       />
 
-      {/* Checkbox de termos */}
       <div className={styles.termosWrapper}>
         <label className={styles.termosLabel}>
           <input
@@ -135,32 +120,29 @@ export function Passo2({
         )}
       </div>
 
-      {/* Erro geral da API */}
       {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
-      {/* Botão Criar conta — full width */}
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        isLoading={isLoading}
-        disabled={passo2Incompleto || isLoading}
-        style={{ width: '100%' }}
-      >
-        Criar conta
-      </Button>
+      <div className={styles.acoes}>
+        <button
+          type="button"
+          className={styles.voltar}
+          onClick={onVoltar}
+          disabled={isLoading}
+        >
+          <ArrowLeft size={14} />
+          <span>Voltar</span>
+        </button>
 
-      {/* Link Voltar — discreto, abaixo do botão */}
-      <button
-        type="button"
-        className={styles.voltarLink}
-        onClick={onVoltar}
-        disabled={isLoading}
-      >
-        <ArrowLeft size={14} />
-        <span>Voltar</span>
-      </button>
-
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          isLoading={isLoading}
+          disabled={passo2Incompleto || isLoading}
+        >
+          Criar conta
+        </Button>
+      </div>
     </form>
   )
 }

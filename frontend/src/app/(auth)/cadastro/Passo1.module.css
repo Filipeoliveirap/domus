@@ -1,7 +1,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 40px;   /* espaço entre header e form */
+  gap: 20px;
 }
 
 .termosWrapper {
@@ -43,35 +43,11 @@
   opacity: 0.75;
 }
 
-/* ─── Cabeçalho ──────────────────────────────────────────── */
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.75px;
-  line-height: 36px;
-  color: #131B2E;
-  margin: 0;
-}
-
-.subtitle {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-regular);
-  line-height: 20px;
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
 /* ─── Formulário ─────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .googleWrap {
@@ -82,7 +58,6 @@
 
 .googleBanner {
   padding: 12px 16px;
-  margin-bottom: 20px;
   background-color: var(--color-bg-subtle, #f4f2fb);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
@@ -134,34 +109,42 @@
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
-/* ─── Action bar ─────────────────────────────────────────── */
-.actions {
+/* ─── Action bar (compartilhada com Passo2) ──────────────── */
+.acoes {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 32px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
-/* Link "Voltar" — estilo ghost discreto */
-.voltarLink {
+.voltar {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: var(--font-size-base);
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 8px 4px;
+  padding: 6px 2px;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast);
 }
-
-.voltarLink:hover {
+.voltar:hover {
   color: var(--color-text-primary);
 }
+.voltar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---- Mobile: CNPJ e Telefone empilham ---- */
 @media (max-width: 640px) {
   .row {

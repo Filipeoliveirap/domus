@@ -101,28 +101,39 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
 
   const temQr = !!(pix?.qrCode && pix?.qrCodeBase64)
 
-  // Máquina de estados EXPLÍCITA do checkout Pix — antes era um `pix ? A : B` que piscava a
-  // cada refetch. 'qr' mostra o QR Code; 'aguardando' é a tela "Confirmando pagamento…"
-  // DELIBERADA (com botão pra voltar ao QR); 'confirmado' é a tela de sucesso.
+  // Máquina de estados EXPLÍCITA do checkout Pix:
   //   qr  →  aguardando  →  confirmado
-  // Transições: timer de 40s ou botão "Já fiz o pagamento" (qr→aguardando); botão "Ver QR
-  // Code de novo" (aguardando→qr, rearmando o timer); poll retorna PAGO (→confirmado, de
-  // qualquer estado). Cartão / cobrança sem Pix cai direto em 'aguardando', sem timer e sem
-  // o botão de voltar ao QR.
-  // Único estado de fato: "a pessoa (ou o timer) pediu a tela de aguardando". O resto é
-  // derivado — 'confirmado' sai do poll, e cobrança sem Pix força 'aguardando' sozinha.
+  // - 'qr': mostra o QR Code. Depois de ~40s sem confirmação, vai sozinho pra 'aguardando'
+  //   (o Mercado Pago não avisa "QR lido", então só dá pra ir por tempo).
+  // - 'aguardando': tela "Confirmando pagamento…", com botão "Ver QR Code de novo" (volta
+  //   pra 'qr' e rearma o timer). Cartão / cobrança sem Pix já entra aqui direto.
+  // - 'confirmado': tela de sucesso (check verde).
+  // Quando o pagamento aprova (poll → resultado='aprovado'), NUNCA pula direto pro check:
+  // passa por 'aguardando' com uma pausa curta ('finalizando') pra dar a sensação de
+  // "processando a transação" antes de revelar o sucesso — mesmo se a pessoa pagou com o
+  // QR ainda na tela.
+  const DWELL_FINALIZANDO_MS = 1800
   const [querAguardando, setQuerAguardando] = useState(false)
+  const [confirmadoRevelado, setConfirmadoRevelado] = useState(false)
+
+  const finalizando = resultado === 'aprovado' && !confirmadoRevelado
 
   const etapaPix: 'qr' | 'aguardando' | 'confirmado' =
-    resultado === 'aprovado'
+    confirmadoRevelado
       ? 'confirmado'
-      : querAguardando || (pixCarregado && !temQr)
+      : finalizando || querAguardando || (pixCarregado && !temQr)
         ? 'aguardando'
         : 'qr'
 
-  // Deixou o QR aberto ~40s sem agir → assume que já pagou (o Mercado Pago não avisa "QR
-  // lido") e mostra a tela de aguardando. "Ver QR Code de novo" zera `querAguardando`, o
-  // effect re-roda (etapaPix volta a 'qr') e o timer rearma.
+  // Pausa de "finalizando" antes de revelar o check verde.
+  useEffect(() => {
+    if (resultado !== 'aprovado') return
+    const t = setTimeout(() => setConfirmadoRevelado(true), DWELL_FINALIZANDO_MS)
+    return () => clearTimeout(t)
+  }, [resultado])
+
+  // QR aberto ~40s sem confirmação → vai pra 'aguardando'. "Ver QR Code de novo" zera
+  // `querAguardando` (etapaPix volta a 'qr') e o timer rearma.
   useEffect(() => {
     if (etapaPix !== 'qr' || !temQr) return
     const t = setTimeout(() => setQuerAguardando(true), 40_000)
@@ -218,28 +229,6 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
       <div className={styles.conteudo}>
         <StepperPagamento etapaAtual={resultadoEfetivo || indisponivel ? 'confirmado' : 'pagamento'} />
 
-        {resultadoEfetivo === 'aprovado' && (
-          <div className={styles.cardAprovado}>
-            <div className={styles.aneisAprovado}>
-              <span className={styles.anelAprovado} aria-hidden="true" />
-              <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
-            </div>
-            <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
-            <p className={styles.aprovadoTexto}>
-              Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
-            </p>
-            <div className={styles.aprovadoResumo}>
-              <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
-              <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
-            </div>
-            {sessaoVerificada && sessao ? (
-              <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
-            ) : (
-              sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
-            )}
-          </div>
-        )}
-
         {indisponivel && (
           <div className={styles.card}>
             <XCircle size={40} className={styles.iconeErro} aria-hidden="true" />
@@ -250,8 +239,30 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
           </div>
         )}
 
-        {resultadoEfetivo === 'enviado' && !indisponivel && (
-          etapaPix === 'qr' && temQr && pix ? (
+        {resultadoEfetivo && !indisponivel && (
+          etapaPix === 'confirmado' ? (
+            <Transicao key="confirmado" modo="escala">
+              <div className={styles.cardAprovado}>
+                <div className={styles.aneisAprovado}>
+                  <span className={styles.anelAprovado} aria-hidden="true" />
+                  <CheckCircle2 size={40} className={styles.iconeAprovado} aria-hidden="true" />
+                </div>
+                <h1 className={styles.aprovadoTitulo}>Pagamento aprovado!</h1>
+                <p className={styles.aprovadoTexto}>
+                  Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está confirmada.
+                </p>
+                <div className={styles.aprovadoResumo}>
+                  <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
+                  <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
+                </div>
+                {sessaoVerificada && sessao ? (
+                  <Link href={`/eventos?detalhe=${eventoId}`} className={styles.aprovadoAcao}>Voltar para o evento</Link>
+                ) : (
+                  sessaoVerificada && <p className={styles.aprovadoFechar}>Já pode fechar esta página.</p>
+                )}
+              </div>
+            </Transicao>
+          ) : etapaPix === 'qr' && temQr && pix ? (
             <Transicao key="qr" modo="fade">
               <div className={styles.card}>
                 <TelaPix
@@ -260,7 +271,6 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
                   expiraEm={pix.expiraEm ?? cobranca.expiraEm}
                   onReiniciar={aoReiniciar}
                   reiniciando={reiniciando}
-                  onJaPaguei={() => setQuerAguardando(true)}
                 />
               </div>
             </Transicao>
@@ -269,8 +279,12 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
               <div className={styles.card}>
                 <Clock size={40} className={styles.iconeAguardando} aria-hidden="true" />
                 <h1>Confirmando pagamento…</h1>
-                <p>Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.</p>
-                {temQr && (
+                <p>
+                  {finalizando
+                    ? 'Pagamento recebido. Confirmando sua inscrição…'
+                    : 'Assim que o Mercado Pago confirmar, sua inscrição fica garantida. Isso costuma levar só alguns instantes.'}
+                </p>
+                {temQr && !finalizando && (
                   <button
                     type="button"
                     className={styles.verQrDeNovo}

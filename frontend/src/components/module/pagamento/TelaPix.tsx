@@ -34,12 +34,9 @@ interface Props {
    *  sem opção nenhuma. Omitido = tela sem essa opção (ex.: onde ainda não foi ligada). */
   onReiniciar?: () => void
   reiniciando?: boolean
-  /** "Já fiz o pagamento" — quando passado, mostra um botão discreto que leva a pessoa pra
-   *  tela de "aguardando confirmação" sem esperar o timer automático. Omitido = sem o botão. */
-  onJaPaguei?: () => void
 }
 
-export function TelaPix({ qrCode, qrCodeBase64, expiraEm, onReiniciar, reiniciando, onJaPaguei }: Props) {
+export function TelaPix({ qrCode, qrCodeBase64, expiraEm, onReiniciar, reiniciando }: Props) {
   const [copiado, setCopiado] = useState(false)
   const [restante, setRestante] = useState(() => segundosRestantes(expiraEm))
 
@@ -78,11 +75,6 @@ export function TelaPix({ qrCode, qrCodeBase64, expiraEm, onReiniciar, reinician
         {restante > 0 ? <>Você tem <strong>{formatarContagem(restante)}</strong> para pagar</> : 'O tempo para pagar acabou'}
       </p>
       <p className={styles.pixAguardando}>Aguardando confirmação do pagamento…</p>
-      {onJaPaguei && (
-        <button type="button" className={styles.pixJaPaguei} onClick={onJaPaguei}>
-          Já fiz o pagamento
-        </button>
-      )}
       {onReiniciar && (
         <button type="button" className={styles.pixReiniciar} onClick={onReiniciar} disabled={reiniciando}>
           <RefreshCw size={14} aria-hidden="true" />

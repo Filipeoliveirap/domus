@@ -161,19 +161,25 @@
 }
 
 .tabela tbody tr {
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) {
   .tabela tbody tr:hover {
     background-color: var(--color-bg-table-head);
   }
 }
+.linhaClicavel {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 .linhaClicavel:active {
   background-color: var(--color-bg-table-head);
+  transform: scale(0.996);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tabela tbody tr { transition: background-color var(--transition-fast); }
+  .linhaClicavel:active { transform: none; }
 }
 
 .celulaPessoa {

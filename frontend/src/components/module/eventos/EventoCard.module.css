@@ -10,6 +10,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .card { transition: box-shadow var(--transition-fast); }
+  .card:active { transform: none; }
 }
 /* hover só em quem tem mouse — no touch o :hover "gruda" depois do tap e o card fica
    levantado como se estivesse pressionado. */

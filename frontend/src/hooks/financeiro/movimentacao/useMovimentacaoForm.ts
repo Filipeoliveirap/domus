@@ -81,18 +81,21 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         descricao: data.descricao || undefined,
       }
 
+      let movSalvaId: string
       if (ehEdicao) {
-        await movimentacoesService.atualizar(movimentacaoId!, payload)
+        const atualizada = await movimentacoesService.atualizar(movimentacaoId!, payload)
+        movSalvaId = atualizada.id
         invalidarCache(queryClient, 'movimentacao')
         queryClient.invalidateQueries({ queryKey: ['movimentacao', movimentacaoId] })
         notificar.sucesso('Movimentação atualizada com sucesso!')
       } else {
-        await movimentacoesService.criar(payload)
+        const criada = await movimentacoesService.criar(payload)
+        movSalvaId = criada.id
         invalidarCache(queryClient, 'movimentacao')
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
-      sairAnimado(() => router.back())
+      sairAnimado(() => router.push(`/financeiro/movimentacoes?destaque=${movSalvaId}`))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

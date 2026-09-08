@@ -112,6 +112,24 @@
   .linha { transition: background-color var(--transition-fast); }
 }
 
+/* Categoria recém-criada/editada: realce que entra e some sozinho (useDestaqueRecente).
+   A ordem alfabética volta ao recarregar a aba. */
+.destacada {
+  animation: catDestaque 3.4s ease-out forwards;
+}
+@keyframes catDestaque {
+  0%   { background-color: var(--color-primary-light); box-shadow: inset 3px 0 0 var(--color-primary); transform: translateY(-6px); }
+  16%  { background-color: var(--color-primary-light); box-shadow: inset 3px 0 0 var(--color-primary); transform: translateY(0); }
+  100% { background-color: var(--color-bg-white); box-shadow: inset 3px 0 0 transparent; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .destacada { animation: catDestaqueFade 2s ease forwards; }
+  @keyframes catDestaqueFade {
+    from { background-color: var(--color-primary-light); }
+    to   { background-color: var(--color-bg-white); }
+  }
+}
+
 .colNome { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .colTipo { display: flex; align-items: center; }
 .colAcoes { display: flex; align-items: center; justify-content: flex-end; }

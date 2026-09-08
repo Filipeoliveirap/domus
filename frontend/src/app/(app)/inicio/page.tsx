@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2, CheckCircle2 } from 'lucide-react'
+import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
@@ -31,8 +35,20 @@ function dataEvento(iso: string): { dia: string; mes: string; hora: string } {
 }
 
 /** Foto quando existe, iniciais quando não — nunca uma silhueta genérica. */
-function Avatar({ nome, fotoId }: { nome: string; fotoId: string | null }) {
+function Avatar({ nome, fotoId, onVerFoto }: { nome: string; fotoId: string | null; onVerFoto?: () => void }) {
   const url = urlFoto(fotoId, 'THUMB')
+  if (url && onVerFoto) {
+    return (
+      <button
+        type="button"
+        className={styles.avatar}
+        onClick={(e) => { e.stopPropagation(); onVerFoto() }}
+        aria-label={`Ver foto de ${nome}`}
+      >
+        <Image src={url} alt="" width={40} height={40} unoptimized className={styles.avatarFoto} />
+      </button>
+    )
+  }
   return (
     <span className={styles.avatar}>
       {url ? (
@@ -58,22 +74,49 @@ function SeloInscritoCard({ eventoId }: { eventoId: string }) {
 }
 
 function ItemAniversariante({
-  aniversariante,
+  aniversariante: a,
   hoje,
+  onVerFoto,
+  onAbrirPessoa,
 }: {
   aniversariante: Aniversariante
   hoje: number
+  onVerFoto: (a: Aniversariante) => void
+  onAbrirPessoa: (id: string) => void
 }) {
-  const ehHoje = aniversariante.dia === hoje
+  const ehHoje = a.dia === hoje
+  const primeiroNome = a.nome.trim().split(' ')[0]
+  const linkParabens = ehHoje && a.telefone
+    ? `https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Feliz aniversário, ${primeiroNome}! 🎉`)}`
+    : null
 
   return (
-    <li className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''}`}>
-      <Avatar nome={aniversariante.nome} fotoId={aniversariante.fotoId} />
+    <li
+      className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''} ${styles.itemAnivClicavel}`}
+      onClick={() => onAbrirPessoa(a.id)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPessoa(a.id) }}
+      role="button"
+      tabIndex={0}
+    >
+      <Avatar nome={a.nome} fotoId={a.fotoId} onVerFoto={a.fotoId ? () => onVerFoto(a) : undefined} />
       <span className={styles.anivInfo}>
-        <span className={styles.anivNome}>{aniversariante.nome}</span>
-        <span className={styles.anivData}>{ehHoje ? 'Hoje' : `Dia ${aniversariante.dia}`}</span>
+        <span className={styles.anivNome}>{a.nome}</span>
+        <span className={styles.anivData}>{ehHoje ? 'Hoje' : `Dia ${a.dia}`}</span>
       </span>
-      {ehHoje && <PartyPopper size={18} className={styles.iconeHoje} aria-label="Aniversário hoje" />}
+      {linkParabens ? (
+        <a
+          href={linkParabens}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.parabens}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <PartyPopper size={14} aria-hidden="true" />
+          Parabéns
+        </a>
+      ) : ehHoje ? (
+        <PartyPopper size={18} className={styles.iconeHoje} aria-label="Aniversário hoje" />
+      ) : null}
     </li>
   )
 }
@@ -82,21 +125,33 @@ function ModalAniversariantes({
   aniversariantes,
   hoje,
   aoFechar,
+  onVerFoto,
+  onAbrirPessoa,
 }: {
   aniversariantes: Aniversariante[]
   hoje: number
   aoFechar: () => void
+  onVerFoto: (a: Aniversariante) => void
+  onAbrirPessoa: (id: string) => void
 }) {
+  const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
+
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') aoFechar()
+      if (e.key === 'Escape') fechar()
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [aoFechar])
+  }, [fechar])
+
+  useEffect(() => {
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = anterior }
+  }, [])
 
   return (
-    <div className={styles.overlay} onMouseDown={aoFechar}>
+    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -104,11 +159,12 @@ function ModalAniversariantes({
         aria-modal="true"
         aria-labelledby="titulo-aniversariantes"
       >
+        <span className={styles.grabber} aria-hidden="true" />
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitulo} id="titulo-aniversariantes">
             Aniversariantes do mês ({aniversariantes.length})
           </h2>
-          <button type="button" className={styles.modalFechar} onClick={aoFechar} aria-label="Fechar">
+          <button type="button" className={styles.modalFechar} onClick={fechar} aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -117,7 +173,13 @@ function ModalAniversariantes({
         <div className={styles.modalCorpo}>
           <ul className={styles.listaAniv}>
             {aniversariantes.map((a) => (
-              <ItemAniversariante key={a.id} aniversariante={a} hoje={hoje} />
+              <ItemAniversariante
+                key={a.id}
+                aniversariante={a}
+                hoje={hoje}
+                onVerFoto={onVerFoto}
+                onAbrirPessoa={onAbrirPessoa}
+              />
             ))}
           </ul>
         </div>
@@ -136,6 +198,10 @@ export default function InicioPage() {
   const [modalAberto, setModalAberto] = useState(false)
   // Detalhe do evento abre AQUI mesmo, sem sair do início.
   const [eventoAberto, setEventoAberto] = useState<string | null>(null)
+  // Interação com os cards de aniversariante: ver a foto grande e abrir o detalhe da pessoa
+  // — em camadas por cima da lista/modal, sem sair do início.
+  const [fotoAniv, setFotoAniv] = useState<Aniversariante | null>(null)
+  const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
 
   const hoje = new Date().getDate()
   const eventos = data?.proximosEventos ?? []
@@ -277,7 +343,13 @@ export default function InicioPage() {
               <>
                 <ul className={styles.listaAniv}>
                   {aniversariantes.slice(0, ANIVERSARIANTES_NO_CARD).map((a) => (
-                    <ItemAniversariante key={a.id} aniversariante={a} hoje={hoje} />
+                    <ItemAniversariante
+                      key={a.id}
+                      aniversariante={a}
+                      hoje={hoje}
+                      onVerFoto={setFotoAniv}
+                      onAbrirPessoa={setPessoaDetalheId}
+                    />
                   ))}
                 </ul>
 
@@ -303,7 +375,21 @@ export default function InicioPage() {
           aniversariantes={aniversariantes}
           hoje={hoje}
           aoFechar={() => setModalAberto(false)}
+          onVerFoto={setFotoAniv}
+          onAbrirPessoa={setPessoaDetalheId}
         />
+      )}
+
+      {fotoAniv?.fotoId && (
+        <VisualizadorFoto
+          fotoId={fotoAniv.fotoId}
+          descricao={`Foto de ${fotoAniv.nome}`}
+          onClose={() => setFotoAniv(null)}
+        />
+      )}
+
+      {pessoaDetalheId && (
+        <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
       )}
     </div>
   )

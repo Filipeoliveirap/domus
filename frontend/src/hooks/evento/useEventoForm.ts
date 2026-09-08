@@ -197,7 +197,7 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         invalidarCache(queryClient, 'evento')
         notificar.sucesso('Evento cadastrado com sucesso!')
       }
-      sairAnimado(() => router.back())
+      sairAnimado(() => ehEdicao ? router.back() : router.push('/eventos'))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

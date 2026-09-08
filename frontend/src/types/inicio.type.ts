@@ -14,6 +14,8 @@ export interface Aniversariante {
   dia: number
   /** Nulo até a pessoa ter foto — a tela cai nas iniciais. */
   fotoId: string | null
+  /** Pra o link "Parabéns" no WhatsApp quando é o dia da pessoa. Nulo = sem telefone. */
+  telefone: string | null
 }
 
 export interface InicioResponse {

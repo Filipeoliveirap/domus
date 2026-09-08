@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
+import { clsx } from 'clsx'
 import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Archive, Trash2 } from 'lucide-react'
+import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
 import { useCategorias } from '@/hooks/financeiro/categoria/useCategorias'
 import { useExcluirCategoriaDefinitivamente } from '@/hooks/financeiro/categoria/useExcluirCategoriaDefinitivamente'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
@@ -49,7 +52,9 @@ function PainelCarregando() {
 }
 
 function CategoriasConteudo() {
+  const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
+  const { destaqueId, ordenar } = useDestaqueRecente()
   const [pagina, setPagina] = useState(0)
   const [modalForm, setModalForm] = useState<{ aberto: boolean; categoria?: CategoriaResponse }>({ aberto: false })
   const [categoriaArquivando, setCategoriaArquivando] = useState<CategoriaResponse | null>(null)
@@ -66,7 +71,8 @@ function CategoriasConteudo() {
     enabled: autorizado,
   })
 
-  const categorias = data?.content ?? []
+  const categoriasPagina = data?.content ?? []
+  const categorias = ordenar(categoriasPagina, (c) => c.id)
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
@@ -159,7 +165,7 @@ function CategoriasConteudo() {
 
             <div className={`${styles.linhas} ${isFetching && !isLoading ? styles.listaAtualizando : ''}`}>
               {categorias.map((categoria) => (
-                <div key={categoria.id} className={styles.linha}>
+                <div key={categoria.id} className={clsx(styles.linha, destaqueId === categoria.id && styles.destacada)}>
                   <div className={styles.colNome}>
                     <span className={`${styles.iconeBox} ${styles[varianteTipoCategoria(categoria.tipo)]}`}>
                       <IconeTipo tipo={categoria.tipo} />
@@ -181,7 +187,7 @@ function CategoriasConteudo() {
 
             <footer className={styles.rodape}>
               <span className={styles.contagem}>
-                Exibindo {categorias.length} de {totalElementos}
+                Exibindo {categoriasPagina.length} de {totalElementos}
               </span>
               <div className={styles.paginacao}>
                 <button
@@ -206,6 +212,9 @@ function CategoriasConteudo() {
         <ModalCategoriaForm
           categoria={modalForm.categoria}
           onClose={() => setModalForm({ aberto: false })}
+          onSaved={(id) => {
+            if (id) router.replace(`/financeiro/categorias?destaque=${id}`, { scroll: false })
+          }}
         />
       )}
 

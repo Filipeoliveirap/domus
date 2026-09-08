@@ -202,16 +202,12 @@ function UsuariosConteudo() {
                   >
                     <td>
                       <div className={styles.celulaUsuario}>
-                        {u.fotoId ? (
-                          <span
-                            onClick={(e) => { e.stopPropagation(); setFotoVisualizando(u.fotoId!) }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
-                          </span>
-                        ) : (
-                          <Avatar fotoId={u.fotoId} nome={u.nome} tamanho="sm" />
-                        )}
+                        <Avatar
+                          fotoId={u.fotoId}
+                          nome={u.nome}
+                          tamanho="sm"
+                          onVerFoto={u.fotoId ? () => setFotoVisualizando(u.fotoId!) : undefined}
+                        />
                         <span className={styles.nome}>{u.nome}</span>
                       </div>
                     </td>

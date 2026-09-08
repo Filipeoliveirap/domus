@@ -1,9 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { clsx } from 'clsx'
-import { X, Phone, Cake, Heart, MapPin, FileText, CalendarClock, Baby } from 'lucide-react'
+import { X, Pencil, Phone, Cake, Heart, MapPin, FileText, CalendarClock, Baby } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarVisitantes } from '@/lib/permissoes'
 import { useVisitante } from '@/hooks/visitante/useVisitante'
 import {
   iniciaisVisitante, formatarTelefoneExibicao, rotuloEstadoCivil,
@@ -21,6 +24,9 @@ interface DrawerDetalheVisitanteProps {
 export function DrawerDetalheVisitante({ visitanteId, onClose }: DrawerDetalheVisitanteProps) {
   const { data: visitante, isPending, isError, refetch } = useVisitante(visitanteId)
   const { saindo, fechar } = useFecharAnimado(onClose, 260)
+  const role = useAuthStore((s) => s.role)
+  const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
+  const podeEditar = podeGerenciarVisitantes(role, capacidadesExtras)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -42,6 +48,16 @@ export function DrawerDetalheVisitante({ visitanteId, onClose }: DrawerDetalheVi
         role="dialog"
         aria-modal="true"
       >
+        {podeEditar && (
+          <Link
+            href={`/pessoas/visitantes/${visitanteId}`}
+            className={styles.btnEditar}
+            onClick={onClose}
+            aria-label="Editar visitante"
+          >
+            <Pencil size={16} />
+          </Link>
+        )}
         <button type="button" className={styles.btnClose} onClick={fechar} aria-label="Fechar">
           <X size={20} />
         </button>

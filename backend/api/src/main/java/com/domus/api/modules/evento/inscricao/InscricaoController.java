@@ -104,7 +104,8 @@ public class InscricaoController {
     public ResponseEntity<List<com.domus.api.modules.evento.campopersonalizado.DTOs.RespostaResponse>> respostas(
             @PathVariable UUID inscricaoId) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();
-        return ResponseEntity.ok(campoPersonalizadoService.respostasPorInscricao(inscricaoId, igrejaId));
+        return ResponseEntity.ok(campoPersonalizadoService.respostasPorInscricao(
+                inscricaoId, igrejaId, usuarioAutenticado.getPessoaId(), usuarioAutenticado.getRole()));
     }
 
     @PutMapping("/inscricoes/{inscricaoId}/respostas")

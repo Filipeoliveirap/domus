@@ -22,10 +22,20 @@ export function usePaginaUrl({ param = 'page' }: UsePaginaUrlOptions = {}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [pagina, setPagina] = useState(() => {
+  const paginaNaUrl = (() => {
     const valor = Number(searchParams.get(param))
     return Number.isInteger(valor) && valor > 0 ? valor : 0
-  })
+  })()
+
+  const [pagina, setPagina] = useState(paginaNaUrl)
+
+  // Sincroniza quando a URL muda por fora (ex.: busca global reescreve a querystring sem
+  // `page`, ou volta pra lista) — antes só era lida na montagem.
+  const [paginaUrlAnterior, setPaginaUrlAnterior] = useState(paginaNaUrl)
+  if (paginaNaUrl !== paginaUrlAnterior) {
+    setPaginaUrlAnterior(paginaNaUrl)
+    if (paginaNaUrl !== pagina) setPagina(paginaNaUrl)
+  }
 
   const pathnameRef = useRef(pathname)
   const searchParamsRef = useRef(searchParams)

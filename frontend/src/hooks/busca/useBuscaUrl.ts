@@ -17,6 +17,18 @@ export function useBuscaUrl({ delay = 350, param = 'q' }: UseBuscaUrlOptions = {
   const [busca, setBusca] = useState(searchParams.get(param) ?? '')
   const buscaDebounced = useDebounce(busca, delay)
 
+  // Sincroniza QUANDO a URL muda por fora (ex.: busca global levou pra `/pessoas?q=João`
+  // já estando em `/pessoas`) — antes disso a busca só era lida na montagem, então a lista
+  // não reagia e a busca global precisava de um reload duro. Ajuste de estado no render
+  // (padrão React), só adota o valor da URL quando ele difere do que já estamos por
+  // escrever — assim não briga com o próprio efeito de escrita abaixo.
+  const urlAtual = searchParams.get(param) ?? ''
+  const [urlAnterior, setUrlAnterior] = useState(urlAtual)
+  if (urlAtual !== urlAnterior) {
+    setUrlAnterior(urlAtual)
+    if (urlAtual !== buscaDebounced) setBusca(urlAtual)
+  }
+
   const pathnameRef = useRef(pathname)
   const searchParamsRef = useRef(searchParams)
 

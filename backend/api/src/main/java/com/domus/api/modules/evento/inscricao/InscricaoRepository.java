@@ -148,6 +148,22 @@ public interface InscricaoRepository extends JpaRepository<InscricaoEvento, UUID
     """)
     long contarParticipantesUnicos(@Param("eventoIds") List<UUID> eventoIds);
 
+    /** Inscrições AGUARDANDO_PAGAMENTO de um evento que ainda não receberam o aviso de
+     *  "prazo chegando" (carimbo aviso_prazo_incompleto_em nulo) — PrazoInscricaoJob. */
+    @Query("""
+        SELECT i FROM InscricaoEvento i
+        WHERE i.evento.id = :eventoId
+          AND i.status = com.domus.api.modules.evento.inscricao.StatusInscricao.AGUARDANDO_PAGAMENTO
+          AND i.avisoPrazoIncompletoEm IS NULL
+        """)
+    List<InscricaoEvento> buscarAguardandoPagamentoSemAvisoDePrazo(@Param("eventoId") UUID eventoId);
+
+    /** Contagem de inscrições por status — usada pelo PrazoInscricaoJob pro texto
+     *  "N confirmados, M aguardando". */
+    @Query("SELECT count(i) FROM InscricaoEvento i WHERE i.evento.id = :eventoId AND i.status = :status")
+    long contarPorEventoIdEStatus(@Param("eventoId") UUID eventoId,
+                                  @Param("status") com.domus.api.modules.evento.inscricao.StatusInscricao status);
+
     /** Exclusão definitiva de pessoa: mantém a inscrição (e a contagem no relatório do evento),
      *  mostra "Pessoa removida do sistema". */
     @Modifying

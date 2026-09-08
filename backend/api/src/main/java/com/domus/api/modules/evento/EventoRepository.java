@@ -187,6 +187,17 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query(value = "DELETE FROM evento WHERE igreja_id = :igrejaId", nativeQuery = true)
     void deleteAllByIgrejaId(@Param("igrejaId") java.util.UUID igrejaId);
 
+    /** Eventos com prazo de inscrição ativo — usados pelo PrazoInscricaoJob. Não deletados
+     *  (o @SQLRestriction da entidade já cuida disso), inscrição obrigatória, prazo
+     *  definido, evento ainda não começado. */
+    @Query("""
+        SELECT e FROM Evento e
+        WHERE e.requerInscricao = true
+          AND e.inscricoesAte IS NOT NULL
+          AND e.inicioEm > :agora
+        """)
+    List<Evento> buscarComPrazoAtivoParaJob(@Param("agora") LocalDateTime agora);
+
     /** @SQLRestriction esconde arquivados de qualquer find derivado/JPQL — precisa de SQL nativo. */
     @Query(value = """
         SELECT * FROM evento

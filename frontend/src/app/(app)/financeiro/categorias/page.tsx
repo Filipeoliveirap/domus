@@ -253,7 +253,7 @@ function ModalExcluirCategoria({ categoria, onClose }: { categoria: CategoriaRes
 
 export default function CategoriasPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+    <Suspense fallback={<div className={styles.pagina}><PainelCarregando /></div>}>
       <CategoriasConteudo />
     </Suspense>
   )

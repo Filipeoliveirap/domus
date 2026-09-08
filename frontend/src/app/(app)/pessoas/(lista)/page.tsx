@@ -45,6 +45,28 @@ const GRUPOS_FILTRO: GrupoFiltro[] = [
   },
 ]
 
+function EsqueletoPagina() {
+  return (
+    <div className={styles.pagina}>
+      <div className={styles.containerTabela}>
+        <table className={styles.tabela}>
+          <thead>
+            <tr>
+              <th>Pessoa</th>
+              <th>Telefone</th>
+              <th>Vínculo</th>
+              <th>Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SkeletonPessoas linhas={TAMANHO_PAGINA} podeGerenciar={false} />
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function PessoasConteudo() {
   const router = useRouter()
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
@@ -90,25 +112,7 @@ function PessoasConteudo() {
   }
 
   if (!hidratado) {
-    return (
-      <div className={styles.pagina}>
-        <div className={styles.containerTabela}>
-          <table className={styles.tabela}>
-            <thead>
-              <tr>
-                <th>Pessoa</th>
-                <th>Telefone</th>
-                <th>Vínculo</th>
-                <th>Cadastro</th>
-              </tr>
-            </thead>
-            <tbody>
-              <SkeletonPessoas linhas={TAMANHO_PAGINA} podeGerenciar={false} />
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
+    return <EsqueletoPagina />
   }
 
   return (
@@ -274,7 +278,7 @@ function PessoasConteudo() {
 
 export default function PessoasPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina} />}>
+    <Suspense fallback={<EsqueletoPagina />}>
       <PessoasConteudo />
     </Suspense>
   )

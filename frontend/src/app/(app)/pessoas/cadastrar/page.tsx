@@ -26,7 +26,7 @@ export default function CadastrarPessoaPage() {
   }
 
   return (
-    <div className={styles.pagina}>
+    <div className={`${styles.pagina} ${form.saindo ? 'saida-formulario' : ''}`}>
       <nav className={styles.breadcrumb} aria-label="breadcrumb">
         <Link href="/inicio" className={styles.breadcrumbLink}>Início</Link>
         <ChevronRight size={16} className={styles.breadcrumbSep} />

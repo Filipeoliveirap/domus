@@ -43,6 +43,7 @@ public class PrazoInscricaoProcessador {
         // estourar LazyInitializationException. Ver memória "Principal desanexado + LAZY".
         Evento evento = eventoRepository.findById(eventoId).orElse(null);
         if (evento == null) return;
+        if (evento.getInscricoesAte() == null) return;
 
         LocalDateTime prazo = evento.getInscricoesAte();
         boolean venceu = agora.isAfter(prazo);

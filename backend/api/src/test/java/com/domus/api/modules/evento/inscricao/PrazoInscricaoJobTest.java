@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -120,11 +121,13 @@ class PrazoInscricaoJobTest {
                 .id(UUID.randomUUID()).igreja(igreja()).evento(evento).pessoa(pessoa)
                 .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.buscarAguardandoPagamentoSemAvisoDePrazo(evento.getId()))
-                .thenReturn(List.of(inscricao)).thenReturn(List.of());
+                .thenReturn(List.of(inscricao));
 
         processar(evento);
-        processar(evento);
 
+        // O "uma vez só" é garantido pelo carimbo (aviso_prazo_incompleto_em), não pelo
+        // re-stub do repositório: a query já filtra quem tem o carimbo.
+        assertThat(inscricao.getAvisoPrazoIncompletoEm()).isNotNull();
         verify(notificacaoService, times(1)).criar(eq(TipoNotificacao.PRAZO_INSCRICAO_INCOMPLETA),
                 eq(igrejaId), eq(usuarioId), anyString(), anyString());
         verify(inscricaoRepository).save(inscricao);

@@ -11,6 +11,7 @@ import { movimentacoesService } from '@/services/financeiro/movimentacao.service
 import type { MovimentacaoRequest, MovimentacaoResponse } from '@/types/financeiro/movimentacao.type'
 import type { ApiError } from '@/types/api.types'
 import { useRouter } from 'next/navigation'
+import { useSaidaFormulario } from '@/hooks/forms/useSaidaFormulario'
 
 interface UseMovimentacaoFormParams {
   movimentacaoId?: string
@@ -24,6 +25,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
   const queryClient = useQueryClient()
   const ehEdicao = !!movimentacaoId
   const router = useRouter()
+  const { saindo, sairAnimado } = useSaidaFormulario()
 
   const form = useAppForm<MovimentacaoFormInput, MovimentacaoFormData>({
     resolver: zodResolver(movimentacaoSchema),
@@ -90,7 +92,7 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
-      router.back()
+      sairAnimado(() => router.back())
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data
@@ -111,5 +113,5 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
     }
   }
 
-  return { ...form, contribuintesArray, onSubmit, erroGeral, isLoading, ehEdicao }
+  return { ...form, contribuintesArray, onSubmit, erroGeral, isLoading, ehEdicao, saindo }
 }

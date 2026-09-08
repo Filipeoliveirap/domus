@@ -91,3 +91,13 @@
 }
 .botaoRestaurar:active:not(:disabled),
 .botaoExcluir:active:not(:disabled) { transform: scale(0.95); }
+
+/* feedback de toque na linha — padrão das demais listas */
+.linha {
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--transition-fast), transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.linha:active { transform: scale(0.996); }
+@media (prefers-reduced-motion: reduce) {
+  .linha:active { transform: none; }
+}

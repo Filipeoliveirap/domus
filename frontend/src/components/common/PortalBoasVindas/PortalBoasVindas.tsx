@@ -36,6 +36,13 @@ export function PortalBoasVindas() {
     setTipoCongelado(tipo)
   }
 
+  // Sair do app shell no meio da animação (ex.: entrar no checkout, que é rota fora do
+  // shell) desmonta este componente. Sem isto, `boasVindas` ficaria armado no store e a
+  // animação de login re-tocaria ao voltar pro shell — só deve tocar em login/retorno real.
+  useEffect(() => {
+    return () => { useUiStore.getState().encerrarBoasVindas() }
+  }, [])
+
   useEffect(() => {
     if (fase !== 'entrada') return
     const reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches

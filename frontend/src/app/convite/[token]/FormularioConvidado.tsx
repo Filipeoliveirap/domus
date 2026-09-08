@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import axios from 'axios'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEntrarComoConvidado } from '@/hooks/convite/useEntrarComoConvidado'
+import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
 import { CamposExtrasForm } from '@/components/module/eventos/CamposExtrasForm'
 import { formatarTelefone } from '@/lib/masks'
 import type { CampoPersonalizadoResponse } from '@/types/campoPersonalizado.type'
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso }: Props) {
-  const router = useRouter()
+  const irParaCheckout = useIrParaCheckout()
   const entrar = useEntrarComoConvidado(token)
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -53,7 +53,7 @@ export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso 
       {
         onSuccess: (resposta) => {
           if (resposta.cobrancaId) {
-            router.push(`/eventos/${eventoId}/pagamento/${resposta.cobrancaId}`)
+            irParaCheckout(eventoId, resposta.cobrancaId, undefined, 0)
           } else {
             onSucesso()
           }

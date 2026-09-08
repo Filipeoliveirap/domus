@@ -28,7 +28,7 @@ import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 // selo do card e os chips do formulário, nenhum nome de recorte solto por aqui.
 const OPCOES_RECORTE = RECORTES_ETARIOS.map((r) => ({ valor: r.nome, label: r.nome }))
 
-const TAMANHO_PAGINA = 12
+const TAMANHO_PAGINA = 9
 
 function EventosConteudo() {
   const router = useRouter()

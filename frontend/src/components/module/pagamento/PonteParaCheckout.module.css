@@ -1,0 +1,85 @@
+.veu {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  /* translúcido: o drawer/modal desliza a saída atrás do vidro fosco antes do route push */
+  background: color-mix(in srgb, var(--color-bg-page) 82%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.veu.visivel {
+  opacity: 1;
+  visibility: visible;
+}
+
+.selo {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-success-bg, var(--color-primary-light));
+  color: var(--color-success, var(--color-primary));
+}
+.veu.visivel .selo {
+  animation: pontePop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anel {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-success-bg, var(--color-primary-light));
+}
+.veu.visivel .anel {
+  animation: ponteAnel 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.titulo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.sub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.veu.visivel .titulo,
+.veu.visivel .sub {
+  animation: ponteSobe 0.4s ease 0.08s both;
+}
+
+@keyframes pontePop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes ponteAnel {
+  from { opacity: 0.6; transform: scale(0.7); }
+  to { opacity: 0; transform: scale(1.8); }
+}
+@keyframes ponteSobe {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veu { transition: opacity 0.12s ease, visibility 0.12s ease; }
+  .veu.visivel .selo,
+  .veu.visivel .anel,
+  .veu.visivel .titulo,
+  .veu.visivel .sub {
+    animation: none;
+  }
+  .anel { display: none; }
+}

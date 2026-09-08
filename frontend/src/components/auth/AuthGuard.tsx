@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
+import { useUiStore } from '@/store/uiStore'
+import { boasVindasJaVista, marcarBoasVindasVista } from '@/lib/boasVindas'
 import { authService } from '@/services/auth.service'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { ModalReaceitarTermos } from '@/components/common/ModalReaceitarTermos/ModalReaceitarTermos'
@@ -27,7 +29,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     authService
       .me()
       .then((sessao) => {
-        if (!cancelado) login(sessao)
+        if (cancelado) return
+        // Voltou com sessão já ativa: fade de marca curto, 1×/sessão do navegador. Não
+        // roda se o reaceite de termos for aparecer.
+        if (!boasVindasJaVista() && !sessao.precisaAceitarTermos) {
+          marcarBoasVindasVista()
+          useUiStore.getState().mostrarBoasVindas('curta')
+        }
+        login(sessao)
       })
       .catch((erro: unknown) => {
         if (cancelado) return

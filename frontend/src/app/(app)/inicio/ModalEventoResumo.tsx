@@ -184,7 +184,11 @@ export function ModalEventoResumo({ eventoId, aoFechar }: Props) {
               {minha?.inscrito && (
                 <span className={styles.seloInscrito}>
                   <CheckCircle2 size={12} aria-hidden="true" />
-                  {evento.situacao === 'ENCERRADO' ? 'Você participou desse evento' : 'Você está inscrito'}
+                  {evento.situacao === 'ENCERRADO'
+                    ? 'Você participou desse evento'
+                    : evento.requerInscricao
+                      ? 'Você está inscrito'
+                      : 'Você vai'}
                 </span>
               )}
             </header>

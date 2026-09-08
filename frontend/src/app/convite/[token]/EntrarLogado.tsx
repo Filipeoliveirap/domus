@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCamposPersonalizadosMinha } from '@/hooks/evento/useCamposPersonalizadosMinha'
@@ -20,6 +21,7 @@ interface Props {
  *  link (ver spec). Não guarda "veio de convite" pra Pessoa cadastrada, por decisão. */
 export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
   const router = useRouter()
+  const irParaCheckout = useIrParaCheckout()
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId, true)
   const { data: campos = [] } = useCamposPersonalizadosMinha(eventoId)
@@ -57,7 +59,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
         <button
           type="button"
           className={styles.btnConfirmar}
-          onClick={() => router.push(`/eventos/${eventoId}/pagamento/${minha.cobrancaPendenteId}`)}
+          onClick={() => irParaCheckout(eventoId, minha.cobrancaPendenteId!, undefined, 0)}
         >
           Continuar pagamento
         </button>
@@ -89,7 +91,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
    *  fluxo antigo (`onSucesso`, tela estática "Inscrição confirmada!"). */
   function finalizar(cobrancaId: string | null) {
     if (cobrancaId) {
-      router.push(`/eventos/${eventoId}/pagamento/${cobrancaId}`)
+      irParaCheckout(eventoId, cobrancaId, undefined, 0)
     } else {
       onSucesso()
     }

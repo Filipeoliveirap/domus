@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useCriarMinisterio, useAtualizarMinisterio, useAtualizarFotoMinisterio } from '@/hooks/ministerio/useMinisterioForm'
@@ -23,12 +23,20 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const { ministerio: rotuloMinisterio } = useRotulos()
   const [nome, setNome] = useState(ministerio?.nome ?? '')
   const [fotoId, setFotoId] = useState<string | null>(ministerio?.fotoId ?? null)
-  const [erro, setErro] = useState<string | undefined>(undefined)
   const criar = useCriarMinisterio()
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
   const atualizarFoto = useAtualizarFotoMinisterio(ministerio?.id ?? '')
   const salvando = criar.isPending || atualizar.isPending
   const { saindo, fechar } = useFecharAnimado(onClose, 260)
+  const nomeRef = useRef<HTMLInputElement>(null)
+
+  // Foco no campo só no desktop: no bottom-sheet mobile o autoFocus abre o teclado na hora
+  // e empurra o sheet pra cima antes da animação de entrada assentar.
+  useEffect(() => {
+    if (!window.matchMedia('(min-width: 768px)').matches) return
+    const t = window.setTimeout(() => nomeRef.current?.focus(), 60)
+    return () => window.clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape' && !salvando) fechar() }
@@ -91,9 +99,8 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
           label="Nome"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          error={erro}
           placeholder="Ex.: Louvor"
-          autoFocus
+          ref={nomeRef}
         />
         <div className={styles.acoes}>
           <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>

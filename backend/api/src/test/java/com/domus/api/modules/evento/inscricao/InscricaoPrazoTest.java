@@ -340,4 +340,51 @@ class InscricaoPrazoTest {
         verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
         verify(pago).registrarEstorno(any());
     }
+
+    // A política de reembolso vale pra QUALQUER pessoa cancelando a PRÓPRIA inscrição —
+    // inclusive admin/líder (meuMembroId == pessoa da inscrição => souEu). A trava de
+    // PERMISSÃO (NAO_PERMITIDO) é que ignora o gestor; o reembolso não.
+    @Test
+    void adminCancelaAPropriaInscricaoDepoisDoPrazoSemReembolsoNaoEstorna() {
+        var evento = eventoPagoSemReembolsoAposPrazo(LocalDateTime.now().minusHours(1));
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ADMIN_IGREJA", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+        verify(pago, never()).registrarEstorno(any());
+        org.assertj.core.api.Assertions.assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void liderCancelaAPropriaInscricaoDepoisDoPrazoSemReembolsoNaoEstorna() {
+        var evento = eventoPagoSemReembolsoAposPrazo(LocalDateTime.now().minusHours(1));
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "LIDER", igrejaId);
+
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+        verify(pago, never()).registrarEstorno(any());
+        org.assertj.core.api.Assertions.assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void adminCancelaAPropriaInscricaoDepoisDoPrazoComReembolsoEstorna() {
+        var evento = eventoPagoComPrazo(LocalDateTime.now().minusHours(1), true); // PERMITIDO_COM_REEMBOLSO
+        var pessoa = pessoaComum();
+        var inscricao = inscricaoDe(evento, pessoa);
+        var pago = cobranca(inscricao.getId(), com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO);
+        when(cobrancaEventoRepository.findByInscricaoId(inscricao.getId())).thenReturn(List.of(pago));
+
+        service.cancelar(inscricao.getId(), UUID.randomUUID(), pessoa.getId(), "ADMIN_IGREJA", igrejaId);
+
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
+        verify(pago).registrarEstorno(any());
+    }
 }

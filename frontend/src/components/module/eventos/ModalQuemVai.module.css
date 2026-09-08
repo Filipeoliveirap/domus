@@ -328,4 +328,13 @@ button.avatar:active {
   .lista {
     padding: 8px 12px 16px;
   }
+
+  /* Numa linha estreita, "avatar + nome + selo da igreja + pílula" não cabe — a pílula
+     vira só o ícone (o aria-label já descreve a ação). */
+  .cancelar {
+    padding: 6px;
+  }
+  .cancelar span {
+    display: none;
+  }
 }

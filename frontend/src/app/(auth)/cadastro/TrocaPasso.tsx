@@ -57,18 +57,34 @@ export function TrocaPasso({
   useLayoutEffect(() => {
     if (!emTransicao) return
     const palco = palcoRef.current
+    const timers: number[] = []
     if (palco) {
+      const alturaNova = palco.scrollHeight // cena nova está em fluxo; a que sai é absolute
+      const encolhe = alturaNova < alturaEstavel.current
       palco.style.height = `${alturaEstavel.current}px`
       void palco.offsetHeight // reflow: fixa o "de" antes de animar
-      palco.style.height = `${palco.scrollHeight}px`
+      if (encolhe) {
+        // Ao voltar pra um passo mais curto, segura a altura alta até a cena que sai quase
+        // terminar de deslizar — senão o `overflow: hidden` corta o rodapé dela e fica
+        // estranho (o avanço não tem isso porque o palco só cresce).
+        timers.push(window.setTimeout(() => { palco.style.height = `${alturaNova}px` }, 150))
+      } else {
+        palco.style.height = `${alturaNova}px`
+      }
     }
-    const t = window.setTimeout(() => {
-      setCamadas((prev) =>
-        prev.filter((c) => c.passo === ativo).map((c) => ({ ...c, entrando: 0 as const })),
-      )
-      if (palco) palco.style.height = ''
-    }, SAIDA_MS)
-    return () => window.clearTimeout(t)
+    timers.push(
+      window.setTimeout(() => {
+        setCamadas((prev) =>
+          prev.filter((c) => c.passo === ativo).map((c) => ({ ...c, entrando: 0 as const })),
+        )
+      }, SAIDA_MS),
+    )
+    timers.push(
+      window.setTimeout(() => {
+        if (palcoRef.current) palcoRef.current.style.height = ''
+      }, SAIDA_MS + 200),
+    )
+    return () => timers.forEach(window.clearTimeout)
     // reage só à troca de cena
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ativo])

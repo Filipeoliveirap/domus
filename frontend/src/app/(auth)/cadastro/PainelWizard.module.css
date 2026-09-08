@@ -62,6 +62,11 @@
   letter-spacing: 0.16em;
 }
 
+/* "Passo N de N" — só no mobile (no desktop o círculo numerado + a copy dão o contexto) */
+.passoMobile {
+  display: none;
+}
+
 .rotulo {
   font-size: 12px;
   font-weight: 600;
@@ -150,12 +155,12 @@
     display: none;
   }
   .conteudo {
-    flex-direction: row;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
   }
   .marca {
-    flex-shrink: 0;
+    width: 100%;
   }
   .logo {
     height: 24px;
@@ -164,11 +169,17 @@
     color: var(--color-text-dark, #1e293b);
     font-size: 12px;
   }
+  .passoMobile {
+    display: block;
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+  }
   .meio {
     display: none;
   }
   .progresso {
-    flex: 1;
     gap: 6px;
   }
   .progItem {

@@ -23,7 +23,7 @@ import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { rotuloRole } from '@/lib/formats/usuarioFormat'
 import { Transicao } from '@/components/common/Transicao/Transicao'
-import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
+import { TrocaCena } from '@/components/common/TrocaCena/TrocaCena'
 import type { SituacaoEvento, SituacaoInscricao, PoliticaCancelamentoAposPrazo } from '@/types/evento.type'
 import type { Impedimento, MinhaInscricaoResponse } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
@@ -278,7 +278,18 @@ export function BotaoConfirmarPresenca({
           disabled={pendente || bloqueadoPorImpedimento}
           aria-pressed={marcado}
         >
-          <ThumbsUp size={15} className={styles.icone} aria-hidden="true" />
+          <span className={styles.euVouIcone}>
+            <ThumbsUp size={15} className={styles.icone} aria-hidden="true" />
+            {/* Faíscas: montam junto com o estado "vai" e disparam a animação uma vez —
+                curtida de post. Somem ao desmarcar. */}
+            {marcado && (
+              <span className={styles.faiscas} aria-hidden="true">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <i key={i} style={{ '--a': `${i * 60}deg` } as React.CSSProperties} />
+                ))}
+              </span>
+            )}
+          </span>
           {marcado ? 'Você vai' : 'Eu vou'}
         </button>
         {bloqueadoPorImpedimento && (

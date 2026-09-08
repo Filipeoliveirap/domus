@@ -11,6 +11,8 @@ import { versiculoDoDia } from '@/lib/versiculos'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
+import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { ModalEventoResumo } from './ModalEventoResumo'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import type { Aniversariante, EventoResumo } from '@/types/inicio.type'
@@ -50,7 +52,7 @@ function SeloInscritoCard({ eventoId }: { eventoId: string }) {
   return (
     <span className={styles.eventoInscrito}>
       <CheckCircle2 size={11} aria-hidden="true" />
-      Você está inscrito
+      {minha.requerInscricao ? 'Você está inscrito' : 'Você vai'}
     </span>
   )
 }
@@ -185,6 +187,7 @@ export default function InicioPage() {
               </button>
             </div>
 
+            <Transicao key={isLoading ? 'load' : isError ? 'erro' : eventos.length ? 'cheio' : 'vazio'} modo="fade">
             {isLoading ? (
               <SkeletonLista />
             ) : isError ? (
@@ -194,7 +197,12 @@ export default function InicioPage() {
                 aoTentarNovamente={() => refetch()}
               />
             ) : eventos.length === 0 ? (
-              <p className={styles.vazio}>Nenhum evento próximo por enquanto.</p>
+              <EstadoVazio
+                icone={Calendar}
+                titulo="Nenhum evento próximo"
+                mensagem="Quando a igreja marcar algo, aparece aqui."
+                acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
+              />
             ) : (
               <div className={styles.trilhaEventos}>
                 {eventos.map((e: EventoResumo) => {
@@ -237,6 +245,7 @@ export default function InicioPage() {
                 })}
               </div>
             )}
+            </Transicao>
           </section>
         </div>
 
@@ -249,6 +258,7 @@ export default function InicioPage() {
               <h2 className={styles.cardLateralTitulo}>Aniversariantes do mês</h2>
             </div>
 
+            <Transicao key={isLoading ? 'load' : isError ? 'erro' : aniversariantes.length ? 'cheio' : 'vazio'} modo="fade">
             {isLoading ? (
               <SkeletonLista />
             ) : isError ? (
@@ -258,7 +268,11 @@ export default function InicioPage() {
                 aoTentarNovamente={() => refetch()}
               />
             ) : aniversariantes.length === 0 ? (
-              <p className={styles.vazio}>Nenhum aniversariante este mês.</p>
+              <EstadoVazio
+                icone={Cake}
+                titulo="Ninguém faz aniversário este mês"
+                mensagem="Os aniversariantes do mês aparecem aqui."
+              />
             ) : (
               <>
                 <ul className={styles.listaAniv}>
@@ -275,6 +289,7 @@ export default function InicioPage() {
                 )}
               </>
             )}
+            </Transicao>
           </section>
         </div>
       </div>

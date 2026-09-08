@@ -25,6 +25,7 @@ import { EstornoPendenteBadge } from '@/components/module/eventos/EstornoPendent
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { ModalConfirmacao } from '@/components/common/ModalConfirmacao/ModalConfirmacao'
 import { ModalDetalheInscrito } from '@/components/module/eventos/ModalDetalheInscrito'
+import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { SkeletonInscritos } from './SkeletonInscritos'
@@ -59,8 +60,12 @@ export default function InscritosPage() {
 
   const [modalInscreverAberto, setModalInscreverAberto] = useState(false)
   const [inscritoCancelando, setInscritoCancelando] = useState<InscritoResponse | null>(null)
+  // Linha que colapsa antes de o refetch tirá-la da lista — o sumiço fica gradual.
+  const [saindoId, setSaindoId] = useState<string | null>(null)
+  const [fotoVisualizando, setFotoVisualizando] = useState<{ id: string; nome: string } | null>(null)
 
-  const cancelarInscricao = useCancelarInscricao()
+  // Sem toast: quando o gestor remove alguém, a linha colapsa na cara dele.
+  const cancelarInscricao = useCancelarInscricao(true)
   const marcarTodos = useMarcarTodosPresentes(eventoId)
   const desmarcarTodos = useDesmarcarTodosPresentes(eventoId)
   const marcarPresencaInscricao = useMarcarPresencaInscricao(eventoId)
@@ -151,10 +156,21 @@ export default function InscritosPage() {
 
   function aoConfirmarCancelamento() {
     if (!inscritoCancelando) return
-    cancelarInscricao.mutate(inscritoCancelando.id, {
-      onSuccess: () => setInscritoCancelando(null),
-    })
+    const id = inscritoCancelando.id
+    setInscritoCancelando(null)
+    setSaindoId(id)
+    // deixa a linha colapsar antes de disparar o cancelamento; NÃO limpa `saindoId` no
+    // sucesso (o refetch mantém a lista antiga por um instante — a linha "piscava de volta"
+    // antes de sumir). Só limpa se der erro.
+    window.setTimeout(() => {
+      cancelarInscricao.mutate(id, { onError: () => setSaindoId(null) })
+    }, 360)
   }
+
+  // A linha só fica colapsada enquanto ainda está na lista; quando o refetch a remove, ela
+  // some de vez sem passar pelo estado "de volta".
+  const colapsandoId =
+    saindoId && lista?.inscritos.content.some((i) => i.id === saindoId) ? saindoId : null
 
   return (
     <div className={styles.pagina}>
@@ -296,7 +312,7 @@ export default function InscritosPage() {
                       else setInscritoDetalhe(inscrito)
                     }
                     return (
-                    <div key={inscrito.id} className={styles.grupo}>
+                    <div key={inscrito.id} className={`${styles.grupo} ${colapsandoId === inscrito.id ? styles.grupoSaindo : ''}`}>
                       <div
                         className={`${styles.linha} ${mostraPresenca ? styles.linhaComPresenca : ''} ${clicavel ? styles.linhaClicavel : ''}`}
                         onClick={clicavel ? aoClicarLinha : undefined}
@@ -305,13 +321,21 @@ export default function InscritosPage() {
                         tabIndex={clicavel ? 0 : undefined}
                       >
                         <div className={styles.colParticipante}>
-                          <span className={styles.avatar}>
-                            {urlFoto(inscrito.fotoId, 'THUMB') ? (
+                          {urlFoto(inscrito.fotoId, 'THUMB') ? (
+                            <button
+                              type="button"
+                              className={styles.avatar}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setFotoVisualizando({ id: inscrito.fotoId!, nome: inscrito.nome })
+                              }}
+                              aria-label={`Ver foto de ${inscrito.nome}`}
+                            >
                               <Image src={urlFoto(inscrito.fotoId, 'THUMB')!} alt="" width={36} height={36} unoptimized className={styles.avatarFoto} />
-                            ) : (
-                              iniciais(inscrito.nome)
-                            )}
-                          </span>
+                            </button>
+                          ) : (
+                            <span className={styles.avatar}>{iniciais(inscrito.nome)}</span>
+                          )}
                           <span className={styles.colParticipanteTextos}>
                             <span className={styles.nome}>{inscrito.nome}</span>
                             {inscrito.convidadoPorNome && (
@@ -532,6 +556,14 @@ export default function InscritosPage() {
           mostraPresenca={mostraPresenca}
           temCamposPersonalizados={(camposPersonalizados ?? []).length > 0}
           onClose={() => setInscritoDetalhe(null)}
+        />
+      )}
+
+      {fotoVisualizando && (
+        <VisualizadorFoto
+          fotoId={fotoVisualizando.id}
+          descricao={`Foto de ${fotoVisualizando.nome}`}
+          onClose={() => setFotoVisualizando(null)}
         />
       )}
     </div>

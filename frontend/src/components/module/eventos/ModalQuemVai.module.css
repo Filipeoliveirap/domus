@@ -111,10 +111,67 @@
 
 .grupo {
   padding: 8px 0;
+  overflow: hidden;
+  max-height: 200px;
+  animation: qvLinhaEntra 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.28s ease, padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .grupo + .grupo {
   border-top: 1px solid var(--color-border);
+}
+
+/* Saída: colapsa + desliza antes de o refetch remover a linha (o modal segura ~360ms). */
+.grupoSaindo {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateX(-16px);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grupo { transition: opacity 0.15s ease; }
+  .grupoSaindo { transform: none; }
+}
+
+@keyframes qvLinhaEntra {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Skeleton de carregamento — mesma silhueta das linhas reais */
+.skeletonLinha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 4px;
+}
+.skeletonAvatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  animation: qvPulse 1.4s ease-in-out infinite;
+}
+.skeletonNome {
+  height: 12px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-primary-light);
+  animation: qvPulse 1.4s ease-in-out infinite;
+}
+@keyframes qvPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grupo { animation: none; }
+  .skeletonAvatar, .skeletonNome { animation: none; }
 }
 
 .linha {
@@ -130,11 +187,29 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  border: none;
+  padding: 0;
   border-radius: var(--radius-full);
   background: var(--color-primary-light);
   color: var(--color-primary);
+  font-family: inherit;
   font-weight: 600;
   overflow: hidden;
+}
+
+button.avatar {
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+button.avatar:hover {
+  transform: scale(1.06);
+}
+button.avatar:active {
+  transform: scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+  button.avatar { transition: none; }
+  button.avatar:hover, button.avatar:active { transform: none; }
 }
 
 .avatar {
@@ -170,23 +245,35 @@
 
 .cancelar {
   flex-shrink: 0;
-  border: none;
-  background: none;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-white);
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   color: var(--color-danger);
   cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform 0.12s ease;
 }
 
 .cancelar:hover:not(:disabled) {
   background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+.cancelar:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .cancelar:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cancelar { transition: background-color var(--transition-fast); }
+  .cancelar:active:not(:disabled) { transform: none; }
 }
 
 .nomeConvidado {
@@ -241,58 +328,13 @@
   .lista {
     padding: 8px 12px 16px;
   }
-}
 
-.confirmacao {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  /* Numa linha estreita, "avatar + nome + selo da igreja + pílula" não cabe — a pílula
+     vira só o ícone (o aria-label já descreve a ação). */
+  .cancelar {
+    padding: 6px;
+  }
+  .cancelar span {
+    display: none;
+  }
 }
-
-.confirmacaoTexto {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-}
-
-.confirmarSim,
-.confirmarNao {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 3px 10px;
-  background: var(--color-bg-white);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.confirmarSim {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-
-.confirmarSim:hover:not(:disabled) {
-  background: var(--color-danger-bg);
-}
-
-.confirmarSim:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.confirmarNao {
-  color: var(--color-text-secondary);
-}
-
-.confirmarNao:hover {
-  background: var(--color-bg-page);
-}
-
-/* --- polish: feedback de toque + hover guardado --- */
-.cancelar, .confirmarSim, .confirmarNao {
-  transition: background-color var(--transition-fast), color var(--transition-fast),
-              border-color var(--transition-fast), transform 0.1s ease;
-}
-.cancelar:active:not(:disabled),
-.confirmarSim:active:not(:disabled),
-.confirmarNao:active { transform: scale(0.94); }

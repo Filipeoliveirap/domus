@@ -208,9 +208,12 @@
 
   .card {
     /* ocupa a tela toda, sem "flutuar" — vira a própria tela.
-       flex:1 empurra o copyright pro rodapé quando o conteúdo é curto; quando é longo,
-       a .page cresce além de 100dvh e a rolagem aparece (sem clipping do topo). */
+       flex:1 0 auto garante altura mínima = viewport (conteúdo curto) e cresce com o
+       conteúdo (conteúdo longo → .page rola do topo, sem clipping).
+       justify-content: center equilibra o bloco (logo + form) no meio da tela em vez de
+       ficar colado no topo com um vão enorme embaixo. */
     flex: 1 0 auto;
+    justify-content: center;
     max-width: none;
     border: none;
     border-radius: 0;
@@ -218,7 +221,7 @@
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     gap: 24px;
-    padding: calc(env(safe-area-inset-top) + 40px)
+    padding: calc(env(safe-area-inset-top) + 24px)
              max(20px, env(safe-area-inset-right))
              calc(env(safe-area-inset-bottom) + 24px)
              max(20px, env(safe-area-inset-left));

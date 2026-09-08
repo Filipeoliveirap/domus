@@ -8,6 +8,7 @@ import { useLogin } from '@/hooks/auth/useLogin'
 import { authService } from '@/services/auth.service'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
+import { Loader } from '@/components/common/Loader/Loader'
 import styles from './page.module.css'
 import Image from 'next/image'
 
@@ -17,6 +18,9 @@ export default function LoginPage() {
   // ~320px. Medimos o container e passamos a largura real (a API do Google aceita 200–400).
   const googleWrapRef = useRef<HTMLDivElement>(null)
   const [larguraGoogle, setLarguraGoogle] = useState(340)
+  // Enquanto o me() abaixo não resolve, esconde só a área do formulário (não o card/logo):
+  // quem já tem sessão é redirecionado sem ver o form aparecer e sumir.
+  const [verificandoSessao, setVerificandoSessao] = useState(true)
   const {
     register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit,
     onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado, aplicarSessao,
@@ -32,7 +36,11 @@ export default function LoginPage() {
       .then((sessao) => aplicarSessao(sessao))
       .catch(() => {
         // 401 (sem sessão) é o caminho normal: fica na tela de login mesmo.
+        setVerificandoSessao(false)
       })
+    // Rede lenta/travada: não deixa o formulário escondido pra sempre.
+    const t = window.setTimeout(() => setVerificandoSessao(false), 4000)
+    return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -64,6 +72,12 @@ export default function LoginPage() {
           <p className={styles.subtitulo}>Bem vindo de volta! Entre na sua conta</p>
         </div>
 
+        {verificandoSessao ? (
+          <div className={styles.verificando} role="status" aria-live="polite">
+            <Loader variant="circular" size="lg" />
+          </div>
+        ) : (
+        <>
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
           <Input
             id="email"
@@ -153,6 +167,8 @@ export default function LoginPage() {
             Cadastre sua igreja
           </Link>
         </div>
+        </>
+        )}
       </div>
 
       <p className={styles.copyright}>© 2026 DOMUS Gestão Eclesiástica</p>

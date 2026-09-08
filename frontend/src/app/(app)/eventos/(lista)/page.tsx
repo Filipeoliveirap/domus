@@ -225,7 +225,7 @@ function EventosConteudo() {
 
 export default function EventosPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina} />}>
+    <Suspense fallback={<div className={styles.pagina}><SkeletonEventos cards={TAMANHO_PAGINA} /></div>}>
       <EventosConteudo />
     </Suspense>
   )

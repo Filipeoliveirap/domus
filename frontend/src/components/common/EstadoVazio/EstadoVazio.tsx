@@ -14,6 +14,8 @@ interface EstadoVazioProps {
   mensagem?: string
   acaoPrimaria?: AcaoBotao
   acaoSecundaria?: AcaoBotao
+  /** Menos padding e ícone menor — pra usar dentro de modal/drawer, não como tela inteira. */
+  compacta?: boolean
 }
 
 export function EstadoVazio({
@@ -22,11 +24,12 @@ export function EstadoVazio({
   mensagem,
   acaoPrimaria,
   acaoSecundaria,
+  compacta = false,
 }: EstadoVazioProps) {
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${compacta ? styles.compacta : ''}`}>
       <div className={styles.iconeWrap}>
-        <Icone size={32} strokeWidth={1.5} />
+        <Icone size={compacta ? 24 : 32} strokeWidth={1.5} />
       </div>
       <h3 className={styles.titulo}>{titulo}</h3>
       {mensagem && <p className={styles.mensagem}>{mensagem}</p>}

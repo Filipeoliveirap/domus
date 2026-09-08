@@ -55,6 +55,14 @@
   gap: 20px;
 }
 
+/* Enquanto o me() checa se já há sessão — segura a altura pra o card não "pular". */
+.verificando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
 .forgotRow {
   display: flex;
   justify-content: flex-end;

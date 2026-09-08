@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Pencil, KeyRound, Archive } from 'lucide-react'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useBuscaUrl } from '@/hooks/busca/useBuscaUrl'
@@ -11,11 +10,11 @@ import { usePaginaUrl } from '@/hooks/busca/usePaginaUrl'
 import { clsx } from 'clsx'
 import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/PainelFiltros'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Avatar } from '@/components/common/Avatar/Avatar'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
-  iniciais, rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
+  rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
 } from '@/lib/formats/pessoaFormat'
-import { urlFoto } from '@/lib/urlFoto'
 import { MenuAcoes, ItemAcao } from '@/components/common/menuacoes/MenuAcoes'
 import { PessoaResponse } from '@/types/pessoa.type'
 import styles from './page.module.css'
@@ -187,14 +186,12 @@ function PessoasConteudo() {
                   >
                     <td>
                       <div className={styles.celulaPessoa}>
-                        <span className={styles.avatar}>
-                          {urlFoto(p.fotoId, 'THUMB') ? (
-                            <Image src={urlFoto(p.fotoId, 'THUMB')!} alt="" width={40} height={40} unoptimized className={styles.avatarFoto}
-                              onClick={(e) => { e.stopPropagation(); setFotoVisualizando(p.fotoId) }} />
-                          ) : (
-                            iniciais(p.nome)
-                          )}
-                        </span>
+                        <Avatar
+                          fotoId={p.fotoId}
+                          nome={p.nome}
+                          tamanho={40}
+                          onVerFoto={p.fotoId ? () => setFotoVisualizando(p.fotoId) : undefined}
+                        />
                         <div className={styles.pessoaInfo}>
                           <span className={styles.nome}>{p.nome}</span>
                           {p.cargo && <span className={styles.email}>{p.cargo}</span>}

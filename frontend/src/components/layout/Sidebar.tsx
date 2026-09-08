@@ -124,6 +124,7 @@ export function Sidebar() {
     } catch {
     }
     logout()
+    fecharNav()
     queryClient.clear()
     router.replace('/login')
   }

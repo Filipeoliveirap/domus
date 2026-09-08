@@ -1,6 +1,8 @@
 import { loginSchema, type LoginFormData } from "@/lib/validators";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
+import { useUiStore } from "@/store/uiStore";
+import { marcarBoasVindasVista } from "@/lib/boasVindas";
 import { queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from 'next/navigation'
@@ -57,7 +59,16 @@ export function useLogin() {
         // outra conta sem recarregar a página mantinha as queries (pessoas, eventos,
         // financeiro…) da conta anterior visíveis até um Ctrl+Shift+R.
         queryClient.clear()
+        // Sidebar/drawer mobile podem ter ficado abertos de antes do logout — o estado de
+        // UI não persiste, mas sobrevive na memória numa SPA. Zera antes de entrar.
+        useUiStore.getState().fecharNav()
         login(sessao)
+        // Boas-vindas completa só depois de um login de verdade — e não por cima do modal
+        // de reaceite de termos, que precisa vir primeiro.
+        if (!sessao.precisaAceitarTermos) {
+            marcarBoasVindasVista()
+            useUiStore.getState().mostrarBoasVindas('completa')
+        }
         const next = new URLSearchParams(window.location.search).get('next')
         router.push(destinoSeguro(next))
     }

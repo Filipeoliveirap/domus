@@ -21,6 +21,14 @@ interface UiState {
   ponteCheckout: boolean
   abrirPonteCheckout: () => void
   fecharPonteCheckout: () => void
+
+  // Animação de boas-vindas mostrada por cima do app shell logo que ele aparece.
+  // `'completa'` = depois de um login de verdade (logo + saudação + cortina que sobe).
+  // `'curta'` = ao voltar com sessão já ativa (fade de marca rápido, 1×/sessão do navegador).
+  // `null` = nada rodando. `mostrarBoasVindas` não sobrescreve uma animação em andamento.
+  boasVindas: 'completa' | 'curta' | null
+  mostrarBoasVindas: (tipo: 'completa' | 'curta') => void
+  encerrarBoasVindas: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -36,4 +44,8 @@ export const useUiStore = create<UiState>((set) => ({
   ponteCheckout: false,
   abrirPonteCheckout: () => set({ ponteCheckout: true }),
   fecharPonteCheckout: () => set((s) => (s.ponteCheckout ? { ponteCheckout: false } : s)),
+
+  boasVindas: null,
+  mostrarBoasVindas: (tipo) => set((s) => (s.boasVindas ? s : { boasVindas: tipo })),
+  encerrarBoasVindas: () => set((s) => (s.boasVindas ? { boasVindas: null } : s)),
 }))

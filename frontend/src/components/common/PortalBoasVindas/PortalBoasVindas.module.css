@@ -1,0 +1,87 @@
+.veu {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-bg-page) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translateY(0);
+  transition: transform 0.64s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* Cortina: o véu inteiro sobe e descobre o app que já está montado por trás. */
+.veu.subindo {
+  transform: translateY(-100%);
+}
+
+.conteudo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: bvSurge 0.45s ease both;
+}
+
+.logo {
+  height: 52px;
+  width: auto;
+  animation: bvLogo 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.saudacao {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  animation: bvSobe 0.5s ease 0.14s both;
+}
+.saudacao strong {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.barra {
+  position: relative;
+  width: 132px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+  animation: bvSobe 0.5s ease 0.22s both;
+}
+.barra::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+  border-radius: 999px;
+  background: var(--color-primary);
+  animation: bvVarre 1.15s ease-in-out infinite;
+}
+
+@keyframes bvSurge {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bvLogo {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes bvSobe {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bvVarre {
+  from { left: -42%; }
+  to { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veu { transition: none; }
+  .conteudo, .logo, .saudacao, .barra { animation: none; }
+  .barra { display: none; }
+}

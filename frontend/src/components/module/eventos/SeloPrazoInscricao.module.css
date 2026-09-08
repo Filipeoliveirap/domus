@@ -1,6 +1,7 @@
 .neutro,
 .destaque,
-.encerrado {
+.encerrado,
+.hoje {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -26,4 +27,10 @@
 .encerrado {
   background: var(--color-bg-sidebar, #f1f5f9);
   color: var(--color-text-muted, #94a3b8);
+}
+
+.hoje {
+  background: var(--color-danger-bg, #fef2f2);
+  color: var(--color-danger, #dc2626);
+  font-weight: var(--font-weight-semibold, 600);
 }

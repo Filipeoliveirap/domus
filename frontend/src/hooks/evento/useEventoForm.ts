@@ -75,6 +75,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       localId: undefined, localTexto: undefined, enderecoLocal: undefined, novoLocal: undefined,
       tipo: '', responsavelPessoaIds: [],
       requerInscricao: false,
+      inscricoesAteData: '', inscricoesAteHora: '',
+      politicaCancelamentoAposPrazo: 'PERMITIDO_COM_REEMBOLSO',
       controlaPresenca: false,
       vagas: undefined,
       tipoInscricao: 'GRATUITO',
@@ -135,6 +137,9 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: eventoInicial.tipo ?? '',
         responsavelPessoaIds: (eventoInicial.responsaveis ?? []).filter((r) => r.id).map((r) => r.id as string),
         requerInscricao: eventoInicial.requerInscricao,
+        inscricoesAteData: eventoInicial.inscricoesAte ? eventoInicial.inscricoesAte.slice(0, 10) : '',
+        inscricoesAteHora: eventoInicial.inscricoesAte ? eventoInicial.inscricoesAte.slice(11, 16) : '',
+        politicaCancelamentoAposPrazo: eventoInicial.politicaCancelamentoAposPrazo ?? 'PERMITIDO_COM_REEMBOLSO',
         controlaPresenca: eventoInicial.controlaPresenca,
         vagas: eventoInicial.vagas ?? undefined,
         tipoInscricao: eventoInicial.preco != null ? 'PAGO' : 'GRATUITO',
@@ -234,6 +239,11 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         tipo: data.tipo || undefined,
         responsavelPessoaIds: data.responsavelPessoaIds ?? [],
         requerInscricao: data.requerInscricao,
+        inscricoesAte: (data.requerInscricao && data.inscricoesAteData && data.inscricoesAteHora)
+          ? `${data.inscricoesAteData}T${data.inscricoesAteHora}` : null,
+        politicaCancelamentoAposPrazo: data.tipoInscricao === 'PAGO'
+          ? data.politicaCancelamentoAposPrazo
+          : (data.politicaCancelamentoAposPrazo === 'NAO_PERMITIDO' ? 'NAO_PERMITIDO' : 'PERMITIDO_COM_REEMBOLSO'),
         // Forçado a false quando requerInscricao=false, mesmo que o form tenha valor de edição anterior.
         controlaPresenca: data.requerInscricao ? data.controlaPresenca : false,
         exclusivoMembros: data.exclusivoMembros,

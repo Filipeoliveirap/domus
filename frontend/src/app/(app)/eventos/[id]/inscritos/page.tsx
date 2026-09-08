@@ -484,6 +484,7 @@ export default function InscritosPage() {
           tituloEvento={evento.titulo}
           exclusivoMembros={evento.exclusivoMembros}
           preco={evento.preco}
+          situacaoInscricao={evento.situacaoInscricao}
           onClose={() => setModalInscreverAberto(false)}
         />
       )}
@@ -495,6 +496,7 @@ export default function InscritosPage() {
           // Titular e convidado agora são a mesma InscricaoEvento, cada um cancelado por
           // conta própria — cancelar um não leva mais nenhum outro junto (Task 4 Step 7).
           quantidadeConvidados={0}
+          semReembolso={evento?.preco != null && evento?.situacaoInscricao === 'ENCERRADA_POR_PRAZO' && evento?.politicaCancelamentoAposPrazo === 'PERMITIDO_SEM_REEMBOLSO' && inscritoCancelando.status === 'CONFIRMADA'}
           isLoading={cancelarInscricao.isPending}
           onConfirmar={aoConfirmarCancelamento}
           onClose={() => setInscritoCancelando(null)}

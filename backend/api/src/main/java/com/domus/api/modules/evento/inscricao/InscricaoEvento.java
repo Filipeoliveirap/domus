@@ -58,6 +58,10 @@ public class InscricaoEvento {
     @JoinColumn(name = "visitante_id")
     private Visitante visitante;
 
+    /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "inscrição incompleta, prazo chegando"). */
+    @Column(name = "aviso_prazo_incompleto_em")
+    private java.time.LocalDateTime avisoPrazoIncompletoEm;
+
     @Column(name = "inscrito_por_usuario_id")
     private UUID inscritoPorUsuarioId;
 

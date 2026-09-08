@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import Image from 'next/image'
-import { X, Users } from 'lucide-react'
+import { X, XCircle, Users } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
+import { ConfirmarCancelamentoInscricao } from './ConfirmarCancelamentoInscricao'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
@@ -43,9 +44,22 @@ export function ModalQuemVai({
   // size=500: "quem vai" mostra todos de uma vez, não pagina
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(eventoId, ehGestor, '', 0, 500)
   const cancelar = useCancelarInscricao()
-  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+  const [aRemover, setARemover] = useState<{ id: string; nome: string } | null>(null)
+  // Linha que colapsa antes de o refetch tirá-la da lista — mesma ideia da lista de membros
+  // de célula: o sumiço fica gradual em vez de "pular".
+  const [saindoId, setSaindoId] = useState<string | null>(null)
   const [fotoAberta, setFotoAberta] = useState<{ id: string; nome: string } | null>(null)
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
+
+  function confirmarCancelamento() {
+    if (!aRemover) return
+    const id = aRemover.id
+    setARemover(null)
+    setSaindoId(id)
+    window.setTimeout(() => {
+      cancelar.mutate(id, { onSettled: () => setSaindoId(null) })
+    }, 360)
+  }
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -132,7 +146,11 @@ export function ModalQuemVai({
             </div>
           ) : (
             linhas.map((l, i) => (
-              <div key={l.id} className={styles.grupo} style={{ '--i': i } as React.CSSProperties}>
+              <div
+                key={l.id}
+                className={clsx(styles.grupo, saindoId === l.id && styles.grupoSaindo)}
+                style={{ '--i': i } as React.CSSProperties}
+              >
                 <div className={styles.linha}>
                   {urlFoto(l.fotoId, 'THUMB') ? (
                     <button
@@ -159,35 +177,16 @@ export function ModalQuemVai({
                   )}
 
                   {podeCancelar && (
-                    confirmandoId === l.id ? (
-                      <span className={styles.confirmacao}>
-                        <span className={styles.confirmacaoTexto}>Cancelar?</span>
-                        <button
-                          type="button"
-                          className={styles.confirmarSim}
-                          onClick={() => cancelar.mutate(l.id, { onSuccess: () => setConfirmandoId(null) })}
-                          disabled={cancelar.isPending}
-                        >
-                          Sim
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.confirmarNao}
-                          onClick={() => setConfirmandoId(null)}
-                        >
-                          Não
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.cancelar}
-                        onClick={() => setConfirmandoId(l.id)}
-                        disabled={cancelar.isPending}
-                      >
-                        Cancelar inscrição
-                      </button>
-                    )
+                    <button
+                      type="button"
+                      className={styles.cancelar}
+                      onClick={() => setARemover({ id: l.id, nome: l.nome })}
+                      disabled={cancelar.isPending}
+                      aria-label={`Cancelar inscrição de ${l.nome}`}
+                    >
+                      <XCircle size={14} aria-hidden="true" />
+                      Cancelar inscrição
+                    </button>
                   )}
                 </div>
               </div>
@@ -198,12 +197,23 @@ export function ModalQuemVai({
       </div>
     </div>
 
-    {/* Irmão do overlay: dentro dele, o clique pra fechar a foto fecharia o modal junto. */}
+    {/* Irmãos do overlay: dentro dele, o clique pra fechar fecharia o modal junto. */}
     {fotoAberta && (
       <VisualizadorFoto
         fotoId={fotoAberta.id}
         descricao={`Foto de ${fotoAberta.nome}`}
         onClose={() => setFotoAberta(null)}
+      />
+    )}
+
+    {aRemover && (
+      <ConfirmarCancelamentoInscricao
+        nome={aRemover.nome}
+        proprio={false}
+        quantidadeConvidados={0}
+        isLoading={cancelar.isPending}
+        onConfirmar={confirmarCancelamento}
+        onClose={() => setARemover(null)}
       />
     )}
     </>

@@ -59,6 +59,8 @@ export default function InscritosPage() {
 
   const [modalInscreverAberto, setModalInscreverAberto] = useState(false)
   const [inscritoCancelando, setInscritoCancelando] = useState<InscritoResponse | null>(null)
+  // Linha que colapsa antes de o refetch tirá-la da lista — o sumiço fica gradual.
+  const [saindoId, setSaindoId] = useState<string | null>(null)
 
   const cancelarInscricao = useCancelarInscricao()
   const marcarTodos = useMarcarTodosPresentes(eventoId)
@@ -151,9 +153,13 @@ export default function InscritosPage() {
 
   function aoConfirmarCancelamento() {
     if (!inscritoCancelando) return
-    cancelarInscricao.mutate(inscritoCancelando.id, {
-      onSuccess: () => setInscritoCancelando(null),
-    })
+    const id = inscritoCancelando.id
+    setInscritoCancelando(null)
+    setSaindoId(id)
+    // deixa a linha colapsar antes do refetch (que vem no onSuccess do hook) removê-la
+    window.setTimeout(() => {
+      cancelarInscricao.mutate(id, { onSettled: () => setSaindoId(null) })
+    }, 360)
   }
 
   return (
@@ -296,7 +302,7 @@ export default function InscritosPage() {
                       else setInscritoDetalhe(inscrito)
                     }
                     return (
-                    <div key={inscrito.id} className={styles.grupo}>
+                    <div key={inscrito.id} className={`${styles.grupo} ${saindoId === inscrito.id ? styles.grupoSaindo : ''}`}>
                       <div
                         className={`${styles.linha} ${mostraPresenca ? styles.linhaComPresenca : ''} ${clicavel ? styles.linhaClicavel : ''}`}
                         onClick={clicavel ? aoClicarLinha : undefined}

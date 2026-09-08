@@ -51,6 +51,21 @@ function CabecalhoTabela() {
   )
 }
 
+function EsqueletoPagina() {
+  return (
+    <div className={styles.pagina}>
+      <div className={styles.containerTabela}>
+        <table className={styles.tabela}>
+          <CabecalhoTabela />
+          <tbody>
+            <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function UsuariosConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl({ delay: 250 })
   const [pagina, setPagina] = useState(0)
@@ -101,18 +116,7 @@ function UsuariosConteudo() {
   }
 
   if (!hidratado) {
-    return (
-      <div className={styles.pagina}>
-        <div className={styles.containerTabela}>
-          <table className={styles.tabela}>
-            <CabecalhoTabela />
-            <tbody>
-              <SkeletonUsuarios linhas={TAMANHO_PAGINA} />
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
+    return <EsqueletoPagina />
   }
 
   if (!autorizado) {
@@ -300,7 +304,7 @@ function UsuariosConteudo() {
 
 export default function UsuariosPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina} />}>
+    <Suspense fallback={<EsqueletoPagina />}>
       <UsuariosConteudo />
     </Suspense>
   )

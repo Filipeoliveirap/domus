@@ -61,6 +61,28 @@ const GRUPOS_FILTRO: GrupoFiltro[] = [
   },
 ]
 
+function EsqueletoPagina() {
+  return (
+    <div className={styles.pagina}>
+      <div className={styles.containerTabela}>
+        <table className={styles.tabela}>
+          <thead>
+            <tr>
+              <th>Visitante</th>
+              <th>Telefone</th>
+              <th>Status de Integração</th>
+              <th className={styles.colunaAcoes}>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SkeletonVisitantes linhas={TAMANHO_PAGINA} />
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function VisitantesConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ contato: '', visita: '', acompanhamento: '' })
@@ -147,25 +169,7 @@ function VisitantesConteudo() {
   }
 
   if (!hidratado) {
-    return (
-      <div className={styles.pagina}>
-        <div className={styles.containerTabela}>
-          <table className={styles.tabela}>
-            <thead>
-              <tr>
-                <th>Visitante</th>
-                <th>Telefone</th>
-                <th>Status de Integração</th>
-                <th className={styles.colunaAcoes}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <SkeletonVisitantes linhas={TAMANHO_PAGINA} />
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
+    return <EsqueletoPagina />
   }
 
   return (
@@ -384,7 +388,7 @@ function VisitantesConteudo() {
 
 export default function VisitantesPage() {
   return (
-    <Suspense fallback={<div className={styles.pagina}>Carregando…</div>}>
+    <Suspense fallback={<EsqueletoPagina />}>
       <VisitantesConteudo />
     </Suspense>
   )

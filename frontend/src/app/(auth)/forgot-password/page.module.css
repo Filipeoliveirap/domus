@@ -24,10 +24,12 @@
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: var(--shadow-card-login);
+  animation: authCardEntra 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cardInner {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  animation: authCardEntra 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes authCardEntra {

@@ -203,11 +203,26 @@ public class CobrancaController {
      * QR está na tela. Sem autenticação, pelo mesmo motivo já documentado na classe: o
      * {@code id} da cobrança já é a garantia de posse (UUIDv4), e exigir sessão aqui não
      * fecharia brecha nenhuma nem funcionaria pro link público (sem login).
+     *
+     * <p>Achado ao vivo (2026-09-08): o poll assíncrono do backend
+     * ({@code PagamentoPollingService.pollarConfirmacao}) só cobre ~60s após o {@code /pagar};
+     * um Pix pago depois disso — e sem o webhook do Mercado Pago chegar (ou chegando muito
+     * atrasado) — deixava a cobrança PENDENTE pra sempre, com a pessoa travada em
+     * "Confirmando pagamento…". Como o front chama este endpoint de poucos em poucos segundos
+     * enquanto a tela está aberta, aproveita a chamada pra reconferir no Mercado Pago quando
+     * ainda está PENDENTE. Idempotente ({@code confirmarPagamento}); falha de rede não
+     * propaga — cai no status do banco.</p>
      */
     @GetMapping("/{id}/status")
     public StatusCobrancaResponse status(@PathVariable UUID id) {
         var cobranca = cobrancaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+
+        if (cobranca.getStatus() == StatusCobranca.PENDENTE && cobranca.getMpPaymentId() != null) {
+            pagamentoPollingService.reconferirAgora(
+                cobranca.getIgrejaId(), id.toString(), cobranca.getMpPaymentId());
+            cobranca = cobrancaRepository.findById(id).orElse(cobranca);
+        }
         return new StatusCobrancaResponse(cobranca.getStatus().name());
     }
 

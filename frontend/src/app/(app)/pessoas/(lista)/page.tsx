@@ -12,6 +12,7 @@ import { PainelFiltros, GrupoFiltro } from '@/components/common/PainelFiltros/Pa
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { Avatar } from '@/components/common/Avatar/Avatar'
 import { useDestaqueRecente } from '@/hooks/useDestaqueRecente'
+import { usePessoa } from '@/hooks/pessoa/usePessoa'
 import type { Vinculo } from '@/types/pessoa.type'
 import {
   rotuloVinculo, varianteVinculo, formatarData, formatarTelefoneExibicao,
@@ -49,7 +50,10 @@ function PessoasConteudo() {
   const { busca, setBusca, buscaDebounced } = useBuscaUrl()
   const { filtros, setFiltros } = useFiltrosUrl({ vinculo: '' })
   const { pagina, setPagina } = usePaginaUrl()
-  const { destaqueId, ordenar } = useDestaqueRecente()
+  const { destaqueId } = useDestaqueRecente()
+  // A pessoa recém-salva pode estar noutra página (ordem alfabética) ou fora do filtro —
+  // busca ela à parte e fixa no topo nesta visita.
+  const { data: pessoaDestaque } = usePessoa(destaqueId ?? undefined)
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -72,7 +76,11 @@ function PessoasConteudo() {
     setPagina(0)
   }
 
-  const pessoas = data?.content ?? []
+  const pessoasPagina = data?.content ?? []
+  const pessoas =
+    destaqueId && pessoaDestaque
+      ? [pessoaDestaque, ...pessoasPagina.filter((p) => p.id !== destaqueId)]
+      : pessoasPagina
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 
@@ -174,7 +182,7 @@ function PessoasConteudo() {
                 </td>
               </tr>
             ) : (
-              ordenar(pessoas, (p) => p.id).map((p) => {
+              pessoas.map((p) => {
                 const acoes: ItemAcao[] = [
                   { label: 'Editar', icone: Pencil, onClick: () => router.push(`/pessoas/${p.id}`) },
                   { label: 'Convidar ao sistema', icone: KeyRound, onClick: () => setPessoaConcedendo(p) },
@@ -227,7 +235,7 @@ function PessoasConteudo() {
         {!isLoading && !isError && pessoas.length > 0 && (
           <footer className={styles.rodape}>
             <span className={styles.contagem}>
-              Exibindo {pessoas.length} de {totalElementos} pessoas
+              Exibindo {pessoasPagina.length} de {totalElementos} pessoas
             </span>
             <div className={styles.paginacao}>
               <button

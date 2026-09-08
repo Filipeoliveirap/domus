@@ -31,9 +31,16 @@ export interface RespostaRequest {
   valor: string
 }
 
+/** RESPONDIDO — a pessoa respondeu de fato (valor preenchido).
+ *  CADASTRO — campo mapeado (idade/estado civil/sexo/endereço) preenchido a partir do
+ *  cadastro da pessoa na igreja; ela nunca respondeu no evento, mas o dado existe.
+ *  SEM_RESPOSTA — sem resposta e sem dado no cadastro (valor é null). */
+export type OrigemResposta = 'RESPONDIDO' | 'CADASTRO' | 'SEM_RESPOSTA'
+
 export interface RespostaResponse {
   campoId: string
   label: string
   tipo: TipoCampoPersonalizado
-  valor: string
+  valor: string | null
+  origem: OrigemResposta
 }

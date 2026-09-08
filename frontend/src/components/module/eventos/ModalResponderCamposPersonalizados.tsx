@@ -23,7 +23,7 @@ export function ModalResponderCamposPersonalizados({
 }: Props) {
   const { responder, isLoading, erro } = useResponderCampos()
   const [valores, setValores] = useState<Record<string, string>>(
-    () => Object.fromEntries(respostasIniciais.map((r) => [r.campoId, r.valor])),
+    () => Object.fromEntries(respostasIniciais.map((r) => [r.campoId, r.valor ?? ''])),
   )
   // Só mostra erro por campo depois da primeira tentativa de salvar — não antes, enquanto a
   // pessoa ainda está preenchendo pela primeira vez.

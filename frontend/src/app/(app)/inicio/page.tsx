@@ -52,7 +52,7 @@ function SeloInscritoCard({ eventoId }: { eventoId: string }) {
   return (
     <span className={styles.eventoInscrito}>
       <CheckCircle2 size={11} aria-hidden="true" />
-      Você está inscrito
+      {minha.requerInscricao ? 'Você está inscrito' : 'Você vai'}
     </span>
   )
 }

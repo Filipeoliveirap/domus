@@ -29,6 +29,9 @@ export interface MinhaInscricaoResponse {
   /** Task 14 — id da CobrancaEvento pendente do TITULAR (evento pago, ainda não pago).
    *  `null` quando o evento é gratuito ou não há cobrança pendente. */
   cobrancaPendenteId: string | null
+  /** Evento formal (inscrição) vs. só "marcar presença" ("Eu vou"). O selo do card muda:
+   *  "Você está inscrito" só quando `true`; senão "Você vai". */
+  requerInscricao: boolean
 }
 
 export interface ParticipanteResponse {

@@ -96,6 +96,8 @@ export function ModalInscreverPessoas({
 
   const role = useAuthStore((s) => s.role)
   const ehGestor = podeGerenciarInscricoes(role)
+  // Task 11: depois do prazo, só gestor inscreve; o backend barra o comum em todos os caminhos.
+  const prazoBloqueiaComum = situacaoInscricao === 'ENCERRADA_POR_PRAZO' && !ehGestor
 
   const buscaDebounced = useDebounce(busca, 300)
   const { data, isLoading } = usePessoas({ q: buscaDebounced, page: 0, size: 30 })
@@ -408,7 +410,7 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoPagar}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
               onClick={() => confirmarPessoa(false)}
             >
               {inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
@@ -416,7 +418,7 @@ export function ModalInscreverPessoas({
             <button
               type="button"
               className={styles.botaoLink}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending}
+              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
               onClick={() => confirmarPessoa(true)}
             >
               Enviar link pra {pessoaClicada.nome} pagar
@@ -529,7 +531,9 @@ export function ModalInscreverPessoas({
 
       {!embutido && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
         <div className={styles.avisoPrazo}>
-          O prazo de inscrição deste evento já encerrou. Como {(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.
+          {ehGestor
+            ? `O prazo de inscrição deste evento já encerrou. Como ${(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.`
+            : 'As inscrições deste evento já encerraram.'}
         </div>
       )}
 
@@ -560,7 +564,7 @@ export function ModalInscreverPessoas({
               type="button"
               className={styles.btnConfirmar}
               onClick={aoConfirmarSelecaoGratuita}
-              disabled={selecionados.size === 0 || inscreverPessoas.isPending}
+              disabled={selecionados.size === 0 || inscreverPessoas.isPending || prazoBloqueiaComum}
             >
               {inscreverPessoas.isPending ? 'Inscrevendo…' : 'Inscrever'}
             </button>

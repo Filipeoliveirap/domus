@@ -15,6 +15,7 @@ import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useDebounce } from '@/hooks/useDebounce'
 import { formatarTelefone } from '@/lib/masks'
 import { rotuloRole } from '@/lib/formats/usuarioFormat'
+import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { useAuthStore } from '@/store/authStore'
 import type { RespostaRequest } from '@/types/campoPersonalizado.type'
 import type { SituacaoInscricao } from '@/types/evento.type'
@@ -39,6 +40,8 @@ interface Props {
 export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros, preco, situacaoInscricao, onClose }: Props) {
   const router = useRouter()
   const role = useAuthStore((s) => s.role)
+  // Task 11: depois do prazo, só gestor inscreve; o backend barra o comum em todos os caminhos.
+  const prazoBloqueiaComum = situacaoInscricao === 'ENCERRADA_POR_PRAZO' && !podeGerenciarInscricoes(role)
   const [aba, setAba] = useState<Aba>('pessoas')
   const { saindo, fechar } = useFecharAnimado(onClose, 220)
 
@@ -241,7 +244,9 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
         <>
         {situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
           <div className={styles.avisoPrazo}>
-            O prazo de inscrição deste evento já encerrou. Como {(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.
+            {podeGerenciarInscricoes(role)
+              ? `O prazo de inscrição deste evento já encerrou. Como ${(rotuloRole(role ?? '') || 'gestor').toLowerCase()}, você ainda pode inscrever.`
+              : 'As inscrições deste evento já encerraram.'}
           </div>
         )}
         <div className={styles.abas}>
@@ -426,15 +431,15 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
               </button>
               {preco ? (
                 <div className={styles.acoesPagamentoConvidado}>
-                  <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending}>
+                  <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending || prazoBloqueiaComum}>
                     {isPending ? 'Inscrevendo…' : `Pagar inscrição${nome.trim() ? ` de ${nome.trim()}` : ''}`}
                   </button>
-                  <button type="button" className={styles.btnEnviarLink} onClick={() => confirmar(true)} disabled={isPending}>
+                  <button type="button" className={styles.btnEnviarLink} onClick={() => confirmar(true)} disabled={isPending || prazoBloqueiaComum}>
                     Enviar link pra pagar
                   </button>
                 </div>
               ) : (
-                <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending}>
+                <button type="button" className={styles.btnConfirmar} onClick={() => confirmar(false)} disabled={isPending || prazoBloqueiaComum}>
                   {isPending ? 'Inscrevendo…' : 'Inscrever'}
                 </button>
               )}

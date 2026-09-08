@@ -344,6 +344,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 preco={evento.preco}
                 politicaCancelamentoAposPrazo={evento.politicaCancelamentoAposPrazo}
                 onInscritoComSucesso={() => setAcabouDeInscrever(true)}
+                onAntesDeNavegar={fechar}
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}

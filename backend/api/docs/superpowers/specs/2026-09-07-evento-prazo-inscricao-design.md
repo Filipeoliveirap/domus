@@ -327,8 +327,12 @@ Quando a resposta traz `situacaoInscricao === 'ENCERRADA_POR_PRAZO'`:
 ### Erros novos no handler de API do front
 
 `PRAZO_INSCRICAO_ENCERRADO`, `CANCELAMENTO_ENCERRADO_POR_PRAZO`, `PRAZO_APOS_INICIO`,
-`PRAZO_SEM_INSCRICAO` → mensagem amigável via `notificar()` (padrão do projeto, sem toast
-do sonner, sem `window.confirm`).
+`PRAZO_SEM_INSCRICAO` — **implementado (2026-09-08):** não há mapa de códigos no front; os
+hooks (`useInscrever`/`useCancelarInscricao` etc.) já mostram a `message` do
+`BusinessException` verbatim via `notificar.erro(...)`, e as mensagens do backend foram
+escritas pra serem legíveis pra leigo. A validação Zod client-side (prazo antes do início)
+pega o `PRAZO_APOS_INICIO` antes do submit; `PRAZO_SEM_INSCRICAO` não é alcançável pelo
+form (o campo mora dentro do bloco `requerInscricao`).
 
 ### Responsividade + animação
 

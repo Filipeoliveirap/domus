@@ -174,29 +174,47 @@ private void validarCancelamentoPermitido(Evento evento, boolean souEu, boolean 
 A expiração automática de cobrança não paga (`CobrancaEventoExpiracaoJob`) **não** passa
 por essa guarda — é o sistema cancelando, não a pessoa.
 
-### Cancelamento sem reembolso após o prazo (adendo 2026-09-07)
+### Política de cancelamento após o prazo (adendo 2026-09-07, revisto 2026-09-08)
 
-Quando `permiteCancelarAposPrazo == true` e o cancelamento acontece **depois** do prazo,
-num **evento pago**:
+**`permite_cancelar_apos_prazo` (boolean, V38) vira `politica_cancelamento_apos_prazo`
+(enum, V39):** `NAO_PERMITIDO | PERMITIDO_COM_REEMBOLSO | PERMITIDO_SEM_REEMBOLSO`.
+`NOT NULL DEFAULT 'PERMITIDO_COM_REEMBOLSO'`. Backfill V39: `true → PERMITIDO_COM_REEMBOLSO`,
+`false → NAO_PERMITIDO`. Só tem efeito quando `inscricoes_ate` não é nulo.
 
-- o cancelamento é permitido (self **e** gestor), mas **não** há estorno no Mercado Pago —
-  a cobrança PAGA fica como está (a igreja mantém o valor), a inscrição vira `CANCELADA`;
-- cobrança `PENDENTE` (nunca paga) continua sendo cancelada normalmente;
-- sem e-mail de reembolso, sem lançamento de "Reembolso" no financeiro (não houve).
+**Antes do prazo** (ou sem prazo): cancelamento sempre permitido, com reembolso total
+(evento pago). A política só decide o que acontece **depois** do prazo:
 
-Vale **só** para o caminho `cancelar(...)` (`DELETE /inscricoes/{id}`, self ou gestor). Os
-caminhos automáticos (`removerInscritosNaoElegiveis`, `cancelarInscricoesEmEventos*`,
-`aplicarEventoVirouGratuito`) **continuam estornando** — não são "cancelamento após o
-prazo", são o sistema removendo por outro motivo.
+| Política | Auto-cancelamento (a pessoa, após o prazo) | Reembolso no cancelamento pós-prazo |
+|---|---|---|
+| `NAO_PERMITIDO` | bloqueado (`CANCELAMENTO_ENCERRADO_POR_PRAZO`) | — |
+| `PERMITIDO_COM_REEMBOLSO` (padrão) | permitido | estorno normal no Mercado Pago |
+| `PERMITIDO_SEM_REEMBOLSO` | permitido | **sem estorno** — cobrança PAGA fica como está, igreja mantém o valor |
 
-Implementação: `cancelarInterno(inscricao, boolean semReembolso)` — `semReembolso` só é
-`true` em `cancelar(...)` quando `evento.getInscricoesAte() != null && agora >
-inscricoesAte`. Com `semReembolso`, pula `estornarCobrancasDaInscricao` para cobranças
-`PAGO` (só cancela as `PENDENTE`). `cancelar` continua `void`/`204` — o front já tem os
-dados (`situacaoInscricao`, `preco`, status da inscrição) para exibir o aviso antes e a
-confirmação depois; a diferença de segundos no "agora" é irrelevante num prazo de dias.
+**Gestor (admin/líder) removendo alguém após o prazo** segue a política:
+- `NAO_PERMITIDO` ou `PERMITIDO_COM_REEMBOLSO` → gestor remove **e reembolsa** (a pessoa
+  não pediu pra sair; decisão da organização).
+- `PERMITIDO_SEM_REEMBOLSO` → gestor remove **sem reembolsar**, com aviso no modal dele.
 
-Antes do prazo, ou evento gratuito: estorno normal, como hoje.
+**Sem reembolso** (`PERMITIDO_SEM_REEMBOLSO`, pós-prazo): não chama
+`estornarCobrancasDaInscricao` para cobranças `PAGO` (só cancela as `PENDENTE`), sem e-mail
+de reembolso, sem lançamento de "Reembolso" no financeiro. A inscrição vira `CANCELADA`
+normalmente. Vale **só** para `cancelar(...)` (`DELETE /inscricoes/{id}`, self ou gestor).
+Os caminhos automáticos (`removerInscritosNaoElegiveis`, `cancelarInscricoesEmEventos*`,
+`aplicarEventoVirouGratuito`) **continuam estornando**.
+
+Implementação:
+- `Evento.getPoliticaCancelamentoAposPrazo()` (enum). `copiarCamposEditaveisPara` propaga
+  o enum (política, não data).
+- `validarCancelamentoPermitido`: bloqueia auto-cancelamento (não-gestor) após o prazo
+  quando `politica == NAO_PERMITIDO`.
+- `cancelarInterno(inscricao, boolean semReembolso)` — `semReembolso == true` só em
+  `cancelar(...)` quando `inscricoesAte != null && agora > inscricoesAte && politica ==
+  PERMITIDO_SEM_REEMBOLSO` (uniforme para self e gestor). `cancelar` continua `void`/`204`.
+
+**Evento gratuito:** não há reembolso a debater. O front oferece só `NAO_PERMITIDO` vs
+`PERMITIDO_COM_REEMBOLSO` (rotulado "permitir" / "não permitir"); `PERMITIDO_SEM_REEMBOLSO`
+nunca é escolhido para gratuito. O backend não precisa de regra especial — sem cobrança
+PAGA, "pular o estorno" não muda nada.
 
 ### DTOs
 

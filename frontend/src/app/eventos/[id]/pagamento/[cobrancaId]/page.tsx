@@ -129,9 +129,12 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
     return () => clearTimeout(t)
   }, [etapaPix, temQr])
 
-  // Assim que o Mercado Pago recebe a tentativa de pagamento, pergunta a cada poucos
-  // segundos se o webhook já confirmou — é a única forma de saber (o navegador não recebe
-  // callback nenhum do lado do Mercado Pago). Some sozinho quando chega numa resposta final.
+  // Pergunta de tempos em tempos se o pagamento já foi confirmado — é a única forma de saber
+  // (o navegador não recebe callback nenhum do lado do Mercado Pago). O endpoint /status, além
+  // de ler o banco, reconfere no Mercado Pago quando a cobrança ainda está PENDENTE (cobre o
+  // caso do webhook atrasar e o poll do backend, de ~1min, já ter acabado) — por isso o
+  // intervalo é de 6s, não menos: cada tick pode custar uma chamada à API do MP. Some sozinho
+  // quando chega numa resposta final.
   useEffect(() => {
     if (resultadoEfetivo !== 'enviado') return
     resolvidoRef.current = false
@@ -155,7 +158,7 @@ function ConteudoPagamento({ eventoId, cobrancaId }: { eventoId: string; cobranc
       } catch {
         // Falha de rede pontual no poll não é motivo pra desistir — tenta de novo no próximo tick.
       }
-    }, 4000)
+    }, 6000)
 
     return () => clearInterval(intervalo)
   }, [resultadoEfetivo, cobrancaId])

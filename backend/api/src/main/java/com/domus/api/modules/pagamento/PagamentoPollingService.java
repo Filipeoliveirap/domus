@@ -44,6 +44,26 @@ public class PagamentoPollingService {
         this.webhookService = webhookService;
     }
 
+    /**
+     * Reconferência única e imediata (síncrona) do pagamento no Mercado Pago — chamada pelo
+     * {@code GET /cobrancas/{id}/status} enquanto a cobrança ainda está PENDENTE. Cobre o
+     * intervalo em que {@link #pollarConfirmacao} (janela de ~1min) já se esgotou mas a
+     * pessoa continua na tela esperando e o webhook não chegou. Idempotente via
+     * {@link MercadoPagoWebhookService#confirmarPagamento}; falha de rede/MP não propaga —
+     * o chamador segue com o status do banco.
+     */
+    public void reconferirAgora(UUID igrejaId, String cobrancaId, String mpPaymentId) {
+        try {
+            var info = mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId);
+            if (!STATUS_AINDA_EM_ABERTO.contains(info.status())) {
+                webhookService.confirmarPagamento(cobrancaId, mpPaymentId, info.status());
+            }
+        } catch (RuntimeException e) {
+            log.warn("Reconferência imediata de pagamento falhou, seguindo com o status do banco. "
+                + "cobrancaId={} mpPaymentId={}", cobrancaId, mpPaymentId, e);
+        }
+    }
+
     @Async("pagamentoPollingExecutor")
     public void pollarConfirmacao(UUID igrejaId, String cobrancaId, String mpPaymentId) {
         for (int tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {

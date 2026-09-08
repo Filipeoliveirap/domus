@@ -1,5 +1,6 @@
 // hooks/pessoa/useCadastrarPessoa.ts
 import { useRouter } from 'next/navigation'
+import { useSaidaFormulario } from '@/hooks/forms/useSaidaFormulario'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
@@ -23,6 +24,7 @@ interface UsePessoaFormParams {
 
 export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormParams = {}) {
   const router = useRouter()
+  const { saindo, sairAnimado } = useSaidaFormulario()
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
@@ -115,7 +117,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         notificar.erro(`Pessoa salva, mas não foi possível atualizar as ${ministerio.plural.toLowerCase()} dela.`)
       }
 
-      router.back()
+      sairAnimado(() => router.back())
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data
@@ -133,7 +135,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
   }
 
   return {
-    ...form, onSubmit, erroGeral, isLoading, ehEdicao,
+    ...form, onSubmit, erroGeral, isLoading, ehEdicao, saindo,
     redesSelecionadas, setRedesSelecionadas,
   }
 }

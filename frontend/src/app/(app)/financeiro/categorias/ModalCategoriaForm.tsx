@@ -21,6 +21,7 @@ interface ModalCategoriaFormProps {
 }
 
 export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormProps) {
+  const { saindo, fechar } = useFecharAnimado(onClose, 240)
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
@@ -29,11 +30,11 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
   } = useCategoriaForm({
     categoriaId: categoria?.id,
     categoriaInicial: categoria,
-    onSuccess: onClose,
+    // fecha ANIMADO ao salvar (não `onClose` seco)
+    onSuccess: () => fechar(),
   })
 
   const tipoSelecionado = watch('tipo')
-  const { saindo, fechar } = useFecharAnimado(onClose, 240)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

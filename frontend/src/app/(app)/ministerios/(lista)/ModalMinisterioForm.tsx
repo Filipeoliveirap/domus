@@ -49,7 +49,7 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
       } else {
         await criar.mutateAsync({ nome, fotoId })
       }
-      onClose()
+      fechar()
     } catch {
       // erro já notificado pela mutation; modal fica aberto para o usuário tentar de novo.
     }

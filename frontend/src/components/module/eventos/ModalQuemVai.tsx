@@ -44,7 +44,7 @@ export function ModalQuemVai({
   const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(eventoId, !ehGestor)
   // size=500: "quem vai" mostra todos de uma vez, não pagina
   const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(eventoId, ehGestor, '', 0, 500)
-  const cancelar = useCancelarInscricao()
+  const cancelar = useCancelarInscricao(true) // sem toast: a linha colapsa na cara do gestor
   const [aRemover, setARemover] = useState<{ id: string; nome: string } | null>(null)
   // Linha que colapsa antes de o refetch tirá-la da lista — mesma ideia da lista de membros
   // de célula: o sumiço fica gradual em vez de "pular".
@@ -57,8 +57,10 @@ export function ModalQuemVai({
     const id = aRemover.id
     setARemover(null)
     setSaindoId(id)
+    // não limpa `saindoId` no sucesso: o refetch mantém a lista antiga um instante e a
+    // linha "piscava de volta". Só limpa em erro.
     window.setTimeout(() => {
-      cancelar.mutate(id, { onSettled: () => setSaindoId(null) })
+      cancelar.mutate(id, { onError: () => setSaindoId(null) })
     }, 360)
   }
 
@@ -92,6 +94,8 @@ export function ModalQuemVai({
 
   const carregando = ehGestor ? carregandoAdmin : carregandoLista
   const total = linhas.length
+  // Só colapsa enquanto ainda está na lista; some de vez quando o refetch a remove.
+  const colapsandoId = saindoId && linhas.some((l) => l.id === saindoId) ? saindoId : null
 
   const igrejasDistintas = new Set(linhas.map((l) => l.igrejaDaPessoa?.id).filter(Boolean))
   const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
@@ -149,7 +153,7 @@ export function ModalQuemVai({
             linhas.map((l, i) => (
               <div
                 key={l.id}
-                className={clsx(styles.grupo, saindoId === l.id && styles.grupoSaindo)}
+                className={clsx(styles.grupo, colapsandoId === l.id && styles.grupoSaindo)}
                 style={{ '--i': i } as React.CSSProperties}
               >
                 <div className={styles.linha}>

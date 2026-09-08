@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { clsx } from 'clsx'
 import Image from 'next/image'
 import { X, Users } from 'lucide-react'
@@ -8,35 +8,28 @@ import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useListaInscritos } from '@/hooks/inscricao/useListaInscritos'
-import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useAuthStore } from '@/store/authStore'
 import { iniciais } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
-import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { podeGerenciarInscricoes } from '@/lib/permissoes'
-import type { SituacaoEvento } from '@/types/evento.type'
 import styles from './ModalQuemVai.module.css'
 
 interface Props {
   eventoId: string
-  situacao: SituacaoEvento
   restritoPropriaIgreja?: boolean
   podeGerenciarEsteEvento: boolean
   aoFechar: () => void
 }
 
-export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar }: Props) {
+export function ModalQuemVai({ eventoId, restritoPropriaIgreja, podeGerenciarEsteEvento, aoFechar }: Props) {
   const role = useAuthStore((s) => s.role)
+  // Gestor puxa a lista completa (inclui quem ainda não é da própria igreja); os demais
+  // veem só os participantes confirmados. É uma lista de interação — sem ação de cancelar.
   const ehGestor = podeGerenciarInscricoes(role) && podeGerenciarEsteEvento
-  const podeCancelar = podeCancelarInscricao(situacao)
 
-  const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(
-    eventoId, !ehGestor)
+  const { data: participantes = [], isLoading: carregandoLista } = useParticipantes(eventoId, !ehGestor)
   // size=500: "quem vai" mostra todos de uma vez, não pagina
-  const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(
-    eventoId, ehGestor, '', 0, 500)
-  const cancelar = useCancelarInscricao()
-  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
+  const { data: listaAdmin, isLoading: carregandoAdmin } = useListaInscritos(eventoId, ehGestor, '', 0, 500)
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
 
   useEffect(() => {
@@ -53,10 +46,6 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
     return () => { document.body.style.overflow = anterior }
   }, [])
 
-  // Normaliza as duas fontes numa só, para não ramificar a marcação por papel. Cada
-  // convidado já chega como linha própria (InscricaoEvento unificada) — sem agrupamento
-  // por titular. "Quem esse titular convidou" virou uma visão à parte, fora de escopo por
-  // ora (ver Task 10/11).
   const linhas = ehGestor
     ? (listaAdmin?.inscritos.content ?? []).map((i) => ({
         id: i.id,
@@ -78,7 +67,15 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
   const mostrarIgreja = !restritoPropriaIgreja || igrejasDistintas.size > 1
 
   return (
-    <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
+    <div
+      className={clsx(styles.overlay, saindo && styles.saindo)}
+      // Este modal costuma abrir por cima do drawer/modal de detalhe do evento — sem parar
+      // a propagação, o clique fora fecharia todos eles de uma vez.
+      onMouseDown={(e) => {
+        e.stopPropagation()
+        fechar()
+      }}
+    >
       <div
         className={styles.modal}
         onMouseDown={(e) => e.stopPropagation()}
@@ -134,44 +131,6 @@ export function ModalQuemVai({ eventoId, situacao, restritoPropriaIgreja, podeGe
                     <span className={styles.selo}>
                       {l.igrejaDaPessoa.sigla ?? l.igrejaDaPessoa.nome}
                     </span>
-                  )}
-
-                  {ehGestor && !podeCancelar && (
-                    <span className={styles.selo}>Participou</span>
-                  )}
-
-                  {ehGestor && podeCancelar && (
-                    confirmandoId === l.id ? (
-                      <span className={styles.confirmacao}>
-                        <span className={styles.confirmacaoTexto}>Cancelar?</span>
-                        <button
-                          type="button"
-                          className={styles.confirmarSim}
-                          onClick={() => {
-                            cancelar.mutate(l.id, { onSuccess: () => setConfirmandoId(null) })
-                          }}
-                          disabled={cancelar.isPending}
-                        >
-                          Sim
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.confirmarNao}
-                          onClick={() => setConfirmandoId(null)}
-                        >
-                          Não
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.cancelar}
-                        onClick={() => setConfirmandoId(l.id)}
-                        disabled={cancelar.isPending}
-                      >
-                        Cancelar inscrição
-                      </button>
-                    )
                   )}
                 </div>
               </div>

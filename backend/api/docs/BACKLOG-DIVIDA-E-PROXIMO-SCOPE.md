@@ -818,3 +818,16 @@ acompanhante agora é sua própria `InscricaoEvento` independente, no mesmo form
 convidado sem cadastro (`nomeConvidado`/`emailConvidado`/`telefoneConvidado` +
 `convidadoPorPessoaId`). A ramificação de 3 caminhos virou 2 (`pessoa` ou convidado sem
 cadastro), e acompanhante ganhou e-mail de comprovante de graça.
+
+---
+
+## Feature: "Desejar parabéns" ao aniversariante (2026-09-08, a brainstormar)
+
+Hoje (`239beb2`) o card de aniversariante no `/inicio` tem só um link "Parabéns" que abre o
+WhatsApp com a mensagem pronta — interino, zero backend além de `telefone` no DTO.
+
+O autor quer evoluir pra algo social: um botão "Parabéns" que **conta** quantas pessoas
+desejaram, com opção de **comentar** junto, e que **notifica** o aniversariante. É feature
+maior (tabela nova de "parabéns"/reações por pessoa+data, endpoint, notificação in-app,
+provavelmente aparecer no perfil da pessoa no dia). Brainstormar antes de implementar.
+Manter o link do WhatsApp como fallback/atalho.

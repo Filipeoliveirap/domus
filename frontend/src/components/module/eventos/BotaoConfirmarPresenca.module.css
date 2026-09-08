@@ -11,24 +11,6 @@
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   transition: opacity var(--transition-fast);
-  /* entra animado — importa depois de cancelar, quando "Se inscrever" volta no lugar
-     do cartão "Inscrito" (antes aparecia seco) */
-  /* `backwards`, não `both`: cobre a montagem sem reter o `transform` no fim — um
-     `transform` residual viraria bloco de contenção e prenderia o modal de cancelamento
-     (position: fixed) dentro deste bloco em vez do centro da tela. */
-  animation: aparecerAcao 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
-
-@keyframes aparecerAcao {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes aparecerAcaoReduzido {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .botao { animation: aparecerAcaoReduzido 0.16s ease both; }
 }
 
 .botao:hover:not(:disabled) {
@@ -187,14 +169,6 @@
   padding: 14px 16px;
   border-radius: var(--radius-md);
   background: var(--color-success-bg, #ecfdf5);
-  /* mesmo respiro de entrada do .botao — inscrever também não "pipoca" na tela */
-  /* `backwards`, não `both`: cobre a montagem sem reter o `transform` no fim — um
-     `transform` residual viraria bloco de contenção e prenderia o modal de cancelamento
-     (position: fixed) dentro deste bloco em vez do centro da tela. */
-  animation: aparecerAcao 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
-@media (prefers-reduced-motion: reduce) {
-  .inscrito { animation: aparecerAcaoReduzido 0.16s ease both; }
 }
 
 .inscritoStatus {
@@ -273,10 +247,6 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  animation: aparecerAcao 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pagamentoPendenteBloco { animation: aparecerAcaoReduzido 0.16s ease both; }
 }
 
 .pagamentoPendenteBloco .cancelarLink {

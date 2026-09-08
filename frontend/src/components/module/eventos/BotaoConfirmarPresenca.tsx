@@ -23,6 +23,7 @@ import { podeGerenciarInscricoes } from '@/lib/permissoes'
 import { podeCancelarInscricao } from '@/lib/formats/eventoFormat'
 import { rotuloRole } from '@/lib/formats/usuarioFormat'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { TrocaCena } from '@/components/module/pagamento/TrocaCena'
 import type { SituacaoEvento, SituacaoInscricao, PoliticaCancelamentoAposPrazo } from '@/types/evento.type'
 import type { Impedimento, MinhaInscricaoResponse } from '@/types/inscricao.type'
 import styles from './BotaoConfirmarPresenca.module.css'
@@ -292,112 +293,26 @@ export function BotaoConfirmarPresenca({
     )
   }
 
-  // Pagamento em aberto: inscrição existe como AGUARDANDO_PAGAMENTO. Vem de dado do
-  // servidor (não de state local), então sobrevive a reload/fechar e reabrir o drawer —
-  // ao contrário do antigo `etapaPagamento`, que se perdia ao desmontar o componente.
-  // Cobre os três casos que caem neste mesmo estado (evento virou pago, preço aumentou —
-  // complemento pendente —, ou checkout iniciado e não terminado): até agora só dava pra
-  // cancelar pelo link do e-mail de lembrete; achado ao vivo, 2026-08-27.
-  if (!minha?.inscrito && minha?.cobrancaPendenteId) {
-    return (
-      <div className={styles.pagamentoPendenteBloco}>
-        <Link href={`/eventos/${eventoId}/pagamento/${minha.cobrancaPendenteId}`} className={styles.pagamentoPendente}>
-          <Clock size={16} aria-hidden="true" />
-          <span>Pagamento pendente — continuar</span>
-        </Link>
-        <button
-          type="button"
-          className={styles.cancelarLink}
-          onClick={() => setConfirmandoCancelamento(true)}
-        >
-          <XCircle size={14} aria-hidden="true" />
-          Cancelar inscrição
-        </button>
+  // A área de ação troca entre "inscrito", "pagamento pendente" e "se inscrever". Antes
+  // cada estado era um `return` seco — o bloco antigo sumia na hora e o novo pipocava.
+  // <TrocaCena> anima essas trocas (crossfade + altura acompanhando o conteúdo novo).
+  // Pagamento pendente: inscrição AGUARDANDO_PAGAMENTO, vinda de dado do servidor (sobrevive
+  // a reload) — cobre evento que virou pago, preço aumentado, ou checkout não terminado.
+  const cenaAcao: 'inscrito' | 'pendente' | 'esgotado' | 'seinscrever' | null =
+    minha?.inscrito
+      ? 'inscrito'
+      : minha?.cobrancaPendenteId
+        ? 'pendente'
+        : inscricaoBloqueadaPelaSituacao || eventoEncerrado
+          ? null
+          : semVagas
+            ? 'esgotado'
+            : 'seinscrever'
 
-        {confirmandoCancelamento && (
-          <ConfirmarCancelamentoInscricao
-            nome=""
-            proprio
-            quantidadeConvidados={0}
-            isLoading={cancelar.isPending}
-            onConfirmar={() => {
-              if (!minha.id) return
-              cancelar.mutate(minha.id, {
-                onSuccess: () => setConfirmandoCancelamento(false),
-              })
-            }}
-            onClose={() => setConfirmandoCancelamento(false)}
-          />
-        )}
-      </div>
-    )
-  }
+  if (cenaAcao === null) return null
 
-  if (minha?.inscrito) {
-    const podeCancelar = podeCancelarInscricao(situacao) && !cancelamentoTravadoPorPrazo
-
-    return (
-      <div className={styles.inscrito}>
-        <div className={styles.inscritoStatus}>
-          <CheckCircle2 size={18} aria-hidden="true" />
-          <div className={styles.inscritoTexto}>
-            <strong>Inscrito</strong>
-            <span>{podeCancelar ? 'Tudo certo pra você!' : 'Você participou deste evento'}</span>
-          </div>
-        </div>
-
-        {podeCancelar && (
-          <button
-            type="button"
-            className={styles.cancelarLink}
-            onClick={() => setConfirmandoCancelamento(true)}
-          >
-            <XCircle size={14} aria-hidden="true" />
-            Cancelar inscrição
-          </button>
-        )}
-
-        {cancelamentoTravadoPorPrazo && (
-          <p className={styles.motivo}>
-            Cancelamento encerrado (o prazo passou). Fale com a organização.
-          </p>
-        )}
-
-        {confirmandoCancelamento && (
-          <ConfirmarCancelamentoInscricao
-            nome=""
-            proprio
-            // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
-            // contagem embutida não existe mais (ver Task 10/11) — sem substituto por ora.
-            quantidadeConvidados={0}
-            // minha.inscrito === true num evento pago já significa CONFIRMADA (pago); o
-            // estado AGUARDANDO_PAGAMENTO cai no bloco de pagamento pendente acima.
-            semReembolso={preco != null && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && politicaCancelamentoAposPrazo === 'PERMITIDO_SEM_REEMBOLSO'}
-            isLoading={cancelar.isPending}
-            onConfirmar={() => {
-              if (!minha.id) return
-              cancelar.mutate(minha.id, {
-                onSuccess: () => setConfirmandoCancelamento(false),
-              })
-            }}
-            onClose={() => setConfirmandoCancelamento(false)}
-          />
-        )}
-      </div>
-    )
-  }
-
-  if (inscricaoBloqueadaPelaSituacao || eventoEncerrado) {
-    return null
-  }
-
-  if (semVagas) {
-    return (
-      <button type="button" className={styles.botao} disabled>
-        Vagas esgotadas
-      </button>
-    )
-  }
+  const podeCancelar = podeCancelarInscricao(situacao) && !cancelamentoTravadoPorPrazo
+  const inscricaoId = minha?.id
 
   function inscreverDeVerdade() {
     if (!preco) {
@@ -430,40 +345,121 @@ export function BotaoConfirmarPresenca({
 
   return (
     <>
-      {avisoPrazoGestor}
-      <button
-        type="button"
-        className={styles.botao}
-        disabled={inscrever.isPending || navegandoParaCheckout || !!impedimento}
-        onClick={() => tentarInscrever(inscreverDeVerdade)}
-      >
-        <CheckCircle2 size={18} aria-hidden="true" />
-        {inscrever.isPending || navegandoParaCheckout ? 'Inscrevendo…' : 'Se inscrever'}
-      </button>
+      <TrocaCena
+        cenaKey={cenaAcao}
+        renderCena={(cena) =>
+          cena === 'inscrito' ? (
+            <div className={styles.inscrito}>
+              <div className={styles.inscritoStatus}>
+                <CheckCircle2 size={18} aria-hidden="true" />
+                <div className={styles.inscritoTexto}>
+                  <strong>Inscrito</strong>
+                  <span>{podeCancelar ? 'Tudo certo pra você!' : 'Você participou deste evento'}</span>
+                </div>
+              </div>
 
-      {impedimento && (
-        <span className={styles.motivo}>
-          <AlertTriangle size={14} aria-hidden="true" />
-          {impedimento}
-        </span>
-      )}
+              {podeCancelar && (
+                <button
+                  type="button"
+                  className={styles.cancelarLink}
+                  onClick={() => setConfirmandoCancelamento(true)}
+                >
+                  <XCircle size={14} aria-hidden="true" />
+                  Cancelar inscrição
+                </button>
+              )}
 
-      {semConta && preco && (
-        <div className={styles.avisoSemConta}>
-          <AlertTriangle size={16} aria-hidden="true" />
-          <span>
-            Este evento é pago, mas a igreja ainda não conectou uma conta para receber
-            pagamentos.{' '}
-            {ehGestor ? (
-              <Link href="/configuracoes/igreja">Conectar agora</Link>
-            ) : (
-              'Fale com a secretaria da igreja.'
-            )}
-          </span>
-          <button type="button" className={styles.cancelarLink} onClick={() => setSemConta(false)}>
-            Fechar
-          </button>
-        </div>
+              {cancelamentoTravadoPorPrazo && (
+                <p className={styles.motivo}>
+                  Cancelamento encerrado (o prazo passou). Fale com a organização.
+                </p>
+              )}
+            </div>
+          ) : cena === 'pendente' ? (
+            <div className={styles.pagamentoPendenteBloco}>
+              <Link
+                href={`/eventos/${eventoId}/pagamento/${minha?.cobrancaPendenteId}`}
+                className={styles.pagamentoPendente}
+              >
+                <Clock size={16} aria-hidden="true" />
+                <span>Pagamento pendente — continuar</span>
+              </Link>
+              <button
+                type="button"
+                className={styles.cancelarLink}
+                onClick={() => setConfirmandoCancelamento(true)}
+              >
+                <XCircle size={14} aria-hidden="true" />
+                Cancelar inscrição
+              </button>
+            </div>
+          ) : cena === 'esgotado' ? (
+            <button type="button" className={styles.botao} disabled>
+              Vagas esgotadas
+            </button>
+          ) : (
+            <>
+              {avisoPrazoGestor}
+              <button
+                type="button"
+                className={styles.botao}
+                disabled={inscrever.isPending || navegandoParaCheckout || !!impedimento}
+                onClick={() => tentarInscrever(inscreverDeVerdade)}
+              >
+                <CheckCircle2 size={18} aria-hidden="true" />
+                {inscrever.isPending || navegandoParaCheckout ? 'Inscrevendo…' : 'Se inscrever'}
+              </button>
+
+              {impedimento && (
+                <span className={styles.motivo}>
+                  <AlertTriangle size={14} aria-hidden="true" />
+                  {impedimento}
+                </span>
+              )}
+
+              {semConta && preco && (
+                <div className={styles.avisoSemConta}>
+                  <AlertTriangle size={16} aria-hidden="true" />
+                  <span>
+                    Este evento é pago, mas a igreja ainda não conectou uma conta para receber
+                    pagamentos.{' '}
+                    {ehGestor ? (
+                      <Link href="/configuracoes/igreja">Conectar agora</Link>
+                    ) : (
+                      'Fale com a secretaria da igreja.'
+                    )}
+                  </span>
+                  <button type="button" className={styles.cancelarLink} onClick={() => setSemConta(false)}>
+                    Fechar
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        }
+      />
+
+      {confirmandoCancelamento && inscricaoId && (
+        <ConfirmarCancelamentoInscricao
+          nome=""
+          proprio
+          // Convidado agora é inscrição própria, sem vínculo ao cancelar o titular — a
+          // contagem embutida não existe mais (ver Task 10/11) — sem substituto por ora.
+          quantidadeConvidados={0}
+          // Só o cartão "Inscrito" de evento pago encerrado por prazo perde o reembolso; o
+          // "pagamento pendente" ainda não pagou nada.
+          semReembolso={
+            cenaAcao === 'inscrito'
+            && preco != null
+            && situacaoInscricao === 'ENCERRADA_POR_PRAZO'
+            && politicaCancelamentoAposPrazo === 'PERMITIDO_SEM_REEMBOLSO'
+          }
+          isLoading={cancelar.isPending}
+          onConfirmar={() =>
+            cancelar.mutate(inscricaoId, { onSuccess: () => setConfirmandoCancelamento(false) })
+          }
+          onClose={() => setConfirmandoCancelamento(false)}
+        />
       )}
 
       {modalContorno}

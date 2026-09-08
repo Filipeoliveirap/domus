@@ -107,18 +107,21 @@ export function useVisitanteForm({ visitanteId, visitanteInicial }: UseVisitante
         observacoes: data.observacoes || undefined,
       }
 
+      let visitanteSalvoId: string
       if (ehEdicao) {
-        await visitanteService.atualizar(visitanteId!, payload)
+        const atualizado = await visitanteService.atualizar(visitanteId!, payload)
+        visitanteSalvoId = atualizado.id
         queryClient.invalidateQueries({ queryKey: ['visitante', visitanteId] })
         invalidarCache(queryClient, 'visitante')
         notificar.sucesso('Visitante atualizado com sucesso!')
       } else {
-        await visitanteService.criar(payload)
+        const criado = await visitanteService.criar(payload)
+        visitanteSalvoId = criado.id
         invalidarCache(queryClient, 'visitante')
         notificar.sucesso('Visitante cadastrado com sucesso!')
       }
 
-      sairAnimado(() => ehEdicao ? router.back() : router.push('/pessoas/visitantes'))
+      sairAnimado(() => router.push(`/pessoas/visitantes?destaque=${visitanteSalvoId}`))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar. Tente novamente.')

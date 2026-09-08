@@ -18,9 +18,10 @@ const OPCOES_TIPO: { valor: TipoCategoria; label: string; descricao: string; Ico
 interface ModalCategoriaFormProps {
   categoria?: CategoriaResponse   // presente = edição
   onClose: () => void
+  onSaved?: (categoriaSalvaId?: string) => void
 }
 
-export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormProps) {
+export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategoriaFormProps) {
   const { saindo, fechar } = useFecharAnimado(onClose, 240)
   const {
     register, handleSubmit, setValue, watch,
@@ -31,7 +32,7 @@ export function ModalCategoriaForm({ categoria, onClose }: ModalCategoriaFormPro
     categoriaId: categoria?.id,
     categoriaInicial: categoria,
     // fecha ANIMADO ao salvar (não `onClose` seco)
-    onSuccess: () => fechar(),
+    onSuccess: (id) => { onSaved?.(id); fechar() },
   })
 
   const tipoSelecionado = watch('tipo')

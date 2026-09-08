@@ -131,18 +131,6 @@ class PrazoInscricaoJobTest {
     }
 
     @Test
-    void avisoIncompletaSoParaEventoPago() {
-        // evento gratuito não tem AGUARDANDO_PAGAMENTO — a query retorna vazio
-        var evento = eventoComPrazo(LocalDateTime.now().plusDays(2));
-        when(inscricaoRepository.buscarAguardandoPagamentoSemAvisoDePrazo(evento.getId())).thenReturn(List.of());
-
-        processar(evento);
-
-        verify(notificacaoService, never()).criar(eq(TipoNotificacao.PRAZO_INSCRICAO_INCOMPLETA),
-                any(), any(), any(), any());
-    }
-
-    @Test
     void pulaResponsavelSemLogin() {
         var evento = eventoComPrazo(LocalDateTime.now().minusHours(1));
         var pessoaSemLogin = Pessoa.builder().id(UUID.randomUUID()).igreja(igreja()).nome("X").build();

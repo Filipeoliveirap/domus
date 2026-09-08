@@ -482,7 +482,7 @@ public class InscricaoService {
     @Transactional
     public ResultadoConvidado inscreverConvidado(UUID eventoId, UUID igrejaId, String nome,
                                                String telefone, String email, UUID convidadoPorPessoaId,
-                                               UUID inscritoPorUsuarioId, UUID visitanteId,
+                                               UUID inscritoPorUsuarioId, String role, UUID visitanteId,
                                                boolean gerarLink) {
         var idsFamilia = familiaIgrejaService.idsDaFamiliaCompleta(igrejaId);
         Evento evento = eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, idsFamilia)
@@ -505,9 +505,7 @@ public class InscricaoService {
                     "O e-mail é obrigatório para se inscrever em eventos.");
         }
         validarEventoAberto(evento);
-        // inscritoPorUsuarioId != null => gestor autenticado (endpoint /inscricoes/convidados exige ADMIN/LIDER);
-        // null => link público sem sessão. Derivamos a role pra guarda a partir disso.
-        validarPrazoInscricao(evento, inscritoPorUsuarioId != null ? "ADMIN_IGREJA" : null);
+        validarPrazoInscricao(evento, role);
         validarConvidadoTopoNaoDuplicado(eventoId, nome, telefone, visitanteId, inscritoPorUsuarioId);
         validarVaga(evento, 1);
 

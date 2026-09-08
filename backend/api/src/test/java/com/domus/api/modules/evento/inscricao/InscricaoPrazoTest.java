@@ -387,4 +387,68 @@ class InscricaoPrazoTest {
         verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-1"), any());
         verify(pago).registrarEstorno(any());
     }
+
+    // --- Revisão final 2026-09-07: guardas que o spec pedia e não foram escritas ---
+
+    /** Lote do gestor (admin/líder) fura o prazo — capacidade, não identidade. */
+    @Test
+    void loteDoGestorInscreveDepoisDoPrazo() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), true);
+        var pessoa = pessoaComum();
+        when(eventoRepository.buscarVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        dado(evento, pessoa, 0);
+        when(inscricaoRepository.listarPessoaIdsJaInscritos(eq(eventoId), any())).thenReturn(List.of());
+
+        service.inscreverPessoas(eventoId, List.of(pessoa.getId()), adminUsuarioId, UUID.randomUUID(),
+                "ADMIN_IGREJA", false, igrejaId);
+
+        verify(inscricaoRepository).save(any());
+    }
+
+    /** Link público (role == null) barra no prazo. */
+    @Test
+    void convidadoPublicoRecusadoDepoisDoPrazo() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), true);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null,
+                "maria@teste.com", null, null, null, null, false))
+                .isInstanceOf(BusinessException.class)
+                .extracting("codigo").isEqualTo("PRAZO_INSCRICAO_ENCERRADO");
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    /** CRITICAL #1: membro comum não fura o prazo pendurando convidado, mesmo passando
+     *  o próprio usuarioId como inscritoPorUsuarioId. */
+    @Test
+    void membroComumRecusadoAoPendurarConvidadoDepoisDoPrazo() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), true);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+
+        assertThatThrownBy(() -> service.inscreverConvidado(eventoId, igrejaId, "Maria", null,
+                "maria@teste.com", null, UUID.randomUUID(), "ACESSO_COMUM", null, false))
+                .isInstanceOf(BusinessException.class)
+                .extracting("codigo").isEqualTo("PRAZO_INSCRICAO_ENCERRADO");
+        verify(inscricaoRepository, never()).save(any());
+    }
+
+    /** Admin pendura convidado depois do prazo — passa. */
+    @Test
+    void adminPenduraConvidadoDepoisDoPrazo() {
+        var evento = eventoComPrazo(LocalDateTime.now().minusHours(1), true);
+        when(eventoRepository.buscarComLockVisivelParaFamilia(eventoId, igrejaId, java.util.Set.of(igrejaId)))
+                .thenReturn(Optional.of(evento));
+        when(inscricaoRepository.contarPessoasConfirmadas(eventoId)).thenReturn(0L);
+        when(inscricaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.inscreverConvidado(eventoId, igrejaId, "Maria", null, "maria@teste.com",
+                null, adminUsuarioId, "ADMIN_IGREJA", null, false);
+
+        verify(inscricaoRepository).save(any());
+    }
 }

@@ -139,8 +139,9 @@ public class EventoService {
                 .controlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()))
                 .restritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()))
                 .inscricoesAte(data.inscricoesAte())
-                .permiteCancelarAposPrazo(data.permiteCancelarAposPrazo() == null
-                        || data.permiteCancelarAposPrazo())
+                .politicaCancelamentoAposPrazo(data.politicaCancelamentoAposPrazo() == null
+                        ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
+                        : data.politicaCancelamentoAposPrazo())
                 .build();
 
         java.util.List<EventoResponsavel> respAdicionados =
@@ -245,8 +246,9 @@ public class EventoService {
         evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
         evento.setRestritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()));
         evento.setInscricoesAte(data.inscricoesAte());
-        evento.setPermiteCancelarAposPrazo(data.permiteCancelarAposPrazo() == null
-                || data.permiteCancelarAposPrazo());
+        evento.setPoliticaCancelamentoAposPrazo(data.politicaCancelamentoAposPrazo() == null
+                ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
+                : data.politicaCancelamentoAposPrazo());
 
         // Resolve a nova foto antes de trocar; só remove a antiga depois.
         Foto fotoAntiga = evento.getFoto();
@@ -449,7 +451,7 @@ public class EventoService {
         ocorrencia.setVagas(editado.getVagas());
         ocorrencia.setPreco(editado.getPreco());
         ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
-        ocorrencia.setPermiteCancelarAposPrazo(editado.isPermiteCancelarAposPrazo());
+        ocorrencia.setPoliticaCancelamentoAposPrazo(editado.getPoliticaCancelamentoAposPrazo());
         ocorrencia.setRequerInscricao(editado.isRequerInscricao());
         ocorrencia.setControlaPresenca(editado.isControlaPresenca());
         ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());

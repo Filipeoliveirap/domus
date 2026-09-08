@@ -4,6 +4,13 @@
   z-index: 200;
 }
 
+/* Contador discreto abaixo do título ("X de Y respondidos"). */
+.contador {
+  margin: 4px 20px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .corpo {
   max-height: 60vh;
   overflow-y: auto;
@@ -12,29 +19,65 @@
 .lista {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   margin: 0;
 }
 
+/* Cada resposta é um bloco; separador sutil entre blocos. */
 .item {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
 }
+.item:first-child { padding-top: 0; }
+.item:last-child { padding-bottom: 0; border-bottom: none; }
 
+/* Pergunta: menor, cinza, em cima. */
 .pergunta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-dark);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
 }
 
+.perguntaTexto {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Tag discreta "do cadastro" — chip neutro ao lado da pergunta. */
+.chipCadastro {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+/* Resposta: destacada, cor de texto normal, peso maior. */
 .resposta {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 .semResposta {
+  font-weight: var(--font-weight-regular);
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+@media (max-width: 767px) {
+  .contador { margin-left: 16px; margin-right: 16px; }
 }

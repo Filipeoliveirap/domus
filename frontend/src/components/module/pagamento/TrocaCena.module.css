@@ -6,10 +6,14 @@
 }
 
 /* Cena que sai: fora do fluxo (não conta pra altura do palco, que já mira a cena nova) e
-   desliza pra cima sumindo. */
+   desliza pra cima sumindo. Sem `bottom`/`inset:0` — se ela esticasse até o rodapé do
+   palco, seria espremida enquanto a altura anima (a cena antiga é mais alta), e o QR
+   "piscava" distorcido. Mantém a altura natural e só é recortada pelo overflow. */
 .cenaSai {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
   pointer-events: none;
   animation: cenaSair 0.42s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }

@@ -316,7 +316,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V37**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V39**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -440,6 +440,10 @@ erDiagram
         integer   idade_max "V3 - CHECK >= 0"
         varchar   restricao_estado_civil "V3 - SOLTEIRO|CASADO|DIVORCIADO|VIUVO, nulável"
         varchar   restricao_sexo "V3 - HOMEM|MULHER, nulável"
+        timestamp inscricoes_ate "V38 - prazo pra fechar inscrição antes do evento começar; NULL = sem prazo"
+        varchar   politica_cancelamento_apos_prazo "V39 - NAO_PERMITIDO|PERMITIDO_COM_REEMBOLSO|PERMITIDO_SEM_REEMBOLSO; o que acontece ao cancelar após o prazo"
+        timestamp aviso_prazo_proximo_em "V38 - carimbo do PrazoInscricaoJob (dedup)"
+        timestamp aviso_prazo_fechado_em "V38 - carimbo do PrazoInscricaoJob (dedup)"
         timestamp deleted_at "soft delete"
     }
 
@@ -465,6 +469,7 @@ erDiagram
         varchar   email_convidado "V31 - obrigatório quando o evento é pago"
         uuid      convidado_por_pessoa_id FK "V26 - quem gerou o convite"
         uuid      visitante_id FK "V28 - liga de volta ao registro de Visitante, ON DELETE SET NULL"
+        timestamp aviso_prazo_incompleto_em "V38 - carimbo do PrazoInscricaoJob (dedup)"
     }
 
     ACOMPANHANTE_INSCRICAO {
@@ -608,7 +613,12 @@ erDiagram
   `idade_max` + `restricao_estado_civil` + `restricao_sexo` são a elegibilidade de
   inscrição: quatro regras independentes, avaliadas no momento de inscrever — não somam
   automaticamente, cada uma bloqueia por conta própria quando o dado da pessoa falta
-  (idade sem `data_nascimento`, sexo sem `pessoa.sexo`).
+  (idade sem `data_nascimento`, sexo sem `pessoa.sexo`). **Prazo de inscrição (V38-V39):**
+  `inscricoes_ate` opcional fecha a inscrição antes de o evento começar — 5ª porta, independente
+  das restrições de elegibilidade. Membro comum barra no prazo; admin/líder furam; link público
+  sempre barra. `politica_cancelamento_apos_prazo` (V39) decide o cancelamento pós-prazo:
+  bloqueado, com reembolso (padrão), ou sem reembolso. Um job diário (`PrazoInscricaoJob`)
+  notifica inscritos com pagamento pendente e responsáveis quando o prazo se aproxima/fecha.
 - **Pagamento de evento (V29-V32):** `CONTA_PAGAMENTO_IGREJA` é a conta Mercado Pago
   conectada (1-por-igreja); token renovado sozinho antes de vencer, sem intervenção
   manual (job diário). `COBRANCA_EVENTO` nasce quando alguém escolhe pagar (ou "enviar

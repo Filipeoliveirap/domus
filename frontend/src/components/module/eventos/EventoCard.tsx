@@ -14,6 +14,7 @@ import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { EventoResponse } from '@/types/evento.type'
 import { urlFoto } from '@/lib/urlFoto'
 import { SelosInscricaoCard } from './SelosInscricaoCard'
+import { SeloPrazoInscricao } from './SeloPrazoInscricao'
 import styles from './EventoCard.module.css'
 
 interface EventoCardProps {
@@ -112,6 +113,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar, onAbrirPendenci
           {evento.preco != null && (
             <span className={styles.preco}>{formatarMoeda(evento.preco)}</span>
           )}
+          <SeloPrazoInscricao evento={evento} />
           <SelosInscricaoCard
             evento={evento}
             onAbrirPendencia={() => (onAbrirPendencia ? onAbrirPendencia(evento) : onAbrirDetalhe(evento))}

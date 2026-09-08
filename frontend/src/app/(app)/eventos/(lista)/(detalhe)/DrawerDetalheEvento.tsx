@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { clsx } from 'clsx'
-import { X, Clock, MapPin, CalendarDays, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
+import { X, Clock, MapPin, CalendarDays, CalendarClock, Users, Ticket, Flame, Pencil, UserCircle, Building2, Archive, Share2 } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useEvento } from '@/hooks/evento/useEvento'
 import { useAuthStore } from '@/store/authStore'
@@ -199,6 +199,22 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 </div>
               )}
 
+              {/* Task 11: prazo de inscrição, quando o evento tem um. */}
+              {evento.inscricoesAte && (
+                <div className={styles.infoItem}>
+                  <span className={styles.infoIcone}><CalendarClock size={20} /></span>
+                  <div>
+                    <p className={styles.infoLabel}>Inscrições até</p>
+                    <p className={styles.infoValor}>
+                      {new Date(evento.inscricoesAte).toLocaleString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })}
+                      {evento.situacaoInscricao === 'ENCERRADA_POR_PRAZO' && ' · encerradas'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* F1: preço só aparecia no modal do início — agora aparece aqui também. */}
               {evento.preco && (
                 <div className={styles.infoItem}>
@@ -323,8 +339,12 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 vagasRestantes={vagasRestantes}
                 requerInscricao={evento.requerInscricao}
                 situacao={evento.situacao}
+                situacaoInscricao={evento.situacaoInscricao}
+                inscricoesAte={evento.inscricoesAte}
                 preco={evento.preco}
+                politicaCancelamentoAposPrazo={evento.politicaCancelamentoAposPrazo}
                 onInscritoComSucesso={() => setAcabouDeInscrever(true)}
+                onAntesDeNavegar={fechar}
               />
 
               {/* F15: fora de AGENDADO, o backend recusa — os botões nem aparecem. */}
@@ -378,6 +398,7 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                 tituloEvento={evento.titulo}
                 exclusivoMembros={evento.exclusivoMembros}
                 preco={evento.preco}
+                situacaoInscricao={evento.situacaoInscricao}
                 onClose={() => setModalAberto(null)}
               />
             )}

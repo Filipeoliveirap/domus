@@ -42,25 +42,41 @@ export function ModalRespostasInscrito({
           </h2>
         </div>
 
+        {!isPending && respostas && respostas.length > 0 && (
+          <p className={styles.contador}>
+            {respostas.filter((r) => r.origem !== 'SEM_RESPOSTA').length} de {respostas.length} respondidos
+          </p>
+        )}
+
         <div className={`${baseStyles.corpo} ${styles.corpo}`}>
           {isPending ? (
             <p>Carregando…</p>
           ) : !respostas || respostas.length === 0 ? (
-            <p>Nenhuma resposta enviada ainda.</p>
+            <p>Nenhum campo personalizado neste evento.</p>
           ) : (
             <dl className={styles.lista}>
-              {respostas.map((r) => (
-                <div key={r.campoId} className={styles.item}>
-                  <dt className={styles.pergunta}>{r.label}</dt>
-                  <dd className={styles.resposta}>
-                    {r.valor?.trim()
-                      ? (r.tipo === 'MULTIPLA_ESCOLHA'
-                        ? r.valor.split(' | ').filter(Boolean).join(', ')
-                        : r.valor)
-                      : <span className={styles.semResposta}>Não respondido</span>}
-                  </dd>
-                </div>
-              ))}
+              {respostas.map((r) => {
+                const respondido = r.origem !== 'SEM_RESPOSTA' && !!r.valor?.trim()
+                return (
+                  <div key={r.campoId} className={styles.item}>
+                    <dt className={styles.pergunta}>
+                      <span className={styles.perguntaTexto}>{r.label}</span>
+                      {r.origem === 'CADASTRO' && (
+                        <span className={styles.chipCadastro}>do cadastro</span>
+                      )}
+                    </dt>
+                    <dd className={styles.resposta}>
+                      {respondido ? (
+                        r.tipo === 'MULTIPLA_ESCOLHA'
+                          ? r.valor!.split(' | ').filter(Boolean).join(', ')
+                          : r.valor
+                      ) : (
+                        <span className={styles.semResposta}>Não respondido</span>
+                      )}
+                    </dd>
+                  </div>
+                )
+              })}
             </dl>
           )}
         </div>

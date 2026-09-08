@@ -105,6 +105,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
+        validarPrazoInscricao(data);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
@@ -137,6 +138,10 @@ public class EventoService {
                 .requerInscricao(Boolean.TRUE.equals(data.requerInscricao()))
                 .controlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()))
                 .restritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()))
+                .inscricoesAte(data.inscricoesAte())
+                .politicaCancelamentoAposPrazo(data.politicaCancelamentoAposPrazo() == null
+                        ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
+                        : data.politicaCancelamentoAposPrazo())
                 .build();
 
         java.util.List<EventoResponsavel> respAdicionados =
@@ -180,6 +185,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
+        validarPrazoInscricao(data);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
 
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
@@ -239,6 +245,10 @@ public class EventoService {
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
         evento.setControlaPresenca(Boolean.TRUE.equals(data.controlaPresenca()));
         evento.setRestritoPropriaIgreja(Boolean.TRUE.equals(data.restritoPropriaIgreja()));
+        evento.setInscricoesAte(data.inscricoesAte());
+        evento.setPoliticaCancelamentoAposPrazo(data.politicaCancelamentoAposPrazo() == null
+                ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
+                : data.politicaCancelamentoAposPrazo());
 
         // Resolve a nova foto antes de trocar; só remove a antiga depois.
         Foto fotoAntiga = evento.getFoto();
@@ -441,6 +451,7 @@ public class EventoService {
         ocorrencia.setVagas(editado.getVagas());
         ocorrencia.setPreco(editado.getPreco());
         ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
+        ocorrencia.setPoliticaCancelamentoAposPrazo(editado.getPoliticaCancelamentoAposPrazo());
         ocorrencia.setRequerInscricao(editado.isRequerInscricao());
         ocorrencia.setControlaPresenca(editado.isControlaPresenca());
         ocorrencia.setRestritoPropriaIgreja(editado.isRestritoPropriaIgreja());
@@ -660,6 +671,20 @@ public class EventoService {
         if (data.preco() != null && !requerInscricao) {
             throw new BusinessException("PRECO_SEM_INSCRICAO",
                     "Só é possível cobrar em eventos que também exigem inscrição.");
+        }
+    }
+
+    /** Prazo de inscrição (V38): se informado, tem que ser antes do início e o evento
+     *  precisa exigir inscrição — senão o prazo não significa nada. */
+    private void validarPrazoInscricao(EventoRequest data) {
+        if (data.inscricoesAte() == null) return;
+        if (!Boolean.TRUE.equals(data.requerInscricao())) {
+            throw new BusinessException("PRAZO_SEM_INSCRICAO",
+                    "O prazo de inscrição só faz sentido com inscrição obrigatória ligada.");
+        }
+        if (data.inscricoesAte().isAfter(data.inicioEm())) {
+            throw new BusinessException("PRAZO_APOS_INICIO",
+                    "O prazo de inscrição tem que ser antes do início do evento.");
         }
     }
 

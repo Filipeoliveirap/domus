@@ -149,6 +149,11 @@ const eventoSchemaBase = z.object({
   fotoId: z.string().nullable().default(null),
 
   requerInscricao: z.boolean().default(false),
+  inscricoesAteData: opcional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')),
+  inscricoesAteHora: opcional(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido. Use hh:mm.')),
+  politicaCancelamentoAposPrazo: z
+    .enum(['NAO_PERMITIDO', 'PERMITIDO_COM_REEMBOLSO', 'PERMITIDO_SEM_REEMBOLSO'])
+    .default('PERMITIDO_COM_REEMBOLSO'),
   controlaPresenca: z.boolean().default(false),
   vagas: opcionalNumero(
     z.coerce.number().int().positive('Vagas deve ser um número inteiro positivo.'),
@@ -198,6 +203,18 @@ export const eventoSchema = eventoSchemaBase.refine(
     return data.idadeMin <= data.idadeMax
   },
   { message: 'A idade mínima não pode ser maior que a máxima.', path: ['idadeMax'] }
+).refine(
+  (data) => {
+    if (!data.inscricoesAteData || !data.inscricoesAteHora) return true
+    const inicio = new Date(`${data.inicioData}T${data.inicioHora}`)
+    const prazo = new Date(`${data.inscricoesAteData}T${data.inscricoesAteHora}`)
+    if (isNaN(inicio.getTime()) || isNaN(prazo.getTime())) return true
+    return prazo <= inicio
+  },
+  { message: 'O prazo tem que ser antes do início do evento.', path: ['inscricoesAteData'] }
+).refine(
+  (data) => !!data.inscricoesAteData === !!data.inscricoesAteHora,
+  { message: 'Informe a data e o horário do prazo.', path: ['inscricoesAteHora'] }
 ).refine(
   (data) => !data.requerInscricao || data.tipoInscricao !== 'PAGO' || !!data.preco,
   { message: 'Informe o valor da inscrição.', path: ['preco'] }

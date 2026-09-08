@@ -16,6 +16,68 @@
   gap: 10px;
   /* página full-screen (sem app shell) — respeita o notch/Dynamic Island no topo */
   padding: calc(16px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 16px max(24px, env(safe-area-inset-left));
+  /* a rota abre fora do app shell — conteúdo entra animado em vez de aparecer seco */
+  animation: entrarTopo 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.conteudoEntra {
+  animation: entrarConteudo 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
+}
+
+@keyframes entrarTopo {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes entrarConteudo {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topo { animation: none; }
+  .conteudoEntra { animation: entrarConteudoReduzido 0.18s ease both; }
+  @keyframes entrarConteudoReduzido { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* Esqueleto do loading.tsx (mostrado enquanto o segmento de rota carrega). */
+.esqueletoTopo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-skeleton, var(--color-primary-light));
+  flex-shrink: 0;
+}
+.esqueletoLinhas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.esqueletoLinha {
+  height: 12px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-bg-skeleton, var(--color-primary-light));
+  opacity: 0.7;
+  animation: pulsarEsqueleto 1.4s ease-in-out infinite;
+}
+.esqueletoLinha:first-child { width: 55%; }
+.esqueletoLinha:last-child { width: 35%; height: 10px; }
+.esqueletoCentro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+@keyframes pulsarEsqueleto {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueletoLinha { animation: none; }
 }
 
 .topoIcone {
@@ -276,3 +338,27 @@
 
 .aprovadoAcao { transition: background-color var(--transition-fast), transform 0.1s ease; }
 .aprovadoAcao:active { transform: scale(0.97); }
+
+/* "Ver QR Code de novo" — botão secundário na tela de aguardando deliberada */
+.verQrDeNovo {
+  display: inline-block;
+  width: 100%;
+  max-width: 260px;
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform 0.12s ease;
+}
+.verQrDeNovo:hover { background: var(--color-primary-light); }
+.verQrDeNovo:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .verQrDeNovo { transition: background-color var(--transition-fast); }
+  .verQrDeNovo:active { transform: none; }
+}

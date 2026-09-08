@@ -125,6 +125,26 @@ public class Evento {
     @Builder.Default
     private boolean divergeDaSerie = false;
 
+    /** Prazo de inscrição (V38). NULL = aceita inscrição até o evento começar (comportamento antigo). */
+    @Column(name = "inscricoes_ate")
+    private LocalDateTime inscricoesAte;
+
+    /** V39. Só tem efeito quando inscricoesAte != null. Decide o que acontece quando
+     *  alguém tenta cancelar a inscrição depois do prazo (ver enum). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "politica_cancelamento_apos_prazo", nullable = false, length = 30)
+    @Builder.Default
+    private PoliticaCancelamentoAposPrazo politicaCancelamentoAposPrazo =
+        PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO;
+
+    /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "prazo chegando"). */
+    @Column(name = "aviso_prazo_proximo_em")
+    private LocalDateTime avisoPrazoProximoEm;
+
+    /** V38 — carimbo do PrazoInscricaoJob (dedup do aviso "prazo fechou"). */
+    @Column(name = "aviso_prazo_fechado_em")
+    private LocalDateTime avisoPrazoFechadoEm;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -149,6 +169,19 @@ public class Evento {
             return SituacaoEvento.ENCERRADO;
         }
         return SituacaoEvento.EM_ANDAMENTO;
+    }
+
+    /** Ver {@link SituacaoInscricao}. ENCERRADA_POR_INICIO é testado primeiro: como a
+     *  validação garante inscricoesAte <= inicioEm, um evento já começado também está
+     *  "depois do prazo", mas o estado correto pra exibir é ENCERRADA_POR_INICIO. */
+    public SituacaoInscricao getSituacaoInscricao() {
+        if (getSituacao() != SituacaoEvento.AGENDADO) {
+            return SituacaoInscricao.ENCERRADA_POR_INICIO;
+        }
+        if (inscricoesAte != null && LocalDateTime.now().isAfter(inscricoesAte)) {
+            return SituacaoInscricao.ENCERRADA_POR_PRAZO;
+        }
+        return SituacaoInscricao.ABERTA;
     }
 
     public String getLocalExibicao() {

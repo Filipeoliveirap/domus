@@ -28,3 +28,46 @@
 .erro { font-size: var(--font-size-sm); color: var(--color-danger); margin: 0; }
 
 .segmentado.comErro .segmentoBtn { border-color: var(--color-danger); }
+
+/* Campos que já vieram do cadastro da pessoa — só leitura, abaixo das perguntas. */
+.blocoCadastro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+.blocoCadastroTitulo {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.itemCadastro { display: flex; flex-direction: column; gap: 3px; }
+.perguntaCadastro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+.chipCadastro {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+.valorCadastro {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+  overflow-wrap: anywhere;
+}

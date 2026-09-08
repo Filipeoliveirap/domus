@@ -111,10 +111,48 @@
 
 .grupo {
   padding: 8px 0;
+  animation: qvLinhaEntra 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
 }
 
 .grupo + .grupo {
   border-top: 1px solid var(--color-border);
+}
+
+@keyframes qvLinhaEntra {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Skeleton de carregamento — mesma silhueta das linhas reais */
+.skeletonLinha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 4px;
+}
+.skeletonAvatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  animation: qvPulse 1.4s ease-in-out infinite;
+}
+.skeletonNome {
+  height: 12px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-primary-light);
+  animation: qvPulse 1.4s ease-in-out infinite;
+}
+@keyframes qvPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grupo { animation: none; }
+  .skeletonAvatar, .skeletonNome { animation: none; }
 }
 
 .linha {

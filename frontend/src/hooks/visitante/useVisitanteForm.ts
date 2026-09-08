@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation'
+import { useSaidaFormulario } from '@/hooks/forms/useSaidaFormulario'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { notificar } from '@/components/common/Notificacao/notificar'
@@ -49,6 +50,7 @@ interface UseVisitanteFormParams {
 
 export function useVisitanteForm({ visitanteId, visitanteInicial }: UseVisitanteFormParams = {}) {
   const router = useRouter()
+  const { saindo, sairAnimado } = useSaidaFormulario()
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
@@ -116,7 +118,7 @@ export function useVisitanteForm({ visitanteId, visitanteInicial }: UseVisitante
         notificar.sucesso('Visitante cadastrado com sucesso!')
       }
 
-      router.back()
+      sairAnimado(() => router.back())
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         setErroGeral(error.response?.data?.message ?? 'Erro ao salvar. Tente novamente.')
@@ -128,5 +130,5 @@ export function useVisitanteForm({ visitanteId, visitanteInicial }: UseVisitante
     }
   }
 
-  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao }
+  return { ...form, onSubmit, erroGeral, isLoading, ehEdicao, saindo }
 }

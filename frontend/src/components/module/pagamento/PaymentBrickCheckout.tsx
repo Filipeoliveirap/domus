@@ -116,11 +116,14 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
     }
   }, [])
 
-  // Conta 15s a partir do momento em que o formulário ainda não ficou pronto. Some assim
-  // que `brickPronto` vira true (o cleanup limpa o timer).
+  // Conta 12s a partir do momento em que o formulário ainda não ficou pronto. Some assim
+  // que `brickPronto` vira true (o cleanup limpa o timer). A causa mais comum de o Brick
+  // nunca ficar pronto é bloqueador de anúncio / proteção contra rastreamento do navegador
+  // barrando os assets do Mercado Pago (mlstatic.com/mercadolibre.com) — a mensagem abaixo
+  // orienta pra isso em vez de só mandar recarregar (recarregar não resolve).
   useEffect(() => {
     if (brickPronto) return
-    const timer = setTimeout(() => setDemorando(true), 15000)
+    const timer = setTimeout(() => setDemorando(true), 12000)
     return () => clearTimeout(timer)
   }, [brickPronto])
 
@@ -309,12 +312,26 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
       <div className={styles.brickArea}>
         {!brickPronto && (
           <div className={styles.carregando} role="status" aria-live="polite">
-            <Loader variant="circular" size="lg" />
-            <p>
-              {demorando
-                ? 'Está demorando mais que o normal. Se o formulário não aparecer, recarregue a página.'
-                : 'Carregando formulário de pagamento…'}
-            </p>
+            {demorando ? (
+              <>
+                <p className={styles.carregandoTitulo}>O formulário de pagamento não carregou</p>
+                <p>
+                  Geralmente é um <strong>bloqueador de anúncios</strong> ou a{' '}
+                  <strong>proteção contra rastreamento</strong> do navegador barrando o
+                  Mercado Pago. Tente:
+                </p>
+                <ul className={styles.carregandoLista}>
+                  <li>desativar o bloqueador / a proteção para este site (ícone do escudo ao lado do endereço)</li>
+                  <li>abrir numa janela normal, não anônima</li>
+                  <li>usar outro navegador (Chrome, Edge)</li>
+                </ul>
+              </>
+            ) : (
+              <>
+                <Loader variant="circular" size="lg" />
+                <p>Carregando formulário de pagamento…</p>
+              </>
+            )}
           </div>
         )}
         <Payment

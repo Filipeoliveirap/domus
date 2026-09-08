@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Search, X, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
@@ -63,7 +64,7 @@ function avisoElegibilidade(p: PessoaResponse, exclusivoMembros: boolean): strin
 export function ModalInscreverPessoas({
   eventoId, tituloEvento, exclusivoMembros, preco, situacaoInscricao, onClose, embutido = false,
 }: Props) {
-  const router = useRouter()
+  const irParaCheckout = useIrParaCheckout()
   const [busca, setBusca] = useState('')
   // Evento gratuito: seleção múltipla por checkbox (Map pra guardar nome/e-mail no momento
   // da seleção — a lista de busca pode mudar de página/termo depois, e precisamos saber
@@ -210,7 +211,9 @@ export function ModalInscreverPessoas({
             voltarParaLista()
           } else {
             setNavegandoParaCheckout(true)
-            router.push(`/eventos/${eventoId}/pagamento/${item.cobrancaId}`)
+            // Fecha o modal animado atrás do véu da ponte antes do push (mesma cena da
+            // auto-inscrição), em vez de cortar seco pro checkout.
+            irParaCheckout(eventoId, item.cobrancaId, fechar)
           }
         },
         onError: () => setImpedimentosParaConfirmar(null),
@@ -312,6 +315,7 @@ export function ModalInscreverPessoas({
   )
 
   // ---- Evento gratuito: fila de quem falta e-mail e/ou responder campos personalizados ----
+  // (modal próprio, empilhado — não é uma "cena" deste modal)
   if (!preco && filaPendencias.length > 0) {
     const atual = filaPendencias[0]
     return (
@@ -331,34 +335,7 @@ export function ModalInscreverPessoas({
     )
   }
 
-  // ---- Evento pago: sem conta MP conectada ----
-  if (preco && !contaPagamento?.conectada) {
-    const conteudo = (
-      <div className={styles.lista}>
-        <p className={styles.estado}>
-          Este evento é pago, mas a igreja ainda não conectou uma conta para receber
-          pagamentos.{' '}
-          {ehGestor ? <Link href="/configuracoes/igreja">Conectar agora</Link> : 'Fale com a secretaria da igreja.'}
-        </p>
-      </div>
-    )
-    return embutido ? conteudo : (
-      <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => fechar()}>
-        <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true"><span className={styles.grabber} aria-hidden="true" />
-          <div className={styles.header}>
-            <div>
-              <h2 className={styles.titulo}>Inscrever pessoas</h2>
-              <p className={styles.subtitulo}>{tituloEvento}</p>
-            </div>
-            <button type="button" className={styles.btnFechar} onClick={fechar} aria-label="Fechar"><X size={20} /></button>
-          </div>
-          {conteudo}
-        </div>
-      </div>
-    )
-  }
-
-  // ---- Evento pago: compartilhando o link de uma pessoa ----
+  // ---- Evento pago: compartilhando o link de uma pessoa (modal próprio, empilhado) ----
   if (preco && compartilhando) {
     return (
       <ModalCompartilharCobranca
@@ -371,85 +348,78 @@ export function ModalInscreverPessoas({
     )
   }
 
-  // ---- Evento pago: painel de uma pessoa (campos adicionais + escolha de pagamento) ----
-  if (preco && pessoaClicada) {
-    const conteudo = (
-      <div className={styles.lista}>
-        <button type="button" className={styles.botaoVoltar} onClick={voltarParaLista}>
-          <ArrowLeft size={16} aria-hidden="true" />
-          Voltar
-        </button>
+  // ---- Cenas que se trocam DENTRO deste modal (mesmo cabeçalho, corpo com crossfade) ----
+  const cena: 'sem-conta' | 'painel-pago' | 'lista' =
+    preco && !contaPagamento?.conectada ? 'sem-conta'
+      : preco && pessoaClicada ? 'painel-pago'
+        : 'lista'
 
-        <div className={styles.painelPessoa}>
-          <h3 className={styles.painelTitulo}>Inscrever {pessoaClicada.nome}</h3>
+  const cenaSemConta = (
+    <div className={styles.lista}>
+      <p className={styles.estado}>
+        Este evento é pago, mas a igreja ainda não conectou uma conta para receber
+        pagamentos.{' '}
+        {ehGestor ? <Link href="/configuracoes/igreja">Conectar agora</Link> : 'Fale com a secretaria da igreja.'}
+      </p>
+    </div>
+  )
 
-          {!pessoaClicada.email && (
-            <Input
-              id="email-pago"
-              type="email"
-              label="E-mail"
-              placeholder="nome@exemplo.com"
-              value={emailPago}
-              onChange={(e) => setEmailPago(e.target.value)}
-              error={tentouConfirmarEmailPago && !emailPagoValido ? 'Informe um e-mail válido.' : undefined}
-            />
-          )}
+  const cenaPainelPago = pessoaClicada && preco != null && (
+    <div className={styles.lista}>
+      <button type="button" className={styles.botaoVoltar} onClick={voltarParaLista}>
+        <ArrowLeft size={16} aria-hidden="true" />
+        Voltar
+      </button>
 
-          {campos.length > 0 && (
-            <CamposExtrasForm
-              campos={campos}
-              valores={camposValores}
-              onChange={(campoId, valor) => setCamposValores((v) => ({ ...v, [campoId]: valor }))}
-              tentouEnviar={tentouConfirmarCampos}
-            />
-          )}
+      <div className={styles.painelPessoa}>
+        <h3 className={styles.painelTitulo}>Inscrever {pessoaClicada.nome}</h3>
 
-          <p className={styles.painelValor}>{formatarMoeda(preco)}</p>
+        {!pessoaClicada.email && (
+          <Input
+            id="email-pago"
+            type="email"
+            label="E-mail"
+            placeholder="nome@exemplo.com"
+            value={emailPago}
+            onChange={(e) => setEmailPago(e.target.value)}
+            error={tentouConfirmarEmailPago && !emailPagoValido ? 'Informe um e-mail válido.' : undefined}
+          />
+        )}
 
-          <div className={styles.acoesPagamento}>
-            <button
-              type="button"
-              className={styles.botaoPagar}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
-              onClick={() => confirmarPessoa(false)}
-            >
-              {inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
-            </button>
-            <button
-              type="button"
-              className={styles.botaoLink}
-              disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
-              onClick={() => confirmarPessoa(true)}
-            >
-              Enviar link pra {pessoaClicada.nome} pagar
-            </button>
-          </div>
+        {campos.length > 0 && (
+          <CamposExtrasForm
+            campos={campos}
+            valores={camposValores}
+            onChange={(campoId, valor) => setCamposValores((v) => ({ ...v, [campoId]: valor }))}
+            tentouEnviar={tentouConfirmarCampos}
+          />
+        )}
+
+        <p className={styles.painelValor}>{formatarMoeda(preco)}</p>
+
+        <div className={styles.acoesPagamento}>
+          <button
+            type="button"
+            className={styles.botaoPagar}
+            disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
+            onClick={() => confirmarPessoa(false)}
+          >
+            {inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending ? 'Inscrevendo…' : `Pagar inscrição de ${pessoaClicada.nome}`}
+          </button>
+          <button
+            type="button"
+            className={styles.botaoLink}
+            disabled={inscreverPessoas.isPending || navegandoParaCheckout || definirEmail.isPending || prazoBloqueiaComum}
+            onClick={() => confirmarPessoa(true)}
+          >
+            Enviar link pra {pessoaClicada.nome} pagar
+          </button>
         </div>
       </div>
-    )
+    </div>
+  )
 
-    return (
-      <>
-        {embutido ? conteudo : (
-          <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={() => !inscreverPessoas.isPending && fechar()}>
-            <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-              <div className={styles.header}>
-                <div>
-                  <h2 className={styles.titulo}>Inscrever pessoas</h2>
-                  <p className={styles.subtitulo}>{tituloEvento}</p>
-                </div>
-                <button type="button" className={styles.btnFechar} onClick={fechar} aria-label="Fechar" disabled={inscreverPessoas.isPending}><X size={20} /></button>
-              </div>
-              {conteudo}
-            </div>
-          </div>
-        )}
-        {modalContorno}
-      </>
-    )
-  }
-
-  // ---- Lista: sem checkbox se pago, com checkbox se gratuito ----
+  // ---- Cena "lista": sem checkbox se pago, com checkbox se gratuito ----
   const listaConteudo = (
     <div className={styles.lista}>
       {isLoading ? (
@@ -509,26 +479,8 @@ export function ModalInscreverPessoas({
     </div>
   )
 
-  const conteudo = (
+  const corpoLista = (
     <>
-      {!embutido && (
-        <div className={styles.header}>
-          <div>
-            <h2 className={styles.titulo} id="titulo-inscrever-pessoas">Inscrever pessoas</h2>
-            <p className={styles.subtitulo}>{tituloEvento}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.btnFechar}
-            onClick={onClose}
-            aria-label="Fechar"
-            disabled={inscreverPessoas.isPending}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      )}
-
       {!embutido && situacaoInscricao === 'ENCERRADA_POR_PRAZO' && (
         <div className={styles.avisoPrazo}>
           {ehGestor
@@ -571,6 +523,38 @@ export function ModalInscreverPessoas({
           </div>
         </div>
       )}
+    </>
+  )
+
+  const conteudo = (
+    <>
+      {!embutido && (
+        <div className={styles.header}>
+          <div>
+            <h2 className={styles.titulo} id="titulo-inscrever-pessoas">Inscrever pessoas</h2>
+            <p className={styles.subtitulo}>{tituloEvento}</p>
+          </div>
+          <button
+            type="button"
+            className={styles.btnFechar}
+            onClick={fechar}
+            aria-label="Fechar"
+            disabled={inscreverPessoas.isPending}
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
+
+      {/* As cenas (lista ↔ painel de uma pessoa ↔ aviso sem-conta) trocam com crossfade
+          + @starting-style em vez de corte seco. O cabeçalho fica fixo por cima. */}
+      <Transicao key={cena} modo="fade" className={styles.cena}>
+        {cena === 'sem-conta'
+          ? cenaSemConta
+          : cena === 'painel-pago'
+            ? cenaPainelPago
+            : corpoLista}
+      </Transicao>
     </>
   )
 

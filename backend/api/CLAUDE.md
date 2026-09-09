@@ -147,6 +147,9 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
     (`--cat-eventos|celulas|ministerios|financeiro`). Cor só em acento — glow do hover,
     selo, CTA, ícone; nunca no fundo do card ou no texto de conteúdo. Ver
     `docs/superpowers/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
+  - **Card NÃO clicável** (relatório, gráfico, número) usa `.card-painel` — só padroniza
+    a sombra (suave parada + leve reforço no hover). Nada de lift/escala/glow (não fingir
+    que é clicável). Mantém o próprio fundo/borda/raio.
 - **Mobile de verdade (Android e iOS).** Além dos padrões de layout acima: modal/drawer
   vira **bottom-sheet** no breakpoint mobile (`@media (max-width: 767px)`: cola no rodapé,
   cantos de baixo retos, `.grabber`, `deslizarCima`/`deslizarBaixo`, `env(safe-area-inset-bottom)`,

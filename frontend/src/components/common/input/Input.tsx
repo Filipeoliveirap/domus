@@ -58,7 +58,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <span className={styles.fieldError} role="alert">
+          <span className={styles.fieldError} role="alert" data-campo-erro>
             {error}
           </span>
         )}

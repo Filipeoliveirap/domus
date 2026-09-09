@@ -34,7 +34,7 @@ export function GraficoEvolucao({ data, isLoading, isError, aoTentarNovamente }:
 
   if (data.length === 0) {
     return (
-      <div className={styles.painel}>
+      <div className={`${styles.painel} card-painel`}>
         <h3 className={styles.titulo}>Evolução Mensal</h3>
         <div className={styles.vazio}>Nenhuma movimentação no período selecionado.</div>
       </div>
@@ -48,7 +48,7 @@ export function GraficoEvolucao({ data, isLoading, isError, aoTentarNovamente }:
   }))
 
   return (
-    <div className={styles.painel}>
+    <div className={`${styles.painel} card-painel`}>
       <h3 className={styles.titulo}>Evolução Mensal</h3>
       <div className={styles.grafico}>
         <ResponsiveContainer width="100%" height={320}>

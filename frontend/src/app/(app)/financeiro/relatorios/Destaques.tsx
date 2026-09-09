@@ -43,7 +43,7 @@ export function Destaques({ resumo, categorias, maiorLancamento, isLoading, isEr
   return (
     <div className={styles.grid}>
       {/* Categoria que mais arrecadou */}
-      <div className={styles.card}>
+      <div className={`${styles.card} card-painel`}>
         <span className={styles.cardIcone}><Award size={20} /></span>
         <div className={styles.cardInfo}>
           <span className={styles.cardLabel}>Categoria que mais arrecadou</span>
@@ -59,7 +59,7 @@ export function Destaques({ resumo, categorias, maiorLancamento, isLoading, isEr
       </div>
 
       {/* Valor médio */}
-      <div className={styles.card}>
+      <div className={`${styles.card} card-painel`}>
         <span className={styles.cardIcone}><Receipt size={20} /></span>
         <div className={styles.cardInfo}>
           <span className={styles.cardLabel}>Valor médio por movimentação</span>
@@ -69,7 +69,7 @@ export function Destaques({ resumo, categorias, maiorLancamento, isLoading, isEr
       </div>
 
       {/* Maior lançamento */}
-      <div className={styles.card}>
+      <div className={`${styles.card} card-painel`}>
         <span className={styles.cardIcone}><TrendingUp size={20} /></span>
         <div className={styles.cardInfo}>
           <span className={styles.cardLabel}>Maior lançamento</span>

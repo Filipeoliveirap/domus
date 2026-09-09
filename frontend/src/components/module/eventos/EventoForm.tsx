@@ -34,6 +34,7 @@ import { notificar } from '@/components/common/Notificacao/notificar'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { Revelar } from '@/components/common/Transicao/Revelar'
+import { Colapsavel } from '@/components/common/Transicao/Colapsavel'
 import styles from './EventoForm.module.css'
 import type { UseFormReturn } from 'react-hook-form'
 import type { EventoFormInput, EventoFormData } from '@/lib/validators'
@@ -566,8 +567,7 @@ export function EventoForm(props: EventoFormProps) {
             </span>
           </label>
 
-          {requerInscricao && (
-            <Revelar className={styles.campos}>
+          <Colapsavel aberto={!!requerInscricao} className={styles.campos}>
               <div>
                 <Input
                   id="vagas"
@@ -748,19 +748,20 @@ export function EventoForm(props: EventoFormProps) {
                 </Revelar>
               )}
 
-              <BlocoRecolhivel
-                id="campos-personalizados"
-                titulo="Campos personalizados"
-                descricao="Perguntas extras no formulário de inscrição"
-                icone={<ClipboardCheck size={18} />}
-              >
-                {/* Sem eventoId (evento novo, ainda não salvo): o painel funciona só em
-                    memória — `salvar()` é chamado depois, já com o id definitivo, por quem
-                    registrou o callback (ver useEffect acima e useEventoForm.salvarEvento). */}
-                <CamposPersonalizadosPainel ref={camposPersonalizadosRef} eventoId={eventoId} />
-              </BlocoRecolhivel>
-            </Revelar>
-          )}
+              {requerInscricao && (
+                <BlocoRecolhivel
+                  id="campos-personalizados"
+                  titulo="Campos personalizados"
+                  descricao="Perguntas extras no formulário de inscrição"
+                  icone={<ClipboardCheck size={18} />}
+                >
+                  {/* Sem eventoId (evento novo, ainda não salvo): o painel funciona só em
+                      memória — `salvar()` é chamado depois, já com o id definitivo, por quem
+                      registrou o callback (ver useEffect acima e useEventoForm.salvarEvento). */}
+                  <CamposPersonalizadosPainel ref={camposPersonalizadosRef} eventoId={eventoId} />
+                </BlocoRecolhivel>
+              )}
+          </Colapsavel>
         </section>
       </div>
 

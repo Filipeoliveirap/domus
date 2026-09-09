@@ -192,7 +192,7 @@ export function SeletorLocal({
         ))}
       </div>
 
-      <Transicao key={modo} modo="fade" className={styles.wrapper}>
+      <Transicao key={modo} modo="subir" className={styles.wrapper}>
         {modo === 'simples' && (
           <InputComSugestoes
             id="local-texto"

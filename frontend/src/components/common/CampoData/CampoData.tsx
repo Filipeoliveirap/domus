@@ -99,7 +99,7 @@ export function CampoData({
         />
       </div>
 
-      {erro && <span className={styles.erro}>{erro}</span>}
+      {erro && <span className={styles.erro} data-campo-erro>{erro}</span>}
     </div>
   )
 }

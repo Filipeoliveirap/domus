@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { clsx } from 'clsx'
 import { User, MapPin, FileText, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { Button } from '@/components/common/button/Button'
 import { Select } from '@/components/common/select/Select'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
+import { Revelar } from '@/components/common/Transicao/Revelar'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import { UF_OPTIONS } from '@/lib/ufs'
 import styles from './VisitanteForm.module.css'
@@ -48,7 +51,6 @@ export type VisitanteFormData = {
 }
 
 type VisitanteFormProps = UseFormReturn<VisitanteFormData> & {
-  isFormIncomplete: boolean
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
@@ -65,8 +67,12 @@ export function VisitanteForm(props: VisitanteFormProps) {
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, emModal, onCancel,
+    erroGeral, isLoading, onSubmit, ehEdicao, emModal, onCancel,
   } = props
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const sexoAtual = watch('sexo') ?? ''
   const temFilhosAtual = watch('temFilhos') ?? false
@@ -90,7 +96,17 @@ export function VisitanteForm(props: VisitanteFormProps) {
   }
 
   return (
-    <form className={clsx(styles.form, emModal && styles.emModal)} onSubmit={handleSubmit(onSubmit)}>
+    <form
+      ref={formRef}
+      className={clsx(styles.form, emModal && styles.emModal)}
+      onSubmit={handleSubmit(
+        (data) => { setErroValidacao(null); onSubmit(data) },
+        () => {
+          setErroValidacao('Faltou preencher um campo — te levei até ele.')
+          rolarParaErro()
+        },
+      )}
+    >
       <div className={styles.colunas}>
         <div className={styles.colunaEsquerda}>
           <section className={styles.secao}>
@@ -128,9 +144,12 @@ export function VisitanteForm(props: VisitanteFormProps) {
                   {...cepReg}
                   onChange={(e) => setValue('endereco.cep', formatarCep(e.target.value), { shouldValidate: true })}
                   onBlur={(e) => { cepReg.onBlur(e); void aoSairDoCep(e) }} />
-                {carregandoCep && <span className={styles.erroCampo}>buscando CEP…</span>}
-                {cepNaoEncontrado && (
-                  <span className={styles.erroCampo}>CEP não encontrado — preencha manualmente.</span>
+                {(carregandoCep || cepNaoEncontrado) && (
+                  <Transicao modo="fade">
+                    <span className={styles.erroCampo}>
+                      {carregandoCep ? 'buscando CEP…' : 'CEP não encontrado — preencha manualmente.'}
+                    </span>
+                  </Transicao>
                 )}
               </div>
               <div className={styles.spanFull}>
@@ -180,22 +199,28 @@ export function VisitanteForm(props: VisitanteFormProps) {
                 <span>Tem filhos?</span>
               </label>
               {temFilhosAtual && (
-                <Input id="quantidadeFilhos" label="QUANTIDADE" type="number" inputMode="numeric" min="0"
-                  error={errors.quantidadeFilhos?.message}
-                  {...register('quantidadeFilhos', { valueAsNumber: true })}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? null : Number(e.target.value)
-                    setValue('quantidadeFilhos', val, { shouldValidate: true })
-                  }} />
+                <Revelar>
+                  <Input id="quantidadeFilhos" label="QUANTIDADE" type="number" inputMode="numeric" min="0"
+                    error={errors.quantidadeFilhos?.message}
+                    {...register('quantidadeFilhos', { valueAsNumber: true })}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? null : Number(e.target.value)
+                      setValue('quantidadeFilhos', val, { shouldValidate: true })
+                    }} />
+                </Revelar>
               )}
             </div>
           </section>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+          {(erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+            </Transicao>
+          )}
 
           <div className={styles.acoes}>
             <Button type="submit" variant="primary" size="lg"
-              isLoading={isLoading} disabled={isFormIncomplete || isLoading} style={{ width: '100%' }}>
+              isLoading={isLoading} disabled={isLoading} style={{ width: '100%' }}>
               {ehEdicao ? 'Salvar alterações' : 'Salvar visitante'}
             </Button>
             <button type="button" onClick={() => (onCancel ? onCancel() : router.back())} className={styles.cancelarLink}>Cancelar</button>

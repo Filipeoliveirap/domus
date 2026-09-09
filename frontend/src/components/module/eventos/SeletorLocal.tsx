@@ -192,7 +192,7 @@ export function SeletorLocal({
         ))}
       </div>
 
-      <Transicao key={modo} modo="fade" className={styles.wrapper}>
+      <Transicao key={modo} modo="subir" className={styles.wrapper}>
         {modo === 'simples' && (
           <InputComSugestoes
             id="local-texto"
@@ -263,7 +263,7 @@ export function SeletorLocal({
                   onChange={(v) => patchEndereco({ uf: v })}
                   placeholder="UF" ariaLabel="Estado (UF)" options={UF_OPTIONS}
                 />
-                {errosEndereco?.uf && <span className={styles.erro}>{errosEndereco.uf}</span>}
+                {errosEndereco?.uf && <span className={styles.erro} data-campo-erro>{errosEndereco.uf}</span>}
               </div>
             </div>
           </Transicao>
@@ -283,7 +283,7 @@ export function SeletorLocal({
                 onEditar={() => setModalAberto('editar-novo')}
                 onRemover={() => onChangeNovoLocal(undefined)}
               />
-              {error && <span className={styles.erro}>{error}</span>}
+              {error && <span className={styles.erro} data-campo-erro>{error}</span>}
             </Transicao>
           ) : locais.length === 0 ? (
             <Transicao key="cadastrado-vazio" modo="subir" className={styles.vazio}>
@@ -297,7 +297,7 @@ export function SeletorLocal({
                 <Plus size={16} aria-hidden="true" />
                 Cadastrar endereço
               </button>
-              {error && <span className={styles.erro}>{error}</span>}
+              {error && <span className={styles.erro} data-campo-erro>{error}</span>}
             </Transicao>
           ) : cadastradoSelecionado ? (
             <Transicao key="cadastrado-card" modo="subir">
@@ -311,7 +311,7 @@ export function SeletorLocal({
                 onEditar={() => setModalAberto('editar-cadastrado')}
                 onRemover={() => onChangeLocalId(undefined)}
               />
-              {error && <span className={styles.erro}>{error}</span>}
+              {error && <span className={styles.erro} data-campo-erro>{error}</span>}
             </Transicao>
           ) : (
             <Transicao key="cadastrado-dropdown" modo="subir">
@@ -355,7 +355,7 @@ export function SeletorLocal({
                 <Plus size={16} aria-hidden="true" />
                 Novo endereço
               </button>
-              {error && <span className={styles.erro}>{error}</span>}
+              {error && <span className={styles.erro} data-campo-erro>{error}</span>}
             </Transicao>
           )
         )}

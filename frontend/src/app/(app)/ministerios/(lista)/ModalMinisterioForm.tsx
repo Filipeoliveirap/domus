@@ -22,6 +22,7 @@ interface Props {
 export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   const { ministerio: rotuloMinisterio } = useRotulos()
   const [nome, setNome] = useState(ministerio?.nome ?? '')
+  const [erroNome, setErroNome] = useState<string | null>(null)
   const [fotoId, setFotoId] = useState<string | null>(ministerio?.fotoId ?? null)
   const criar = useCriarMinisterio()
   const atualizar = useAtualizarMinisterio(ministerio?.id ?? '')
@@ -51,6 +52,16 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
   }, [])
 
   async function salvar() {
+    if (!nome.trim()) {
+      setErroNome('Dê um nome antes de salvar.')
+      const el = nomeRef.current
+      el?.focus()
+      if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.classList.add('tremido')
+        window.setTimeout(() => el.classList.remove('tremido'), 450)
+      }
+      return
+    }
     try {
       if (ministerio) {
         await atualizar.mutateAsync({ nome, fotoId })
@@ -96,17 +107,18 @@ export function ModalMinisterioForm({ ministerio, onClose }: Props) {
         </div>
         <Input
           id="nome-ministerio"
-          label="Nome"
+          label="NOME*"
           value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          onChange={(e) => { setNome(e.target.value); if (erroNome) setErroNome(null) }}
           placeholder="Ex.: Louvor"
+          error={erroNome ?? undefined}
           ref={nomeRef}
         />
         <div className={styles.acoes}>
           <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
             Cancelar
           </Button>
-          <Button type="button" variant="primary" disabled={!nome.trim() || salvando} isLoading={salvando} loadingText="Salvando…" onClick={salvar}>
+          <Button type="button" variant="primary" disabled={salvando} isLoading={salvando} loadingText="Salvando…" onClick={salvar}>
             Salvar
           </Button>
         </div>

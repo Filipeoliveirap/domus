@@ -21,7 +21,6 @@ export function useRedefinirSenha() {
         register,
         handleSubmit,
         watch,
-        isFormIncomplete,
         formState: { errors },
     } = useAppForm<RedefinirSenhaFormData>({
         resolver: zodResolver(redefinirSenhaSchema),
@@ -31,7 +30,7 @@ export function useRedefinirSenha() {
 
     // Link inválido: sem token na URL, ou o backend rejeitou (expirado / já usado).
     const linkInvalido = token.trim().length === 0 || tokenInvalido
-    const isButtonDisabled = isFormIncomplete || isLoading
+    const isButtonDisabled = isLoading
 
     const onSubmit = async (data: RedefinirSenhaFormData) => {
         setErroGeral(null)

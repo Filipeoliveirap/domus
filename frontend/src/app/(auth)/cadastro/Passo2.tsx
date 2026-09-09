@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, RotateCcw } from 'lucide-react'
 import type { UseFormRegister, UseFormHandleSubmit, FieldErrors, UseFormWatch } from 'react-hook-form'
@@ -9,12 +9,12 @@ import { Input } from '../../../components/common/input/Input'
 import { Button } from '../../../components/common/button/Button'
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator'
 import styles from './Passo2.module.css'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 
 interface Passo2Props {
   register: UseFormRegister<RegistrarIgrejaFormData2>
   handleSubmit: UseFormHandleSubmit<RegistrarIgrejaFormData2>
   errors: FieldErrors<RegistrarIgrejaFormData2>
-  passo2Incompleto: boolean
   watch: UseFormWatch<RegistrarIgrejaFormData2>
   erroGeral: string | null
   isLoading: boolean
@@ -23,7 +23,7 @@ interface Passo2Props {
 }
 
 export function Passo2({
-  register, handleSubmit, errors, passo2Incompleto, watch,
+  register, handleSubmit, errors, watch,
   erroGeral, isLoading, onSubmit, onVoltar,
 }: Passo2Props) {
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -31,8 +31,11 @@ export function Passo2({
 
   const senha = watch('senhaAdmin') || ''
 
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form ref={formRef} className={styles.form} onSubmit={handleSubmit(onSubmit, () => rolarParaErro())}>
       <Input
         id="nomeAdmin"
         label="NOME COMPLETO*"
@@ -138,7 +141,7 @@ export function Passo2({
           variant="primary"
           size="md"
           isLoading={isLoading}
-          disabled={passo2Incompleto || isLoading}
+          disabled={isLoading}
         >
           Criar conta
         </Button>

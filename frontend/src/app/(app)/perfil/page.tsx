@@ -76,7 +76,6 @@ export default function PerfilPage() {
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
   const { data: bairros } = useBairros()
 
   async function aoSairDoCep(e: React.FocusEvent<HTMLInputElement>) {
@@ -106,11 +105,8 @@ export default function PerfilPage() {
         ref={formRef}
         className={styles.card}
         onSubmit={handleSubmit(
-          (data) => { setErroValidacao(null); onSubmit(data) },
-          () => {
-            setErroValidacao('Faltou preencher um campo — te levei até ele.')
-            rolarParaErro()
-          },
+          onSubmit,
+          () => rolarParaErro(),
         )}
       >
         <div className={styles.fotoWrap}>
@@ -277,9 +273,9 @@ export default function PerfilPage() {
           </div>
         </section>
 
-        {(erroGeral || erroValidacao) && (
+        {erroGeral && (
           <Transicao modo="fade">
-            <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+            <div className={styles.erroGeral}>{erroGeral}</div>
           </Transicao>
         )}
 

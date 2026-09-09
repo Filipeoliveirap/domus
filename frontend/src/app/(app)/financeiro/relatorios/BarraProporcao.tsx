@@ -33,7 +33,7 @@ export function BarraProporcao({ data, isLoading, isError, aoTentarNovamente }: 
   // Período sem nenhuma movimentação: evita a barra 100% verde enganosa.
   if (entradas === 0 && saidas === 0) {
     return (
-      <div className={styles.painel}>
+      <div className={`${styles.painel} card-painel`}>
         <div className={styles.header}>
           <div>
             <h3 className={styles.titulo}>Proporção Entradas vs Saídas</h3>
@@ -49,7 +49,7 @@ export function BarraProporcao({ data, isLoading, isError, aoTentarNovamente }: 
   const pctTexto = percentualUtilizado.toFixed(0)
 
   return (
-    <div className={styles.painel}>
+    <div className={`${styles.painel} card-painel`}>
       <div className={styles.header}>
         <div>
           <h3 className={styles.titulo}>Proporção Entradas vs Saídas</h3>

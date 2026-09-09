@@ -34,7 +34,7 @@ export function BreakdownContribuinte({ data, isLoading, isError, aoTentarNovame
 
   return (
     <div className={styles.grid}>
-      <div className={styles.coluna}>
+      <div className={`${styles.coluna} card-painel`}>
         <div className={styles.colunaHeader}>
           <span className={`${styles.headerIcone} ${styles.entrada}`}><ArrowDownCircle size={18} /></span>
           <h3 className={styles.colunaTitulo}>Contribuintes — Entradas</h3>
@@ -42,7 +42,7 @@ export function BreakdownContribuinte({ data, isLoading, isError, aoTentarNovame
         <Tabela itens={entradas} variante="entrada" />
       </div>
 
-      <div className={styles.coluna}>
+      <div className={`${styles.coluna} card-painel`}>
         <div className={styles.colunaHeader}>
           <span className={`${styles.headerIcone} ${styles.saida}`}><ArrowUpCircle size={18} /></span>
           <h3 className={styles.colunaTitulo}>Beneficiários — Saídas</h3>

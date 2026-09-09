@@ -1,5 +1,6 @@
 'use client'
 
+import { type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -56,13 +57,13 @@ export default function DashboardPage() {
             <Card icone={<Users size={22} />} label="Total de pessoas"
               valor={isLoading || !data ? null : String(data.pessoas.total)}
               badge={data ? `+${data.pessoas.novosMes} este mês` : ''} badgeCor="verde" />
-            <Card icone={<Calendar size={22} />} label="Eventos este mês"
+            <Card icone={<Calendar size={22} />} label="Eventos este mês" cor="eventos"
               valor={isLoading || !data ? null : String(data.eventos.mes)}
               badge={data ? `${data.eventos.semana} esta semana` : ''} badgeCor="azul" />
-            <Card icone={<TrendingUp size={22} />} label="Entradas do mês"
+            <Card icone={<TrendingUp size={22} />} label="Entradas do mês" cor="financeiro"
               valor={isLoading || !data ? null : formatarMoeda(data.financeiro.entradasMes)}
               badge="" badgeCor="verde" />
-            <Card icone={<Wallet size={22} />} label="Saldo do mês"
+            <Card icone={<Wallet size={22} />} label="Saldo do mês" cor="financeiro"
               valor={isLoading || !data ? null : formatarMoeda(data.financeiro.saldoMes)}
               valorCor={saldoNegativo ? 'vermelho' : 'verde'} badge="" badgeCor="azul" />
           </div>
@@ -70,7 +71,7 @@ export default function DashboardPage() {
           {/* Listas */}
           <div className={styles.colunas}>
             {/* Movimentações recentes */}
-            <section className={styles.card}>
+            <section className={`${styles.card} card-painel`}>
               <div className={styles.cardHeader}>
                 <div>
                   <h2 className={styles.cardTitulo}>Movimentações recentes</h2>
@@ -114,7 +115,7 @@ export default function DashboardPage() {
             </section>
 
             {/* Próximos eventos */}
-            <section className={styles.card}>
+            <section className={`${styles.card} card-painel`}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitulo}>Próximos eventos</h2>
               </div>
@@ -163,16 +164,20 @@ export default function DashboardPage() {
   )
 }
 
-function Card({ icone, label, valor, badge, badgeCor, valorCor }: {
+function Card({ icone, label, valor, badge, badgeCor, valorCor, cor }: {
   icone: React.ReactNode
   label: string
   valor: string | null
   badge: string
   badgeCor: 'verde' | 'azul'
   valorCor?: 'verde' | 'vermelho'
+  cor?: 'eventos' | 'financeiro'
 }) {
   return (
-    <div className={styles.cardNumero}>
+    <div
+      className={`${styles.cardNumero} card-painel`}
+      style={cor ? ({ '--cor': `var(--cat-${cor})` } as CSSProperties) : undefined}
+    >
       <div className={styles.cardTopo}>
         <span className={styles.cardIcone}>{icone}</span>
         {badge && <span className={`${styles.badge} ${badgeCor === 'verde' ? styles.badgeVerde : styles.badgeAzul}`}>{badge}</span>}

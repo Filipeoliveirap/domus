@@ -18,6 +18,8 @@ import { CampoData } from '@/components/common/CampoData/CampoData'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputComSugestoes'
 import { BlocoRecolhivel } from '@/components/common/BlocoRecolhivel/BlocoRecolhivel'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
+import { PreviaEvento } from './PreviaEvento'
 import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
@@ -38,7 +40,6 @@ import type { EventoFormInput, EventoFormData } from '@/lib/validators'
 import type { InscritoImpactado, ImpactoMudancaPrecoResponse, RestricaoEstadoCivil, RestricaoSexo, EscopoEdicaoEvento } from '@/types/evento.type'
 
 type EventoFormProps = UseFormReturn<EventoFormInput, unknown, EventoFormData> & {
-  isFormIncomplete: boolean
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
@@ -71,9 +72,9 @@ const DIAS_SEMANA_OPTIONS = [
 export function EventoForm(props: EventoFormProps) {
   const router = useRouter()
   const {
-    register, handleSubmit, watch, setValue,
-    formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao, eventoId, responsaveisIniciais,
+    register, handleSubmit, watch, setValue, setError,
+    formState: { errors, touchedFields, isSubmitted },
+    erroGeral, isLoading, onSubmit, ehEdicao, eventoId, responsaveisIniciais,
     registrarSalvarCamposPersonalizados,
     impactoAfetados, isVerificandoImpacto, onConfirmarImpacto, onFecharImpacto,
     impactoMudancaPreco, onConfirmarMudancaPreco, onFecharMudancaPreco,
@@ -134,6 +135,34 @@ export function EventoForm(props: EventoFormProps) {
   const camposPersonalizadosRef = useRef<CamposPersonalizadosHandle>(null)
   const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+
+  // Required ainda vazios — só entram na prévia depois que a pessoa interagiu
+  // (submeteu ou tocou o campo), pra não acusar erro na cara de quem acabou de abrir.
+  const rotulosRequired: Record<'titulo' | 'inicioData' | 'inicioHora', string> = {
+    titulo: 'título',
+    inicioData: 'data de início',
+    inicioHora: 'horário de início',
+  }
+  const camposFaltando = (Object.keys(rotulosRequired) as Array<keyof typeof rotulosRequired>)
+    .filter((campo) => {
+      const valor = watch(campo)
+      const vazio = valor == null || String(valor).trim() === ''
+      const jaInteragiu = isSubmitted || touchedFields[campo]
+      return vazio && jaInteragiu
+    })
+    .map((campo) => rotulosRequired[campo])
+
+  const localResumo =
+    novoLocalAtual?.nome?.trim() ||
+    localTextoAtual?.trim() ||
+    enderecoLocalAtual?.cidade?.trim() ||
+    ''
+
+  const rotuloOutrasCongregacoes =
+    `${concordar(congregacao.genero, 'as')} outras ${congregacao.plural.toLowerCase()}`
+
   useEffect(() => {
     registrarSalvarCamposPersonalizados((eventoIdSalvo) => (
       camposPersonalizadosRef.current?.salvar(eventoIdSalvo) ?? Promise.resolve()
@@ -142,9 +171,24 @@ export function EventoForm(props: EventoFormProps) {
   }, [registrarSalvarCamposPersonalizados])
 
   return (
-    <form className={styles.form} onSubmit={(e) => handleSubmit(
-      (data) => { setErroValidacao(null); onSubmit(data) },
-      () => setErroValidacao('Faltou preencher um campo — te levei até ele.'),
+    <form ref={formRef} className={styles.form} onSubmit={(e) => handleSubmit(
+      (data) => {
+        setErroValidacao(null)
+        if (precisaConectarContaPagamento) {
+          setError('preco', {
+            type: 'manual',
+            message: 'Conecte uma conta de recebimento antes de publicar um evento pago.',
+          })
+          setErroValidacao('Faltou preencher um campo — te levei até ele.')
+          rolarParaErro()
+          return
+        }
+        onSubmit(data)
+      },
+      () => {
+        setErroValidacao('Faltou preencher um campo — te levei até ele.')
+        rolarParaErro()
+      },
     )(e)}>
       <div className={styles.colunas}>
         {/* ─── 1 · Sobre o evento ─── */}
@@ -721,6 +765,31 @@ export function EventoForm(props: EventoFormProps) {
       </div>
 
       <div className={styles.blocoFinal}>
+        <PreviaEvento
+          titulo={watch('titulo') as string}
+          tipo={tipoAtual}
+          inicioData={inicioData}
+          inicioHora={watch('inicioHora') as string}
+          fimData={fimData}
+          localResumo={localResumo}
+          fotoId={fotoIdAtual}
+          requerInscricao={!!requerInscricao}
+          tipoInscricao={(tipoInscricao as 'GRATUITO' | 'PAGO') ?? 'GRATUITO'}
+          preco={preco}
+          vagas={vagasAtual}
+          inscricoesAteData={watch('inscricoesAteData') as string}
+          exclusivoMembros={!!exclusivoMembros}
+          idadeMin={idadeMinAtual}
+          idadeMax={idadeMaxAtual}
+          restricaoEstadoCivil={restricaoEstadoCivilAtual}
+          restricaoSexo={restricaoSexoAtual}
+          restritoPropriaIgreja={!!watch('restritoPropriaIgreja')}
+          temFamilia={temFamilia}
+          rotuloOutrasCongregacoes={rotuloOutrasCongregacoes}
+          controlaPresenca={!!watch('controlaPresenca')}
+          camposFaltando={camposFaltando}
+        />
+
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
         {erroValidacao && <div className={styles.erroGeral}>{erroValidacao}</div>}
 
@@ -730,7 +799,7 @@ export function EventoForm(props: EventoFormProps) {
             variant="primary"
             size="lg"
             isLoading={isLoading || isVerificandoImpacto}
-            disabled={isFormIncomplete || isLoading || isVerificandoImpacto || precisaConectarContaPagamento}
+            disabled={isLoading || isVerificandoImpacto}
             style={{ width: '100%' }}
           >
             {ehEdicao ? 'Salvar alterações' : 'Salvar evento'}

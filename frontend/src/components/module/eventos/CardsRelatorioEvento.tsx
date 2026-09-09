@@ -22,7 +22,7 @@ export function CardsRelatorioEvento({ relatorio }: Props) {
 
   return (
     <div className={styles.grade}>
-      <div className={styles.card}>
+      <div className={`${styles.card} card-painel`}>
         <span className={styles.cardTitulo}>Inscritos</span>
         <div className={styles.presencaLinha}>
           <div
@@ -38,7 +38,7 @@ export function CardsRelatorioEvento({ relatorio }: Props) {
         </div>
       </div>
 
-      <div className={styles.card}>
+      <div className={`${styles.card} card-painel`}>
         <span className={styles.cardTitulo}>Composição de Inscritos</span>
         <div className={styles.composicaoLinha}>
           <span className={styles.composicaoValor}>{relatorio.inscritos.pessoas}</span>
@@ -58,7 +58,7 @@ export function CardsRelatorioEvento({ relatorio }: Props) {
 
         return (
           <>
-            <div className={styles.card}>
+            <div className={`${styles.card} card-painel`}>
               <span className={styles.cardTitulo}>Presença Total</span>
               <div className={styles.presencaLinha}>
                 <div
@@ -74,7 +74,7 @@ export function CardsRelatorioEvento({ relatorio }: Props) {
               </div>
             </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} card-painel`}>
               <span className={styles.cardTitulo}>Composição de Presença</span>
               <div className={styles.composicaoLinha}>
                 <span className={styles.composicaoValor}>{relatorio.compareceram.pessoas}</span>
@@ -86,7 +86,7 @@ export function CardsRelatorioEvento({ relatorio }: Props) {
               </div>
             </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} card-painel`}>
               <span className={styles.cardTitulo}>Impacto Global</span>
               <p className={styles.impactoValor}>{relatorio.percentualIgreja ?? 0}%</p>
               <p className={styles.impactoLabel}>da igreja compareceu a este evento</p>

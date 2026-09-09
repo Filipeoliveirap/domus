@@ -35,7 +35,7 @@ export function BreakdownCategoria({ data, isLoading, isError, aoTentarNovamente
   return (
     <div className={styles.grid}>
       {/* Entradas por categoria */}
-      <div className={styles.coluna}>
+      <div className={`${styles.coluna} card-painel`}>
         <div className={styles.colunaHeader}>
           <span className={`${styles.headerIcone} ${styles.entrada}`}><ArrowDownCircle size={18} /></span>
           <h3 className={styles.colunaTitulo}>Entradas por Categoria</h3>
@@ -44,7 +44,7 @@ export function BreakdownCategoria({ data, isLoading, isError, aoTentarNovamente
       </div>
 
       {/* Saídas por categoria */}
-      <div className={styles.coluna}>
+      <div className={`${styles.coluna} card-painel`}>
         <div className={styles.colunaHeader}>
           <span className={`${styles.headerIcone} ${styles.saida}`}><ArrowUpCircle size={18} /></span>
           <h3 className={styles.colunaTitulo}>Saídas por Categoria</h3>

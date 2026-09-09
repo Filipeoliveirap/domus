@@ -12,7 +12,6 @@
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.06), 0 10px 20px -3px rgba(19, 27, 46, 0.06);
 }
 
 .cardIcone {
@@ -22,8 +21,8 @@
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: hsl(var(--cat-financeiro) / 0.14);
+  color: hsl(var(--cat-financeiro));
   flex-shrink: 0;
 }
 

@@ -10,11 +10,20 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
  * resto da visita e limpa o parâmetro da URL num effect (fora do render). Entrar na aba
  * de novo, sem o parâmetro, volta a ordem normal.
  *
- * Uso: `const { destaqueId, ordenar } = useDestaqueRecente()`. A tela busca o item à parte
- * e o fixa no topo (ou usa `ordenar(itens, i => i.id)` quando o item já está na página),
- * e dá o realce de entrada na linha com `id === destaqueId`.
+ * Uso: `const { destaqueId, ehNovo, ordenar } = useDestaqueRecente()`. A tela busca o item
+ * à parte e o fixa no topo (ou usa `ordenar(itens, i => i.id)` quando o item já está na
+ * página), e dá o realce de entrada na linha com `id === destaqueId`.
+ *
+ * `ehNovo` (do `?novo=1`) marca "veio de um cadastro, não de uma edição" — numa lista
+ * cronológica a linha nova já nasce no topo, então a tela pode só realçar sem fixar.
+ *
+ * `expiraMs`: passa um número pra lista cronológica (ex.: movimentações). Depois desse
+ * tempo o `destaqueId` volta a `null` — assim o realce e a fixação somem sozinhos e não
+ * "grudam" na linha se a pessoa continuar mexendo na tela (abrir outra, editar e voltar).
+ * Sem `expiraMs` o id fica congelado a visita toda (padrão pra lista alfabética, onde a
+ * linha se perde no meio e precisa ficar fixada).
  */
-export function useDestaqueRecente(param = 'destaque') {
+export function useDestaqueRecente(param = 'destaque', expiraMs?: number) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -23,8 +32,15 @@ export function useDestaqueRecente(param = 'destaque') {
   // useSearchParams pode vir vazio no 1º render e só popular depois) e congela — o effect
   // abaixo tira o parâmetro da URL, mas o id continua fixando a linha pelo resto da visita.
   const naUrl = searchParams.get(param)
+  const novoNaUrl = searchParams.get('novo') === '1'
   const [destaqueId, setDestaqueId] = useState<string | null>(naUrl)
-  if (destaqueId === null && naUrl) setDestaqueId(naUrl)
+  // `ehNovo` distingue cadastro de edição: numa lista cronológica (ex.: movimentações) a
+  // linha recém-criada já nasce no topo, então não precisa ser fixada — só realçada.
+  const [ehNovo, setEhNovo] = useState(novoNaUrl)
+  if (destaqueId === null && naUrl) {
+    setDestaqueId(naUrl)
+    setEhNovo(novoNaUrl)
+  }
   const limpou = useRef(false)
 
   useEffect(() => {
@@ -32,9 +48,20 @@ export function useDestaqueRecente(param = 'destaque') {
     limpou.current = true
     const p = new URLSearchParams(window.location.search)
     p.delete(param)
+    p.delete('novo')
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }, [destaqueId, param, pathname, router])
+
+  // Lista cronológica: o realce/fixação expira sozinho (setTimeout dentro de effect é ok).
+  useEffect(() => {
+    if (!destaqueId || !expiraMs) return
+    const t = window.setTimeout(() => {
+      setDestaqueId(null)
+      setEhNovo(false)
+    }, expiraMs)
+    return () => window.clearTimeout(t)
+  }, [destaqueId, expiraMs])
 
   function ordenar<T>(lista: T[], getId: (item: T) => string): T[] {
     if (!destaqueId) return lista
@@ -43,5 +70,5 @@ export function useDestaqueRecente(param = 'destaque') {
     return [alvo, ...lista.filter((i) => getId(i) !== destaqueId)]
   }
 
-  return { destaqueId, ordenar }
+  return { destaqueId, ehNovo, ordenar }
 }

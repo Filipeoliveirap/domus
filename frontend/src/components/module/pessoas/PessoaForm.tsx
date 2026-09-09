@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, MapPin, FileText, Church, Info } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
@@ -12,6 +12,9 @@ import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
 import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { Revelar } from '@/components/common/Transicao/Revelar'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { BlocoRecolhivel } from '@/components/common/BlocoRecolhivel/BlocoRecolhivel'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { SeletorRedes } from './SeletorRedes'
 import { formatarTelefone, formatarCep } from '@/lib/masks'
 import { UF_OPTIONS } from '@/lib/ufs'
@@ -42,7 +45,6 @@ const ESTADO_CIVIL_OPTIONS = [
 
 
 type PessoaFormProps = UseFormReturn<PessoaFormInput, unknown, PessoaFormData> & {
-  isFormIncomplete: boolean
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
@@ -56,9 +58,13 @@ export function PessoaForm(props: PessoaFormProps) {
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
-    erroGeral, isLoading, isFormIncomplete, onSubmit, ehEdicao,
+    erroGeral, isLoading, onSubmit, ehEdicao,
     redesSelecionadas, setRedesSelecionadas,
   } = props
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
@@ -68,6 +74,12 @@ export function PessoaForm(props: PessoaFormProps) {
   const dataBatismoAtual = (watch('dataBatismo') as string | undefined) ?? ''
   const nomeAtual = (watch('nome') as string | undefined) ?? ''
   const fotoIdAtual = watch('fotoId') as string | null | undefined
+  const observacoesAtual = (watch('observacoes') as string | undefined) ?? ''
+
+  // "Observações" recolhido por padrão (uso raro) — abre se já tem texto (edição) ou se a
+  // pessoa clicar. Ajuste em fase de render, não em effect.
+  const [obsAbertoManual, setObsAbertoManual] = useState<boolean | null>(null)
+  const obsAberto = obsAbertoManual ?? !!observacoesAtual.trim()
 
   // Auto-preenchimento por CEP (ViaCEP). Nunca trava: erro/CEP inexistente só sinalizam.
   const { buscar, carregando: carregandoCep } = useBuscaCep()
@@ -92,7 +104,17 @@ export function PessoaForm(props: PessoaFormProps) {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form
+      ref={formRef}
+      className={styles.form}
+      onSubmit={handleSubmit(
+        (data) => { setErroValidacao(null); onSubmit(data) },
+        () => {
+          setErroValidacao('Faltou preencher um campo — te levei até ele.')
+          rolarParaErro()
+        },
+      )}
+    >
       <div className={styles.colunas}>
         <div className={styles.colunaEsquerda}>
           {/* Informações pessoais */}
@@ -131,7 +153,7 @@ export function PessoaForm(props: PessoaFormProps) {
                   ariaLabel="Estado civil"
                   options={ESTADO_CIVIL_OPTIONS}
                 />
-                {errors.estadoCivil?.message && <span className={styles.erroCampo}>{errors.estadoCivil.message}</span>}
+                {errors.estadoCivil?.message && <span className={styles.erroCampo} data-campo-erro>{errors.estadoCivil.message}</span>}
               </div>
             </div>
             {/* Nulável de propósito — não é sobre identidade, é pra restringir
@@ -153,9 +175,12 @@ export function PessoaForm(props: PessoaFormProps) {
                   {...cepReg}
                   onChange={(e) => setValue('endereco.cep', formatarCep(e.target.value), { shouldValidate: true })}
                   onBlur={(e) => { cepReg.onBlur(e); void aoSairDoCep(e) }} />
-                {carregandoCep && <span className={styles.erroCampo}>buscando CEP…</span>}
-                {cepNaoEncontrado && (
-                  <span className={styles.erroCampo}>CEP não encontrado — preencha manualmente.</span>
+                {(carregandoCep || cepNaoEncontrado) && (
+                  <Transicao modo="fade">
+                    <span className={styles.erroCampo}>
+                      {carregandoCep ? 'buscando CEP…' : 'CEP não encontrado — preencha manualmente.'}
+                    </span>
+                  </Transicao>
                 )}
               </div>
               <div className={styles.spanFull}>
@@ -182,23 +207,25 @@ export function PessoaForm(props: PessoaFormProps) {
                   ariaLabel="Estado (UF)"
                   options={UF_OPTIONS}
                 />
-                {errors.endereco?.uf?.message && <span className={styles.erroCampo}>{errors.endereco.uf.message}</span>}
+                {errors.endereco?.uf?.message && <span className={styles.erroCampo} data-campo-erro>{errors.endereco.uf.message}</span>}
               </div>
             </div>
           </section>
 
-          {/* Observações */}
-          <section className={styles.secao}>
-            <div className={styles.secaoHeader}>
-              <span className={styles.secaoIcone}><FileText size={20} /></span>
-              <h2 className={styles.secaoTitulo}>Observações</h2>
-            </div>
+          {/* Observações — recolhido por padrão */}
+          <BlocoRecolhivel
+            id="observacoes"
+            titulo="Observações"
+            descricao="Notas internas sobre a pessoa"
+            icone={<FileText size={18} />}
+            aberto={obsAberto}
+            onToggle={setObsAbertoManual}
+          >
             <div className={styles.campoTextarea}>
-              <label className={styles.labelTextarea} htmlFor="observacoes">NOTAS ADICIONAIS</label>
               <textarea id="observacoes" className={styles.textarea}
                 placeholder="Informações relevantes sobre a pessoa..." {...register('observacoes')} />
             </div>
-          </section>
+          </BlocoRecolhivel>
         </div>
 
         <div className={styles.colunaDireita}>
@@ -241,11 +268,15 @@ export function PessoaForm(props: PessoaFormProps) {
             </div>
           </section>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+          {(erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+            </Transicao>
+          )}
 
           <div className={styles.acoes}>
             <Button type="submit" variant="primary" size="lg"
-              isLoading={isLoading} disabled={isFormIncomplete || isLoading} style={{ width: '100%' }}>
+              isLoading={isLoading} disabled={isLoading} style={{ width: '100%' }}>
               {ehEdicao ? 'Salvar alterações' : 'Salvar pessoa'}
             </Button>
             <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>

@@ -34,6 +34,9 @@
 }
 
 .segmentoBtn {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   flex: 1;
   padding: 8px;
   border-radius: var(--radius-sm);
@@ -42,7 +45,19 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform 0.12s ease;
+  transition: border-color var(--transition-fast), color 0.25s ease, transform 0.12s ease;
+}
+
+.segmentoBtn::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--color-primary);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 0.2s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .segmentoBtn:hover {
@@ -52,14 +67,18 @@
 .segmentoBtn:active { transform: scale(0.98); }
 
 @media (prefers-reduced-motion: reduce) {
+  .segmentoBtn, .segmentoBtn::after { transition: opacity 0.15s ease; }
   .segmentoBtn:active { transform: none; }
 }
 
 .segmentoAtivo,
 .segmentoAtivo:hover {
-  background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-bg-white);
+}
+.segmentoAtivo::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Estado vazio: nenhum endereço cadastrado ainda. */

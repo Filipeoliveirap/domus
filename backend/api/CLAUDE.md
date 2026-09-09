@@ -127,11 +127,18 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
 - **Suavidade e animação são parte da entrega, não enfeite opcional.** Toda tela, modal,
   drawer, aba, dropdown ou bloco condicional novo entra com o padrão de movimento já
   adotado — nada "pipoca" na tela seco. Ferramentas do projeto (usar, não reinventar):
-  - `<Transicao modo="fade|subir|escala">` (`components/common/Transicao/`) para bloco que
-    aparece (resultado de filtro, seção condicional, card que substitui um formulário,
-    prévia). Anima só na montagem via `@starting-style`.
-  - `<Revelar>` para campos que expandem ao ligar um toggle (altura suave via
-    `grid-template-rows: 0fr→1fr`).
+  - `<Colapsavel aberto={bool}>` (`components/common/Transicao/`) — **padrão de
+    mostrar/esconder animado** do projeto. Conteúdo fica sempre montado; anima abrir
+    **E** fechar (altura via `grid-template-rows: 1fr↔0fr` + fade + deslize, curva
+    easeOut ~0.48s). Use quando um toggle liga/desliga uma seção (ex.: "Exigir
+    inscrição", "Todos ↔ Faixa específica"). `<BlocoRecolhivel>` (disclosure com
+    cabeçalho + chevron) é construído em cima dele.
+  - `<Transicao modo="fade|subir|escala">` para bloco que aparece e **não some** por
+    toggle (resultado de filtro, item de lista, prévia). Anima só na montagem via
+    `@starting-style`.
+  - `<Revelar>` para item que **surge montando** (`{cond && <Revelar>}` ou item novo
+    numa lista) e precisa abrir com altura — mesma curva do `<Colapsavel>`. Só anima a
+    entrada; a saída fica seca (use `<Colapsavel>` se precisar dos dois lados).
   - `useFecharAnimado(onClose, ms)` + classe `.saindo` para a **saída** de modal/drawer —
     a saída roda em `@keyframes` + classe, funciona em qualquer navegador (o `@starting-style`
     da entrada não pega no iOS Safari < 17.4, então saída nunca depende dele).

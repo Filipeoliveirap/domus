@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { clsx } from 'clsx'
 import { X, Share2 } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { ModalInscreverPessoas } from './ModalInscreverPessoas'
 import { ModalCompartilharConvite } from './ModalCompartilharConvite'
 import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
@@ -92,6 +94,9 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
   const isPending = criarConvidado.isPending || navegandoParaCheckout
 
+  const abaRef = useRef<HTMLDivElement>(null)
+  const { rolarParaErro } = useRolarParaErro(abaRef)
+
   function limparFormulario() {
     setNome('')
     setTelefone('')
@@ -144,7 +149,10 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
    *  duas vezes possíveis, uma por botão ("Pagar inscrição"/"Enviar link"). */
   function confirmar(gerarLink: boolean) {
     setTentouConfirmar(true)
-    if (!nome.trim() || !telefoneValido() || !emailValido() || camposObrigatoriosPendentes()) return
+    if (!nome.trim() || !telefoneValido() || !emailValido() || camposObrigatoriosPendentes()) {
+      requestAnimationFrame(() => rolarParaErro())
+      return
+    }
 
     const visitanteId = aba === 'visitantes' ? visitanteSelecionadoId ?? undefined : undefined
     const nomeConfirmado = nome.trim()
@@ -274,7 +282,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
         {(aba === 'visitantes' || aba === 'fora') && (
           <>
-            <div className={styles.conteudoAba}>
+            <Transicao key={aba} modo="subir" className={styles.conteudoAba} ref={abaRef}>
               {aba === 'visitantes' && (
                 <>
                   <p className={styles.avisoCamposExtra}>
@@ -323,7 +331,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                   value={nome}
                   onChange={(e) => { setNome(e.target.value); if (aba === 'visitantes') setVisitanteSelecionadoId(null) }}
                 />
-                {tentouConfirmar && !nome.trim() && <span className={styles.avisoErro}>O nome é obrigatório.</span>}
+                {tentouConfirmar && !nome.trim() && <span className={styles.avisoErro} data-campo-erro>O nome é obrigatório.</span>}
               </label>
 
               <label className={styles.campo}>
@@ -336,10 +344,10 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                   onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                 />
                 {tentouConfirmar && !telefone.trim() && (
-                  <span className={styles.avisoErro}>O telefone é obrigatório.</span>
+                  <span className={styles.avisoErro} data-campo-erro>O telefone é obrigatório.</span>
                 )}
                 {tentouConfirmar && telefone.trim() && !telefoneValido() && (
-                  <span className={styles.avisoErro}>Telefone inválido. Digite um número válido com DDD.</span>
+                  <span className={styles.avisoErro} data-campo-erro>Telefone inválido. Digite um número válido com DDD.</span>
                 )}
               </label>
 
@@ -357,10 +365,10 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                     : 'É pra onde vão avisos sobre a inscrição neste evento.'}
                 </span>
                 {tentouConfirmar && !email.trim() && (
-                  <span className={styles.avisoErro}>O e-mail é obrigatório.</span>
+                  <span className={styles.avisoErro} data-campo-erro>O e-mail é obrigatório.</span>
                 )}
                 {tentouConfirmar && email.trim() && !emailValido() && (
-                  <span className={styles.avisoErro}>E-mail inválido.</span>
+                  <span className={styles.avisoErro} data-campo-erro>E-mail inválido.</span>
                 )}
               </label>
 
@@ -412,11 +420,11 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
                     />
                   )}
                   {tentouConfirmar && campo.obrigatorio && !(camposValores[campo.id]?.trim()) && (
-                    <span className={styles.avisoErro}>Essa pergunta é obrigatória.</span>
+                    <span className={styles.avisoErro} data-campo-erro>Essa pergunta é obrigatória.</span>
                   )}
                 </label>
               ))}
-            </div>
+            </Transicao>
 
             {aba === 'fora' && (
               <button type="button" className={styles.btnLinkCompartilhar} onClick={() => setCompartilharAberto(true)}>

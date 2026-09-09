@@ -7,9 +7,10 @@ import { useCallback } from 'react'
  * que o form é coluna única), foca o control e dá um "tremido" curto.
  *
  * Genérico — não conhece o form de evento. Ligue no callback de erro do
- * handleSubmit: handleSubmit(onValid, () => { rolarParaErro(); ...banner })
+ * handleSubmit: handleSubmit(onValid, () => { rolarParaErro(); ...banner }).
+ * `formRef` aceita qualquer elemento container (form, div) que envolva os campos.
  */
-export function useRolarParaErro(formRef: React.RefObject<HTMLFormElement | null>) {
+export function useRolarParaErro(formRef: React.RefObject<HTMLElement | null>) {
   const rolarParaErro = useCallback(() => {
     const form = formRef.current
     if (!form) return

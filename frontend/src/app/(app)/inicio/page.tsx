@@ -277,7 +277,7 @@ export default function InicioPage() {
                   return (
                     <button
                       key={e.id}
-                      className={styles.cardEvento}
+                      className={`${styles.cardEvento} card-interativo`}
                       onClick={() => setEventoAberto(e.id)}
                     >
                       <div>
@@ -305,7 +305,10 @@ export default function InicioPage() {
                         )}
                         <SeloInscritoCard eventoId={e.id} />
                       </div>
-                      <span className={styles.eventoAcao}>Ver detalhes</span>
+                      <span className={`${styles.eventoAcao} card-cta`}>
+                        Ver detalhes
+                        <ArrowRight size={13} className="card-seta" aria-hidden="true" />
+                      </span>
                     </button>
                   )
                 })}

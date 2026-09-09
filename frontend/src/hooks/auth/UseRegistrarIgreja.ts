@@ -7,6 +7,7 @@ import { authService } from "@/services/auth.service";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useAppForm } from "../forms/useAppForm";
+import { marcarBoasVindasVista } from "@/lib/boasVindas";
 import type { ApiError } from "@/types/api.types";
 
 export function useRegistrarIgreja () {
@@ -15,6 +16,8 @@ export function useRegistrarIgreja () {
     const [erroGeral, setErroGeral] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [passo, setPasso] = useState<1 | 2 | 3>(1)
+    // Direção da última troca de passo — alimenta a animação do <TrocaPasso>.
+    const [direcaoPasso, setDirecaoPasso] = useState<1 | -1>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
     const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
     const [googleData, setGoogleData] = useState<{ idToken: string; nome: string; email: string } | null>(null)
@@ -60,10 +63,12 @@ export function useRegistrarIgreja () {
 
     const irParaPasso2 = (data : RegistrarIgrejaFormData1) => {
         setDataPasso1(data)
+        setDirecaoPasso(1)
         setPasso(2)
     }
 
     const voltarParaPasso1 = () => {
+        setDirecaoPasso(-1)
         setPasso(1)
     }
 
@@ -86,10 +91,12 @@ export function useRegistrarIgreja () {
                 ...dadosAdmin,    
             })
             login(response)
+            marcarBoasVindasVista()
             setDadosSucesso({
                 nome: response.nome,
                 nomeIgreja: dataPasso1.nomeIgreja,
             })
+            setDirecaoPasso(1)
             setPasso(3)
 
         } catch (error : unknown) {
@@ -98,6 +105,7 @@ export function useRegistrarIgreja () {
                 const codigo = data?.error
                 if (codigo === 'CNPJ_DUPLICADO') {
                     setError('cnpj', { type: 'server', message: data?.message })
+                    setDirecaoPasso(-1)
                     setPasso(1)
                     return
                 }
@@ -143,7 +151,9 @@ export function useRegistrarIgreja () {
                 aceitouTermos: aceitouTermosGoogle,
             })
             login(response)
+            marcarBoasVindasVista()
             setDadosSucesso({ nome: response.nome, nomeIgreja: dataIgreja.nomeIgreja })
+            setDirecaoPasso(1)
             setPasso(3)
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
@@ -170,6 +180,7 @@ export function useRegistrarIgreja () {
 
     return {
         passo,
+        direcaoPasso,
         irParaPasso2,
         voltarParaPasso1,
         register,

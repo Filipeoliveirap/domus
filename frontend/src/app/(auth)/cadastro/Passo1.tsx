@@ -36,14 +36,6 @@ export function Passo1({
 
   return (
     <div className={styles.container}>
-
-      <header className={styles.header}>
-        <h2 className={styles.title}>Cadastre sua igreja</h2>
-        <p className={styles.subtitle}>
-          Inicie a transformação digital da sua comunidade hoje mesmo.
-        </p>
-      </header>
-
       {modoGoogle ? (
         <div className={styles.googleBanner}>
           Cadastrando como <strong>{googleData!.nome}</strong> ({googleData!.email})
@@ -66,10 +58,7 @@ export function Passo1({
         </>
       )}
 
-      {/* Formulário */}
       <form className={styles.form} onSubmit={handleSubmit(modoGoogle ? onSubmitGoogle : onAvancar)}>
-
-        {/* Campo 1: Nome da igreja — full width */}
         <Input
           id="nomeIgreja"
           label="NOME DA IGREJA*"
@@ -79,7 +68,6 @@ export function Passo1({
           {...register('nomeIgreja')}
         />
 
-        {/* Campos 2 e 3: CNPJ + Telefone lado a lado em grid */}
         <div className={styles.row}>
           <Input
             id="cnpj"
@@ -91,10 +79,7 @@ export function Passo1({
             onChange={(e) => {
               const formatado = formatarCnpj(e.target.value)
               e.target.value = formatado
-              setValue('cnpj', formatado, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
+              setValue('cnpj', formatado, { shouldValidate: true, shouldDirty: true })
             }}
           />
           <Input
@@ -108,15 +93,11 @@ export function Passo1({
             onChange={(e) => {
               const formatado = formatarTelefone(e.target.value)
               e.target.value = formatado
-              setValue('telefoneContato', formatado, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
+              setValue('telefoneContato', formatado, { shouldValidate: true, shouldDirty: true })
             }}
           />
         </div>
 
-        {/* Campo 4: E-mail de contato — full width com ícone */}
         <Input
           id="emailContato"
           type="email"
@@ -151,11 +132,10 @@ export function Passo1({
 
         {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
 
-        {/* Action bar — Voltar (para login) + Próximo/Concluir */}
-        <div className={styles.actions}>
-          <Link href="/login" className={styles.voltarLink}>
-            <ArrowLeft size={12} />
-            <span>Voltar</span>
+        <div className={styles.acoes}>
+          <Link href="/login" className={styles.voltar}>
+            <ArrowLeft size={14} />
+            <span>Voltar ao login</span>
           </Link>
 
           <Button
@@ -167,10 +147,9 @@ export function Passo1({
             loadingText="Cadastrando..."
           >
             {modoGoogle ? 'Concluir cadastro' : 'Próximo'}
-            {!modoGoogle && <ArrowRight size={12} />}
+            {!modoGoogle && <ArrowRight size={14} />}
           </Button>
         </div>
-
       </form>
     </div>
   )

@@ -64,7 +64,6 @@ export function PessoaForm(props: PessoaFormProps) {
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const vinculoAtual = watch('vinculo')
   const sexoAtual = watch('sexo')
@@ -108,11 +107,8 @@ export function PessoaForm(props: PessoaFormProps) {
       ref={formRef}
       className={styles.form}
       onSubmit={handleSubmit(
-        (data) => { setErroValidacao(null); onSubmit(data) },
-        () => {
-          setErroValidacao('Faltou preencher um campo — te levei até ele.')
-          rolarParaErro()
-        },
+        onSubmit,
+        () => rolarParaErro(),
       )}
     >
       <div className={styles.colunas}>
@@ -268,9 +264,9 @@ export function PessoaForm(props: PessoaFormProps) {
             </div>
           </section>
 
-          {(erroGeral || erroValidacao) && (
+          {erroGeral && (
             <Transicao modo="fade">
-              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+              <div className={styles.erroGeral}>{erroGeral}</div>
             </Transicao>
           )}
 

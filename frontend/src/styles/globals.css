@@ -228,3 +228,22 @@ ul, ol {
     transform: none;
   }
 }
+
+/* ─── Card de painel: card NÃO clicável (relatório, gráfico, número). Só padroniza a
+   SOMBRA — sombra suave parada + leve reforço no hover, sem lift/escala/glow (não
+   fingir que é clicável). Cada card mantém seu próprio fundo/borda/raio. Opcional:
+   o container seta `--cor` e um ícone usa hsl(var(--cor) / …). ─────────────────── */
+.card-painel {
+  box-shadow: 0 1px 3px rgba(19, 27, 46, 0.04);
+  transition: box-shadow 0.25s;
+}
+@media (hover: hover) {
+  .card-painel:hover {
+    box-shadow: 0 4px 16px -4px rgba(19, 27, 46, 0.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-painel {
+    transition: none;
+  }
+}

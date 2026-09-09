@@ -37,7 +37,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
   return (
     <div className={styles.grid}>
       {/* Entradas */}
-      <div className={`${styles.card} ${styles.cardEntrada}`}>
+      <div className={`${styles.card} ${styles.cardEntrada} card-painel`}>
         <div className={styles.cardTopo}>
           <span className={styles.cardLabel}>Total de Entradas</span>
           <span className={styles.cardIcone}><TrendingUp size={20} /></span>
@@ -52,7 +52,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
       </div>
 
       {/* Saídas */}
-      <div className={`${styles.card} ${styles.cardSaida}`}>
+      <div className={`${styles.card} ${styles.cardSaida} card-painel`}>
         <div className={styles.cardTopo}>
           <span className={styles.cardLabel}>Total de Saídas</span>
           <span className={styles.cardIcone}><TrendingDown size={20} /></span>
@@ -67,7 +67,7 @@ export function CardsResumo({ data, isLoading, isError, aoTentarNovamente }: Car
       </div>
 
       {/* Saldo — card destacado */}
-      <div className={`${styles.card} ${styles.cardSaldo}`}>
+      <div className={`${styles.card} ${styles.cardSaldo} card-painel`}>
         <div className={styles.cardTopo}>
           <span className={styles.cardLabelClaro}>Saldo Consolidado</span>
           <span className={styles.cardIconeClaro}><Wallet size={20} /></span>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Wallet, ArrowDownCircle, ArrowUpCircle, Info, Plus, X, Scale, UserX } from 'lucide-react'
@@ -15,11 +15,12 @@ import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/catego
 import type { TipoMovimentacao, ContribuinteResponse } from '@/types/financeiro/movimentacao.type'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Revelar } from '@/components/common/Transicao/Revelar'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import styles from './MovimentacaoForm.module.css'
 
 type MovimentacaoFormProps = UseFormReturn<MovimentacaoFormInput, unknown, MovimentacaoFormData> & {
   contribuintesArray: UseFieldArrayReturn<MovimentacaoFormInput, 'contribuintes'>
-  isFormIncomplete: boolean
   erroGeral: string | null
   isLoading: boolean
   ehEdicao: boolean
@@ -34,8 +35,12 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   const {
     register, handleSubmit, watch, setValue,
     formState: { errors, isSubmitted },
-    contribuintesArray, erroGeral, isLoading, isFormIncomplete, ehEdicao, onSubmit, contribuintesIniciais,
+    contribuintesArray, erroGeral, isLoading, ehEdicao, onSubmit, contribuintesIniciais,
   } = props
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const tipo = watch('tipo') as TipoMovimentacao | undefined
   const categoriaId = watch('categoriaId') as string
@@ -59,8 +64,6 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
 
   const labelPessoa = tipo === 'SAIDA' ? 'Beneficiário' : 'Contribuinte'
   const categoriaNome = categoriasCompativeis.find((c: CategoriaResponse) => c.id === categoriaId)?.nome
-
-  const valorInvalido = !valor || parseFloat(valor) <= 0
 
   const somaContribuintes = contribuintes.reduce((acc, c) => acc + (parseFloat(c?.valor ?? '') || 0), 0)
   const totalMovimentacao = parseFloat(valor) || 0
@@ -135,7 +138,17 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+    <form
+      ref={formRef}
+      className={styles.form}
+      onSubmit={handleSubmit(
+        (data) => { setErroValidacao(null); onSubmit(data) },
+        () => {
+          setErroValidacao('Faltou preencher um campo — te levei até ele.')
+          rolarParaErro()
+        },
+      )}
+    >
       <div className={styles.colunas}>
         {/* Coluna esquerda — campos */}
         <div className={styles.colunaEsquerda}>
@@ -175,7 +188,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     <span className={styles.tipoDesc}>Despesas, contas, salários</span>
                   </button>
                 </div>
-                {errors.tipo && <span className={styles.erroCampo}>{errors.tipo.message}</span>}
+                {errors.tipo && <span className={styles.erroCampo} data-campo-erro>{errors.tipo.message}</span>}
               </div>
 
               {/* Valor */}
@@ -194,14 +207,15 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     }}
                     inputMode="numeric"
                 />
-                {errors.valor && <span className={styles.erroCampo}>{errors.valor.message}</span>}
+                {errors.valor && <span className={styles.erroCampo} data-campo-erro>{errors.valor.message}</span>}
               </div>
 
               <div className={styles.linha2}>
                 <div className={styles.campo}>
                   <label className={styles.label} htmlFor="categoriaId">CATEGORIA</label>
+                  <Transicao key={semNenhumaCategoria ? 'aviso' : 'select'} modo="fade">
                   {semNenhumaCategoria ? (
-                    <div className={styles.avisoCategoria}>
+                    <div className={styles.avisoCategoria} data-campo-erro>
                       <p className={styles.avisoCategoriaTexto}>
                         Nenhuma categoria cadastrada. Para lançar entradas e saídas, crie uma categoria antes.
                       </p>
@@ -220,16 +234,19 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                         disabled={!tipo}
                       />
                       {semCategoriaParaTipo && (
-                        <span className={styles.avisoCategoriaTipo}>
-                          Nenhuma categoria de {tipo === 'ENTRADA' ? 'entrada' : 'saída'}.{' '}
-                          <Link href="/financeiro/categorias" className={styles.avisoCategoriaLink}>
-                            Criar uma
-                          </Link>
-                        </span>
+                        <Revelar>
+                          <span className={styles.avisoCategoriaTipo}>
+                            Nenhuma categoria de {tipo === 'ENTRADA' ? 'entrada' : 'saída'}.{' '}
+                            <Link href="/financeiro/categorias" className={styles.avisoCategoriaLink}>
+                              Criar uma
+                            </Link>
+                          </span>
+                        </Revelar>
                       )}
-                      {errors.categoriaId && <span className={styles.erroCampo}>{errors.categoriaId.message}</span>}
+                      {errors.categoriaId && <span className={styles.erroCampo} data-campo-erro>{errors.categoriaId.message}</span>}
                     </>
                   )}
+                  </Transicao>
                 </div>
 
                 <div className={styles.campo}>
@@ -240,7 +257,7 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     value={dataMovimentacao}
                     onChange={(v) => setValue('dataMovimentacao', v, { shouldValidate: true, shouldDirty: true })}
                   />
-                  {errors.dataMovimentacao && <span className={styles.erroCampo}>{errors.dataMovimentacao.message}</span>}
+                  {errors.dataMovimentacao && <span className={styles.erroCampo} data-campo-erro>{errors.dataMovimentacao.message}</span>}
                 </div>
               </div>
 
@@ -251,9 +268,11 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                     {labelPessoa}S <span className={styles.opcional}>(opcional)</span>
                   </label>
                   {contribuintes.length === 2 && !!valor && (
-                    <button type="button" className={styles.btnMeioAMeio} onClick={dividirMeioAMeio}>
-                      <Scale size={14} /> Dividir 50/50
-                    </button>
+                    <Transicao modo="escala">
+                      <button type="button" className={styles.btnMeioAMeio} onClick={dividirMeioAMeio}>
+                        <Scale size={14} /> Dividir 50/50
+                      </button>
+                    </Transicao>
                   )}
                 </div>
 
@@ -331,16 +350,18 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
                 </button>
 
                 {contribuintes.length > 0 && (
-                  <div className={`${styles.somaContribuintes} ${somaBate ? styles.somaOk : styles.somaErro}`}>
-                    Soma dos {labelPessoa.toLowerCase()}s: {formatarMoeda(String(somaContribuintes))}
-                    {!somaBate && (
-                      diferenca > 0
-                        ? ` — ainda falta ${formatarMoeda(String(diferenca))} para completar o valor da movimentação`
-                        : ` — está passando ${formatarMoeda(String(Math.abs(diferenca)))} do valor da movimentação`
-                    )}
-                  </div>
+                  <Revelar>
+                    <div className={`${styles.somaContribuintes} ${somaBate ? styles.somaOk : styles.somaErro}`}>
+                      Soma dos {labelPessoa.toLowerCase()}s: {formatarMoeda(String(somaContribuintes))}
+                      {!somaBate && (
+                        diferenca > 0
+                          ? ` — ainda falta ${formatarMoeda(String(diferenca))} para completar o valor da movimentação`
+                          : ` — está passando ${formatarMoeda(String(Math.abs(diferenca)))} do valor da movimentação`
+                      )}
+                    </div>
+                  </Revelar>
                 )}
-                {erroContribuintes && <span className={styles.erroCampo}>{erroContribuintes}</span>}
+                {erroContribuintes && <span className={styles.erroCampo} data-campo-erro>{erroContribuintes}</span>}
               </div>
 
               {/* Descrição */}
@@ -390,10 +411,14 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
             </div>
           </div>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+          {(erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+            </Transicao>
+          )}
 
           <div className={styles.acoes}>
-            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || valorInvalido || !somaBate || isLoading || semNenhumaCategoria}>
+            <button type="submit" className={styles.btnSalvar} disabled={isLoading}>
               {isLoading ? 'Salvando…' : ehEdicao ? 'Salvar alterações' : 'Salvar movimentação'}
             </button>
             <button type="button" onClick={() => router.back()} className={styles.cancelarLink}>Cancelar</button>

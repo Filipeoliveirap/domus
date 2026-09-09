@@ -18,6 +18,7 @@ export function SelecaoPessoa({ pessoaIdSelecionado, nomeSelecionado, onSelecion
   const [busca, setBusca] = useState('')
   const [aberto, setAberto] = useState(false)
   const [nomeCapturado, setNomeCapturado] = useState<string | undefined>(undefined)
+  const [removendo, setRemovendo] = useState(false)
   const buscaDebounced = useDebounce(busca, 300)
 
   const { data } = usePessoas({ q: buscaDebounced, page: 0, size: 8 })
@@ -27,20 +28,25 @@ export function SelecaoPessoa({ pessoaIdSelecionado, nomeSelecionado, onSelecion
 
   if (pessoaIdSelecionado && nomeExibido) {
     return (
-      <div className={styles.chip}>
+      <Transicao modo="escala" className={`${styles.chip} ${removendo ? styles.chipSaindo : ''}`}>
         <span className={styles.chipNome}>{nomeExibido}</span>
         <button
           type="button"
           className={styles.chipRemover}
           onClick={() => {
-            setNomeCapturado(undefined)
-            onSelecionar(undefined, undefined)
+            if (removendo) return
+            setRemovendo(true)
+            setTimeout(() => {
+              setRemovendo(false)
+              setNomeCapturado(undefined)
+              onSelecionar(undefined, undefined)
+            }, 160)
           }}
           aria-label="Remover"
         >
           <X size={16} />
         </button>
-      </div>
+      </Transicao>
     )
   }
 

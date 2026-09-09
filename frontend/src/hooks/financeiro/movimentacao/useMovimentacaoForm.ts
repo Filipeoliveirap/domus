@@ -95,7 +95,8 @@ export function useMovimentacaoForm({ movimentacaoId, movimentacaoInicial, onSuc
         notificar.sucesso('Movimentação registrada com sucesso!')
       }
       onSuccess?.()
-      sairAnimado(() => router.push(`/financeiro/movimentacoes?destaque=${movSalvaId}`))
+      const paramNovo = ehEdicao ? '' : '&novo=1'
+      sairAnimado(() => router.push(`/financeiro/movimentacoes?destaque=${movSalvaId}${paramNovo}`))
     } catch (error: unknown) {
       if (axios.isAxiosError<ApiError>(error)) {
         const e = error.response?.data

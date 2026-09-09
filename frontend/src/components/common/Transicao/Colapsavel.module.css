@@ -1,0 +1,35 @@
+.wrap {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 0.48s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.34s ease 0.08s;
+}
+.wrap > .inner {
+  transform: translateY(0);
+  transition: transform 0.48s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.fechado {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+}
+.fechado > .inner {
+  transform: translateY(-6px);
+  transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+  /* padding vertical do conteúdo não pode "vazar" altura quando a linha está em 0fr. */
+  padding-block: 0;
+}
+
+.inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap, .fechado, .wrap > .inner, .fechado > .inner { transition: opacity 0.15s ease; transform: none; }
+}

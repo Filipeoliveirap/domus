@@ -19,9 +19,10 @@ interface BlocoRecolhivelProps {
 }
 
 /**
- * Disclosure: cabeçalho clicável + corpo que expande suave. Para conteúdo
- * opcional que a maioria dos eventos não usa (recorrência, restrição de
- * público, campos personalizados) — some do caminho até alguém pedir.
+ * Disclosure: cabeçalho clicável + corpo que expande suave (grid-template-rows
+ * 0fr -> 1fr, sem número mágico). Para conteúdo opcional que a maioria dos
+ * eventos não usa (recorrência, restrição de público, campos personalizados) —
+ * some do caminho até alguém pedir.
  *
  * Diferente do <Revelar> (que é controlado por um booleano externo, tipo
  * `{toggle && <Revelar>}`): aqui, por padrão, o estado aberto/fechado é do
@@ -81,10 +82,11 @@ export function BlocoRecolhivel({
         id={corpoId}
         role="region"
         aria-labelledby={tituloId}
-        hidden={!aberto}
         data-recolhivel
         data-id={id}
-        className={styles.corpoWrap}
+        data-fechado={aberto ? undefined : ''}
+        className={`${styles.corpoWrap} ${aberto ? '' : styles.fechado}`}
+        inert={!aberto}
       >
         <div className={styles.corpoInner}>{children}</div>
       </div>

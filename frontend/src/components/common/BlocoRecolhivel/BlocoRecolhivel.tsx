@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { Colapsavel } from '@/components/common/Transicao/Colapsavel'
 import styles from './BlocoRecolhivel.module.css'
 
 interface BlocoRecolhivelProps {
@@ -19,14 +20,12 @@ interface BlocoRecolhivelProps {
 }
 
 /**
- * Disclosure: cabeçalho clicável + corpo que expande suave (grid-template-rows
- * 0fr -> 1fr, sem número mágico). Para conteúdo opcional que a maioria dos
- * eventos não usa (recorrência, restrição de público, campos personalizados) —
- * some do caminho até alguém pedir.
+ * Disclosure: cabeçalho clicável + corpo que expande/recolhe suave nos dois
+ * sentidos (usa <Colapsavel>, o padrão de show/hide animado do projeto).
  *
- * Diferente do <Revelar> (que é controlado por um booleano externo, tipo
- * `{toggle && <Revelar>}`): aqui, por padrão, o estado aberto/fechado é do
- * próprio bloco. Passe `aberto` + `onToggle` para o pai controlar.
+ * Diferente do <Revelar> (que só anima na montagem, `{cond && <Revelar>}`):
+ * aqui, por padrão, o estado aberto/fechado é do próprio bloco. Passe `aberto`
+ * + `onToggle` para o pai controlar.
  *
  * O useRolarParaErro dispara `domus:abrir-recolhivel` com o id deste bloco
  * quando há um campo com erro escondido aqui dentro.
@@ -78,18 +77,11 @@ export function BlocoRecolhivel({
         </span>
       </button>
 
-      <div
-        id={corpoId}
-        role="region"
-        aria-labelledby={tituloId}
-        data-recolhivel
-        data-id={id}
-        data-fechado={aberto ? undefined : ''}
-        className={`${styles.corpoWrap} ${aberto ? '' : styles.fechado}`}
-        inert={!aberto}
-      >
-        <div className={styles.corpoInner}>{children}</div>
-      </div>
+      <Colapsavel aberto={aberto} className={styles.corpo}>
+        <div id={corpoId} role="region" aria-labelledby={tituloId} data-recolhivel data-id={id} data-fechado={aberto ? undefined : ''}>
+          {children}
+        </div>
+      </Colapsavel>
     </div>
   )
 }

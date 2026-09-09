@@ -56,36 +56,17 @@
   color: var(--color-text-muted);
 }
 
-/* Expansão de altura suave sem número mágico: a linha do grid vai de 0fr a 1fr
-   e o conteúdo interno recorta o overflow enquanto abre/fecha. */
-.corpoWrap {
-  display: grid;
-  grid-template-rows: 1fr;
-  opacity: 1;
-  transition:
-    grid-template-rows 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.32s ease 0.06s;
-}
-.fechado {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.18s ease;
-}
-.corpoInner {
-  overflow: hidden;
-  min-height: 0;
+/* O corpo em si — a animação de abrir/fechar vem do <Colapsavel>. Aqui só o
+   respiro interno. */
+.corpo {
   padding: 4px 16px 16px;
+}
+.corpo > [data-recolhivel] {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-.fechado .corpoInner {
-  padding-top: 0;
-  padding-bottom: 0;
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .cabecalho, .chevron, .corpoWrap, .fechado { transition: none; }
+  .cabecalho, .chevron { transition: none; }
 }

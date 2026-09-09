@@ -509,7 +509,7 @@ export function EventoForm(props: EventoFormProps) {
                   Só minha igreja
                 </span>
                 <span className={styles.toggleDescricao}>
-                  Não mostra este evento para {concordar(congregacao.genero, 'os_min')} outras {congregacao.plural.toLowerCase()}.
+                  Ligado: só a sua igreja vê este evento. Desligado: {concordar(congregacao.genero, 'os_min')} outras {congregacao.plural.toLowerCase()} também veem.
                 </span>
               </span>
               <span className={styles.switch}>

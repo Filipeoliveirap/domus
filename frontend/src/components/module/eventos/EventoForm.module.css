@@ -1,31 +1,20 @@
 .form { width: 100%; }
 
+/* Coluna única — mesma estrutura no desktop e no mobile. */
 .colunas {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 32px;
-  align-items: start;
-}
-.colunaEsquerda {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-.colunaDireita {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  position: sticky;
-  top: 24px;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-/* Campos personalizados + ações do formulário, fora do grid de 2 colunas — usa a largura
-   inteira, ver comentário no EventoForm.tsx. */
 .blocoFinal {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  margin-top: 24px;
+  gap: 20px;
+  max-width: 720px;
+  margin: 24px auto 0;
 }
 
 /* ─── Seções ─── */
@@ -39,21 +28,11 @@
   padding: 28px;
   box-shadow: 0 4px 6px -1px rgba(19, 27, 46, 0.08), 0 10px 20px -3px rgba(19, 27, 46, 0.08);
 }
-.secaoData {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  background: var(--color-bg-igreja-card);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-}
 .secaoHeader {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.secaoData .secaoHeader { margin-bottom: 0; }
 .secaoIcone {
   display: flex;
   align-items: center;
@@ -456,14 +435,9 @@
 }
 
 /* ─── Responsivo ─── */
-@media (max-width: 1024px) {
-  .colunas { grid-template-columns: 1fr; gap: 20px; }
-  .colunaDireita { position: static; }
-}
-
 /* Mobile: menos padding, tipografia menor, campos lado a lado empilham. */
 @media (max-width: 767px) {
-  .colunaEsquerda, .colunaDireita, .blocoFinal { gap: 16px; }
+  .colunas, .blocoFinal { gap: 16px; }
 
   .secao, .secaoData { padding: 18px; gap: 18px; }
   .secao { box-shadow: 0 2px 6px -2px rgba(19, 27, 46, 0.1); }

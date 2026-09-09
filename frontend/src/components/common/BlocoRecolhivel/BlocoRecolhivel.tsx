@@ -10,8 +10,11 @@ interface BlocoRecolhivelProps {
   titulo: string
   descricao?: string
   icone?: React.ReactNode
-  /** Abre já expandido (ex.: edição de evento que já tem restrição ativa). */
+  /** Modo não-controlado: abre já expandido. Ignorado se `aberto` for passado. */
   defaultAberto?: boolean
+  /** Modo controlado: o pai é dono do estado (ex.: sincronizar com um campo do form). */
+  aberto?: boolean
+  onToggle?: (aberto: boolean) => void
   children: React.ReactNode
 }
 
@@ -21,26 +24,37 @@ interface BlocoRecolhivelProps {
  * público, campos personalizados) — some do caminho até alguém pedir.
  *
  * Diferente do <Revelar> (que é controlado por um booleano externo, tipo
- * `{toggle && <Revelar>}`): aqui o estado aberto/fechado é do próprio bloco.
+ * `{toggle && <Revelar>}`): aqui, por padrão, o estado aberto/fechado é do
+ * próprio bloco. Passe `aberto` + `onToggle` para o pai controlar.
  *
  * O useRolarParaErro dispara `domus:abrir-recolhivel` com o id deste bloco
  * quando há um campo com erro escondido aqui dentro.
  */
 export function BlocoRecolhivel({
-  id, titulo, descricao, icone, defaultAberto = false, children,
+  id, titulo, descricao, icone, defaultAberto = false, aberto: abertoProp, onToggle, children,
 }: BlocoRecolhivelProps) {
-  const [aberto, setAberto] = useState(defaultAberto)
+  const controlado = abertoProp !== undefined
+  const [abertoInterno, setAbertoInterno] = useState(defaultAberto)
+  const aberto = controlado ? abertoProp : abertoInterno
   const corpoId = `recolhivel-${id}`
   const tituloId = useId()
+
+  function definir(novo: boolean) {
+    onToggle?.(novo)
+    if (!controlado) setAbertoInterno(novo)
+  }
 
   useEffect(() => {
     function aoAbrirPorErro(e: Event) {
       const detail = (e as CustomEvent<{ id: string }>).detail
-      if (detail?.id === id) setAberto(true)
+      if (detail?.id === id) {
+        onToggle?.(true)
+        setAbertoInterno(true)
+      }
     }
     window.addEventListener('domus:abrir-recolhivel', aoAbrirPorErro)
     return () => window.removeEventListener('domus:abrir-recolhivel', aoAbrirPorErro)
-  }, [id])
+  }, [id, onToggle])
 
   return (
     <div className={styles.bloco}>
@@ -49,7 +63,7 @@ export function BlocoRecolhivel({
         className={styles.cabecalho}
         aria-expanded={aberto}
         aria-controls={corpoId}
-        onClick={() => setAberto((v) => !v)}
+        onClick={() => definir(!aberto)}
       >
         <ChevronRight
           size={18}

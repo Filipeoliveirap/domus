@@ -1,6 +1,7 @@
 package com.domus.api.modules.pagamento.conta;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -36,6 +37,15 @@ public class ContaPagamentoIgreja {
     @Column(name = "conectado_por_usuario_id", nullable = false)
     private UUID conectadoPorUsuarioId;
 
+    @Column(name = "taxa_pix_percent")
+    private BigDecimal taxaPixPercent;
+
+    @Column(name = "taxa_cartao_avista_percent")
+    private BigDecimal taxaCartaoAvistaPercent;
+
+    @Column(name = "taxa_cartao_parcela_adicional_percent")
+    private BigDecimal taxaCartaoParcelaAdicionalPercent;
+
     protected ContaPagamentoIgreja() {}
 
     public ContaPagamentoIgreja(UUID igrejaId, String mpUserId, String accessTokenCriptografado,
@@ -57,6 +67,13 @@ public class ContaPagamentoIgreja {
         this.expiraEm = expiraEm;
     }
 
+    /** Taxas negociadas da igreja com o MP. Qualquer uma nula = usa o default do back. */
+    public void atualizarTaxasNegociadas(BigDecimal pix, BigDecimal cartaoAvista, BigDecimal parcelaAdicional) {
+        this.taxaPixPercent = pix;
+        this.taxaCartaoAvistaPercent = cartaoAvista;
+        this.taxaCartaoParcelaAdicionalPercent = parcelaAdicional;
+    }
+
     public UUID getId() { return id; }
     public UUID getIgrejaId() { return igrejaId; }
     public String getMpUserId() { return mpUserId; }
@@ -64,4 +81,7 @@ public class ContaPagamentoIgreja {
     public String getRefreshTokenCriptografado() { return refreshTokenCriptografado; }
     public Instant getExpiraEm() { return expiraEm; }
     public Instant getConectadoEm() { return conectadoEm; }
+    public BigDecimal getTaxaPixPercent() { return taxaPixPercent; }
+    public BigDecimal getTaxaCartaoAvistaPercent() { return taxaCartaoAvistaPercent; }
+    public BigDecimal getTaxaCartaoParcelaAdicionalPercent() { return taxaCartaoParcelaAdicionalPercent; }
 }

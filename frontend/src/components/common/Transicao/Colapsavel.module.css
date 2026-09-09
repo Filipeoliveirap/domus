@@ -3,15 +3,24 @@
   grid-template-rows: 1fr;
   opacity: 1;
   transition:
-    grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.3s ease 0.05s;
+    grid-template-rows 0.48s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.34s ease 0.08s;
 }
+.wrap > .inner {
+  transform: translateY(0);
+  transition: transform 0.48s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
 .fechado {
   grid-template-rows: 0fr;
   opacity: 0;
   transition:
-    grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.16s ease;
+    grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+}
+.fechado > .inner {
+  transform: translateY(-6px);
+  transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .inner {
@@ -20,5 +29,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wrap, .fechado { transition: opacity 0.15s ease; }
+  .wrap, .fechado, .wrap > .inner, .fechado > .inner { transition: opacity 0.15s ease; transform: none; }
 }

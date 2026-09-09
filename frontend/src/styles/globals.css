@@ -151,3 +151,80 @@ ul, ol {
   .saida-formulario { animation-name: domusSaidaFormularioFade; }
   @keyframes domusSaidaFormularioFade { to { opacity: 0; } }
 }
+
+/* ─── Card interativo: padrão de card clicável do projeto ───────────────────
+   Uso: className={`${styles.card} card-interativo`} + no CSS do módulo define
+   `--cor: var(--cat-<area>)` no seletor do card. Ver spec
+   2026-09-08-cor-por-categoria-e-card-interativo. ───────────────────────── */
+.card-interativo {
+  --cor: var(--cat-eventos);
+  position: relative;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s;
+}
+@media (hover: hover) {
+  .card-interativo:hover,
+  .card-interativo:focus-visible {
+    transform: translateY(-6px) scale(1.03);
+    border-color: hsl(var(--cor) / 0.35);
+    box-shadow:
+      0 0 0 1px hsl(var(--cor) / 0.15),
+      0 26px 50px -18px hsl(var(--cor) / 0.45);
+    z-index: 2;
+    outline: none;
+  }
+}
+.card-interativo:active {
+  transform: translateY(-2px) scale(0.995);
+}
+
+.card-midia {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .card-interativo:hover .card-midia {
+    transform: scale(1.1);
+  }
+}
+
+.card-seta {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .card-interativo:hover .card-seta {
+    transform: translateX(4px);
+  }
+}
+
+.card-cta {
+  background: hsl(var(--cor) / 0.08);
+  border: 1px solid hsl(var(--cor) / 0.18);
+  color: hsl(var(--cor));
+  transition: background 0.3s, border-color 0.3s;
+}
+@media (hover: hover) {
+  .card-interativo:hover .card-cta {
+    background: hsl(var(--cor) / 0.16);
+    border-color: hsl(var(--cor) / 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-interativo,
+  .card-midia,
+  .card-seta,
+  .card-cta {
+    transition: none;
+  }
+  .card-interativo:hover,
+  .card-interativo:focus-visible,
+  .card-interativo:active {
+    transform: none;
+  }
+  .card-interativo:hover .card-midia,
+  .card-interativo:hover .card-seta {
+    transform: none;
+  }
+}

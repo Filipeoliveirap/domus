@@ -141,6 +141,12 @@ eu abro?"** Se a resposta for mais que um ou dois, o desenho ainda não está pr
   - Micro-feedback de toque: `:active { transform: scale(0.9x) }` com `transition` curta
     (~0.12s) em botões de ação; sempre com bloco `@media (prefers-reduced-motion: reduce)`
     zerando os `transform`.
+  - **Card clicável** usa as classes globais `.card-interativo` (+ `.card-midia` pra
+    imagem com zoom parallax, `.card-seta` pra seta que desliza, `.card-cta` pro bloco
+    de ação tingido) e define `--cor` com o token da área
+    (`--cat-eventos|celulas|ministerios|financeiro`). Cor só em acento — glow do hover,
+    selo, CTA, ícone; nunca no fundo do card ou no texto de conteúdo. Ver
+    `docs/superpowers/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
 - **Mobile de verdade (Android e iOS).** Além dos padrões de layout acima: modal/drawer
   vira **bottom-sheet** no breakpoint mobile (`@media (max-width: 767px)`: cola no rodapé,
   cantos de baixo retos, `.grabber`, `deslizarCima`/`deslizarBaixo`, `env(safe-area-inset-bottom)`,

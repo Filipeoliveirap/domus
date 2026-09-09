@@ -4,6 +4,14 @@
   --color-primary-dark:  #004AC6;
   --color-primary-light: #EFF6FF;
 
+  /* ─── Cor por categoria (acento: glow, selo, CTA, ícone) — HSL triplet
+     pra usar hsl(var(--cat-x) / opacidade). Ver spec
+     2026-09-08-cor-por-categoria-e-card-interativo. ─── */
+  --cat-eventos: 221 83% 53%;      /* = --color-primary (#2563EB) */
+  --cat-celulas: 158 64% 40%;      /* verde */
+  --cat-ministerios: 262 60% 55%;  /* roxo/violeta */
+  --cat-financeiro: 38 92% 50%;    /* âmbar */
+
   /* ─── Backgrounds ───────────────────────────────────────── */
   --color-bg-page:          #F8FAFC;
   --color-bg-sidebar:       #F1F5F9;

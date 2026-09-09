@@ -1,0 +1,72 @@
+.bloco {
+  border: 1px dashed var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-white);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  min-height: 48px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+@media (hover: hover) {
+  .cabecalho:hover { background: var(--color-bg-table-header); }
+}
+.cabecalho:active { transform: scale(0.995); }
+.cabecalho:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform var(--transition-fast);
+}
+.chevronAberto { transform: rotate(90deg); }
+
+.icone {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.titulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.descricao {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* O corpo em si — a animação de abrir/fechar vem do <Colapsavel>. Aqui só o
+   respiro interno. */
+.corpo {
+  padding: 4px 16px 16px;
+}
+.corpo > [data-recolhivel] {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cabecalho, .chevron { transition: none; }
+}

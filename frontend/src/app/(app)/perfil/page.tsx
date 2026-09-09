@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { User, MapPin, FileText, Church } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useMinhaPessoa, useAtualizarMinhaFoto } from '@/hooks/pessoa/useMinhaPessoa'
@@ -14,7 +14,9 @@ import { Input } from '@/components/common/input/Input'
 import { CampoData } from '@/components/common/CampoData/CampoData'
 import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
 import { Revelar } from '@/components/common/Transicao/Revelar'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { StatusCards } from '@/components/common/statuscards/StatusCards'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { Button } from '@/components/common/button/Button'
 import { useBuscaCep } from '@/hooks/pessoa/useBuscaCep'
 import { useBairros } from '@/hooks/pessoa/useBairros'
@@ -71,6 +73,10 @@ export default function PerfilPage() {
   const { buscar, carregando: carregandoCep } = useBuscaCep()
   const [cepNaoEncontrado, setCepNaoEncontrado] = useState(false)
   const cepReg = register('endereco.cep')
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
   const { data: bairros } = useBairros()
 
   async function aoSairDoCep(e: React.FocusEvent<HTMLInputElement>) {
@@ -96,7 +102,17 @@ export default function PerfilPage() {
         <p className={styles.subtitulo}>Gerencie suas informações pessoais e segurança da conta.</p>
       </div>
 
-      <form className={styles.card} onSubmit={handleSubmit(onSubmit)}>
+      <form
+        ref={formRef}
+        className={styles.card}
+        onSubmit={handleSubmit(
+          (data) => { setErroValidacao(null); onSubmit(data) },
+          () => {
+            setErroValidacao('Faltou preencher um campo — te levei até ele.')
+            rolarParaErro()
+          },
+        )}
+      >
         <div className={styles.fotoWrap}>
           <UploadFoto
             valor={fotoIdAtual}
@@ -158,7 +174,7 @@ export default function PerfilPage() {
                 disabled={!podeEditarTudo}
                 options={ESTADO_CIVIL_OPTIONS}
               />
-              {errors.estadoCivil?.message && <span className={styles.erroCampo}>{errors.estadoCivil.message}</span>}
+              {errors.estadoCivil?.message && <span className={styles.erroCampo} data-campo-erro>{errors.estadoCivil.message}</span>}
             </div>
           </div>
           <StatusCards label="SEXO" options={SEXO_OPTIONS}
@@ -178,9 +194,12 @@ export default function PerfilPage() {
                 {...cepReg}
                 onChange={(e) => setValue('endereco.cep', formatarCep(e.target.value), { shouldValidate: true })}
                 onBlur={(e) => { cepReg.onBlur(e); void aoSairDoCep(e) }} />
-              {carregandoCep && <span className={styles.erroCampo}>buscando CEP…</span>}
-              {cepNaoEncontrado && (
-                <span className={styles.erroCampo}>CEP não encontrado — preencha manualmente.</span>
+              {(carregandoCep || cepNaoEncontrado) && (
+                <Transicao modo="fade">
+                  <span className={styles.erroCampo}>
+                    {carregandoCep ? 'buscando CEP…' : 'CEP não encontrado — preencha manualmente.'}
+                  </span>
+                </Transicao>
               )}
             </div>
             <div className={styles.spanFull}>
@@ -213,7 +232,7 @@ export default function PerfilPage() {
                 disabled={!podeEditarTudo}
                 options={UF_OPTIONS}
               />
-              {errors.endereco?.uf?.message && <span className={styles.erroCampo}>{errors.endereco.uf.message}</span>}
+              {errors.endereco?.uf?.message && <span className={styles.erroCampo} data-campo-erro>{errors.endereco.uf.message}</span>}
             </div>
           </div>
         </section>
@@ -258,7 +277,11 @@ export default function PerfilPage() {
           </div>
         </section>
 
-        {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+        {(erroGeral || erroValidacao) && (
+          <Transicao modo="fade">
+            <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+          </Transicao>
+        )}
 
         {/* Foto salva sozinha ao trocar; quem não edita o resto não tem o que salvar aqui. */}
         {podeEditarTudo && (

@@ -5,6 +5,7 @@ import { clsx } from 'clsx'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useSalvarCamposPersonalizados } from '@/hooks/evento/useSalvarCamposPersonalizados'
 import type { CampoPersonalizadoRequest, CampoPersonalizadoResponse, TipoCampoPersonalizado } from '@/types/campoPersonalizado.type'
@@ -148,7 +149,7 @@ const PainelEditor = forwardRef<
         </p>
 
         {campos.map((campo, indice) => (
-          <div
+          <Revelar
             key={chaveCampo(campo, indice)}
             className={clsx(styles.cartaoCampo, removendo.has(chaveCampo(campo, indice)) && styles.cartaoSaindo)}
           >
@@ -198,34 +199,38 @@ const PainelEditor = forwardRef<
             </div>
 
             {campo.tipo === 'TEXTO_CURTO' && (
-              <div>
-                <Input
-                  id={`campo-placeholder-${indice}`}
-                  label="Exemplo de resposta (opcional)"
-                  placeholder="Ex.: Digite P, M ou G"
-                  value={campo.placeholder ?? ''}
-                  onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
-                />
-                <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
-              </div>
+              <Revelar>
+                <div>
+                  <Input
+                    id={`campo-placeholder-${indice}`}
+                    label="Exemplo de resposta (opcional)"
+                    placeholder="Ex.: Digite P, M ou G"
+                    value={campo.placeholder ?? ''}
+                    onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
+                  />
+                  <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
+                </div>
+              </Revelar>
             )}
 
             {(campo.tipo === 'OPCAO_UNICA' || campo.tipo === 'MULTIPLA_ESCOLHA') && (
-              <div className={styles.campoOpcoes}>
-                <span className={styles.labelOpcoes}>Opções da lista (uma por linha)</span>
-                <textarea
-                  className={styles.textareaOpcoes}
-                  placeholder={'Ex.:\nP\nM\nG'}
-                  value={(campo.opcoes ?? []).join('\n')}
-                  onChange={(e) => atualizarCampo(indice, {
-                    // Sem trim/filter aqui: filtrar linha vazia a cada tecla apagava a
-                    // quebra de linha que a pessoa acabou de digitar (Enter "não fazia nada").
-                    // Limpeza (trim + remover linha vazia) só acontece ao salvar.
-                    opcoes: e.target.value.split('\n'),
-                  })}
-                />
-                <span className={styles.dica}>Cada linha vira uma opção diferente na lista.</span>
-              </div>
+              <Revelar>
+                <div className={styles.campoOpcoes}>
+                  <span className={styles.labelOpcoes}>Opções da lista (uma por linha)</span>
+                  <textarea
+                    className={styles.textareaOpcoes}
+                    placeholder={'Ex.:\nP\nM\nG'}
+                    value={(campo.opcoes ?? []).join('\n')}
+                    onChange={(e) => atualizarCampo(indice, {
+                      // Sem trim/filter aqui: filtrar linha vazia a cada tecla apagava a
+                      // quebra de linha que a pessoa acabou de digitar (Enter "não fazia nada").
+                      // Limpeza (trim + remover linha vazia) só acontece ao salvar.
+                      opcoes: e.target.value.split('\n'),
+                    })}
+                  />
+                  <span className={styles.dica}>Cada linha vira uma opção diferente na lista.</span>
+                </div>
+              </Revelar>
             )}
 
             <label className={styles.toggleLinha}>
@@ -240,7 +245,7 @@ const PainelEditor = forwardRef<
               </span>
             </label>
 
-          </div>
+          </Revelar>
         ))}
 
         <button type="button" className={styles.botaoAdicionar} onClick={adicionarCampo}>
@@ -321,7 +326,7 @@ function PreviaInterativa({ campos, removendo }: { campos: CampoPersonalizadoReq
       {campos.map((campo, indice) => {
         const chave = campo.id ?? `novo-${indice}`
         return (
-          <div key={chave} className={clsx(styles.previewCampo, removendo.has(chave) && styles.previewSaindo)}>
+          <Revelar key={chave} className={clsx(styles.previewCampo, removendo.has(chave) && styles.previewSaindo)}>
             <label className={styles.previewLabel}>
               {campo.label || 'O que você quer perguntar'}{campo.obrigatorio && <span className={styles.previewAsterisco}> *</span>}
             </label>
@@ -391,7 +396,7 @@ function PreviaInterativa({ campos, removendo }: { campos: CampoPersonalizadoReq
                 })}
               </div>
             )}
-          </div>
+          </Revelar>
         )
       })}
     </div>

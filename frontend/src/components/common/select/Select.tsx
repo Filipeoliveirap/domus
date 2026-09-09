@@ -50,7 +50,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           </span>
         </div>
         {error && (
-          <span className={styles.fieldError} role="alert">
+          <span className={styles.fieldError} role="alert" data-campo-erro>
             {error}
           </span>
         )}

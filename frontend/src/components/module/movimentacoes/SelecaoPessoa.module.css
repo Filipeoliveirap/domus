@@ -108,3 +108,17 @@
 .chipRemover:hover {
   color: var(--color-danger);
 }
+.chipRemover:active { transform: scale(0.88); }
+
+.chipSaindo {
+  animation: chipPessoaSai 0.16s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+@keyframes chipPessoaSai {
+  to { opacity: 0; transform: scale(0.86); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chipRemover:active { transform: none; }
+  .chipSaindo { animation-name: chipPessoaSaiFade; }
+  @keyframes chipPessoaSaiFade { to { opacity: 0; } }
+}

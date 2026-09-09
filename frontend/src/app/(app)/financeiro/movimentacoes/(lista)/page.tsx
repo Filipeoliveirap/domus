@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Pencil, Archive, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
@@ -75,7 +75,9 @@ function MovimentacoesConteudo() {
   })
 
   const { pagina, setPagina } = usePaginaUrl()
-  const { destaqueId } = useDestaqueRecente()
+  // Lista cronológica: o realce expira em ~5s (o hook zera o destaqueId) — some sozinho e
+  // não gruda na linha se a pessoa continuar mexendo na tela.
+  const { destaqueId, ehNovo } = useDestaqueRecente('destaque', 4000)
   const { data: movDestaque } = useMovimentacao(destaqueId ?? undefined)
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
   // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
@@ -97,10 +99,32 @@ function MovimentacoesConteudo() {
   }, autorizado)
 
   const movimentacoesPagina = data?.content ?? []
-  const movimentacoes =
-    destaqueId && movDestaque
-      ? [movDestaque, ...movimentacoesPagina.filter((m) => m.id !== destaqueId)]
-      : movimentacoesPagina
+  const destaqueNaPagina = !!destaqueId && movimentacoesPagina.some((m) => m.id === destaqueId)
+
+  // Rede de segurança: navegou com ?destaque mas a linha não veio na página (cache velho
+  // que não revalidou) — força um refetch uma vez, pra não depender de reload manual.
+  const jaForcouRefetch = useRef(false)
+  useEffect(() => {
+    if (destaqueId && !destaqueNaPagina && !isLoading && !isFetching && !jaForcouRefetch.current) {
+      jaForcouRefetch.current = true
+      refetch()
+    }
+  }, [destaqueId, destaqueNaPagina, isLoading, isFetching, refetch])
+  const movimentacoes = (() => {
+    if (!destaqueId) return movimentacoesPagina
+    // A lista ainda não trouxe a linha nova (cache em atualização) — ponte: mostra a busca
+    // avulsa no topo até o refetch chegar.
+    if (!destaqueNaPagina) {
+      return movDestaque ? [movDestaque, ...movimentacoesPagina] : movimentacoesPagina
+    }
+    // A lista já tem a linha. Cadastro: deixa na posição cronológica natural (já é o topo).
+    // Edição: fixa no topo enquanto o destaque não expira (~5s).
+    if (ehNovo) return movimentacoesPagina
+    return [
+      movimentacoesPagina.find((m) => m.id === destaqueId)!,
+      ...movimentacoesPagina.filter((m) => m.id !== destaqueId),
+    ]
+  })()
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 

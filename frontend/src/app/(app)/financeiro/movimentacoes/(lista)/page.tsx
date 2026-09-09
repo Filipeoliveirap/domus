@@ -75,17 +75,10 @@ function MovimentacoesConteudo() {
   })
 
   const { pagina, setPagina } = usePaginaUrl()
-  const { destaqueId, ehNovo } = useDestaqueRecente()
+  // Lista cronológica: o realce expira em ~5s (o hook zera o destaqueId) — some sozinho e
+  // não gruda na linha se a pessoa continuar mexendo na tela.
+  const { destaqueId, ehNovo } = useDestaqueRecente('destaque', 4000)
   const { data: movDestaque } = useMovimentacao(destaqueId ?? undefined)
-
-  // Edição: fixa a linha no topo por alguns segundos (com o realce), depois solta pra
-  // posição cronológica natural. Cadastro nunca fixa — a linha nova já nasce no topo.
-  const [soltarFixacao, setSoltarFixacao] = useState(false)
-  useEffect(() => {
-    if (!destaqueId || ehNovo) return
-    const t = window.setTimeout(() => setSoltarFixacao(true), 4500)
-    return () => window.clearTimeout(t)
-  }, [destaqueId, ehNovo])
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
   // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
   // refresh de página, o que é aceitável: o filtro continua aplicado, só perde o rótulo.
@@ -124,9 +117,9 @@ function MovimentacoesConteudo() {
     if (!destaqueNaPagina) {
       return movDestaque ? [movDestaque, ...movimentacoesPagina] : movimentacoesPagina
     }
-    // A lista já tem a linha. Cadastro (ou passados os segundos da edição): deixa na
-    // posição cronológica natural. Edição, primeiros segundos: fixa no topo.
-    if (ehNovo || soltarFixacao) return movimentacoesPagina
+    // A lista já tem a linha. Cadastro: deixa na posição cronológica natural (já é o topo).
+    // Edição: fixa no topo enquanto o destaque não expira (~5s).
+    if (ehNovo) return movimentacoesPagina
     return [
       movimentacoesPagina.find((m) => m.id === destaqueId)!,
       ...movimentacoesPagina.filter((m) => m.id !== destaqueId),

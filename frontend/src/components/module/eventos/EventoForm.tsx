@@ -161,7 +161,7 @@ export function EventoForm(props: EventoFormProps) {
     ''
 
   const rotuloOutrasCongregacoes =
-    `${concordar(congregacao.genero, 'as')} outras ${congregacao.plural.toLowerCase()}`
+    `${concordar(congregacao.genero, 'os_min')} outras ${congregacao.plural.toLowerCase()}`
 
   useEffect(() => {
     registrarSalvarCamposPersonalizados((eventoIdSalvo) => (
@@ -509,7 +509,7 @@ export function EventoForm(props: EventoFormProps) {
                   Só minha igreja
                 </span>
                 <span className={styles.toggleDescricao}>
-                  Não mostra este evento para {concordar(congregacao.genero, 'as')} outras {congregacao.plural.toLowerCase()}.
+                  Não mostra este evento para {concordar(congregacao.genero, 'os_min')} outras {congregacao.plural.toLowerCase()}.
                 </span>
               </span>
               <span className={styles.switch}>

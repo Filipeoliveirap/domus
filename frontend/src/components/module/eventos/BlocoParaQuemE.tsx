@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Users, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { SelectMenu } from '@/components/common/SelectMenu/SelectMenu'
-import { Transicao } from '@/components/common/Transicao/Transicao'
-import { Revelar } from '@/components/common/Transicao/Revelar'
+import { Colapsavel } from '@/components/common/Transicao/Colapsavel'
 import type { RestricaoEstadoCivil, RestricaoSexo } from '@/types/evento.type'
 import styles from './BlocoParaQuemE.module.css'
 import formStyles from './EventoForm.module.css'
@@ -98,82 +97,80 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
         </button>
       </div>
 
-      {modoFaixa && (
-        <Revelar className={styles.detalhes}>
-          <div>
-            <span className={styles.subLabel}>Faixa etária</span>
-            <div className={styles.chips}>
-              {RECORTES_ETARIOS.map((chip) => (
-                <button
-                  key={chip.nome}
-                  type="button"
-                  className={`${styles.chip} ${recorteEtario === chip.nome ? styles.chipAtivo : ''}`}
-                  onClick={() => aoEscolherChip(chip)}
-                >
-                  {chip.nome}
-                </button>
-              ))}
-            </div>
-
-            <div className={styles.linhaIdades}>
-              <Input
-                id="idade-min"
-                type="number"
-                label="IDADE MÍNIMA"
-                placeholder="0"
-                min={0}
-                value={idadeMin ?? ''}
-                onChange={(e) => onChangeIdadeMin(e.target.value === '' ? undefined : Number(e.target.value))}
-              />
-              <Input
-                id="idade-max"
-                type="number"
-                label="IDADE MÁXIMA"
-                placeholder="Sem limite"
-                min={0}
-                error={erroIdadeMax}
-                value={idadeMax ?? ''}
-                onChange={(e) => onChangeIdadeMax(e.target.value === '' ? undefined : Number(e.target.value))}
-              />
-            </div>
+      <Colapsavel aberto={modoFaixa} className={styles.detalhes}>
+        <div>
+          <span className={styles.subLabel}>Faixa etária</span>
+          <div className={styles.chips}>
+            {RECORTES_ETARIOS.map((chip) => (
+              <button
+                key={chip.nome}
+                type="button"
+                className={`${styles.chip} ${recorteEtario === chip.nome ? styles.chipAtivo : ''}`}
+                onClick={() => aoEscolherChip(chip)}
+              >
+                {chip.nome}
+              </button>
+            ))}
           </div>
 
-          <div className={styles.linhaSelects}>
-            <div className={styles.campoSelect}>
-              <span className={styles.subLabel}>Estado civil</span>
-              <SelectMenu
-                value={restricaoEstadoCivil ?? ''}
-                onChange={(v) => onChangeEstadoCivil((v || null) as RestricaoEstadoCivil | null)}
-                placeholder="Qualquer"
-                ariaLabel="Restrição de estado civil"
-                options={[
-                  { value: 'SOLTEIRO', label: 'Solteiro(a)' },
-                  { value: 'CASADO', label: 'Casado(a)' },
-                  { value: 'DIVORCIADO', label: 'Divorciado(a)' },
-                  { value: 'VIUVO', label: 'Viúvo(a)' },
-                ]}
-              />
-            </div>
-
-            <div className={styles.campoSelect}>
-              <span className={styles.subLabel}>Sexo</span>
-              <SelectMenu
-                value={restricaoSexo ?? ''}
-                onChange={(v) => onChangeSexo((v || null) as RestricaoSexo | null)}
-                placeholder="Qualquer"
-                ariaLabel="Restrição de sexo"
-                options={[
-                  { value: 'HOMEM', label: 'Homem' },
-                  { value: 'MULHER', label: 'Mulher' },
-                ]}
-              />
-            </div>
+          <div className={styles.linhaIdades}>
+            <Input
+              id="idade-min"
+              type="number"
+              label="IDADE MÍNIMA"
+              placeholder="0"
+              min={0}
+              value={idadeMin ?? ''}
+              onChange={(e) => onChangeIdadeMin(e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+            <Input
+              id="idade-max"
+              type="number"
+              label="IDADE MÁXIMA"
+              placeholder="Sem limite"
+              min={0}
+              error={erroIdadeMax}
+              value={idadeMax ?? ''}
+              onChange={(e) => onChangeIdadeMax(e.target.value === '' ? undefined : Number(e.target.value))}
+            />
           </div>
-        </Revelar>
-      )}
+        </div>
+
+        <div className={styles.linhaSelects}>
+          <div className={styles.campoSelect}>
+            <span className={styles.subLabel}>Estado civil</span>
+            <SelectMenu
+              value={restricaoEstadoCivil ?? ''}
+              onChange={(v) => onChangeEstadoCivil((v || null) as RestricaoEstadoCivil | null)}
+              placeholder="Qualquer"
+              ariaLabel="Restrição de estado civil"
+              options={[
+                { value: 'SOLTEIRO', label: 'Solteiro(a)' },
+                { value: 'CASADO', label: 'Casado(a)' },
+                { value: 'DIVORCIADO', label: 'Divorciado(a)' },
+                { value: 'VIUVO', label: 'Viúvo(a)' },
+              ]}
+            />
+          </div>
+
+          <div className={styles.campoSelect}>
+            <span className={styles.subLabel}>Sexo</span>
+            <SelectMenu
+              value={restricaoSexo ?? ''}
+              onChange={(v) => onChangeSexo((v || null) as RestricaoSexo | null)}
+              placeholder="Qualquer"
+              ariaLabel="Restrição de sexo"
+              options={[
+                { value: 'HOMEM', label: 'Homem' },
+                { value: 'MULHER', label: 'Mulher' },
+              ]}
+            />
+          </div>
+        </div>
+      </Colapsavel>
 
       {mostrarExclusivoMembros && (
-        <Revelar className={styles.detalhes}>
+        <div className={styles.detalhes}>
           <label className={formStyles.toggleRow}>
             <span className={formStyles.toggleTexto}>
               <span className={formStyles.toggleTitulo}>Somente membros da igreja</span>
@@ -189,17 +186,15 @@ export function BlocoParaQuemE(props: BlocoParaQuemEProps) {
             </span>
           </label>
 
-          {exclusivoMembros && (
-            <Transicao modo="subir">
-              <div className={formStyles.infoBox}>
-                <AlertTriangle size={18} className={formStyles.infoIcon} />
-                <p className={formStyles.infoText}>
-                  Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
-                </p>
-              </div>
-            </Transicao>
-          )}
-        </Revelar>
+          <Colapsavel aberto={exclusivoMembros}>
+            <div className={formStyles.infoBox} style={{ marginTop: 8 }}>
+              <AlertTriangle size={18} className={formStyles.infoIcon} />
+              <p className={formStyles.infoText}>
+                Pessoas com vínculo Congregante não poderão se inscrever nem ser inscritas.
+              </p>
+            </div>
+          </Colapsavel>
+        </div>
       )}
     </div>
   )

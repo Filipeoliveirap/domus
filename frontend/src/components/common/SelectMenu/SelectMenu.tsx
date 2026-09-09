@@ -73,23 +73,27 @@ export function SelectMenu({
         <ChevronDown size={16} className={clsx(styles.chevron, aberto && styles.chevronAberto)} aria-hidden="true" />
       </button>
 
-      {aberto && (
-        <div className={styles.painel} role="listbox">
-          {todas.map((o) => (
-            <button
-              key={o.value || '__vazio__'}
-              type="button"
-              role="option"
-              aria-selected={o.value === value}
-              className={clsx(styles.opcao, o.value === value && styles.opcaoAtiva)}
-              onClick={() => escolher(o.value)}
-            >
-              <span>{o.label}</span>
-              {o.value === value && <Check size={14} aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Painel fica montado — anima abrir E fechar (opacity + slide/scale). */}
+      <div
+        className={clsx(styles.painel, aberto && styles.painelAberto)}
+        role="listbox"
+        inert={!aberto}
+      >
+        {todas.map((o) => (
+          <button
+            key={o.value || '__vazio__'}
+            type="button"
+            role="option"
+            aria-selected={o.value === value}
+            className={clsx(styles.opcao, o.value === value && styles.opcaoAtiva)}
+            onClick={() => escolher(o.value)}
+            tabIndex={aberto ? 0 : -1}
+          >
+            <span>{o.label}</span>
+            {o.value === value && <Check size={14} aria-hidden="true" />}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

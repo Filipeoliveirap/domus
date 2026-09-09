@@ -70,7 +70,7 @@ export function CamposExtrasForm({ campos, valores, onChange, tentouEnviar }: Pr
               />
             )}
 
-            {mensagemErro && <span className={styles.erro}>{mensagemErro}</span>}
+            {mensagemErro && <span className={styles.erro} data-campo-erro>{mensagemErro}</span>}
           </label>
         )
       })}

@@ -40,7 +40,6 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const tipo = watch('tipo') as TipoMovimentacao | undefined
   const categoriaId = watch('categoriaId') as string
@@ -142,11 +141,8 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
       ref={formRef}
       className={styles.form}
       onSubmit={handleSubmit(
-        (data) => { setErroValidacao(null); onSubmit(data) },
-        () => {
-          setErroValidacao('Faltou preencher um campo — te levei até ele.')
-          rolarParaErro()
-        },
+        onSubmit,
+        () => rolarParaErro(),
       )}
     >
       <div className={styles.colunas}>
@@ -411,9 +407,9 @@ export function MovimentacaoForm(props: MovimentacaoFormProps) {
             </div>
           </div>
 
-          {(erroGeral || erroValidacao) && (
+          {erroGeral && (
             <Transicao modo="fade">
-              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+              <div className={styles.erroGeral}>{erroGeral}</div>
             </Transicao>
           )}
 

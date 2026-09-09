@@ -52,7 +52,6 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const { saindo, fechar } = useFecharAnimado(onClose, 260)
 
@@ -100,11 +99,8 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
         <form
           ref={formRef}
           onSubmit={handleSubmit(
-            () => { setErroValidacao(null); void salvar() },
-            () => {
-              setErroValidacao('Faltou preencher um campo — te levei até ele.')
-              rolarParaErro()
-            },
+            () => void salvar(),
+            () => rolarParaErro(),
           )}
           className={styles.form}
         >
@@ -142,9 +138,9 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
               const formatted = digits.length <= 2 ? digits : digits.replace(/(\d{2})(\d{0,2})/, '$1:$2')
               setValue('horario', formatted, { shouldValidate: true })
             }} error={errors.horario?.message} />
-          {(form.erroGeral || erroValidacao) && (
+          {form.erroGeral && (
             <Transicao modo="fade">
-              <p className={styles.erro}>{form.erroGeral ?? erroValidacao}</p>
+              <p className={styles.erro}>{form.erroGeral}</p>
             </Transicao>
           )}
           <div className={styles.acoes}>

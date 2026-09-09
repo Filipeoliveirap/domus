@@ -1,12 +1,13 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { GoogleLogin } from '@react-oauth/google'
 import { Lock, LockKeyhole, KeyRound, Eye, EyeOff, ArrowLeft, CheckCircle2, TimerOff } from 'lucide-react'
 import { useRedefinirSenha } from '@/hooks/auth/useRedefinirSenha'
 import { useLogin } from '@/hooks/auth/useLogin'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
 import { PasswordStrengthIndicator } from '../cadastro/PasswordStrengthIndicator'
@@ -25,6 +26,9 @@ function RedefinirSenhaConteudo() {
   const [mostrarNova, setMostrarNova] = useState(false)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
   const senha = watch('novaSenha') ?? ''
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
 
   if (linkInvalido) {
     return (
@@ -99,7 +103,7 @@ function RedefinirSenhaConteudo() {
         </p>
       </div>
 
-      <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+      <form ref={formRef} className={styles.form} onSubmit={handleSubmit(onSubmit, () => rolarParaErro())}>
         <div>
           <Input
             id="novaSenha"

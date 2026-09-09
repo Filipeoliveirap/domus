@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, AlertTriangle } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
@@ -41,7 +41,6 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,11 +72,8 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
         <form
           ref={formRef}
           onSubmit={handleSubmit(
-            (data) => { setErroValidacao(null); onSubmit(data) },
-            () => {
-              setErroValidacao('Faltou preencher um campo — te levei até ele.')
-              rolarParaErro()
-            },
+            onSubmit,
+            () => rolarParaErro(),
           )}
           className={styles.form}
         >
@@ -116,9 +112,9 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
             {errors.tipo && <span className={styles.erroCampo} data-campo-erro>{errors.tipo.message}</span>}
           </div>
 
-          {(erroGeral || erroValidacao) && (
+          {erroGeral && (
             <Transicao modo="fade">
-              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+              <div className={styles.erroGeral}>{erroGeral}</div>
             </Transicao>
           )}
 

@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { useQueryClient } from '@tanstack/react-query'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useCelulaForm } from '@/hooks/celula/useCelulaForm'
 import { useAtualizarFotoCelula } from '@/hooks/celula/useAtualizarFotoCelula'
 import { invalidarCache } from '@/lib/cacheInvalidacao'
@@ -45,8 +47,12 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
 
   const form = useCelulaForm({ celulaId: celula?.id, celulaInicial: celula ?? undefined })
   const atualizarFoto = useAtualizarFotoCelula(celula?.id)
-  const { register, handleSubmit, setValue, watch, formState: { errors }, isFormIncomplete } = form
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = form
   const horarioValue = (watch('horario') as string) ?? ''
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const { saindo, fechar } = useFecharAnimado(onClose, 260)
 
@@ -91,7 +97,17 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
         <h2 className={styles.titulo}>
           {celula ? `Editar ${rotulo.singular.toLowerCase()}` : `Nova ${rotulo.singular.toLowerCase()}`}
         </h2>
-        <form onSubmit={handleSubmit(salvar)} className={styles.form}>
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit(
+            () => { setErroValidacao(null); void salvar() },
+            () => {
+              setErroValidacao('Faltou preencher um campo — te levei até ele.')
+              rolarParaErro()
+            },
+          )}
+          className={styles.form}
+        >
           <div className={styles.fotoWrap}>
             <UploadFoto
               valor={fotoId}
@@ -126,13 +142,17 @@ export function ModalCelulaForm({ celula, onClose }: Props) {
               const formatted = digits.length <= 2 ? digits : digits.replace(/(\d{2})(\d{0,2})/, '$1:$2')
               setValue('horario', formatted, { shouldValidate: true })
             }} error={errors.horario?.message} />
-          {form.erroGeral && <p className={styles.erro}>{form.erroGeral}</p>}
+          {(form.erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <p className={styles.erro}>{form.erroGeral ?? erroValidacao}</p>
+            </Transicao>
+          )}
           <div className={styles.acoes}>
             <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
               Cancelar
             </Button>
             <Button type="submit" variant="primary" isLoading={salvando}
-              disabled={isFormIncomplete || salvando}>
+              disabled={salvando}>
               {celula ? 'Salvar' : `Criar ${rotulo.singular.toLowerCase()}`}
             </Button>
           </div>

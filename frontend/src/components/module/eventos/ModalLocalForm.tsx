@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPin, X, Landmark } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -14,6 +14,8 @@ import { enderecoIgrejaParaCamposCompactos, jaExisteEnderecoDaIgreja } from '@/l
 import { localEventoSchema, type LocalEventoFormData, type LocalEventoFormInput } from '@/lib/validators'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import type { LocalEventoRequest, LocalEventoResponse } from '@/types/evento.type'
 import styles from './ModalLocalForm.module.css'
 
@@ -56,6 +58,10 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
       complementoBairroCidadeUf: valoresIniciais?.complementoBairroCidadeUf ?? local?.complementoBairroCidadeUf ?? '',
     },
   })
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   // Trava o scroll do fundo enquanto o modal está aberto (padrão dos outros modais).
   useEffect(() => {
@@ -109,7 +115,20 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
 
         {/* stopPropagation: o modal está num portal, mas o submit ainda borbulha pela árvore
             React até o <form> do EventoForm. Sem isto, salvar aqui dispara o submit do evento. */}
-        <form className={styles.form} onSubmit={(e) => { e.stopPropagation(); void handleSubmit(onSubmit)(e) }}>
+        <form
+          ref={formRef}
+          className={styles.form}
+          onSubmit={(e) => {
+            e.stopPropagation()
+            void handleSubmit(
+              (data) => { setErroValidacao(null); onSubmit(data) },
+              () => {
+                setErroValidacao('Faltou preencher um campo — te levei até ele.')
+                rolarParaErro()
+              },
+            )(e)
+          }}
+        >
           <Input
             id="local-nome"
             label="NOME"
@@ -119,18 +138,20 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
           />
 
           {mostrarUsarIgreja && (
-            <button
-              type="button"
-              className={styles.btnUsarIgreja}
-              onClick={() => {
-                const { linha1, linha2 } = enderecoIgrejaParaCamposCompactos(igreja.endereco!)
-                setValue('cepLogradouroNumero', linha1, { shouldDirty: true })
-                setValue('complementoBairroCidadeUf', linha2, { shouldDirty: true })
-              }}
-            >
-              <Landmark size={16} aria-hidden="true" />
-              Usar o endereço da igreja
-            </button>
+            <Transicao modo="subir">
+              <button
+                type="button"
+                className={styles.btnUsarIgreja}
+                onClick={() => {
+                  const { linha1, linha2 } = enderecoIgrejaParaCamposCompactos(igreja.endereco!)
+                  setValue('cepLogradouroNumero', linha1, { shouldDirty: true })
+                  setValue('complementoBairroCidadeUf', linha2, { shouldDirty: true })
+                }}
+              >
+                <Landmark size={16} aria-hidden="true" />
+                Usar o endereço da igreja
+              </button>
+            </Transicao>
           )}
 
           <Input
@@ -159,7 +180,11 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
             {...register('complementoBairroCidadeUf')}
           />
 
-          {erroGeral && <div className={styles.alertError}>{erroGeral}</div>}
+          {(erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <div className={styles.alertError}>{erroGeral ?? erroValidacao}</div>
+            </Transicao>
+          )}
 
           <div className={styles.footer}>
             <button type="button" className={styles.btnCancel} onClick={fechar}>Cancelar</button>

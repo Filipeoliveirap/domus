@@ -16,8 +16,14 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
  *
  * `ehNovo` (do `?novo=1`) marca "veio de um cadastro, não de uma edição" — numa lista
  * cronológica a linha nova já nasce no topo, então a tela pode só realçar sem fixar.
+ *
+ * `expiraMs`: passa um número pra lista cronológica (ex.: movimentações). Depois desse
+ * tempo o `destaqueId` volta a `null` — assim o realce e a fixação somem sozinhos e não
+ * "grudam" na linha se a pessoa continuar mexendo na tela (abrir outra, editar e voltar).
+ * Sem `expiraMs` o id fica congelado a visita toda (padrão pra lista alfabética, onde a
+ * linha se perde no meio e precisa ficar fixada).
  */
-export function useDestaqueRecente(param = 'destaque') {
+export function useDestaqueRecente(param = 'destaque', expiraMs?: number) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -46,6 +52,16 @@ export function useDestaqueRecente(param = 'destaque') {
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }, [destaqueId, param, pathname, router])
+
+  // Lista cronológica: o realce/fixação expira sozinho (setTimeout dentro de effect é ok).
+  useEffect(() => {
+    if (!destaqueId || !expiraMs) return
+    const t = window.setTimeout(() => {
+      setDestaqueId(null)
+      setEhNovo(false)
+    }, expiraMs)
+    return () => window.clearTimeout(t)
+  }, [destaqueId, expiraMs])
 
   function ordenar<T>(lista: T[], getId: (item: T) => string): T[] {
     if (!destaqueId) return lista

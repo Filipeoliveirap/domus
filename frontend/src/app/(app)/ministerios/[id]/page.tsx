@@ -34,7 +34,10 @@ export default function MinisterioDetalhePage() {
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const podeGerenciarCadastro = podeGerenciarCadastroMinisterios(role, capacidadesExtras)
 
-  const { data: ministerio, isLoading } = useMinisterioDetalhe(id)
+  const { data: ministerio, isLoading, isFetching } = useMinisterioDetalhe(id)
+  // Cabeçalho veio do cache da lista (navegação imersiva); a lista de membros ainda está
+  // a caminho no primeiro fetch cheio — mostra skeleton em vez de "Nenhum membro ainda".
+  const membrosCarregando = isFetching && (ministerio?.membros.length ?? 0) === 0
   const removerMembro = useRemoverMembro(id)
   const atualizarPapel = useAtualizarPapel(id)
   const pedirEntrada = usePedirEntrada(id)
@@ -180,7 +183,16 @@ export default function MinisterioDetalhePage() {
 
       <section className={styles.secao}>
         <h2 className={styles.subtitulo}>Membros</h2>
-        {ministerio.membros.length === 0 ? (
+        {membrosCarregando ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+                <Skeleton width="32px" height="32px" circle />
+                <Skeleton width="40%" height="16px" />
+              </div>
+            ))}
+          </div>
+        ) : ministerio.membros.length === 0 ? (
           <EstadoVazio titulo="Nenhum membro ainda" mensagem={`Adicione pessoas a esta ${rotuloMinisterio.singular.toLowerCase()}.`} />
         ) : (
           <ul className={styles.lista} ref={listaRef}>

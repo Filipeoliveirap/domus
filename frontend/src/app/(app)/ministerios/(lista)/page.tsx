@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Pencil, Archive, Users, Crown, Trash2 } from 'lucide-react'
+import { useNavegacaoImersiva } from '@/hooks/useNavegacaoImersiva'
 import { useAuthStore } from '@/store/authStore'
 import { podeGerenciarCadastroMinisterios } from '@/lib/permissoes'
 import { useMinisterios } from '@/hooks/ministerio/useMinisterios'
@@ -31,7 +31,7 @@ function rotuloLideres(lideres: string[]): string {
 }
 
 export default function MinisteriosPage() {
-  const router = useRouter()
+  const { saindoId, entrar, prefetch } = useNavegacaoImersiva()
   const role = useAuthStore((s) => s.role)
   const capacidadesExtras = useAuthStore((s) => s.capacidadesExtras)
   const hidratado = useAuthStore((s) => s.hidratado)
@@ -108,7 +108,7 @@ export default function MinisteriosPage() {
           acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloMinisterio.singular.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined}
         />
       ) : (
-        <div className={styles.grade}>
+        <div className={`${styles.grade} ${saindoId ? 'imersivo-navegando' : ''}`}>
           {ministerios.map((ministerio) => {
             // Mesmo padrão de Célula: líder da própria rede edita; arquivar/excluir só cadastro.
             const podeEditarEsta = podeGerenciar || ministerio.souLiderDesteMinisterio
@@ -125,12 +125,20 @@ export default function MinisteriosPage() {
             return (
               <div
                 key={ministerio.id}
+                data-imersivo-card={ministerio.id}
                 className={`${styles.card} card-interativo`}
                 role="button"
                 tabIndex={0}
-                onClick={() => router.push(`/ministerios/${ministerio.id}`)}
+                onPointerEnter={() => {
+                  prefetch(`/ministerios/${ministerio.id}`)
+                  queryClient.prefetchQuery({
+                    queryKey: ['ministerios', ministerio.id],
+                    queryFn: () => ministerioService.detalhe(ministerio.id),
+                  })
+                }}
+                onClick={() => entrar(`/ministerios/${ministerio.id}`, ministerio.id)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') router.push(`/ministerios/${ministerio.id}`)
+                  if (e.key === 'Enter' || e.key === ' ') entrar(`/ministerios/${ministerio.id}`, ministerio.id)
                 }}
               >
                 {acoes.length > 0 && (

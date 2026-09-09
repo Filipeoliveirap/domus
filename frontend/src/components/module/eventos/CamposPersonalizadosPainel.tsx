@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
-import { Transicao } from '@/components/common/Transicao/Transicao'
+import { Revelar } from '@/components/common/Transicao/Revelar'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useSalvarCamposPersonalizados } from '@/hooks/evento/useSalvarCamposPersonalizados'
 import type { CampoPersonalizadoRequest, CampoPersonalizadoResponse, TipoCampoPersonalizado } from '@/types/campoPersonalizado.type'
@@ -149,9 +149,8 @@ const PainelEditor = forwardRef<
         </p>
 
         {campos.map((campo, indice) => (
-          <Transicao
+          <Revelar
             key={chaveCampo(campo, indice)}
-            modo="subir"
             className={clsx(styles.cartaoCampo, removendo.has(chaveCampo(campo, indice)) && styles.cartaoSaindo)}
           >
             <div className={styles.cabecalhoCartao}>
@@ -242,7 +241,7 @@ const PainelEditor = forwardRef<
               </span>
             </label>
 
-          </Transicao>
+          </Revelar>
         ))}
 
         <button type="button" className={styles.botaoAdicionar} onClick={adicionarCampo}>
@@ -323,7 +322,7 @@ function PreviaInterativa({ campos, removendo }: { campos: CampoPersonalizadoReq
       {campos.map((campo, indice) => {
         const chave = campo.id ?? `novo-${indice}`
         return (
-          <div key={chave} className={clsx(styles.previewCampo, removendo.has(chave) && styles.previewSaindo)}>
+          <Revelar key={chave} className={clsx(styles.previewCampo, removendo.has(chave) && styles.previewSaindo)}>
             <label className={styles.previewLabel}>
               {campo.label || 'O que você quer perguntar'}{campo.obrigatorio && <span className={styles.previewAsterisco}> *</span>}
             </label>
@@ -393,7 +392,7 @@ function PreviaInterativa({ campos, removendo }: { campos: CampoPersonalizadoReq
                 })}
               </div>
             )}
-          </div>
+          </Revelar>
         )
       })}
     </div>

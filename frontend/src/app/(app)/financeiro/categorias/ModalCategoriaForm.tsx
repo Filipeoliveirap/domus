@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, AlertTriangle } from 'lucide-react'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { useCategoriaForm } from '@/hooks/financeiro/categoria/useCategoriaForm'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { ModalArquivar } from '@/components/common/modalArquivar/ModalArquivar'
 import type { CategoriaResponse, TipoCategoria } from '@/types/financeiro/categoria.type'
 import styles from './ModalCategoriaForm.module.css'
@@ -26,7 +28,7 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
   const {
     register, handleSubmit, setValue, watch,
     formState: { errors },
-    onSubmit, erroGeral, isLoading, isFormIncomplete, ehEdicao,
+    onSubmit, erroGeral, isLoading, ehEdicao,
     confirmacaoPendente, confirmarAtualizacao, cancelarConfirmacao,
   } = useCategoriaForm({
     categoriaId: categoria?.id,
@@ -36,6 +38,10 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
   })
 
   const tipoSelecionado = watch('tipo')
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,7 +70,17 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
           <p className={styles.subtitulo}>Defina o nome e o tipo da classificação.</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit(
+            (data) => { setErroValidacao(null); onSubmit(data) },
+            () => {
+              setErroValidacao('Faltou preencher um campo — te levei até ele.')
+              rolarParaErro()
+            },
+          )}
+          className={styles.form}
+        >
           {/* Nome */}
           <div className={styles.campo}>
             <label className={styles.label} htmlFor="nome">NOME DA CATEGORIA</label>
@@ -74,7 +90,7 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
               placeholder="Ex: Dízimos e Ofertas"
               {...register('nome')}
             />
-            {errors.nome && <span className={styles.erroCampo}>{errors.nome.message}</span>}
+            {errors.nome && <span className={styles.erroCampo} data-campo-erro>{errors.nome.message}</span>}
           </div>
 
           {/* Tipo — três cards selecionáveis */}
@@ -97,16 +113,20 @@ export function ModalCategoriaForm({ categoria, onClose, onSaved }: ModalCategor
                 )
               })}
             </div>
-            {errors.tipo && <span className={styles.erroCampo}>{errors.tipo.message}</span>}
+            {errors.tipo && <span className={styles.erroCampo} data-campo-erro>{errors.tipo.message}</span>}
           </div>
 
-          {erroGeral && <div className={styles.erroGeral}>{erroGeral}</div>}
+          {(erroGeral || erroValidacao) && (
+            <Transicao modo="fade">
+              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+            </Transicao>
+          )}
 
           <div className={styles.rodape}>
             <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={isLoading}>
               Cancelar
             </button>
-            <button type="submit" className={styles.btnSalvar} disabled={isFormIncomplete || isLoading}>
+            <button type="submit" className={styles.btnSalvar} disabled={isLoading}>
               {isLoading ? 'Salvando…' : 'Salvar categoria'}
             </button>
           </div>

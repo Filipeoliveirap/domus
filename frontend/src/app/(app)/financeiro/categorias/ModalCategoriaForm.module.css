@@ -105,8 +105,24 @@
   border: 1.5px solid var(--color-border-input);
   background: var(--color-bg-white);
   cursor: pointer;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform 0.1s ease;
+  transition:
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    transform 0.12s ease;
   text-align: center;
+}
+.opcao:active { transform: scale(0.96); }
+.opcaoAtiva {
+  animation: catTipoPop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes catTipoPop {
+  0% { transform: scale(0.95); }
+  55% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opcao:active { transform: none; }
+  .opcaoAtiva { animation: none; }
 }
 @media (hover: hover) {
   .opcao:hover { border-color: var(--color-primary); }

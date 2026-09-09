@@ -199,34 +199,38 @@ const PainelEditor = forwardRef<
             </div>
 
             {campo.tipo === 'TEXTO_CURTO' && (
-              <div>
-                <Input
-                  id={`campo-placeholder-${indice}`}
-                  label="Exemplo de resposta (opcional)"
-                  placeholder="Ex.: Digite P, M ou G"
-                  value={campo.placeholder ?? ''}
-                  onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
-                />
-                <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
-              </div>
+              <Revelar>
+                <div>
+                  <Input
+                    id={`campo-placeholder-${indice}`}
+                    label="Exemplo de resposta (opcional)"
+                    placeholder="Ex.: Digite P, M ou G"
+                    value={campo.placeholder ?? ''}
+                    onChange={(e) => atualizarCampo(indice, { placeholder: e.target.value || null })}
+                  />
+                  <span className={styles.dica}>Aparece apagado dentro do campo, só como exemplo — não é a resposta.</span>
+                </div>
+              </Revelar>
             )}
 
             {(campo.tipo === 'OPCAO_UNICA' || campo.tipo === 'MULTIPLA_ESCOLHA') && (
-              <div className={styles.campoOpcoes}>
-                <span className={styles.labelOpcoes}>Opções da lista (uma por linha)</span>
-                <textarea
-                  className={styles.textareaOpcoes}
-                  placeholder={'Ex.:\nP\nM\nG'}
-                  value={(campo.opcoes ?? []).join('\n')}
-                  onChange={(e) => atualizarCampo(indice, {
-                    // Sem trim/filter aqui: filtrar linha vazia a cada tecla apagava a
-                    // quebra de linha que a pessoa acabou de digitar (Enter "não fazia nada").
-                    // Limpeza (trim + remover linha vazia) só acontece ao salvar.
-                    opcoes: e.target.value.split('\n'),
-                  })}
-                />
-                <span className={styles.dica}>Cada linha vira uma opção diferente na lista.</span>
-              </div>
+              <Revelar>
+                <div className={styles.campoOpcoes}>
+                  <span className={styles.labelOpcoes}>Opções da lista (uma por linha)</span>
+                  <textarea
+                    className={styles.textareaOpcoes}
+                    placeholder={'Ex.:\nP\nM\nG'}
+                    value={(campo.opcoes ?? []).join('\n')}
+                    onChange={(e) => atualizarCampo(indice, {
+                      // Sem trim/filter aqui: filtrar linha vazia a cada tecla apagava a
+                      // quebra de linha que a pessoa acabou de digitar (Enter "não fazia nada").
+                      // Limpeza (trim + remover linha vazia) só acontece ao salvar.
+                      opcoes: e.target.value.split('\n'),
+                    })}
+                  />
+                  <span className={styles.dica}>Cada linha vira uma opção diferente na lista.</span>
+                </div>
+              </Revelar>
             )}
 
             <label className={styles.toggleLinha}>

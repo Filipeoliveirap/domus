@@ -48,9 +48,9 @@ MP cobra a % sobre o valor cobrado, não sobre o alvo. A conta certa:
 valorACobrar = valorAlvo / (1 − taxaEfetiva)
 ```
 
-Exemplo: alvo R$ 100, taxa 4,49% → `100 / (1 − 0,0449) = 100 / 0,9551 = R$ 104,70`
-(arredondado pra cima). O MP tira ~4,49% de 104,70 ≈ R$ 4,70. A igreja recebe
-**R$ 100,00** cravados.
+Exemplo: alvo R$ 100, taxa 4,49% → `100 / (1 − 0,0449) = 100 / 0,9551 = 104,7011…`
+→ **R$ 104,71** (arredondado pra cima ao centavo — a igreja nunca recebe menos que
+o alvo). O MP tira ~4,49% de 104,71 ≈ R$ 4,71. A igreja recebe **R$ 100,00** cravados.
 
 Todos os exemplos de valor nesta spec usam a tabela de config padrão: Pix 0,99%,
 cartão à vista 4,49%, adicional por parcela 2,50%. Faixas de cartão:
@@ -58,7 +58,7 @@ cartão à vista 4,49%, adicional por parcela 2,50%. Faixas de cartão:
 | Parcelas | Taxa efetiva | Total (alvo R$ 100) | Taxa em R$ |
 |---|---|---|---|
 | Pix | 0,99% | R$ 101,00 | R$ 1,00 |
-| 1x | 4,49% | R$ 104,70 | R$ 4,70 |
+| 1x | 4,49% | R$ 104,71 | R$ 4,71 |
 | 2x | 6,99% | R$ 107,52 | R$ 7,52 |
 | 3x | 9,49% | R$ 110,49 | R$ 10,49 |
 | 6x | 16,99% | R$ 120,47 | R$ 20,47 |
@@ -70,7 +70,7 @@ o alvo).
 
 O pagador vê "6x de R$ 19,67 sem juros". O custo que o MP cobra da igreja por
 parcelar (~2–3% por parcela extra) entra no `valorACobrar` via gross-up — então
-o **total** em 6x é maior que à vista (ex.: R$ 118,00 vs R$ 104,70). A igreja
+o **total** em 6x é maior que à vista (ex.: R$ 118,00 vs R$ 104,71). A igreja
 recebe o alvo cravado em qualquer faixa. O resumo no cadastro mostra o total real
 de cada faixa pro gestor escolher o teto com consciência.
 
@@ -190,7 +190,7 @@ Resposta (`OpcoesPagamentoResponse`):
   "valorEvento": 100.00,           // o alvo, pra mostrar "valor do evento"
   "opcoes": [
     { "meio": "PIX",    "parcelas": 1, "valorTotal": 101.00, "valorParcela": 101.00, "taxa": 1.00 },
-    { "meio": "CARTAO", "parcelas": 1, "valorTotal": 104.70, "valorParcela": 104.70, "taxa": 4.70 },
+    { "meio": "CARTAO", "parcelas": 1, "valorTotal": 104.71, "valorParcela": 104.71, "taxa": 4.71 },
     { "meio": "CARTAO", "parcelas": 2, "valorTotal": 107.52, "valorParcela": 53.76,  "taxa": 7.52 }
     // ... até evento.pagamentoMaxParcelas
   ]
@@ -289,7 +289,7 @@ Onde hoje `registrarEntradaDeEvento` faz **uma** ENTRADA bruta, passa a fazer
   ```
   O pagador vai pagar:
     Pix ............... R$ 101,00
-    Cartão à vista .... R$ 104,70
+    Cartão à vista .... R$ 104,71
     em 6x ............. R$ 118,00  (R$ 19,67 / mês)
   A igreja recebe R$ 100,00 em qualquer opção.
   ```
@@ -329,7 +329,7 @@ novos em `Evento` (`pagamentoAceitaCartao`, `pagamentoMaxParcelas`).
 2. **Inscrição.** Pessoa se inscreve → nasce `INSCRICAO_EVENTO` `AGUARDANDO_PAGAMENTO`
    + `COBRANCA_EVENTO` com `valor = 100` (alvo), `valor_cobrado = null`.
 3. **Checkout — escolha.** `GET /cobrancas/{id}/opcoes-pagamento` → tela mostra
-   "Pix R$ 101,00 · Cartão à vista R$ 104,70 · 2x R$ 107,52 · 3x R$ 110,49 · …".
+   "Pix R$ 101,00 · Cartão à vista R$ 104,71 · 2x R$ 107,52 · 3x R$ 110,49 · …".
    Pessoa escolhe 3x.
 4. **Checkout — Brick.** `PaymentBrickCheckout` monta com `amount = 110.49`,
    cartão only, `maxInstallments = 6`. Pessoa preenche o cartão, 3x.

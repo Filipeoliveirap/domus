@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Pencil, Archive, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
@@ -75,8 +75,17 @@ function MovimentacoesConteudo() {
   })
 
   const { pagina, setPagina } = usePaginaUrl()
-  const { destaqueId } = useDestaqueRecente()
+  const { destaqueId, ehNovo } = useDestaqueRecente()
   const { data: movDestaque } = useMovimentacao(destaqueId ?? undefined)
+
+  // Edição: fixa a linha no topo por alguns segundos (com o realce), depois solta pra
+  // posição cronológica natural. Cadastro nunca fixa — a linha nova já nasce no topo.
+  const [soltarFixacao, setSoltarFixacao] = useState(false)
+  useEffect(() => {
+    if (!destaqueId || ehNovo) return
+    const t = window.setTimeout(() => setSoltarFixacao(true), 4500)
+    return () => window.clearTimeout(t)
+  }, [destaqueId, ehNovo])
   const [movArquivando, setMovArquivando] = useState<MovimentacaoResponse | null>(null)
   // Nome só existe enquanto durar a navegação (a URL guarda o id, não o nome) — some num
   // refresh de página, o que é aceitável: o filtro continua aplicado, só perde o rótulo.
@@ -97,10 +106,32 @@ function MovimentacoesConteudo() {
   }, autorizado)
 
   const movimentacoesPagina = data?.content ?? []
-  const movimentacoes =
-    destaqueId && movDestaque
-      ? [movDestaque, ...movimentacoesPagina.filter((m) => m.id !== destaqueId)]
-      : movimentacoesPagina
+  const destaqueNaPagina = !!destaqueId && movimentacoesPagina.some((m) => m.id === destaqueId)
+
+  // Rede de segurança: navegou com ?destaque mas a linha não veio na página (cache velho
+  // que não revalidou) — força um refetch uma vez, pra não depender de reload manual.
+  const jaForcouRefetch = useRef(false)
+  useEffect(() => {
+    if (destaqueId && !destaqueNaPagina && !isLoading && !isFetching && !jaForcouRefetch.current) {
+      jaForcouRefetch.current = true
+      refetch()
+    }
+  }, [destaqueId, destaqueNaPagina, isLoading, isFetching, refetch])
+  const movimentacoes = (() => {
+    if (!destaqueId) return movimentacoesPagina
+    // A lista ainda não trouxe a linha nova (cache em atualização) — ponte: mostra a busca
+    // avulsa no topo até o refetch chegar.
+    if (!destaqueNaPagina) {
+      return movDestaque ? [movDestaque, ...movimentacoesPagina] : movimentacoesPagina
+    }
+    // A lista já tem a linha. Cadastro (ou passados os segundos da edição): deixa na
+    // posição cronológica natural. Edição, primeiros segundos: fixa no topo.
+    if (ehNovo || soltarFixacao) return movimentacoesPagina
+    return [
+      movimentacoesPagina.find((m) => m.id === destaqueId)!,
+      ...movimentacoesPagina.filter((m) => m.id !== destaqueId),
+    ]
+  })()
   const totalPaginas = data?.totalPages ?? 0
   const totalElementos = data?.totalElements ?? 0
 

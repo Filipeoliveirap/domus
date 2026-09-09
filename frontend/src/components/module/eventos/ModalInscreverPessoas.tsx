@@ -9,6 +9,7 @@ import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
 import { Transicao } from '@/components/common/Transicao/Transicao'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
@@ -95,6 +96,8 @@ export function ModalInscreverPessoas({
   // assim" só para quem gerencia. `null` = confirmação fechada.
   const [impedimentosParaConfirmar, setImpedimentosParaConfirmar] = useState<Impedimento[] | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const painelPagoRef = useRef<HTMLDivElement>(null)
+  const { rolarParaErro } = useRolarParaErro(painelPagoRef)
 
   const role = useAuthStore((s) => s.role)
   const ehGestor = podeGerenciarInscricoes(role)
@@ -180,6 +183,7 @@ export function ModalInscreverPessoas({
     if (!confirmado && ((precisaEmail && !emailPagoValido) || camposObrigatoriosPendentes())) {
       setTentouConfirmarCampos(true)
       setTentouConfirmarEmailPago(true)
+      requestAnimationFrame(() => rolarParaErro())
       return
     }
     if (!confirmado && precisaEmail) {
@@ -372,7 +376,7 @@ export function ModalInscreverPessoas({
         Voltar
       </button>
 
-      <div className={styles.painelPessoa}>
+      <div className={styles.painelPessoa} ref={painelPagoRef}>
         <h3 className={styles.painelTitulo}>Inscrever {pessoaClicada.nome}</h3>
 
         {!pessoaClicada.email && (
@@ -423,6 +427,7 @@ export function ModalInscreverPessoas({
   // ---- Cena "lista": sem checkbox se pago, com checkbox se gratuito ----
   const listaConteudo = (
     <div className={styles.lista}>
+      <Transicao key={isLoading ? 'load' : pessoas.length === 0 ? 'vazio' : 'lista'} modo="fade">
       {isLoading ? (
         <p className={styles.estado}>Carregando pessoas…</p>
       ) : pessoas.length === 0 ? (
@@ -477,6 +482,7 @@ export function ModalInscreverPessoas({
           )
         })
       )}
+      </Transicao>
     </div>
   )
 

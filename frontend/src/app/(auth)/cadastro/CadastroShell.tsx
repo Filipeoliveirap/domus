@@ -49,7 +49,6 @@ export function CadastroShell(h: HookRetorno) {
         register={h.register}
         handleSubmit={h.handleSubmit}
         errors={h.errors}
-        passo1Incompleto={h.passo1Incompleto}
         setValue={h.setValue}
         onAvancar={h.irParaPasso2}
         googleData={h.googleData}
@@ -66,7 +65,6 @@ export function CadastroShell(h: HookRetorno) {
         register={h.register2}
         handleSubmit={h.handleSubmit2}
         errors={h.errors2}
-        passo2Incompleto={h.passo2Incompleto}
         watch={h.watch2}
         erroGeral={h.erroGeral}
         isLoading={h.isLoading}

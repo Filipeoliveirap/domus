@@ -5,6 +5,7 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useLogin } from '@/hooks/auth/useLogin'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { authService } from '@/services/auth.service'
 import { Input } from '@/components/common/input/Input'
 import { Button } from '@/components/common/button/Button'
@@ -25,6 +26,9 @@ export default function LoginPage() {
     register, handleSubmit, errors, erroGeral, isLoading, isButtonDisabled, onSubmit,
     onGoogleLogin, onGoogleError, contaSemSenha, emailDigitado, aplicarSessao,
   } = useLogin()
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
 
   // Quem já tem sessão válida (cookie httpOnly ainda ativo) e cai em /login — por um link
   // de e-mail com ?next=, por exemplo — não deve ver o formulário: só passa direto pro
@@ -78,7 +82,7 @@ export default function LoginPage() {
           </div>
         ) : (
         <>
-        <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+        <form ref={formRef} className={styles.form} onSubmit={handleSubmit(onSubmit, () => rolarParaErro())}>
           <Input
             id="email"
             type="email"

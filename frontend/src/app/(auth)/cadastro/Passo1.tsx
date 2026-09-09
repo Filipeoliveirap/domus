@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useRef } from 'react'
+import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { ArrowLeft, ArrowRight, Mail } from 'lucide-react'
 import { GoogleLogin } from '@react-oauth/google'
 import type { UseFormRegister, UseFormHandleSubmit, FieldErrors, UseFormSetValue } from 'react-hook-form'
@@ -14,7 +16,6 @@ interface Passo1Props {
   register: UseFormRegister<RegistrarIgrejaFormData1>
   handleSubmit: UseFormHandleSubmit<RegistrarIgrejaFormData1>
   errors: FieldErrors<RegistrarIgrejaFormData1>
-  passo1Incompleto: boolean
   setValue: UseFormSetValue<RegistrarIgrejaFormData1>
   onAvancar: (data: RegistrarIgrejaFormData1) => void
   googleData: { nome: string; email: string } | null
@@ -28,11 +29,13 @@ interface Passo1Props {
 }
 
 export function Passo1({
-  register, handleSubmit, setValue, errors, passo1Incompleto, onAvancar,
+  register, handleSubmit, setValue, errors, onAvancar,
   googleData, onGoogleAuth, onGoogleError, onSubmitGoogle, erroGeral, isLoading,
   aceitouTermosGoogle, setAceitouTermosGoogle,
 }: Passo1Props) {
   const modoGoogle = googleData !== null
+  const formRef = useRef<HTMLFormElement>(null)
+  const { rolarParaErro } = useRolarParaErro(formRef)
 
   return (
     <div className={styles.container}>
@@ -58,7 +61,7 @@ export function Passo1({
         </>
       )}
 
-      <form className={styles.form} onSubmit={handleSubmit(modoGoogle ? onSubmitGoogle : onAvancar)}>
+      <form ref={formRef} className={styles.form} onSubmit={handleSubmit(modoGoogle ? onSubmitGoogle : onAvancar, () => rolarParaErro())}>
         <Input
           id="nomeIgreja"
           label="NOME DA IGREJA*"
@@ -142,7 +145,7 @@ export function Passo1({
             type="submit"
             variant="primary"
             size="md"
-            disabled={passo1Incompleto || isLoading || (modoGoogle && !aceitouTermosGoogle)}
+            disabled={isLoading || (modoGoogle && !aceitouTermosGoogle)}
             isLoading={modoGoogle && isLoading}
             loadingText="Cadastrando..."
           >

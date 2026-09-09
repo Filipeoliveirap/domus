@@ -39,7 +39,6 @@ export function useLogin() {
     const {
         register,
         handleSubmit,
-        isFormIncomplete,
         formState: { errors },
     } = useAppForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -50,7 +49,7 @@ export function useLogin() {
         requiredFields: ['email', 'senha'],
     })
 
-    const isButtonDisabled = isFormIncomplete || isLoading
+    const isButtonDisabled = isLoading
 
     // Grava a sessão no store e redireciona. Compartilhado entre login nativo e Google.
     // A resposta não traz token: ele já chegou como cookie httpOnly no Set-Cookie.

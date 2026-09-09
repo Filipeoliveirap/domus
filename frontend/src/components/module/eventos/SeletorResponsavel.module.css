@@ -132,3 +132,16 @@
   background: var(--color-bg-white);
   color: var(--color-danger, #c0392b);
 }
+
+/* Saída do chip ao remover — encolhe + fade em vez de sumir seco. */
+.chipSaindo {
+  animation: chipSai 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+@keyframes chipSai {
+  to { opacity: 0; transform: scale(0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chipSaindo { animation-name: chipSaiFade; }
+  @keyframes chipSaiFade { to { opacity: 0; } }
+}

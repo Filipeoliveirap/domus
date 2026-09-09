@@ -313,9 +313,9 @@ class CalculadoraTaxaPagamentoTest {
 
     @Test
     void cartaoAvistaUsaTaxaAvista() {
-        // 100 / (1 - 0.0449) = 100 / 0.9551 = 104.6959... -> CEILING -> 104.70
+        // 100 / (1 - 0.0449) = 100 / 0.9551 = 104.7011... -> CEILING -> 104.71
         BigDecimal cobrar = calculadora.valorACobrar(igrejaId, new BigDecimal("100.00"), MeioPagamento.CARTAO, 1);
-        assertThat(cobrar).isEqualByComparingTo("104.70");
+        assertThat(cobrar).isEqualByComparingTo("104.71");
     }
 
     @Test
@@ -347,7 +347,7 @@ class CalculadoraTaxaPagamentoTest {
         assertThat(calculadora.valorACobrar(igrejaId, new BigDecimal("100.00"), MeioPagamento.PIX, 1))
             .isEqualByComparingTo("100.51"); // 100 / 0.995 = 100.5025 -> 100.51
         assertThat(calculadora.valorACobrar(igrejaId, new BigDecimal("100.00"), MeioPagamento.CARTAO, 1))
-            .isEqualByComparingTo("104.70");
+            .isEqualByComparingTo("104.71");
     }
 
     @Test
@@ -371,8 +371,8 @@ class CalculadoraTaxaPagamentoTest {
 
     @Test
     void taxaEmReaisEhADiferenca() {
-        assertThat(calculadora.taxaEmReais(new BigDecimal("100.00"), new BigDecimal("104.70")))
-            .isEqualByComparingTo("4.70");
+        assertThat(calculadora.taxaEmReais(new BigDecimal("100.00"), new BigDecimal("104.71")))
+            .isEqualByComparingTo("4.71");
     }
 }
 ```
@@ -1055,10 +1055,10 @@ Em `CobrancaControllerTest.java`:
         ArgumentCaptor<BigDecimal> valor = ArgumentCaptor.forClass(BigDecimal.class);
         verify(mercadoPagoClient).criarPagamentoComToken(any(), any(), valor.capture(),
             any(), any(), any(), any(), any());
-        assertThat(valor.getValue()).isEqualByComparingTo("104.70");
+        assertThat(valor.getValue()).isEqualByComparingTo("104.71");
 
         var cobranca = cobrancaRepository.findById(cobrancaId).orElseThrow();
-        assertThat(cobranca.getValorCobrado()).isEqualByComparingTo("104.70");
+        assertThat(cobranca.getValorCobrado()).isEqualByComparingTo("104.71");
         assertThat(cobranca.getValor()).isEqualByComparingTo("100.00"); // alvo intacto
     }
 

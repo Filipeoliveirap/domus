@@ -47,7 +47,7 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar, onAbrirPendenci
 
   return (
     <article
-      className={`${styles.card} ${evento.situacao === 'ENCERRADO' ? styles.cardEncerrado : ''}`}
+      className={`${styles.card} card-interativo ${evento.situacao === 'ENCERRADO' ? styles.cardEncerrado : ''}`}
       onClick={() => onAbrirDetalhe(evento)}
     >
       <div className={styles.imagem}>
@@ -57,9 +57,10 @@ export function EventoCard({ evento, onAbrirDetalhe, onArquivar, onAbrirPendenci
           e pedir a versão de 200px aqui obriga o navegador a ampliar, o que borra.
         */}
         {urlFoto(evento.fotoId, 'DISPLAY') ? (
-          <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={styles.imagemFoto} />
+          // eslint-disable-next-line @next/next/no-img-element -- servida por /api/fotos
+          <img src={urlFoto(evento.fotoId, 'DISPLAY')!} alt={evento.titulo} className={`${styles.imagemFoto} card-midia`} />
         ) : (
-          <div className={styles.imagemPlaceholder}>
+          <div className={`${styles.imagemPlaceholder} card-midia`}>
             <CalendarDays size={32} />
           </div>
         )}

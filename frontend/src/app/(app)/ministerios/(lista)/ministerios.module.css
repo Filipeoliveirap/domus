@@ -79,6 +79,7 @@
 }
 
 .card {
+  --cor: var(--cat-ministerios);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -89,13 +90,7 @@
   min-width: 0;
   cursor: pointer;
   position: relative;
-  transition: background var(--transition-normal), transform var(--transition-fast);
 }
-/* hover só com mouse — no touch "gruda" depois do tap. */
-@media (hover: hover) {
-  .card:hover { background: var(--color-bg-hover); }
-}
-.card:active { transform: scale(0.99); }
 
 .cardActions {
   position: absolute;
@@ -124,7 +119,7 @@
   overflow: hidden;
   transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.cardFotoBtn:hover { transform: scale(1.06); }
+/* zoom no hover vem do .card-interativo:hover .card-midia; aqui só o "cliquei na foto". */
 .cardFotoBtn:active { transform: scale(0.93); }
 .cardFotoBtn:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -132,24 +127,29 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .cardFotoBtn { transition: none; }
-  .cardFotoBtn:hover, .cardFotoBtn:active { transform: none; }
+  .cardFotoBtn:active { transform: none; }
 }
 
 .cardIcon {
   width: 64px;
   height: 64px;
   border-radius: var(--radius-lg);
-  background: var(--color-primary-bg, #dbeafe);
-  color: var(--color-primary);
+  background: hsl(var(--cat-ministerios) / 0.12);
+  color: hsl(var(--cat-ministerios));
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 4px;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.card:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+@media (hover: hover) {
+  .card:hover .cardIcon { transform: scale(1.08) rotate(-3deg); }
 }
+@media (prefers-reduced-motion: reduce) {
+  .cardIcon { transition: none; }
+  .card:hover .cardIcon { transform: none; }
+}
+/* foco: o realce vem de .card-interativo:focus-visible (globals.css) */
 
 .cardTopo {
   display: flex;

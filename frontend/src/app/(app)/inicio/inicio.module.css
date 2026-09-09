@@ -175,6 +175,7 @@
 }
 
 .cardEvento {
+  --cor: var(--cat-eventos);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -186,16 +187,7 @@
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   text-align: left;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
-
-@media (hover: hover) {
-  .cardEvento:hover {
-    border-color: var(--color-primary);
-    box-shadow: 0 8px 20px rgba(19, 27, 46, 0.06);
-  }
-}
-.cardEvento:active { transform: scale(0.985); }
 
 .cardEventoTopo {
   display: flex;
@@ -210,8 +202,8 @@
   align-items: center;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: hsl(var(--cor) / 0.12);
+  color: hsl(var(--cor));
   line-height: 1.1;
 }
 
@@ -279,22 +271,14 @@
 }
 
 .eventoAcao {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 8px;
   border-radius: var(--radius-sm);
-  background: var(--color-bg-page);
-  color: var(--color-primary);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  text-align: center;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-@media (hover: hover) {
-.cardEvento:hover .eventoAcao {
-  background: var(--color-primary);
-  color: #fff;
-}
+  font-weight: var(--font-weight-semibold);
 }
 
 /* ---- Card de aniversariantes ---- */

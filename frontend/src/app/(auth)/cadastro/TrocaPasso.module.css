@@ -1,0 +1,76 @@
+.palco {
+  position: relative;
+  overflow: hidden;
+  transition: height 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cena {
+  width: 100%;
+}
+
+/* Cena que sai: fora do fluxo (não conta pra altura, que já mira a nova). */
+.saiEsquerda,
+.saiDireita {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.saiEsquerda {
+  animation: saiEsq 0.34s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+.saiDireita {
+  animation: saiDir 0.34s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+.entraDireita {
+  animation: entraDir 0.34s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+}
+.entraEsquerda {
+  animation: entraEsq 0.34s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+}
+
+@keyframes saiEsq {
+  to {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes saiDir {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes entraDir {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes entraEsq {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes soFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palco {
+    transition-duration: 0.01s;
+  }
+  .saiEsquerda,
+  .saiDireita {
+    animation: soFade 0.15s linear reverse forwards;
+  }
+  .entraDireita,
+  .entraEsquerda {
+    animation: soFade 0.15s linear both;
+  }
+}

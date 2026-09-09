@@ -21,6 +21,8 @@
 .fechado > .inner {
   transform: translateY(-6px);
   transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+  /* padding vertical do conteúdo não pode "vazar" altura quando a linha está em 0fr. */
+  padding-block: 0;
 }
 
 .inner {

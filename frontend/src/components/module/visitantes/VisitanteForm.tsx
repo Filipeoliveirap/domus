@@ -72,7 +72,6 @@ export function VisitanteForm(props: VisitanteFormProps) {
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   const sexoAtual = watch('sexo') ?? ''
   const temFilhosAtual = watch('temFilhos') ?? false
@@ -100,11 +99,8 @@ export function VisitanteForm(props: VisitanteFormProps) {
       ref={formRef}
       className={clsx(styles.form, emModal && styles.emModal)}
       onSubmit={handleSubmit(
-        (data) => { setErroValidacao(null); onSubmit(data) },
-        () => {
-          setErroValidacao('Faltou preencher um campo — te levei até ele.')
-          rolarParaErro()
-        },
+        onSubmit,
+        () => rolarParaErro(),
       )}
     >
       <div className={styles.colunas}>
@@ -212,9 +208,9 @@ export function VisitanteForm(props: VisitanteFormProps) {
             </div>
           </section>
 
-          {(erroGeral || erroValidacao) && (
+          {erroGeral && (
             <Transicao modo="fade">
-              <div className={styles.erroGeral}>{erroGeral ?? erroValidacao}</div>
+              <div className={styles.erroGeral}>{erroGeral}</div>
             </Transicao>
           )}
 

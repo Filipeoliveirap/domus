@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPin, X, Landmark } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -61,7 +61,6 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
 
   const formRef = useRef<HTMLFormElement>(null)
   const { rolarParaErro } = useRolarParaErro(formRef)
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
   // Trava o scroll do fundo enquanto o modal está aberto (padrão dos outros modais).
   useEffect(() => {
@@ -121,11 +120,8 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
           onSubmit={(e) => {
             e.stopPropagation()
             void handleSubmit(
-              (data) => { setErroValidacao(null); onSubmit(data) },
-              () => {
-                setErroValidacao('Faltou preencher um campo — te levei até ele.')
-                rolarParaErro()
-              },
+              onSubmit,
+              () => rolarParaErro(),
             )(e)
           }}
         >
@@ -180,9 +176,9 @@ export function ModalLocalForm({ local, onClose, onCriado, onDefinir, valoresIni
             {...register('complementoBairroCidadeUf')}
           />
 
-          {(erroGeral || erroValidacao) && (
+          {erroGeral && (
             <Transicao modo="fade">
-              <div className={styles.alertError}>{erroGeral ?? erroValidacao}</div>
+              <div className={styles.alertError}>{erroGeral}</div>
             </Transicao>
           )}
 

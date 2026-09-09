@@ -19,7 +19,6 @@ export function useEsqueciSenha() {
     const {
         register,
         handleSubmit,
-        isFormIncomplete,
         formState: { errors },
     } = useAppForm<EsqueciSenhaFormData>({
         resolver: zodResolver(esqueciSenhaSchema),
@@ -27,7 +26,7 @@ export function useEsqueciSenha() {
         requiredFields: ['email'],
     })
 
-    const isButtonDisabled = isFormIncomplete || isLoading
+    const isButtonDisabled = isLoading
 
     const onSubmit = async (data: EsqueciSenhaFormData) => {
         setErroGeral(null)

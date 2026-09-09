@@ -19,7 +19,7 @@ export function useRolarParaErro(formRef: React.RefObject<HTMLFormElement | null
     // Deixa o React pintar os aria-invalid / mensagens de erro antes de procurar.
     requestAnimationFrame(() => {
       // 1. Abre blocos recolhíveis fechados que contenham erro.
-      form.querySelectorAll<HTMLElement>('[data-recolhivel][hidden]').forEach((bloco) => {
+      form.querySelectorAll<HTMLElement>('[data-recolhivel][data-fechado]').forEach((bloco) => {
         if (bloco.querySelector('[data-campo-erro]')) {
           const id = bloco.getAttribute('data-id')
           if (id) window.dispatchEvent(new CustomEvent('domus:abrir-recolhivel', { detail: { id } }))

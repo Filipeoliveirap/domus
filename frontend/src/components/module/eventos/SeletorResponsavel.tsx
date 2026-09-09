@@ -31,13 +31,26 @@ export function SeletorResponsavel({ ids, iniciais = [], onChange }: SeletorResp
   const escolhidos = new Set(ids)
   const resultados = habilitado ? (data?.content ?? []).filter((p) => !escolhidos.has(p.id)) : []
 
+  // Ids que estão "saindo": ficam no DOM mais 180ms pra rodar a animação de saída
+  // antes de o onChange tirar de verdade.
+  const [saindo, setSaindo] = useState<Set<string>>(new Set())
+
   function adicionar(p: { id: string; nome: string }) {
     setNomesEscolhidos((m) => ({ ...m, [p.id]: p.nome }))
     onChange([...ids, p.id])
     setBusca('')
   }
   function remover(id: string) {
-    onChange(ids.filter((v) => v !== id))
+    if (saindo.has(id)) return
+    setSaindo((s) => new Set(s).add(id))
+    setTimeout(() => {
+      onChange(ids.filter((v) => v !== id))
+      setSaindo((s) => {
+        const n = new Set(s)
+        n.delete(id)
+        return n
+      })
+    }, 180)
   }
 
   return (
@@ -49,7 +62,7 @@ export function SeletorResponsavel({ ids, iniciais = [], onChange }: SeletorResp
       {ids.length > 0 && (
         <div className={styles.chips}>
           {ids.map((id) => (
-            <Transicao key={id} modo="escala" className={styles.chip}>
+            <Transicao key={id} modo="escala" className={`${styles.chip} ${saindo.has(id) ? styles.chipSaindo : ''}`}>
               <span className={styles.chipNome}>{nomePorId[id] ?? 'Responsável'}</span>
               <button
                 type="button"

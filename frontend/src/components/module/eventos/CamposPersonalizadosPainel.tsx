@@ -5,6 +5,7 @@ import { clsx } from 'clsx'
 import { Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import { Input } from '@/components/common/input/Input'
 import { Select } from '@/components/common/select/Select'
+import { Transicao } from '@/components/common/Transicao/Transicao'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useSalvarCamposPersonalizados } from '@/hooks/evento/useSalvarCamposPersonalizados'
 import type { CampoPersonalizadoRequest, CampoPersonalizadoResponse, TipoCampoPersonalizado } from '@/types/campoPersonalizado.type'
@@ -148,8 +149,9 @@ const PainelEditor = forwardRef<
         </p>
 
         {campos.map((campo, indice) => (
-          <div
+          <Transicao
             key={chaveCampo(campo, indice)}
+            modo="subir"
             className={clsx(styles.cartaoCampo, removendo.has(chaveCampo(campo, indice)) && styles.cartaoSaindo)}
           >
             <div className={styles.cabecalhoCartao}>
@@ -240,7 +242,7 @@ const PainelEditor = forwardRef<
               </span>
             </label>
 
-          </div>
+          </Transicao>
         ))}
 
         <button type="button" className={styles.botaoAdicionar} onClick={adicionarCampo}>

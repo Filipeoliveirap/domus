@@ -2,17 +2,27 @@ package com.domus.api.modules.pagamento.cobranca;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.domus.api.modules.pagamento.MercadoPagoApi;
+import com.domus.api.modules.pagamento.conta.ContaPagamentoIgreja;
+import com.domus.api.modules.pagamento.conta.ContaPagamentoIgrejaRepository;
+import com.domus.api.modules.pagamento.seguranca.CredencialEncryptor;
 import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -27,6 +37,19 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
     @Autowired MockMvc mockMvc;
     @Autowired CobrancaEventoRepository cobrancaEventoRepository;
+    @Autowired ContaPagamentoIgrejaRepository contaPagamentoIgrejaRepository;
+    @Autowired CredencialEncryptor credencialEncryptor;
+
+    // Wrapper fino da chamada HTTP real ao Mercado Pago — mockado só pro caminho feliz do
+    // recálculo de valor (os demais testes falham antes de chegar aqui). O MercadoPagoClient
+    // continua REAL: os testes de "sem conta conectada" seguem exercitando o fluxo de ponta
+    // a ponta.
+    @MockitoBean MercadoPagoApi mercadoPagoApi;
+
+    // O poll de confirmação (@Async) não asserta nada aqui e roda em paralelo ao webhook —
+    // mockar não perde cobertura e evita que ele rode após o rollback do @Transactional
+    // (logs de warning + ~30s de stall no Surefire).
+    @MockitoBean com.domus.api.modules.pagamento.PagamentoPollingService pagamentoPollingService;
 
     @Test
     void retorna400ParaTokenInexistenteSemPrecisarDeAutenticacao() throws Exception {
@@ -116,7 +139,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     void retorna404AoTentarPagarCobrancaInexistenteSemPrecisarDeAutenticacao() throws Exception {
         mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"a@a.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"a@a.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isNotFound());
     }
 
@@ -174,7 +197,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"pagador@teste.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"pagador@teste.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("IGREJA_SEM_CONTA_PAGAMENTO")));
     }
@@ -211,7 +234,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"japago@teste.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"japago@teste.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("COBRANCA_NAO_PENDENTE")));
     }
@@ -252,7 +275,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"duplicado@teste.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"duplicado@teste.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("COBRANCA_JA_EM_PROCESSAMENTO")));
     }
@@ -305,7 +328,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(post("/cobrancas/" + cobrancaTardia.getId() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"depois@teste.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"depois@teste.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("VAGAS_ESGOTADAS")));
     }
@@ -344,7 +367,7 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"atrasado@teste.com\"}"))
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1,\"payerEmail\":\"atrasado@teste.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error", is("COBRANCA_EXPIRADA")));
     }
@@ -574,5 +597,229 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         var atualizada = cobrancaEventoRepository.findById(cobranca.getId()).orElseThrow();
         assertThat(atualizada.getStatus()).isEqualTo(StatusCobranca.PENDENTE);
         assertThat(atualizada.getMpPaymentId()).isNull();
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Task 6: POST /cobrancas/{id}/pagar recalcula o valor no back (gross-up por meio/parcela)
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('51111111-1111-1111-1111-111111111111', 'Igreja Recalculo', 'recalculo@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('53333333-3333-3333-3333-333333333333', '51111111-1111-1111-1111-111111111111', 'Pagador Recalculo', 'pagrecalculo@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('54444444-4444-4444-4444-444444444444', '51111111-1111-1111-1111-111111111111', " +
+            "'53333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('57777777-7777-7777-7777-777777777777', '51111111-1111-1111-1111-111111111111', 'Salão Recalculo')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao, pagamento_max_parcelas) VALUES " +
+            "('55555555-5555-5555-5555-555555555565', '51111111-1111-1111-1111-111111111111', " +
+            "'Evento Pago Cartao', now(), '57777777-7777-7777-7777-777777777777', true, 100.00, true, 12)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('56666666-6666-6666-6666-666666666666', '51111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555565', '53333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_recalculaValorNoBack_ignorandoQualquerValorDoFront() throws Exception {
+        UUID igrejaId = UUID.fromString("51111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555565");
+        UUID inscricaoId = UUID.fromString("56666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("53333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("54444444-4444-4444-4444-444444444444");
+
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(
+            igrejaId, "mp-user-recalculo",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+
+        when(mercadoPagoApi.criarPagamentoTokenizado(any(), any(), any(), any(), any(), any(), any(), any()))
+            .thenReturn(new MercadoPagoApi.ResultadoPagamento("mp-payment-recalculo", "approved", null, null, null, null));
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":1," +
+                    "\"payerEmail\":\"p@x.com\",\"issuerId\":\"1\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isOk());
+
+        // 100 / (1 - 0.0449) = 104.7011... -> CEILING -> 104.71.
+        // O nº de parcelas mandado ao MP é o `parcelas` validado (1), não o `installments`.
+        ArgumentCaptor<BigDecimal> valor = ArgumentCaptor.forClass(BigDecimal.class);
+        verify(mercadoPagoApi).criarPagamentoTokenizado(any(), any(), valor.capture(),
+            any(), any(), eq(1), any(), any());
+        assertThat(valor.getValue()).isEqualByComparingTo("104.71");
+
+        var atualizada = cobrancaEventoRepository.findById(cobranca.getId()).orElseThrow();
+        assertThat(atualizada.getValorCobrado()).isEqualByComparingTo("104.71");
+        assertThat(atualizada.getValor()).isEqualByComparingTo("100.00"); // alvo intacto
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('55111111-1111-1111-1111-111111111111', 'Igreja Installments', 'installments@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('55333333-3333-3333-3333-333333333333', '55111111-1111-1111-1111-111111111111', 'Pagador Installments', 'paginst@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('55444444-4444-4444-4444-444444444444', '55111111-1111-1111-1111-111111111111', " +
+            "'55333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('55777777-7777-7777-7777-777777777777', '55111111-1111-1111-1111-111111111111', 'Salão Installments')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao, pagamento_max_parcelas) VALUES " +
+            "('55555555-5555-5555-5555-555555555575', '55111111-1111-1111-1111-111111111111', " +
+            "'Evento Installments', now(), '55777777-7777-7777-7777-777777777777', true, 100.00, true, 12)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('55666666-6666-6666-6666-666666666666', '55111111-1111-1111-1111-111111111111', " +
+            "'55555555-5555-5555-5555-555555555575', '55333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_ignoraInstallmentsDoFront_usaParcelasValidado() throws Exception {
+        UUID igrejaId = UUID.fromString("55111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("55555555-5555-5555-5555-555555555575");
+        UUID inscricaoId = UUID.fromString("55666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("55333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("55444444-4444-4444-4444-444444444444");
+
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(
+            igrejaId, "mp-user-installments",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+
+        when(mercadoPagoApi.criarPagamentoTokenizado(any(), any(), any(), any(), any(), any(), any(), any()))
+            .thenReturn(new MercadoPagoApi.ResultadoPagamento("mp-payment-inst", "approved", null, null, null, null));
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        // parcelas=1 (barato, passa no teto) mas installments=12 no corpo — o servidor
+        // ignora installments e manda parcelas=1 pro Mercado Pago.
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"tok\",\"paymentMethodId\":\"visa\",\"installments\":12," +
+                    "\"payerEmail\":\"p@x.com\",\"issuerId\":\"1\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isOk());
+
+        verify(mercadoPagoApi).criarPagamentoTokenizado(any(), any(), any(),
+            any(), any(), eq(1), any(), any());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('52111111-1111-1111-1111-111111111111', 'Igreja Pix Parcela', 'pixparcela@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('52333333-3333-3333-3333-333333333333', '52111111-1111-1111-1111-111111111111', 'Pagador Pix', 'pagpix@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('52444444-4444-4444-4444-444444444444', '52111111-1111-1111-1111-111111111111', " +
+            "'52333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('52777777-7777-7777-7777-777777777777', '52111111-1111-1111-1111-111111111111', 'Salão Pix')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco) VALUES " +
+            "('52555555-5555-5555-5555-555555555555', '52111111-1111-1111-1111-111111111111', " +
+            "'Evento Pix', now(), '52777777-7777-7777-7777-777777777777', true, 100.00)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('52666666-6666-6666-6666-666666666666', '52111111-1111-1111-1111-111111111111', " +
+            "'52555555-5555-5555-5555-555555555555', '52333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_pixComParcelasMaiorQue1_recusa() throws Exception {
+        UUID igrejaId = UUID.fromString("52111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("52555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("52666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("52333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("52444444-4444-4444-4444-444444444444");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentMethodId\":\"pix\",\"payerEmail\":\"p@x.com\",\"meio\":\"PIX\",\"parcelas\":2}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("PIX_NAO_PARCELA")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('53111111-1111-1111-1111-111111111111', 'Igreja So Pix', 'sopix@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('53433333-3333-3333-3333-333333333333', '53111111-1111-1111-1111-111111111111', 'Pagador So Pix', 'pagsopix@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('53444444-4444-4444-4444-444444444444', '53111111-1111-1111-1111-111111111111', " +
+            "'53433333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('53777777-7777-7777-7777-777777777777', '53111111-1111-1111-1111-111111111111', 'Salão So Pix')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao) VALUES " +
+            "('53555555-5555-5555-5555-555555555555', '53111111-1111-1111-1111-111111111111', " +
+            "'Evento So Pix', now(), '53777777-7777-7777-7777-777777777777', true, 100.00, false)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('53666666-6666-6666-6666-666666666666', '53111111-1111-1111-1111-111111111111', " +
+            "'53555555-5555-5555-5555-555555555555', '53433333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_cartaoEmEventoQueSoAceitaPix_recusa() throws Exception {
+        UUID igrejaId = UUID.fromString("53111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("53555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("53666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("53433333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("53444444-4444-4444-4444-444444444444");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":1," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("CARTAO_NAO_ACEITO")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('54111111-1111-1111-1111-111111111111', 'Igreja Teto', 'teto@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('54333333-3333-3333-3333-333333333333', '54111111-1111-1111-1111-111111111111', 'Pagador Teto', 'pagteto@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('54544444-4444-4444-4444-444444444444', '54111111-1111-1111-1111-111111111111', " +
+            "'54333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('54777777-7777-7777-7777-777777777777', '54111111-1111-1111-1111-111111111111', 'Salão Teto')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao, pagamento_max_parcelas) VALUES " +
+            "('54555555-5555-5555-5555-555555555555', '54111111-1111-1111-1111-111111111111', " +
+            "'Evento Teto 3x', now(), '54777777-7777-7777-7777-777777777777', true, 100.00, true, 3)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('54666666-6666-6666-6666-666666666666', '54111111-1111-1111-1111-111111111111', " +
+            "'54555555-5555-5555-5555-555555555555', '54333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_parcelasAcimaDoTetoDoEvento_recusa() throws Exception {
+        UUID igrejaId = UUID.fromString("54111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("54555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("54666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("54333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("54544444-4444-4444-4444-444444444444");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":6," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":6}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("PARCELAS_ACIMA_DO_TETO")));
+    }
+
+    @Test
+    void pagar_semMeio_recusaComoValidacao() throws Exception {
+        mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentMethodId\":\"pix\",\"payerEmail\":\"p@x.com\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.campos.meio").exists());
     }
 }

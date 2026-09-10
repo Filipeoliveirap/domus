@@ -71,7 +71,7 @@ class MercadoPagoWebhookServiceTest {
         UUID inscricaoId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -91,7 +91,7 @@ class MercadoPagoWebhookServiceTest {
         UUID igrejaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -112,7 +112,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("pending"));
 
@@ -124,7 +124,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
@@ -141,18 +141,21 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         cobranca.marcarComoPago("mp-payment-999");
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(cobrancaRepository, never()).save(any());
         verify(inscricaoRepository, never()).findById(any());
         verify(notificacaoService, never()).criar(any(), any(), any(), any(), any());
+        // [C2] a 2ª confirmação não pode gerar ENTRADA no financeiro nem 2º comprovante
+        verify(movimentacaoAutomaticaService, never()).registrarEntradaDeEvento(any(), any(), any(), any(), any(), any());
+        verify(emailService, never()).enviar(any(), any(), any());
     }
 
     @Test
     void ignoraSilenciosamenteQuandoCobrancaNaoExiste() {
-        when(cobrancaRepository.findById(any())).thenReturn(Optional.empty());
+        when(cobrancaRepository.buscarComLock(any())).thenReturn(Optional.empty());
 
         service.confirmarPagamento(UUID.randomUUID().toString(), "mp-payment-999", info("approved"));
 
@@ -165,7 +168,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
@@ -179,7 +182,7 @@ class MercadoPagoWebhookServiceTest {
         UUID criadoPorUsuarioId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaId, UUID.randomUUID(), UUID.randomUUID(),
             null, BigDecimal.TEN, Instant.now().plusSeconds(600), criadoPorUsuarioId, null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
@@ -203,7 +206,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(igrejaId, UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600),
             criadoPorUsuarioId, "token-abc");
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
@@ -224,7 +227,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             null, BigDecimal.TEN, Instant.now().plusSeconds(600), null, null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
@@ -237,7 +240,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("pending"));
 
@@ -258,7 +261,7 @@ class MercadoPagoWebhookServiceTest {
         UUID cobrancaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("rejected"));
 
@@ -277,7 +280,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("rejected"));
 
@@ -293,7 +296,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("cancelled"));
 
@@ -309,7 +312,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("pending"));
 
@@ -327,7 +330,7 @@ class MercadoPagoWebhookServiceTest {
         UUID igrejaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -350,7 +353,7 @@ class MercadoPagoWebhookServiceTest {
         UUID inscricaoId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
             null, BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO)
                 .nomeConvidado("Fulano de Fora").build();
@@ -369,7 +372,7 @@ class MercadoPagoWebhookServiceTest {
         UUID igrejaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, null,
             BigDecimal.TEN, Instant.now().plusSeconds(600), null, null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO)
                 .nomeConvidado("Fulano de Fora").emailConvidado("fulano@teste.com").build();
@@ -392,7 +395,7 @@ class MercadoPagoWebhookServiceTest {
         UUID igrejaDaPessoaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaDoEventoId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -416,7 +419,7 @@ class MercadoPagoWebhookServiceTest {
         UUID igrejaId = UUID.randomUUID();
         var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
             BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -444,7 +447,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(600), UUID.randomUUID(), null);
         cobranca.marcarComoExpirado();
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.CANCELADA).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
@@ -465,7 +468,7 @@ class MercadoPagoWebhookServiceTest {
         var cobranca = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().minusSeconds(600), UUID.randomUUID(), null);
         cobranca.marcarComoCancelado();
-        when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
 
         service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 

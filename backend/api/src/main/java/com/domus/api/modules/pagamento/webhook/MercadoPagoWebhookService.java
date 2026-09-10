@@ -97,10 +97,15 @@ public class MercadoPagoWebhookService {
      * não muda nada — a cobrança continua PENDENTE, esperando uma confirmação futura ou
      * expirando naturalmente.
      */
+    @org.springframework.transaction.annotation.Transactional
     public void confirmarPagamento(String cobrancaId, String mpPaymentId,
                                    com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento info) {
         String status = info.status();
-        var cobranca = cobrancaRepository.findById(UUID.fromString(cobrancaId)).orElse(null);
+        // [C2] lock pessimista + @Transactional: webhook e poll correm de propósito em
+        // paralelo — sem serializar, os dois liam status==PENDENTE e geravam ENTRADA
+        // duplicada no financeiro + dois comprovantes. O 2º agora bloqueia até o 1º
+        // commitar e cai na guarda de idempotência abaixo.
+        var cobranca = cobrancaRepository.buscarComLock(UUID.fromString(cobrancaId)).orElse(null);
         if (cobranca == null) {
             log.info("Confirmação de pagamento ignorada — cobrança inexistente. "
                 + "cobrancaId={} mpPaymentId={} status={}", cobrancaId, mpPaymentId, status);

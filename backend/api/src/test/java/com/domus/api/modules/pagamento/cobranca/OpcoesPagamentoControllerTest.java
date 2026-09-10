@@ -139,6 +139,34 @@ class OpcoesPagamentoControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    void valorAbaixoDoMinimoDeCartao_devolveApenasPix() throws Exception {
+        // R$ 0,50: o gross-up de cartão 1x dá ~R$ 0,53, abaixo do mínimo de cartão do MP
+        // (R$ 1,00). Nenhuma faixa de cartão é oferecível — só Pix.
+        UUID cobrancaId = cobranca(evento(true, 6), new BigDecimal("0.50"));
+
+        mockMvc.perform(get("/cobrancas/{id}/opcoes-pagamento", cobrancaId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.opcoes.length()").value(1))
+            .andExpect(jsonPath("$.opcoes[0].meio").value("PIX"));
+    }
+
+    @Test
+    void valorBaixo_filtraFaixasDeCartaoAbaixoDoMinimoPorParcela() throws Exception {
+        // R$ 12,00, teto 6x. 1x e 2x sobrevivem (parcela >= R$ 5,00); 3x em diante cai
+        // abaixo do mínimo por parcela (~R$ 13,26 / 3 = R$ 4,42) e é filtrada.
+        UUID cobrancaId = cobranca(evento(true, 6), new BigDecimal("12.00"));
+
+        mockMvc.perform(get("/cobrancas/{id}/opcoes-pagamento", cobrancaId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.opcoes.length()").value(3))
+            .andExpect(jsonPath("$.opcoes[0].meio").value("PIX"))
+            .andExpect(jsonPath("$.opcoes[1].meio").value("CARTAO"))
+            .andExpect(jsonPath("$.opcoes[1].parcelas").value(1))
+            .andExpect(jsonPath("$.opcoes[2].meio").value("CARTAO"))
+            .andExpect(jsonPath("$.opcoes[2].parcelas").value(2));
+    }
+
+    @Test
     void semAutenticacao_endpointResponde() throws Exception {
         UUID cobrancaId = cobranca(evento(false, 1), new BigDecimal("100.00"));
 

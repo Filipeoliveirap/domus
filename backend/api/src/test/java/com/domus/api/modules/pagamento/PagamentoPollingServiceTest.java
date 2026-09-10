@@ -39,7 +39,7 @@ class PagamentoPollingServiceTest {
     @Test
     void confirmaQuandoMercadoPagoJaAprovou() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "approved"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "approved", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
@@ -49,7 +49,7 @@ class PagamentoPollingServiceTest {
     @Test
     void naoConfirmaEnquantoPagamentoAindaEstaEmAberto() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "pending"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "pending", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
@@ -62,7 +62,7 @@ class PagamentoPollingServiceTest {
         // trata cada status do MP (inclusive liberar a cobrança pra nova tentativa) — a
         // reconferência não deve decidir isso sozinha, só repassar.
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "rejected"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "rejected", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
@@ -72,7 +72,7 @@ class PagamentoPollingServiceTest {
     @Test
     void naoMartelaOMercadoPagoEmChamadasSeguidas() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "pending"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "pending", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);

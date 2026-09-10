@@ -346,6 +346,33 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
+    void comprovante_mostraOValorCobradoComTaxa_naoOAlvo() {
+        UUID cobrancaId = UUID.randomUUID();
+        UUID inscricaoId = UUID.randomUUID();
+        UUID pessoaId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        UUID igrejaId = UUID.randomUUID();
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plusSeconds(600), UUID.randomUUID(), null);
+        cobranca.registrarValorCobrado(new BigDecimal("111.73")); // 100 alvo + taxa (6x)
+        when(cobrancaRepository.buscarComLock(cobrancaId)).thenReturn(Optional.of(cobranca));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
+        Igreja igrejaDaPessoa = igreja(igrejaId, "Igreja Batista");
+        Pessoa pessoa = Pessoa.builder().id(pessoaId).igreja(igrejaDaPessoa)
+                .nome("Maria").email("maria@teste.com").build();
+        when(pessoaRepository.findById(pessoaId)).thenReturn(Optional.of(pessoa));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento(eventoId, igrejaDaPessoa)));
+
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
+
+        var corpo = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviar(eq("maria@teste.com"), any(), corpo.capture());
+        assertThat(corpo.getValue()).contains("111,73").doesNotContain("100,00");
+    }
+
+    @Test
     void naoEnviaEmailQuandoConvidadoSemCadastroNaoTemEmail() {
         // Dado anômalo (email_convidado deveria ser obrigatório em evento pago, ver
         // InscricaoService.inscreverConvidado) — guarda continua valendo por segurança.

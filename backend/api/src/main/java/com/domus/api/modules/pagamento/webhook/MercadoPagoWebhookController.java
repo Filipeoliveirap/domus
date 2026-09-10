@@ -84,7 +84,7 @@ public class MercadoPagoWebhookController {
             try {
                 var informacoes = buscarInformacoesPagamento(dataId, userId);
                 if (informacoes != null && informacoes.externalReference() != null) {
-                    service.confirmarPagamento(informacoes.externalReference(), dataId, informacoes.status());
+                    service.confirmarPagamento(informacoes.externalReference(), dataId, informacoes);
                 } else {
                     log.warn("Webhook do Mercado Pago sem external_reference resolvido, ignorado. "
                         + "dataId={} userId={}", dataId, userId);

@@ -35,6 +35,12 @@ public class CobrancaEvento {
     @Column(name = "mp_payment_id")
     private String mpPaymentId;
 
+    /** Valor efetivamente cobrado do pagador (alvo + taxa, com gross-up), gravado no
+     *  {@code POST /cobrancas/{id}/pagar}. {@code valor} continua sendo o alvo (o que a
+     *  igreja quer receber). NULL até a 1ª tentativa de pagamento. */
+    @Column(name = "valor_cobrado")
+    private BigDecimal valorCobrado;
+
     @Column(name = "token_link_publico", unique = true)
     private String tokenLinkPublico;
 
@@ -100,6 +106,10 @@ public class CobrancaEvento {
         this.mpPaymentId = mpPaymentId;
     }
 
+    /** Grava quanto foi efetivamente cobrado do pagador (alvo + taxa, com gross-up) no
+     *  {@code POST /pagar}. {@code valor} (o alvo) fica intacto. */
+    public void registrarValorCobrado(BigDecimal valorCobrado) { this.valorCobrado = valorCobrado; }
+
     /**
      * Libera a cobrança para uma nova tentativa de pagamento depois que a tentativa
      * anterior (que gravou {@code mpPaymentId} via {@link #registrarTentativaPagamento})
@@ -135,16 +145,42 @@ public class CobrancaEvento {
     public void registrarEstorno(BigDecimal valor) {
         this.valorEstornado = this.valorEstornado.add(valor);
         this.estornoPendente = false;
-        if (this.valorEstornado.compareTo(this.valor) >= 0) {
+        if (this.valorEstornado.compareTo(baseDeEstorno()) >= 0) {
             this.status = StatusCobranca.REEMBOLSADO;
         }
     }
 
-    /** Quanto ainda dá pra estornar desta cobrança — o valor original menos o que já foi
-     *  devolvido em estornos parciais anteriores. Nunca negativo. */
+    /** Base sobre a qual todo estorno opera: o valor BRUTO efetivamente cobrado do pagador
+     *  ({@code valorCobrado}, alvo + taxa com gross-up) quando existe, senão o alvo
+     *  ({@code valor}). Devolver o bruto é o certo — foi o que saiu da conta do pagador. */
+    private BigDecimal baseDeEstorno() {
+        return valorCobrado != null ? valorCobrado : valor;
+    }
+
+    /** Quanto ainda dá pra estornar desta cobrança — o valor BRUTO cobrado (com taxa) menos
+     *  o que já foi devolvido em estornos parciais anteriores. Cai no alvo ({@code valor})
+     *  quando a cobrança nunca chegou a ser paga ({@code valorCobrado} nulo). Nunca negativo. */
     public BigDecimal valorRestanteParaEstornar() {
-        BigDecimal restante = this.valor.subtract(this.valorEstornado);
+        BigDecimal restante = baseDeEstorno().subtract(this.valorEstornado);
         return restante.signum() > 0 ? restante : BigDecimal.ZERO;
+    }
+
+    /** Quanto do ALVO (líquido) desta cobrança ainda está coberto pelo pagador — o alvo
+     *  menos a parte LÍQUIDA do que já foi estornado. Diferente de valorRestanteParaEstornar(),
+     *  que é BRUTO (o que se devolve ao pagador). Usado por InscricaoService.valorJaPago()
+     *  pra responder "quanto do preço líquido essa pessoa já cobriu?". */
+    public BigDecimal valorAlvoRestante() {
+        if (valorCobrado == null || valorCobrado.signum() == 0) {
+            BigDecimal r = valor.subtract(this.valorEstornado);
+            return r.signum() > 0 ? r : BigDecimal.ZERO;
+        }
+        BigDecimal fracaoRetida = valorCobrado.subtract(this.valorEstornado)
+            .divide(valorCobrado, java.math.MathContext.DECIMAL64);
+        // O arredondamento HALF_UP aqui é independente do CEILING aplicado ao novoBruto em
+        // InscricaoService.aplicarMudancaValorPago; pequena diferença de centavo em reajuste
+        // encadeado é esperada e inofensiva (não gera cobrança/estorno a mais).
+        BigDecimal r = valor.multiply(fracaoRetida).setScale(2, java.math.RoundingMode.HALF_UP);
+        return r.signum() > 0 ? r : BigDecimal.ZERO;
     }
 
     /** Uma tentativa de estorno (em lote ou individual) falhou — fica marcada até alguém
@@ -162,6 +198,7 @@ public class CobrancaEvento {
     public BigDecimal getValor() { return valor; }
     public StatusCobranca getStatus() { return status; }
     public String getMpPaymentId() { return mpPaymentId; }
+    public BigDecimal getValorCobrado() { return valorCobrado; }
     public String getTokenLinkPublico() { return tokenLinkPublico; }
     public Instant getExpiraEm() { return expiraEm; }
     public Instant getPagoEm() { return pagoEm; }

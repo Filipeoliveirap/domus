@@ -80,7 +80,8 @@ class EventoTipoENormalizacaoTest {
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
                 pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
-                notificacaoService, eventoSerieRepository);
+                notificacaoService, eventoSerieRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class));
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));
@@ -150,35 +151,35 @@ class EventoTipoENormalizacaoTest {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, tipo, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComLocal(UUID localId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 localId, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComAmbos() {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 UUID.randomUUID(), "Chácara", null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComResponsavel(UUID pessoaId) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, java.util.List.of(pessoaId),
                 null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComIdades(Integer min, Integer max) {
         return new EventoRequest("Evento", "desc", LocalDateTime.now().plusDays(5), null,
                 null, null, null, null,
                 null, min, max, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     @Test

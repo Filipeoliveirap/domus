@@ -97,7 +97,9 @@ public class MercadoPagoWebhookService {
      * não muda nada — a cobrança continua PENDENTE, esperando uma confirmação futura ou
      * expirando naturalmente.
      */
-    public void confirmarPagamento(String cobrancaId, String mpPaymentId, String status) {
+    public void confirmarPagamento(String cobrancaId, String mpPaymentId,
+                                   com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento info) {
+        String status = info.status();
         var cobranca = cobrancaRepository.findById(UUID.fromString(cobrancaId)).orElse(null);
         if (cobranca == null) {
             log.info("Confirmação de pagamento ignorada — cobrança inexistente. "
@@ -145,7 +147,7 @@ public class MercadoPagoWebhookService {
             inscricao.setStatus(StatusInscricao.CONFIRMADA);
             inscricaoRepository.save(inscricao);
             enviarEmailConfirmacao(cobranca, inscricao);
-            registrarNoFinanceiro(cobranca, inscricao);
+            registrarNoFinanceiro(cobranca, inscricao, info);
         });
 
         // Plano 4b — convidado sem cadastro via convite público não tem
@@ -165,14 +167,22 @@ public class MercadoPagoWebhookService {
      * cobrança já está PAGO de verdade independente disso. Falha só loga, mesmo padrão do
      * e-mail de confirmação.
      */
-    private void registrarNoFinanceiro(CobrancaEvento cobranca, InscricaoEvento inscricao) {
+    private void registrarNoFinanceiro(CobrancaEvento cobranca, InscricaoEvento inscricao,
+                                       com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento info) {
         try {
             Evento evento = eventoRepository.findById(cobranca.getEventoId()).orElse(null);
             if (evento == null) return;
 
             String nomePagador = resolverNomePagador(cobranca, inscricao);
+            java.math.BigDecimal bruto = info.valorBruto() != null ? info.valorBruto()
+                : (cobranca.getValorCobrado() != null ? cobranca.getValorCobrado() : cobranca.getValor());
+            java.math.BigDecimal taxa = info.taxaMercadoPago() != null
+                ? info.taxaMercadoPago() : java.math.BigDecimal.ZERO;
+            if (info.taxaMercadoPago() == null) {
+                log.warn("Pagamento confirmado sem fee_details do Mercado Pago — taxa registrada como zero, receita pode estar superestimada. cobrancaId={} mpPaymentId={}", cobranca.getId(), cobranca.getMpPaymentId());
+            }
             movimentacaoAutomaticaService.registrarEntradaDeEvento(
-                cobranca.getIgrejaId(), cobranca.getValor(),
+                cobranca.getIgrejaId(), bruto, taxa,
                 "Pagamento de inscrição — " + evento.getTitulo() + " (" + nomePagador + ")",
                 cobranca.getPessoaId(), nomePagador);
         } catch (RuntimeException e) {

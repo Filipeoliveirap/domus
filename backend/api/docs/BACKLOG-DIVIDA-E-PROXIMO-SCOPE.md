@@ -762,29 +762,38 @@ quem já estava confirmado, sem re-checar vaga. `ModalImpactoMudancaPreco` avisa
 os números antes de confirmar a mudança. Cobre também estorno em massa que falha (tag
 "Estorno pendente" com retry, ver `CobrancaEvento.estornoPendente`).
 
-### Escolha de meio de pagamento + parcelamento por evento, considerando a taxa do Mercado Pago (2026-08-26, ainda não desenhado)
+### ~~Escolha de meio de pagamento + parcelamento por evento~~ / ~~Taxa do MP separada no financeiro~~ (**BACKEND FEITO** 2026-09-09, front pendente)
 
-Ideia do autor: no cadastro de evento pago, deixar a igreja escolher quais meios de
-pagamento aceitar (cartão/Pix) e, se cartão, quantas parcelas — hoje o Payment Brick libera
-tudo sem nenhuma configuração por evento. Puxa consigo uma decisão de produto real: quem
-absorve a taxa do Mercado Pago (~4-5% no cartão, menor no Pix, e sobe com parcelamento)? A
-igreja embute no preço na hora de cadastrar, ou repassa pro pagador? Avaliado como feature
-grande de verdade (mexe em cadastro de evento, `PaymentBrickCheckout`, e características de
-UX/produto que só o autor decide) — **precisa de brainstorm/spec própria antes de
-implementar**, não é uma mudança bounded.
+Os dois itens abaixo foram desenhados juntos (spec/plano em
+`docs/superpowers/{specs,plans}/2026-09-09-meio-pagamento-parcelamento-taxa-evento*`) e o
+**backend está implementado** (migration V40, Tasks 1–8, suíte verde). Decisões: repassar a
+taxa do MP pro pagador via **gross-up** (`valorACobrar = alvo / (1 − taxa%)`, arredonda pra
+cima); evento pago escolhe Pix-só ou Pix+cartão com teto de parcelas; financeiro registra
+ENTRADA bruta em "Eventos" + SAÍDA da taxa real (`transaction_amount − net_received_amount`)
+em categoria própria **"Taxas de pagamento"** auto-criada.
 
-### Taxa do Mercado Pago não aparece separada no financeiro (2026-08-26, recomendação dada, não implementada)
+**Falta:** frontend (Tasks 9–12: tipos/services, resumo e-commerce no `EventoForm`, tela
+`EscolhaMeioPagamento` antes do Payment Brick, nota no detalhe do evento) + validação e2e
+no sandbox do Mercado Pago (Task 13).
 
-Consequência de a `MovimentacaoAutomaticaService` registrar o valor **bruto** da inscrição
-como entrada — o que realmente cai na conta da igreja no Mercado Pago é menor (desconta a
-taxa por transação). Recomendação já discutida com o autor: criar uma categoria própria
-**"Taxas de pagamento"** (separada de "Eventos" — taxa é despesa operacional, não parte do
-valor do evento) e registrar uma SAÍDA com o valor exato da taxa, usando o `fee_details` que
-a API do Mercado Pago já devolve na mesma consulta que o webhook faz hoje
-(`MercadoPagoApi.buscarInformacoesPagamento`) — só falta ler esse campo e persistir. Bounded
-o suficiente pra implementar direto quando entrar na fila, sem brainstorm — mas faz mais
-sentido resolver junto do item acima (a decisão de quem absorve a taxa muda o que "registrar
-a taxa" significa na prática).
+**Resíduos conhecidos deste scope (anotados pra não sumir):**
+- **`taxaDevolvida` no estorno = `BigDecimal.ZERO` fixo.** Um estorno total dentro da janela
+  devolve a taxa do gateway, mas rastrear isso com precisão exige ler o `fee_details` do
+  *refund* do MP. A SAÍDA bruta em "Eventos" já deixa o dinheiro certo; só a linha de
+  "devolução de taxa" em "Taxas de pagamento" não é registrada.
+- **Os 2 lançamentos (bruto + taxa) são linkados só pela string de descrição**
+  (`"Taxa Mercado Pago — <evento> (<pagador>)"`), não por uma FK/referência de inscrição —
+  a spec §7 previa a referência e ela caiu na implementação. Reconciliar "qual taxa é de
+  qual pagamento" é text-matching; dois pagadores de mesmo nome no mesmo evento ficam
+  indistinguíveis. Totais financeiros continuam certos.
+- **`MercadoPagoClient.criarPagamento(UUID, CobrancaEvento)`** ficou morto (só teste chama) e
+  agora cobraria `cobranca.getValor()` que mudou de significado (virou o alvo líquido) — sem
+  gross-up. Deletar quando for mexer no módulo, ou é uma armadilha.
+- **Aprender a taxa real do `fee_details`** pra corrigir o gross-up dos próximos pagamentos
+  (hoje usa a tabela padrão do MP em `pagamento.taxa.*` + override opcional por igreja em
+  `conta_pagamento_igreja`) — fica pra depois.
+- **`aplicarConfigPagamento` (Task 3)** propaga os 2 campos pro sync de ocorrência de série;
+  não tem teste dedicado pra esse caminho (helper compartilhado cobre, risco baixo).
 
 ### ~~`PagarCobrancaRequest` sem validação de bean nos campos~~ (2026-08-26 → **RESOLVIDO** 2026-09-07)
 

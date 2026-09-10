@@ -332,7 +332,7 @@ mvn -q -o test -Dtest=NomeDaClasse
 ## Modelo de dados (diagrama ER)
 
 > **Fonte da verdade são as migrations** (`src/main/resources/db/migration`), não este
-> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V39**.
+> diagrama. Ao mexer no schema, atualize aqui também. Estado atual: **V40**.
 > `V1__schema_inicial.sql` consolida as antigas V1–V16 em 2026-07-21 (ver nota logo
 > abaixo do diagrama). Campos de rotina (`created_at`, `updated_at`, `deleted_at`) foram
 > omitidos por ruído, exceto quando têm significado (soft delete).
@@ -445,7 +445,9 @@ erDiagram
         char      uf "V36"
         uuid      foto_id FK "V2 - era varchar; agora aponta pra FOTO"
         integer   vagas "V15 - NULL = sem limite"
-        numeric   preco "V15 - NULL = gratuito"
+        numeric   preco "V15 - NULL = gratuito. V40 mudou o SIGNIFICADO: era o que o pagador paga, virou o que a igreja quer RECEBER (líquido alvo); o pagador paga preco + taxa do MP (gross-up)"
+        boolean   pagamento_aceita_cartao "V40 - Pix sempre aceito em evento pago; cartão é opt-in"
+        smallint  pagamento_max_parcelas "V40 - 1..12 (CHECK); teto de parcelas do cartão que o pagador pode escolher"
         boolean   exclusivo_membros "cobre batizados - vinculo=MEMBRO é quem é batizado"
         boolean   requer_inscricao "V16"
         varchar   tipo "V3 - texto livre que aprende (autocomplete); não é 'categoria'"
@@ -543,6 +545,9 @@ erDiagram
         timestamp expira_em
         timestamp conectado_em
         uuid      conectado_por_usuario_id FK
+        numeric   taxa_pix_percent "V40 - taxa negociada da igreja com o MP; NULL = usa o default do back (pagamento.taxa.*)"
+        numeric   taxa_cartao_avista_percent "V40 - idem"
+        numeric   taxa_cartao_parcela_adicional_percent "V40 - idem; adicional por parcela extra"
     }
 
     COBRANCA_EVENTO {
@@ -552,7 +557,8 @@ erDiagram
         uuid      inscricao_id FK "ON DELETE CASCADE"
         uuid      pessoa_id FK "nulável - XOR com acompanhante_id; os dois nulos = convidado sem cadastro (V30)"
         uuid      acompanhante_id FK "ON DELETE CASCADE"
-        numeric   valor "CHECK > 0"
+        numeric   valor "CHECK > 0 - o ALVO (o que a igreja quer receber)"
+        numeric   valor_cobrado "V40 - alvo + taxa do MP (gross-up), gravado no POST /pagar; NULL até a 1ª tentativa. Estorno opera sobre ESTE valor (bruto); valorJaPago/reajuste operam sobre `valor` (líquido)"
         varchar   status "PENDENTE|PAGO|EXPIRADO|CANCELADO|REEMBOLSADO"
         varchar   mp_payment_id "nulável até a 1ª tentativa de pagamento"
         varchar   token_link_publico UK "V29 - link 'enviar pra pagar' compartilhável"
@@ -646,6 +652,20 @@ erDiagram
   `POST .../pagar`. Pagamento aprovado e estorno em cancelamento entram automaticamente
   no financeiro da igreja (`MOVIMENTACAO_FINANCEIRA`, categoria "Eventos" auto-criada na
   1ª vez).
+- **Meio de pagamento, parcelamento e taxa por evento (V40):** o evento pago escolhe se
+  aceita cartão (`pagamento_aceita_cartao`, Pix sempre) e o teto de parcelas
+  (`pagamento_max_parcelas`). A taxa do Mercado Pago é **repassada ao pagador** por
+  gross-up: `evento.preco` passou a ser o líquido que a igreja quer receber, e o valor
+  cobrado é `preco / (1 − taxa%)` (arredonda pra cima), calculado no back por meio/parcela
+  (`CalculadoraTaxaPagamento`; tabela padrão em `pagamento.taxa.*`, override opcional por
+  igreja em `conta_pagamento_igreja`). O `POST /cobrancas/{id}/pagar` **recalcula** o valor
+  no servidor e ignora o `installments` cru do Brick (usa o `parcelas` validado). Faixas de
+  cartão/parcela abaixo do mínimo do MP (`pagamento.limite.*` — R$ 1 total, R$ 5/parcela)
+  não são oferecidas nem no checkout nem no cadastro. No financeiro: **dois lançamentos** —
+  ENTRADA do bruto em "Eventos" + SAÍDA da taxa real (`transaction_amount −
+  net_received_amount`) em categoria própria **"Taxas de pagamento"** (auto-criada). Ver
+  spec/plano em `docs/superpowers/`. *Resíduos no BACKLOG: `taxaDevolvida` do estorno = 0
+  fixo; os 2 lançamentos linkados só por descrição.*
 - **`MOVIMENTACAO_CONTRIBUINTE` (V15, ganhou `nome_externo` em V32):** uma movimentação
   pode ter **zero, um ou vários** contribuintes/beneficiários — cada linha soma pro valor
   total da movimentação (`CHECK` de que a soma bate, aplicado em código, não em SQL).

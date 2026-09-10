@@ -164,6 +164,10 @@ const eventoSchemaBase = z.object({
   ),
   exclusivoMembros: z.boolean().default(false),
 
+  // Config de pagamento (só relevante em evento pago; backend força off/1 caso contrário).
+  pagamentoAceitaCartao: z.boolean().default(false),
+  pagamentoMaxParcelas: z.coerce.number().int().min(1).max(12).default(1),
+
   recorteEtario: z.string().nullable().optional(),
   idadeMin: opcionalNumero(z.coerce.number().int().min(0, 'A idade mínima não pode ser negativa.')),
   idadeMax: opcionalNumero(z.coerce.number().int().min(0, 'A idade máxima não pode ser negativa.')),

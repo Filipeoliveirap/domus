@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
+import type { MeioPagamento, OpcoesPagamentoResponse } from '@/types/api.types'
 
 export type StatusCobranca = 'PENDENTE' | 'PAGO' | 'EXPIRADO' | 'CANCELADO' | 'REEMBOLSADO'
 
@@ -44,6 +45,12 @@ export interface PagarCobrancaRequest {
    *  de parcelamento/preço pra alguns bancos emissores (`error_pricing`, código 10107)
    *  mesmo com token/cartão válidos. */
   issuerId: string | null
+  /** Meio escolhido na tela de opções (Task 10/11). Opcional por ora — `PaymentBrickCheckout`
+   *  ainda não passa; a Task 11 liga a tela de opções ao Brick e passa os dois.
+   *  TODO Task 11: tornar obrigatório quando o checkout enviar. */
+  meio?: MeioPagamento
+  /** Nº de parcelas escolhido (1 = à vista / Pix). Ver nota em `meio`. TODO Task 11. */
+  parcelas?: number
 }
 
 export interface PagarCobrancaResponse {
@@ -89,6 +96,12 @@ export const cobrancaService = {
    *  link público) — mesma garantia de posse que já vale pro token do link. */
   pagar: (cobrancaId: string, dados: PagarCobrancaRequest): Promise<PagarCobrancaResponse> =>
     api.post<PagarCobrancaResponse>(Endpoints.cobrancas.PAGAR(cobrancaId), dados).then((res) => res.data),
+
+  /** Opções de pagamento (Pix + faixas de parcela no cartão) de uma cobrança já existente,
+   *  com a taxa do Mercado Pago já embutida em cada `valorTotal`. Sem sessão — o `id` já
+   *  prova posse, mesma garantia do resto do módulo. */
+  opcoesPagamento: (cobrancaId: string): Promise<OpcoesPagamentoResponse> =>
+    api.get<OpcoesPagamentoResponse>(Endpoints.cobrancas.OPCOES_PAGAMENTO(cobrancaId)).then((res) => res.data),
 
   /** Poll usado enquanto o QR do Pix está na tela, esperando o webhook confirmar. */
   status: (cobrancaId: string): Promise<StatusCobrancaResponse> =>

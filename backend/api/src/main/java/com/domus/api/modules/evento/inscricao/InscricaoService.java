@@ -1170,6 +1170,9 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int marcados = 0;
         for (InscricaoEvento inscricao : inscricoes) {
+            // [I9] só CONFIRMADA — canceladas e pendentes de pagamento não têm presença
+            // (o endpoint individual já recusa; o "todos" contava errado no relatório).
+            if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) continue;
             inscricao.setCompareceu(true);
             marcados++;
             inscricaoRepository.save(inscricao);
@@ -1195,6 +1198,7 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int desmarcados = 0;
         for (InscricaoEvento inscricao : inscricoes) {
+            if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) continue; // [I9]
             inscricao.setCompareceu(false);
             desmarcados++;
             inscricaoRepository.save(inscricao);

@@ -78,9 +78,7 @@ public class CobrancaEventoService {
                 if (!cartaoViavelParaValor(total, p)) {
                     continue; // faixa abaixo do mínimo do MP — não oferecer (travaria o Brick)
                 }
-                BigDecimal parcela = total.divide(BigDecimal.valueOf(p), 2, RoundingMode.HALF_UP);
-                opcoes.add(new OpcoesPagamentoResponse.OpcaoPagamento(
-                    MeioPagamento.CARTAO, p, total, parcela, calculadora.taxaEmReais(valorEvento, total)));
+                opcoes.add(opcao(igrejaId, valorEvento, MeioPagamento.CARTAO, p));
             }
         }
         return new OpcoesPagamentoResponse(valorEvento, opcoes);

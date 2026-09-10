@@ -456,7 +456,7 @@ public class InscricaoService {
      * fato "segura" a vaga é a cobrança (expira e libera sozinha se ninguém pagar). Evento
      * gratuito continua exatamente como antes: conta inscrições confirmadas + convidados.
      */
-    private long contarOcupadas(Evento evento) {
+    public long contarOcupadas(Evento evento) {
         if (evento.getPreco() != null) {
             return cobrancaEventoRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
         }
@@ -1059,9 +1059,12 @@ public class InscricaoService {
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
 
         long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
+        // [I3] "vagas restantes" desconta também quem está reservando pagamento (cobrança
+        // PENDENTE não-vencida), igual ao que o /pagar checa — senão a tela oferece uma
+        // vaga que o backend recusa depois do cartão preenchido.
         Integer restantes = evento.getVagas() == null
                 ? null
-                : Math.max(0, evento.getVagas() - (int) total);
+                : Math.max(0, evento.getVagas() - (int) contarOcupadas(evento));
 
         return new ListaInscritosResponse(total, evento.getVagas(), restantes, paginaInscritos);
     }

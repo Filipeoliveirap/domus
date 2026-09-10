@@ -147,6 +147,15 @@ class InscricaoServiceTest {
                 usuarioId, "token-" + UUID.randomUUID());
     }
 
+    private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobrancaComplementoExpirada() {
+        var c = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("30.00"), java.time.Instant.now().minusSeconds(3600),
+                usuarioId, "token-" + UUID.randomUUID());
+        c.marcarComoExpirado();
+        return c;
+    }
+
     private Evento eventoDeOutraIgreja(UUID outraIgrejaId, boolean restritoPropriaIgreja) {
         Igreja outraIgreja = new Igreja();
         outraIgreja.setId(outraIgrejaId);
@@ -2010,7 +2019,7 @@ class InscricaoServiceTest {
         when(usuarioRepository.findByPessoaId(pessoaId))
                 .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(usuarioDaPessoaId).build()));
 
-        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA");
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId);
 
         var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
@@ -2039,7 +2048,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobrancaSemToken));
 
-        service.enviarLembretePagamento(inscricaoId, igrejaId, "LIDER");
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "LIDER", usuarioId);
 
         var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(emailService).enviar(eq("maria@email.com"), any(), corpoCaptor.capture());
@@ -2054,14 +2063,14 @@ class InscricaoServiceTest {
                 .status(StatusInscricao.CONFIRMADA).build();
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
 
-        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA"))
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId))
                 .hasFieldOrPropertyWithValue("codigo", "INSCRICAO_NAO_AGUARDA_PAGAMENTO");
         verifyNoInteractions(emailService);
     }
 
     @Test
     void enviarLembretePagamentoRecusaParaQuemNaoGerenciaInscricoes() {
-        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ACESSO_COMUM"))
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ACESSO_COMUM", usuarioId))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         verifyNoInteractions(emailService, inscricaoRepository);
     }
@@ -2078,7 +2087,7 @@ class InscricaoServiceTest {
         when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobrancaPendente()));
 
-        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA"))
+        assertThatThrownBy(() -> service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId))
                 .hasFieldOrPropertyWithValue("codigo", "SEM_EMAIL_PARA_LEMBRETE");
     }
 
@@ -2545,11 +2554,58 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPagaComId("mp-payment-original"), cobrancaPendente()));
 
-        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA");
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId);
 
         var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(emailService).enviar(eq("maria@email.com"), any(), corpoCaptor.capture());
         assertThat(corpoCaptor.getValue()).contains("já pagou o valor original");
         assertThat(corpoCaptor.getValue()).contains("Falta complementar");
+    }
+
+    // [C1] 2026-09-10: o complemento pode já ter expirado (inscrição CONFIRMADA). O botão
+    // "Lembrar" precisa recriar a cobrança pra o link do e-mail funcionar.
+    @Test
+    void enviarLembrete_complementoExpirado_recriaCobrancaEEnvia() {
+        Pessoa maria = Pessoa.builder().id(pessoaId).igreja(igreja()).nome("Maria")
+                .email("maria@email.com").vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja())
+                .evento(Evento.builder().id(eventoId).igreja(igreja()).titulo("Retiro")
+                        .inicioEm(LocalDateTime.now().plusDays(10)).requerInscricao(true)
+                        .preco(new java.math.BigDecimal("80.00")).build())
+                .pessoa(maria).status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-original"), cobrancaComplementoExpirada()));
+        var nova = cobrancaPendente();
+        when(cobrancaEventoService.criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true)))
+                .thenReturn(nova);
+
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId);
+
+        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true));
+        verify(emailService).enviar(eq("maria@email.com"), any(), any());
+    }
+
+    @Test
+    void enviarLembrete_complementoAindaPendente_naoDuplicaCobranca() {
+        Pessoa maria = Pessoa.builder().id(pessoaId).igreja(igreja()).nome("Maria")
+                .email("maria@email.com").vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja())
+                .evento(Evento.builder().id(eventoId).igreja(igreja()).titulo("Retiro")
+                        .inicioEm(LocalDateTime.now().plusDays(10)).requerInscricao(true)
+                        .preco(new java.math.BigDecimal("80.00")).build())
+                .pessoa(maria).status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)).thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComId("mp-original"), cobrancaPendente()));
+
+        service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId);
+
+        verify(cobrancaEventoService, never()).criarParaTerceiro(any(), any(), any(), any(), any(), any(), anyBoolean());
+        verify(emailService).enviar(eq("maria@email.com"), any(), any());
     }
 }

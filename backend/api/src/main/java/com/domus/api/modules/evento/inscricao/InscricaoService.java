@@ -1844,7 +1844,7 @@ public class InscricaoService {
      * assim que a cobrança vence) — então não precisa criar uma nova.
      */
     @Transactional
-    public void enviarLembretePagamento(UUID inscricaoId, UUID igrejaId, String role) {
+    public void enviarLembretePagamento(UUID inscricaoId, UUID igrejaId, String role, UUID usuarioId) {
         if (!Permissoes.podeGerenciarInscricoes(role)) {
             throw new org.springframework.security.access.AccessDeniedException(
                     "Você não tem permissão para enviar lembretes de pagamento.");
@@ -1852,21 +1852,39 @@ public class InscricaoService {
 
         InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
-        if (!inscricao.estaAguardandoPagamento()) {
+
+        List<CobrancaEvento> cobrancasDaInscricao = cobrancaEventoRepository.findByInscricaoId(inscricaoId);
+        // Diferencia "nunca pagou nada" de "já pagou o valor original, só falta o
+        // complemento de um reajuste" — mesma distinção da tag "Falta complementar" na
+        // lista de inscritos. Desde [C1] (2026-09-10) o segundo caso é CONFIRMADA, não
+        // AGUARDANDO_PAGAMENTO, e o complemento pode já ter EXPIRADO.
+        boolean pagamentoParcial = cobrancasDaInscricao.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PAGO);
+        java.math.BigDecimal precoEvento = inscricao.getEvento().getPreco();
+        java.math.BigDecimal aindaDeve = precoEvento == null
+                ? java.math.BigDecimal.ZERO
+                : precoEvento.subtract(valorJaPago(cobrancasDaInscricao));
+
+        if (!inscricao.estaAguardandoPagamento() && !(pagamentoParcial && aindaDeve.signum() > 0)) {
             throw new ConflitoNegocioException("INSCRICAO_NAO_AGUARDA_PAGAMENTO",
                     "Esta inscrição não está com pagamento pendente.");
         }
 
-        List<CobrancaEvento> cobrancasDaInscricao = cobrancaEventoRepository.findByInscricaoId(inscricaoId);
         CobrancaEvento cobranca = cobrancasDaInscricao.stream()
                 .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
                 .findFirst()
-                .orElseThrow(() -> new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",
-                        "Não foi encontrada uma cobrança em aberto para esta inscrição."));
-        // Diferencia "nunca pagou nada" de "já pagou o valor original, só falta o
-        // complemento de um reajuste" — mesma distinção da tag "Falta complementar" na
-        // lista de inscritos (2026-08-27), agora também no texto do lembrete.
-        boolean pagamentoParcial = cobrancasDaInscricao.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PAGO);
+                .orElse(null);
+        if (cobranca == null) {
+            if (pagamentoParcial && aindaDeve.signum() > 0) {
+                // "Falta complementar" cujo complemento já EXPIROU — recria uma cobrança
+                // nova pra o link do lembrete funcionar ([C1] botão "Lembrar").
+                UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
+                cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
+                        inscricaoId, pessoaId, aindaDeve, usuarioId, true);
+            } else {
+                throw new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",
+                        "Não foi encontrada uma cobrança em aberto para esta inscrição.");
+            }
+        }
 
         String nomeDestinatario;
         String email;
@@ -1923,8 +1941,14 @@ public class InscricaoService {
                 </div>
                 """.formatted(nomeDestinatario, paragrafoSituacao, evento.getTitulo(), paragrafoValor, link, linkCancelar);
 
-        emailService.enviar(email, "Lembrete de pagamento pendente — " + evento.getTitulo(), corpo);
-        log.info("Lembrete de pagamento enviado. inscricaoId={}, igrejaId={}", inscricaoId, igrejaId);
+        try {
+            emailService.enviar(email, "Lembrete de pagamento pendente — " + evento.getTitulo(), corpo);
+            log.info("Lembrete de pagamento enviado. inscricaoId={}, igrejaId={}", inscricaoId, igrejaId);
+        } catch (RuntimeException e) {
+            // [I7] falha do provedor de e-mail não pode dar rollback (a cobrança recriada
+            // no caso "Falta complementar" precisa persistir) — só loga, igual aos outros envios.
+            log.error("Falha ao enviar lembrete de pagamento. inscricaoId={}", inscricaoId, e);
+        }
         notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.LEMBRETE_PAGAMENTO_PENDENTE,
                 "Lembrete: falta pagar " + valorFormatado + " pra confirmar sua inscrição em \"" + evento.getTitulo() + "\".");
     }

@@ -66,6 +66,20 @@ public class EventoService {
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     private final com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
+    private final com.domus.api.modules.pagamento.cobranca.CobrancaEventoService cobrancaEventoService;
+
+    /**
+     * Simula as opções de pagamento pro form de cadastro/edição de evento pago — antes de
+     * o evento existir, então não passa por {@code CobrancaEvento}. Delega a montagem pro
+     * {@code CobrancaEventoService} (mesma lógica do checkout). {@code maxParcelas} só vale
+     * quando o cartão está habilitado; sem cartão, cai em 1 (só Pix).
+     */
+    public com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse simularPagamento(
+            UUID igrejaId, com.domus.api.modules.pagamento.DTOs.SimularPagamentoRequest req) {
+        boolean aceitaCartao = Boolean.TRUE.equals(req.aceitaCartao());
+        int maxParcelas = aceitaCartao && req.maxParcelas() != null ? req.maxParcelas() : 1;
+        return cobrancaEventoService.montarOpcoes(req.preco(), aceitaCartao, maxParcelas, igrejaId);
+    }
 
     @Cacheable(
             value = "eventos",

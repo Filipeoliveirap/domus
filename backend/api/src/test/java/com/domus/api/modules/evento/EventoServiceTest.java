@@ -82,7 +82,8 @@ class EventoServiceTest {
                 eventoRepository, igrejaRepository, cacheEvictor, outboxRegistrador,
                 inscricaoService, inscricaoRepository, fotoService, elegibilidadeService, pessoaRepository,
                 localEventoRepository, usuarioRepository, familiaIgrejaService, notificacaoService,
-                eventoSerieRepository
+                eventoSerieRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class)
         );
 
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));

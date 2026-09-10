@@ -53,6 +53,7 @@ public class CobrancaController {
     private final com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento;
     private final PagamentoPollingService pagamentoPollingService;
     private final com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService;
+    private final com.domus.api.modules.pagamento.webhook.MercadoPagoWebhookService webhookService;
     private final com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado;
 
     public CobrancaController(CobrancaEventoService service,
@@ -64,6 +65,7 @@ public class CobrancaController {
                                com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento,
                                PagamentoPollingService pagamentoPollingService,
                                com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService,
+                               com.domus.api.modules.pagamento.webhook.MercadoPagoWebhookService webhookService,
                                com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado) {
         this.service = service;
         this.cobrancaRepository = cobrancaRepository;
@@ -74,6 +76,7 @@ public class CobrancaController {
         this.calculadoraTaxaPagamento = calculadoraTaxaPagamento;
         this.pagamentoPollingService = pagamentoPollingService;
         this.inscricaoService = inscricaoService;
+        this.webhookService = webhookService;
         this.usuarioAutenticado = usuarioAutenticado;
     }
 
@@ -326,6 +329,15 @@ public class CobrancaController {
             .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
         if (cobranca.getStatus() != StatusCobranca.PENDENTE || cobranca.getMpPaymentId() == null) {
             // Nada pra reiniciar — cobrança já resolvida, ou nunca teve tentativa em andamento.
+            return;
+        }
+        // [C3] reconfere no MP antes de descartar o mpPaymentId: se o pagamento aprovou na
+        // janela entre o poll e o clique, confirmar em vez de perder o rastro (senão vira
+        // pagamento órfão / risco de a pessoa pagar de novo). Se o cancelamento no MP
+        // falhar, `cancelarPagamento` lança e a cobrança NÃO é liberada (o front mostra o erro).
+        var info = mercadoPagoClient.buscarInformacoesPagamento(cobranca.getIgrejaId(), cobranca.getMpPaymentId());
+        if ("approved".equals(info.status())) {
+            webhookService.confirmarPagamento(id.toString(), cobranca.getMpPaymentId(), info);
             return;
         }
         mercadoPagoClient.cancelarPagamento(cobranca.getIgrejaId(), cobranca.getMpPaymentId());

@@ -101,6 +101,17 @@ public class Evento {
     @Column(name = "preco", precision = 10, scale = 2)
     private java.math.BigDecimal preco;
 
+    /** Só relevante em evento pago. Pix é sempre aceito; cartão é opt-in. */
+    @Column(name = "pagamento_aceita_cartao", nullable = false)
+    @Builder.Default
+    private boolean pagamentoAceitaCartao = false;
+
+    /** Só relevante quando pagamentoAceitaCartao. 1 = só à vista. Cap em 12 (CHECK no banco). */
+    @Column(name = "pagamento_max_parcelas", nullable = false)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    @Builder.Default
+    private int pagamentoMaxParcelas = 1;
+
     @Column(name = "exclusivo_membros", nullable = false)
     @Builder.Default
     private boolean exclusivoMembros = false;

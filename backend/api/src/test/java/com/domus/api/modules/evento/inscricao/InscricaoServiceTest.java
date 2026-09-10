@@ -2319,6 +2319,67 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void aplicarMudancaValorPago_aumento_cobraDiferencaSobreOAlvoNaoSobreOBruto() {
+        // Ripple da Task 8: valorJaPago tem que responder "quanto do ALVO líquido a pessoa
+        // cobriu?" (100), não o bruto pago (110.49). Preço sobe 100->130: o complemento
+        // é 30.00 (130 - 100), não 19.51 (130 - 110.49) — senão a taxa do gateway entrava
+        // como receita e a igreja arrecadava 119.51 contra um alvo de 130.
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComValorCobrado("mp-payment-1", "100.00", "110.49")));
+        var complemento = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-complemento");
+        when(cobrancaEventoService.criarParaTerceiro(
+                eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true)))
+                .thenReturn(complemento);
+        when(usuarioRepository.findByPessoaId(pessoaId))
+                .thenReturn(Optional.of(com.domus.api.modules.usuario.Usuario.builder().id(UUID.randomUUID()).build()));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("100.00"), new java.math.BigDecimal("130.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        verify(cobrancaEventoService).criarParaTerceiro(
+                eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true));
+        verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
+    }
+
+    @Test
+    void calcularImpactoMudancaValorPago_aumentoPequeno_reportaCobrarSobreOAlvo() {
+        // Prévia 100->110 sobre cobrança paga com bruto 110.49: direção "cobrar",
+        // novoValorDevido = 110 - 100 = 10.00, nada a estornar (não pode dizer "estornar"
+        // num aumento de preço).
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComValorCobrado("mp-payment-1", "100.00", "110.49")));
+
+        var impacto = service.calcularImpactoMudancaValorPago(
+                eventoId, new java.math.BigDecimal("100.00"), new java.math.BigDecimal("110.00"));
+
+        assertThat(impacto.tipo()).isEqualTo(
+                com.domus.api.modules.evento.DTOs.ImpactoMudancaPrecoResponse.VALOR_AUMENTOU);
+        assertThat(impacto.pessoasSeraoCobradas()).isEqualTo(1);
+        assertThat(impacto.valorTotalACobrar()).isEqualByComparingTo("10.00");
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("0");
+    }
+
+    @Test
     void aplicarMudancaValorPagoSoAtualizaValorDaCobrancaPendenteDeQuemAindaNaoPagou() {
         InscricaoEvento aguardando = InscricaoEvento.builder()
                 .id(inscricaoId).igreja(igreja()).evento(evento(10))

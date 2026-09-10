@@ -41,7 +41,7 @@ class MercadoPagoWebhookControllerTest {
         var resposta = controller.webhook("ts=1,v1=hash", "req-1", "999", "payment", "mp-user-1");
 
         assertOk(resposta);
-        verify(service).confirmarPagamento("cobranca-abc", "999", "approved");
+        verify(service).confirmarPagamento(eq("cobranca-abc"), eq("999"), org.mockito.ArgumentMatchers.argThat(i -> "approved".equals(i.status())));
     }
 
     @Test

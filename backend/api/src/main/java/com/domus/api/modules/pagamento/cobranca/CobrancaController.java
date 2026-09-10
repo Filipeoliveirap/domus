@@ -7,6 +7,7 @@ import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaCheckoutDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaPublicaDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.PagarCobrancaRequest;
 import com.domus.api.modules.pagamento.cobranca.DTOs.PagarCobrancaResponse;
+import com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -227,6 +228,21 @@ public class CobrancaController {
     }
 
     public record StatusCobrancaResponse(String status) {}
+
+    /**
+     * Opções de pagamento (Pix + faixas de cartão) pra a tela de escolha de método do
+     * checkout. Sem autenticação, mesmo motivo do resto da classe (posse do UUID da
+     * cobrança). O valor de cada opção é recalculado no back — o front só renderiza.
+     */
+    @GetMapping("/{id}/opcoes-pagamento")
+    public OpcoesPagamentoResponse opcoesPagamento(@PathVariable UUID id) {
+        var cobranca = cobrancaRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        var evento = eventoRepository.findById(cobranca.getEventoId())
+            .orElseThrow(() -> new ResourceNotFoundException("Evento da cobrança não encontrado."));
+        return service.montarOpcoes(cobranca.getValor(), evento.isPagamentoAceitaCartao(),
+            evento.getPagamentoMaxParcelas(), cobranca.getIgrejaId());
+    }
 
     /**
      * Recupera o QR/copia-e-cola de um pagamento Pix em andamento — pro caso de a pessoa

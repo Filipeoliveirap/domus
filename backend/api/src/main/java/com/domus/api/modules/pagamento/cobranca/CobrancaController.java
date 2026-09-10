@@ -182,6 +182,13 @@ public class CobrancaController {
         // primeiro aqui reserva; a segunda é recusada antes de chamar o Mercado Pago.
         var evento = eventoRepository.buscarComLock(cobranca.getEventoId(), cobranca.getIgrejaId())
             .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        // [I1] o link de pagamento (até 48h) não pode cobrar um evento que já ACONTECEU.
+        // O prazo de inscrição (inscricoes_ate), esse sim, NÃO barra aqui — uma inscrição
+        // pendente já existente pode ser concluída mesmo depois do prazo ([C4]).
+        if (evento.getSituacao() == com.domus.api.modules.evento.SituacaoEvento.ENCERRADO) {
+            throw new BusinessException("EVENTO_ENCERRADO",
+                "Este evento já terminou. Fale com a igreja para resolver o pagamento.");
+        }
         if (evento.getVagas() != null) {
             long ocupadas = cobrancaRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
             if (ocupadas >= evento.getVagas()) {

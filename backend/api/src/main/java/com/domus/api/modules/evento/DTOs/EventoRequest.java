@@ -47,6 +47,15 @@ public record EventoRequest(
         Integer vagas,
         @Positive(message = "O valor deve ser maior que zero.")
         java.math.BigDecimal preco,
+
+        /** Só usado em evento pago. null tratado como false. */
+        Boolean pagamentoAceitaCartao,
+
+        /** Só usado quando pagamentoAceitaCartao. null tratado como 1. */
+        @jakarta.validation.constraints.Min(value = 1, message = "O parcelamento deve ser de pelo menos 1x.")
+        @jakarta.validation.constraints.Max(value = 12, message = "O parcelamento máximo é 12x.")
+        Integer pagamentoMaxParcelas,
+
         Boolean exclusivoMembros,
         Boolean requerInscricao,
         /** Só pode ser {@code true} quando {@code requerInscricao} também é. */

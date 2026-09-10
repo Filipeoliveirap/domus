@@ -753,9 +753,12 @@ Em `MercadoPagoApi.java`, tornar `RespostaPagamentoMercadoPago` package-private 
                                        BigDecimal valorLiquido) {
 
         static InformacoesPagamento de(RespostaPagamentoMercadoPago r) {
-            BigDecimal bruto = r.transactionAmount();
+            // Contrato: sem transaction_details (pagamento pending) os TRÊS campos financeiros
+            // ficam null — não só a taxa/líquido. Um payload pending traz transaction_amount,
+            // mas sem líquido não dá pra fechar a conta, então valorBruto também fica null.
             BigDecimal liquido = r.transactionDetails() != null
                 ? r.transactionDetails().netReceivedAmount() : null;
+            BigDecimal bruto = liquido != null ? r.transactionAmount() : null;
             BigDecimal taxa = (bruto != null && liquido != null) ? bruto.subtract(liquido) : null;
             return new InformacoesPagamento(r.externalReference(), r.status(), bruto, taxa, liquido);
         }
@@ -1054,7 +1057,7 @@ Em `CobrancaControllerTest.java`:
 
         ArgumentCaptor<BigDecimal> valor = ArgumentCaptor.forClass(BigDecimal.class);
         verify(mercadoPagoClient).criarPagamentoComToken(any(), any(), valor.capture(),
-            any(), any(), any(), any(), any());
+            any(), any(), eq(1), any(), any());   // installments enviado ao MP == parcelas validado, não request.installments()
         assertThat(valor.getValue()).isEqualByComparingTo("104.71");
 
         var cobranca = cobrancaRepository.findById(cobrancaId).orElseThrow();
@@ -1131,13 +1134,17 @@ Depois das checagens de estado (`COBRANCA_NAO_PENDENTE` etc.) e do lock do event
             cobranca.getIgrejaId(), cobranca.getValor(), request.meio(), request.parcelas());
         cobranca.registrarValorCobrado(valorACobrar);
 
+        // O número de parcelas mandado pro Mercado Pago é o `parcelas` VALIDADO (contra o
+        // teto do evento), NUNCA o `request.installments()` cru do Brick. Senão dava pra
+        // pedir gross-up de 1x (barato, passa no teto) e `installments: 12` no mesmo request
+        // — a igreja absorveria o custo do 12x que a feature existe pra repassar.
         var resultado = mercadoPagoClient.criarPagamentoComToken(
             cobranca.getIgrejaId(), cobranca, valorACobrar,
-            request.token(), request.paymentMethodId(), request.installments(),
+            request.token(), request.paymentMethodId(), request.parcelas(),
             request.payerEmail(), request.issuerId());
 ```
 
-(`PIX_NAO_PARCELA` e `PARCELAS_INVALIDAS` já são lançados de dentro de `CalculadoraTaxaPagamento.valorACobrar` — não duplicar aqui.)
+(`PIX_NAO_PARCELA` e `PARCELAS_INVALIDAS` já são lançados de dentro de `CalculadoraTaxaPagamento.valorACobrar` — não duplicar aqui. `request.installments()` passa a ser ignorado no servidor — fica no DTO só porque o Brick o envia.)
 
 Injetar `CalculadoraTaxaPagamento` no construtor do controller.
 

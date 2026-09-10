@@ -175,24 +175,57 @@
 .aprovadoResumo {
   width: 100%;
   margin-top: 20px;
-  padding: 16px;
+  padding: 4px 16px;
   background: var(--color-bg-page);
   border-radius: var(--radius-md);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
   animation: entrarDeBaixo 0.4s ease-out 0.4s both;
 }
 
-.aprovadoResumoLabel {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-muted);
+.detalheLinha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
   text-align: left;
 }
 
-.aprovadoResumoValor {
-  font-size: var(--font-size-lg, 18px);
+.detalheLinha + .detalheLinha {
+  border-top: 1px solid var(--color-border);
+}
+
+.detalheLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.detalheValor {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+  text-align: right;
+  word-break: break-word;
+}
+
+.detalheMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: right;
+  word-break: break-all;
+}
+
+.detalheTotal .detalheLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.detalheTotal .detalheValor {
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-success-text);
 }
@@ -200,6 +233,25 @@
 @keyframes entrarDeBaixo {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.trocarForma {
+  align-self: flex-start;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.trocarForma:hover { opacity: 0.7; }
+.trocarForma:active { transform: scale(0.98); }
+.trocarForma:disabled { opacity: 0.5; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trocarForma:active { transform: none; }
 }
 
 @media (max-width: 480px) {

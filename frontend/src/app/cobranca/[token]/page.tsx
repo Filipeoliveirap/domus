@@ -6,6 +6,8 @@ import { CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCobrancaPublica } from '@/hooks/cobranca/useCobrancaPublica'
 import { cobrancaService } from '@/services/cobranca.service'
 import { PaymentBrickCheckout } from '@/components/module/pagamento/PaymentBrickCheckout'
+import { EscolhaMeioPagamento } from '@/components/module/pagamento/EscolhaMeioPagamento'
+import type { OpcaoPagamento } from '@/types/api.types'
 import { TelaPix } from '@/components/module/pagamento/TelaPix'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import styles from './CobrancaPublica.module.css'
@@ -14,6 +16,20 @@ import styles from './CobrancaPublica.module.css'
 // chega assíncrona, pelo webhook do Mercado Pago — sem poll, a tela ficava presa em
 // "processando" pra sempre, mesmo depois do pagamento já ter sido confirmado de verdade.
 type Resultado = 'enviado' | 'aprovado'
+
+/** Resumo de uma linha da opção escolhida, mostrado acima do Payment Brick. */
+function resumoOpcao(o: OpcaoPagamento): string {
+  if (o.meio === 'PIX') return 'Pagamento via Pix — total:'
+  if (o.parcelas === 1) return 'Cartão de crédito à vista — total:'
+  return `Cartão de crédito em ${o.parcelas}x de ${formatarMoeda(o.valorParcela)} — total:`
+}
+
+/** Rótulo curto da forma de pagamento, pra linha "Forma de pagamento" do comprovante. */
+function formaPagamento(o: OpcaoPagamento): string {
+  if (o.meio === 'PIX') return 'Pix'
+  if (o.parcelas === 1) return 'Cartão · à vista'
+  return `Cartão · ${o.parcelas}x`
+}
 
 /**
  * Página pública de cobrança individual (Task 13-14) — aberta sem sessão, a partir do
@@ -40,6 +56,18 @@ function ConteudoCobranca({ token }: { token: string }) {
   // esgotadas, já foi paga/cancelada) — vindo tanto do backend na hora de pagar quanto do
   // poll abaixo.
   const [indisponivel, setIndisponivel] = useState<string | null>(null)
+  // Opção escolhida em `<EscolhaMeioPagamento>` — `null` mostra o seletor; preenchida,
+  // mostra o Payment Brick travado nesse meio/parcelas. "Trocar" volta pra cá.
+  const [opcao, setOpcao] = useState<OpcaoPagamento | null>(null)
+  // `mpPaymentId` vem do Brick (`onPagamentoCriado`) e alimenta a linha "Nº do pagamento"
+  // do comprovante; `null` (ex.: cobrança já paga ao abrir o link) omite a linha.
+  const [mpPaymentId, setMpPaymentId] = useState<string | null>(null)
+  // Data/hora "congelada" na 1ª vez que a confirmação aparece (escrita no render, idempotente).
+  const dataConfirmacaoRef = useRef<string | null>(null)
+  // Ver nota na tela irmã (`/eventos/[id]/pagamento/[cobrancaId]`): voltar pro seletor com
+  // uma tentativa já criada no Mercado Pago precisa liberar a cobrança antes.
+  const [tentativaEmVoo, setTentativaEmVoo] = useState(false)
+  const [voltandoParaSeletor, setVoltandoParaSeletor] = useState(false)
   const resolvidoRef = useRef(false)
 
   // Reload no meio de um pagamento em voo não pode voltar pro formulário — reenviar
@@ -47,6 +75,12 @@ function ConteudoCobranca({ token }: { token: string }) {
   // em vez de sincronizado via effect (setState síncrono no corpo do effect é o padrão que
   // causava o vazamento de estado do parágrafo acima).
   const resultadoEfetivo: Resultado | null = resultado ?? (cobranca?.pagamentoEmAndamento ? 'enviado' : null)
+
+  if ((resultadoEfetivo || cobranca?.status === 'PAGO') && !dataConfirmacaoRef.current) {
+    dataConfirmacaoRef.current = new Date().toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+    })
+  }
 
   // Mesmo achado da tela irmã (`/eventos/[id]/pagamento/[cobrancaId]`, 2026-08-27): reload
   // no meio do Pix caía direto em "confirmando" sem jeito de voltar a ver o QR.
@@ -99,6 +133,20 @@ function ConteudoCobranca({ token }: { token: string }) {
     }
   }
 
+  async function trocarFormaPagamento() {
+    if (tentativaEmVoo && cobranca) {
+      setVoltandoParaSeletor(true)
+      try {
+        await cobrancaService.reiniciar(cobranca.id)
+        await queryClient.invalidateQueries({ queryKey: ['cobranca-publica', token] })
+      } finally {
+        setVoltandoParaSeletor(false)
+      }
+    }
+    setTentativaEmVoo(false)
+    setOpcao(null)
+  }
+
   if (isLoading) {
     return <div className={styles.pagina}><p className={styles.estado}>Carregando…</p></div>
   }
@@ -127,8 +175,33 @@ function ConteudoCobranca({ token }: { token: string }) {
             Obrigado! Sua inscrição em &quot;{cobranca.tituloEvento}&quot; está paga.
           </p>
           <div className={styles.aprovadoResumo}>
-            <span className={styles.aprovadoResumoLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
-            <span className={styles.aprovadoResumoValor}>{formatarMoeda(cobranca.valor)}</span>
+            {opcao ? (
+              <>
+                {mpPaymentId && (
+                  <div className={styles.detalheLinha}>
+                    <span className={styles.detalheLabel}>Nº do pagamento</span>
+                    <span className={styles.detalheMono}>{mpPaymentId}</span>
+                  </div>
+                )}
+                <div className={styles.detalheLinha}>
+                  <span className={styles.detalheLabel}>Forma de pagamento</span>
+                  <span className={styles.detalheValor}>{formaPagamento(opcao)}</span>
+                </div>
+                <div className={styles.detalheLinha}>
+                  <span className={styles.detalheLabel}>Data e hora</span>
+                  <span className={styles.detalheValor}>{dataConfirmacaoRef.current}</span>
+                </div>
+                <div className={`${styles.detalheLinha} ${styles.detalheTotal}`}>
+                  <span className={styles.detalheLabel}>Total</span>
+                  <span className={styles.detalheValor}>{formatarMoeda(opcao.valorTotal)}</span>
+                </div>
+              </>
+            ) : (
+              <div className={styles.detalheLinha}>
+                <span className={styles.detalheLabel}>Valor da inscrição de {cobranca.nomePagador}</span>
+                <span className={styles.detalheValor}>{formatarMoeda(cobranca.valor)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -191,21 +264,42 @@ function ConteudoCobranca({ token }: { token: string }) {
       </header>
 
       <div className={styles.conteudo}>
-        <div className={styles.card}>
-          <p className={styles.saudacao}>{cobranca.nomePagador}, sua parte:</p>
-          <p className={styles.valor}>{formatarMoeda(cobranca.valor)}</p>
-        </div>
+        {!opcao ? (
+          <EscolhaMeioPagamento cobrancaId={cobranca.id} onEscolher={setOpcao} />
+        ) : (
+          <>
+            <button
+              type="button"
+              className={styles.trocarForma}
+              onClick={trocarFormaPagamento}
+              disabled={voltandoParaSeletor}
+            >
+              {voltandoParaSeletor ? 'Liberando…' : '← Trocar forma de pagamento'}
+            </button>
 
-        <PaymentBrickCheckout
-          key={cobranca.id}
-          cobrancaId={cobranca.id}
-          valor={cobranca.valor}
-          expiraEm={cobranca.expiraEm}
-          onPagamentoCriado={() => setResultado('enviado')}
-          onCobrancaIndisponivel={setIndisponivel}
-        />
+            <div className={styles.card}>
+              <p className={styles.saudacao}>{resumoOpcao(opcao)}</p>
+              <p className={styles.valor}>{formatarMoeda(opcao.valorTotal)}</p>
+            </div>
 
-        <p className={styles.seguranca}>Pagamento processado com segurança pelo Mercado Pago.</p>
+            <PaymentBrickCheckout
+              key={`${cobranca.id}-${opcao.meio}-${opcao.parcelas}`}
+              cobrancaId={cobranca.id}
+              meio={opcao.meio}
+              parcelas={opcao.parcelas}
+              valorTotal={opcao.valorTotal}
+              expiraEm={cobranca.expiraEm}
+              onPagamentoCriado={(idPagamento) => {
+                setMpPaymentId(idPagamento)
+                setResultado('enviado')
+              }}
+              onCobrancaIndisponivel={setIndisponivel}
+              onTentativaEmVoo={setTentativaEmVoo}
+            />
+
+            <p className={styles.seguranca}>Pagamento processado com segurança pelo Mercado Pago.</p>
+          </>
+        )}
       </div>
     </div>
   )

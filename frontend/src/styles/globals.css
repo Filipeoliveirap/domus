@@ -261,3 +261,19 @@ ul, ol {
 @media (prefers-reduced-motion: reduce) {
   .tremido { animation: none; }
 }
+
+/* ─── Navegação imersiva: card → página de detalhe ───────────────────────────────
+   Ao clicar num card de PGM/ministério, o useNavegacaoImersiva cria uma cópia do card
+   (position: fixed) que cresce até a área de conteúdo e a navegação acontece por baixo.
+   A animação toda vive no hook (inline styles). Aqui só o realce: os OUTROS cards da
+   grade escurecem enquanto a cópia cresce. ─────────────────────────────────────────── */
+.imersivo-navegando .card-interativo {
+  opacity: 0.45;
+  transition: opacity 220ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .imersivo-navegando .card-interativo {
+    opacity: 1;
+    transition: none;
+  }
+}

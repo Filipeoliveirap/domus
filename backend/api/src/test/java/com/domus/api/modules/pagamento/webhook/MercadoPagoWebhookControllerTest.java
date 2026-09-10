@@ -36,7 +36,7 @@ class MercadoPagoWebhookControllerTest {
     void resolveExternalReferencePeloMpUserIdEConfirma() {
         when(validator.valida(any(), any(), any())).thenReturn(true);
         when(mercadoPagoClient.buscarInformacoesPagamentoPorMpUserId("mp-user-1", "999"))
-            .thenReturn(new MercadoPagoApi.InformacoesPagamento("cobranca-abc", "approved"));
+            .thenReturn(new MercadoPagoApi.InformacoesPagamento("cobranca-abc", "approved", null, null, null));
 
         var resposta = controller.webhook("ts=1,v1=hash", "req-1", "999", "payment", "mp-user-1");
 

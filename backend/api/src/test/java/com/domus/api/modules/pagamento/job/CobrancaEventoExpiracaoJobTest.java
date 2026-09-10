@@ -40,11 +40,31 @@ class CobrancaEventoExpiracaoJobTest {
         InscricaoEvento inscricao = InscricaoEvento.builder()
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findAllById(List.of(inscricaoId))).thenReturn(List.of(inscricao));
+        when(repository.existePagaParaInscricao(inscricaoId)).thenReturn(false);
 
         job.executar();
 
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
         verify(inscricaoRepository).saveAll(List.of(inscricao));
+    }
+
+    @Test
+    void complementoVencidoNaoCancelaInscricaoDeQuemJaPagouOOriginal() {
+        UUID inscricaoId = UUID.randomUUID();
+        var complementoVencido = new CobrancaEvento(UUID.randomUUID(), UUID.randomUUID(), inscricaoId,
+            UUID.randomUUID(), new BigDecimal("30.00"), Instant.now().minusSeconds(60), UUID.randomUUID(), null);
+        when(repository.findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any()))
+            .thenReturn(List.of(complementoVencido));
+        InscricaoEvento inscricao = InscricaoEvento.builder()
+                .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.findAllById(List.of(inscricaoId))).thenReturn(List.of(inscricao));
+        when(repository.existePagaParaInscricao(inscricaoId)).thenReturn(true); // já pagou o original
+
+        job.executar();
+
+        assertThat(complementoVencido.getStatus()).isEqualTo(StatusCobranca.EXPIRADO); // complemento expira
+        assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO); // NÃO é cancelada
+        verify(inscricaoRepository, never()).saveAll(any());
     }
 
     @Test

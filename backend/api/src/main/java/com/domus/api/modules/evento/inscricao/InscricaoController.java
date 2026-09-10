@@ -137,7 +137,8 @@ public class InscricaoController {
             @PathVariable UUID eventoId,
             @PathVariable UUID inscricaoId) {
         var usuario = usuarioAutenticado.get();
-        inscricaoService.enviarLembretePagamento(inscricaoId, usuario.getIgreja().getId(), usuario.getRole().getNome());
+        inscricaoService.enviarLembretePagamento(inscricaoId, usuario.getIgreja().getId(),
+                usuario.getRole().getNome(), usuario.getId());
         return ResponseEntity.noContent().build();
     }
 

@@ -298,7 +298,7 @@ class EventoServiceCamposInscricaoTest {
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
-        when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
+        when(inscricaoService.contarOcupadas(any(Evento.class))).thenReturn(10L);
 
         assertThatThrownBy(() -> service.atualizarEvento(
                 eventoId, request(9, null, null), igrejaId, usuarioId,
@@ -317,7 +317,7 @@ class EventoServiceCamposInscricaoTest {
                 .build();
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId))
                 .thenReturn(Optional.of(existente));
-        when(inscricaoService.contarPessoasConfirmadas(eventoId)).thenReturn(10L);
+        when(inscricaoService.contarOcupadas(any(Evento.class))).thenReturn(10L);
 
         service.atualizarEvento(eventoId, request(10, null, null), igrejaId, usuarioId,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
@@ -340,7 +340,7 @@ class EventoServiceCamposInscricaoTest {
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
 
         assertThat(existente.getVagas()).isNull();
-        verify(inscricaoService, never()).contarPessoasConfirmadas(any());
+        verify(inscricaoService, never()).contarOcupadas(any());
     }
 
     @Test

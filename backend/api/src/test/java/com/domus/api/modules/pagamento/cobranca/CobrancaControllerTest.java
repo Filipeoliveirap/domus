@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -599,6 +600,75 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
         assertThat(atualizada.getMpPaymentId()).isNull();
     }
 
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('32111111-1111-1111-1111-111111111112', 'Igreja Reiniciar C3', 'reiniciarc3@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('32333333-3333-3333-3333-333333333336', '32111111-1111-1111-1111-111111111112', 'Titular C3', 'titc3@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('42444444-4444-4444-4444-444444444447', '32111111-1111-1111-1111-111111111112', '32333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('32777777-7777-7777-7777-777777777778', '32111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco) VALUES ('32555555-5555-5555-5555-555555555556', '32111111-1111-1111-1111-111111111112', 'Retiro C3', now() + interval '10 days', '32777777-7777-7777-7777-777777777778', true, 50.00)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('32666666-6666-6666-6666-666666666667', '32111111-1111-1111-1111-111111111112', '32555555-5555-5555-5555-555555555556', '32333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void reiniciar_quandoPagamentoJaAprovadoNoMp_confirmaEmVezDeLiberar() throws Exception {
+        UUID igrejaId = UUID.fromString("32111111-1111-1111-1111-111111111112");
+        UUID eventoId = UUID.fromString("32555555-5555-5555-5555-555555555556");
+        UUID inscricaoId = UUID.fromString("32666666-6666-6666-6666-666666666667");
+        UUID pessoaId = UUID.fromString("32333333-3333-3333-3333-333333333336");
+        UUID usuarioId = UUID.fromString("42444444-4444-4444-4444-444444444447");
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(igrejaId, "mp-user-c3",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            BigDecimal.valueOf(50), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobranca.registrarTentativaPagamento("mp-c3-aprovado");
+        cobrancaEventoRepository.save(cobranca);
+        when(mercadoPagoApi.buscarInformacoesPagamento(any(), eq("mp-c3-aprovado")))
+            .thenReturn(new MercadoPagoApi.InformacoesPagamento(cobranca.getId().toString(), "approved",
+                new BigDecimal("50.00"), new BigDecimal("0.50"), new BigDecimal("49.50")));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/reiniciar")).andExpect(status().isOk());
+
+        var atualizada = cobrancaEventoRepository.findById(cobranca.getId()).orElseThrow();
+        assertThat(atualizada.getStatus()).isEqualTo(StatusCobranca.PAGO);
+        assertThat(atualizada.getMpPaymentId()).isEqualTo("mp-c3-aprovado"); // NÃO foi limpo
+        verify(mercadoPagoApi, never()).cancelarPagamento(any(), any());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('33111111-1111-1111-1111-111111111112', 'Igreja Reiniciar C3b', 'reiniciarc3b@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('33333333-3333-3333-3333-33333333333b', '33111111-1111-1111-1111-111111111112', 'Titular C3b', 'titc3b@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('43444444-4444-4444-4444-444444444447', '33111111-1111-1111-1111-111111111112', '33333333-3333-3333-3333-33333333333b', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('33777777-7777-7777-7777-777777777778', '33111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco) VALUES ('33555555-5555-5555-5555-555555555556', '33111111-1111-1111-1111-111111111112', 'Retiro C3b', now() + interval '10 days', '33777777-7777-7777-7777-777777777778', true, 50.00)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('33666666-6666-6666-6666-666666666667', '33111111-1111-1111-1111-111111111112', '33555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-33333333333b', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void reiniciar_quandoPagamentoAindaPendente_liberaNormalmente() throws Exception {
+        UUID igrejaId = UUID.fromString("33111111-1111-1111-1111-111111111112");
+        UUID eventoId = UUID.fromString("33555555-5555-5555-5555-555555555556");
+        UUID inscricaoId = UUID.fromString("33666666-6666-6666-6666-666666666667");
+        UUID pessoaId = UUID.fromString("33333333-3333-3333-3333-33333333333b");
+        UUID usuarioId = UUID.fromString("43444444-4444-4444-4444-444444444447");
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(igrejaId, "mp-user-c3b",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            BigDecimal.valueOf(50), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null);
+        cobranca.registrarTentativaPagamento("mp-c3b-pendente");
+        cobrancaEventoRepository.save(cobranca);
+        when(mercadoPagoApi.buscarInformacoesPagamento(any(), eq("mp-c3b-pendente")))
+            .thenReturn(new MercadoPagoApi.InformacoesPagamento(cobranca.getId().toString(), "pending", null, null, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/reiniciar")).andExpect(status().isOk());
+
+        var atualizada = cobrancaEventoRepository.findById(cobranca.getId()).orElseThrow();
+        assertThat(atualizada.getStatus()).isEqualTo(StatusCobranca.PENDENTE);
+        assertThat(atualizada.getMpPaymentId()).isNull(); // liberado
+        verify(mercadoPagoApi).cancelarPagamento(any(), eq("mp-c3b-pendente"));
+    }
+
     // ---------------------------------------------------------------------------------
     // Task 6: POST /cobrancas/{id}/pagar recalcula o valor no back (gross-up por meio/parcela)
     // ---------------------------------------------------------------------------------
@@ -892,11 +962,71 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('35111111-1111-1111-1111-111111111112', 'Igreja MP Down', 'mpdown@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('35333333-3333-3333-3333-333333333336', '35111111-1111-1111-1111-111111111112', 'Titular MP', 'titmp@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('46444444-4444-4444-4444-444444444447', '35111111-1111-1111-1111-111111111112', '35333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('35777777-7777-7777-7777-777777777778', '35111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao) VALUES ('35555555-5555-5555-5555-555555555556', '35111111-1111-1111-1111-111111111112', 'Retiro MP', now() + interval '10 days', '35777777-7777-7777-7777-777777777778', true, 100.00, true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('35666666-6666-6666-6666-666666666667', '35111111-1111-1111-1111-111111111112', '35555555-5555-5555-5555-555555555556', '35333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_quandoMercadoPagoIndisponivel_devolve4xxNao500() throws Exception {
+        UUID igrejaId = UUID.fromString("35111111-1111-1111-1111-111111111112");
+        UUID usuarioId = UUID.fromString("46444444-4444-4444-4444-444444444447");
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(igrejaId, "mp-user-down",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+        var cobranca = new CobrancaEvento(igrejaId,
+            UUID.fromString("35555555-5555-5555-5555-555555555556"),
+            UUID.fromString("35666666-6666-6666-6666-666666666667"),
+            UUID.fromString("35333333-3333-3333-3333-333333333336"),
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, "tok-mp");
+        cobrancaEventoRepository.save(cobranca);
+        when(mercadoPagoApi.criarPagamentoTokenizado(any(), any(), any(), any(), any(), any(), any(), any()))
+            .thenThrow(new com.domus.api.shared.exception.BusinessException("MP_INDISPONIVEL", "MP fora do ar"));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":1," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("MP_INDISPONIVEL")));
+    }
+
+    @Test
     void pagar_semMeio_recusaComoValidacao() throws Exception {
         mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"paymentMethodId\":\"pix\",\"payerEmail\":\"p@x.com\",\"parcelas\":1}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.campos.meio").exists());
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('34111111-1111-1111-1111-111111111112', 'Igreja Encerrado', 'encerrado@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('34333333-3333-3333-3333-333333333336', '34111111-1111-1111-1111-111111111112', 'Titular Enc', 'titenc@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('45444444-4444-4444-4444-444444444447', '34111111-1111-1111-1111-111111111112', '34333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('34777777-7777-7777-7777-777777777778', '34111111-1111-1111-1111-111111111112', 'Salão')",
+        // evento que já ACONTECEU (inicio_em 3 dias atrás)
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco) VALUES ('34555555-5555-5555-5555-555555555556', '34111111-1111-1111-1111-111111111112', 'Retiro Passado', now() - interval '3 days', '34777777-7777-7777-7777-777777777778', true, 50.00)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('34666666-6666-6666-6666-666666666667', '34111111-1111-1111-1111-111111111112', '34555555-5555-5555-5555-555555555556', '34333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_eventoJaEncerrado_recusa() throws Exception {
+        UUID igrejaId = UUID.fromString("34111111-1111-1111-1111-111111111112");
+        var cobranca = new CobrancaEvento(igrejaId,
+            UUID.fromString("34555555-5555-5555-5555-555555555556"),
+            UUID.fromString("34666666-6666-6666-6666-666666666667"),
+            UUID.fromString("34333333-3333-3333-3333-333333333336"),
+            new BigDecimal("50.00"), Instant.now().plus(1, ChronoUnit.DAYS),
+            UUID.fromString("45444444-4444-4444-4444-444444444447"), "tok-enc");
+        cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentMethodId\":\"pix\",\"payerEmail\":\"p@x.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("EVENTO_ENCERRADO")));
     }
 }

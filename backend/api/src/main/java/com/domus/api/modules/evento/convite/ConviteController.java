@@ -63,7 +63,7 @@ public class ConviteController {
         }
 
         Integer vagasRestantes = evento.getVagas() == null ? null
-                : Math.max(0, evento.getVagas() - (int) inscricaoService.contarPessoasConfirmadas(evento.getId()));
+                : Math.max(0, evento.getVagas() - (int) inscricaoService.contarOcupadas(evento));
 
         var campos = campoPersonalizadoService.listarParaResponder(evento.getId(), evento.getIgreja().getId(), null);
 

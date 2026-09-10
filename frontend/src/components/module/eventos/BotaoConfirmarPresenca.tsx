@@ -231,7 +231,9 @@ export function BotaoConfirmarPresenca({
     </Transicao>
   )
 
-  if (encerradoPorPrazo && !podeFurarPrazo && !minha?.inscrito) {
+  // [C4] quem já tem uma cobrança pendente (inscrição no meio do pagamento) não é barrado
+  // pelo prazo — a vaga já estava reservada; cai no cenaAcao 'pendente' abaixo pra concluir.
+  if (encerradoPorPrazo && !podeFurarPrazo && !minha?.inscrito && !minha?.cobrancaPendenteId) {
     return (
       <button type="button" className={styles.botao} disabled>
         Inscrições encerradas em {dataPrazo}

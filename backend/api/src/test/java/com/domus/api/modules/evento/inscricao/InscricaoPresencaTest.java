@@ -138,6 +138,28 @@ class InscricaoPresencaTest {
     }
 
     @Test
+    void marcarTodosPresentes_ignoraCanceladasEPendentesDePagamento() {
+        Evento evento = evento(true);
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));
+        InscricaoEvento confirmada = inscricao(evento);
+        InscricaoEvento cancelada = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento).nomeConvidado("Cancelou")
+                .status(StatusInscricao.CANCELADA).build();
+        InscricaoEvento pendente = InscricaoEvento.builder()
+                .id(UUID.randomUUID()).igreja(igreja()).evento(evento).nomeConvidado("Falta pagar")
+                .status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
+        when(inscricaoRepository.listarPorEvento(eventoId)).thenReturn(List.of(confirmada, cancelada, pendente));
+
+        int marcados = service.marcarTodosPresentes(eventoId, igrejaId, "ADMIN_IGREJA");
+
+        assertThat(marcados).isEqualTo(1);
+        assertThat(cancelada.isCompareceu()).isFalse();
+        assertThat(pendente.isCompareceu()).isFalse();
+        verify(inscricaoRepository, never()).save(cancelada);
+        verify(inscricaoRepository, never()).save(pendente);
+    }
+
+    @Test
     void desmarcarTodosPresentes_recusa409_quandoEventoNaoControlaPresenca() {
         Evento evento = evento(false);
         when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(evento));

@@ -1573,7 +1573,7 @@ public class InscricaoService {
     private java.math.BigDecimal valorJaPago(List<CobrancaEvento> cobrancasDaInscricao) {
         return cobrancasDaInscricao.stream()
                 .filter(c -> c.getStatus() == StatusCobranca.PAGO)
-                .map(CobrancaEvento::valorRestanteParaEstornar)
+                .map(CobrancaEvento::valorAlvoRestante)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
     }
 

@@ -38,12 +38,11 @@ public record InscritoResponse(
          *  InscricaoRepository.listarIdsPaginadoPorEvento), então o front precisa saber
          *  qual é qual pra mostrar a tag "Pagamento pendente". */
         StatusInscricao status,
-        /** {@code true} quando AGUARDANDO_PAGAMENTO mas já existe pelo menos uma cobrança
-         *  PAGO dessa inscrição — ou seja, a pessoa JÁ pagou o valor original e só falta a
-         *  diferença de um reajuste de preço (ver InscricaoService.aplicarMudancaValorPago),
-         *  bem diferente de quem nunca pagou nada. Sempre {@code false} fora de
-         *  AGUARDANDO_PAGAMENTO. Front usa isso pra escolher entre a tag "Pagamento
-         *  pendente" e "Falta complementar" (2026-08-27). */
+        /** {@code true} quando a pessoa JÁ pagou o valor original E ainda deve um complemento
+         *  de reajuste de preço (cobrança PAGO + cobrança PENDENTE ou EXPIRADO). Bem diferente
+         *  de quem nunca pagou nada. Independe do status da inscrição — desde 2026-09-10 [C1]
+         *  ela continua CONFIRMADA nesse caso, e a tag "Falta complementar" segue aparecendo
+         *  mesmo com o complemento já EXPIRADO, até o gestor resolver. */
         boolean pagamentoParcial,
         /** ID da {@code CobrancaEvento} com estorno pendente desta inscrição, ou {@code null}
          *  quando não há nenhuma (2026-08-27). Pode existir em CONFIRMADA (reajuste de preço
@@ -95,7 +94,7 @@ public record InscritoResponse(
                 i.isCompareceu(),
                 EventoResponse.IgrejaResumo.de(pessoaResolvida != null ? pessoaResolvida.getIgreja() : i.getIgreja()),
                 i.getStatus(),
-                i.getStatus() == StatusInscricao.AGUARDANDO_PAGAMENTO && pagamentoParcial,
+                pagamentoParcial,
                 cobrancaEstornoPendenteId
         );
     }

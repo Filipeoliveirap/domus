@@ -19,6 +19,9 @@ import { UploadFoto } from '@/components/common/UploadFoto/UploadFoto'
 import { InputComSugestoes } from '@/components/common/InputComSugestoes/InputComSugestoes'
 import { BlocoRecolhivel } from '@/components/common/BlocoRecolhivel/BlocoRecolhivel'
 import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
+import { useDebounce } from '@/hooks/useDebounce'
+import { eventosService } from '@/services/evento.service'
+import type { OpcoesPagamentoResponse } from '@/types/api.types'
 import { PreviaEvento } from './PreviaEvento'
 import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
@@ -104,6 +107,57 @@ export function EventoForm(props: EventoFormProps) {
   const pagamentoMaxParcelas = Number(watch('pagamentoMaxParcelas')) || 1
   const precisaConectarContaPagamento = requerInscricao && tipoInscricao === 'PAGO'
     && !!contaPagamento && !contaPagamento.conectada
+
+  // ── Simulação de pagamento (única no form) ──────────────────────────────────
+  // O form é o dono da chamada: pede SEMPRE o máximo (cartão + 12x) pra descobrir o
+  // que o Mercado Pago aceita pra este `preco`. O backend já filtra as faixas de
+  // cartão/parcela abaixo do mínimo do MP. `ResumoTaxaPagamento` não busca mais nada —
+  // só renderiza o subconjunto que corresponde à seleção atual.
+  const simulacaoPagamentoAtiva = !!requerInscricao && tipoInscricao === 'PAGO'
+  const precoSimulacao = useDebounce(precoNumerico, 400)
+  const [opcoesSimuladas, setOpcoesSimuladas] = useState<OpcoesPagamentoResponse | null>(null)
+  const [simulacaoPagamentoErro, setSimulacaoPagamentoErro] = useState(false)
+
+  useEffect(() => {
+    if (!simulacaoPagamentoAtiva || !precoSimulacao || precoSimulacao <= 0) {
+      setOpcoesSimuladas(null)
+      setSimulacaoPagamentoErro(false)
+      return
+    }
+    let vivo = true
+    eventosService
+      .simularPagamento({ preco: precoSimulacao, aceitaCartao: true, maxParcelas: 12 })
+      .then((r) => { if (vivo) { setOpcoesSimuladas(r); setSimulacaoPagamentoErro(false) } })
+      .catch(() => { if (vivo) setSimulacaoPagamentoErro(true) })
+    return () => { vivo = false }
+  }, [simulacaoPagamentoAtiva, precoSimulacao])
+
+  const opcoesCartaoViaveis = (opcoesSimuladas?.opcoes ?? []).filter((o) => o.meio === 'CARTAO')
+  const cartaoViavel = opcoesCartaoViaveis.length > 0
+  const maxParcelaViavel = Math.max(0, ...opcoesCartaoViaveis.map((o) => o.parcelas))
+  // O gating da UI (chip/toggle desabilitado) só liga quando a simulação REALMENTE
+  // respondeu — enquanto carrega ou deu erro, tudo fica habilitado (senão os 12 chips
+  // "piscam" desabilitados por ~400ms ao abrir um evento pago pra editar). A rede de
+  // segurança de verdade é o guard do backend em POST /cobrancas/{id}/pagar.
+  const gatingPagamentoAtivo = simulacaoPagamentoAtiva && opcoesSimuladas != null
+  const cartaoIndisponivel = gatingPagamentoAtivo && !cartaoViavel
+
+  // Cartão ficou inviável pro valor atual: desliga o toggle e volta parcelas pra 1.
+  useEffect(() => {
+    if (cartaoIndisponivel && pagamentoAceitaCartao) {
+      setValue('pagamentoAceitaCartao', false, { shouldDirty: true })
+      setValue('pagamentoMaxParcelas', 1, { shouldDirty: true })
+    }
+  }, [cartaoIndisponivel, pagamentoAceitaCartao, setValue])
+
+  // Teto de parcelas escolhido acima do que o MP aceita pro valor: baixa pro máximo
+  // viável. Correção de sistema (não edição do usuário) → shouldDirty: false, pra não
+  // disparar aviso de "alterações não salvas" num form recém-aberto.
+  useEffect(() => {
+    if (gatingPagamentoAtivo && cartaoViavel && pagamentoMaxParcelas > maxParcelaViavel) {
+      setValue('pagamentoMaxParcelas', maxParcelaViavel, { shouldDirty: false })
+    }
+  }, [gatingPagamentoAtivo, cartaoViavel, maxParcelaViavel, pagamentoMaxParcelas, setValue])
   const fotoIdAtual = watch('fotoId') as string | null | undefined
   const localIdAtual = watch('localId') as string | undefined
   const localTextoAtual = watch('localTexto') as string | undefined
@@ -754,12 +808,18 @@ export function EventoForm(props: EventoFormProps) {
                     aberto={!!requerInscricao && tipoInscricao === 'PAGO'}
                     className={styles.blocoPagamento}
                   >
-                    <label className={styles.toggleRow}>
+                    <label
+                      className={`${styles.toggleRow} ${cartaoIndisponivel ? styles.toggleRowDesabilitado : ''}`}
+                      title={cartaoIndisponivel
+                        ? 'O valor da inscrição está abaixo do mínimo aceito para pagamento com cartão. Somente Pix.'
+                        : undefined}
+                    >
                       <span className={styles.toggleTexto}>
                         <span className={styles.toggleTitulo}>Aceitar cartão de crédito</span>
                         <span className={styles.toggleDescricao}>
-                          Além do Pix. A taxa do cartão é repassada a quem paga — a igreja
-                          recebe o valor cheio.
+                          {cartaoIndisponivel
+                            ? 'O valor da inscrição está abaixo do mínimo aceito para pagamento com cartão. Somente Pix.'
+                            : 'Além do Pix. A taxa do cartão é repassada a quem paga — a igreja recebe o valor cheio.'}
                         </span>
                       </span>
                       <span className={styles.switch}>
@@ -767,6 +827,7 @@ export function EventoForm(props: EventoFormProps) {
                           type="checkbox"
                           className={styles.switchInput}
                           checked={pagamentoAceitaCartao}
+                          disabled={cartaoIndisponivel}
                           onChange={(e) =>
                             setValue('pagamentoAceitaCartao', e.target.checked, { shouldDirty: true })
                           }
@@ -776,19 +837,34 @@ export function EventoForm(props: EventoFormProps) {
                     </label>
 
                     <Colapsavel aberto={pagamentoAceitaCartao} className={styles.campos}>
-                      <div className={styles.grupoData}>
-                        <Select
-                          id="pagamento-max-parcelas"
-                          label="PARCELAR EM ATÉ"
-                          value={String(pagamentoMaxParcelas)}
-                          onChange={(e) =>
-                            setValue('pagamentoMaxParcelas', Number(e.target.value), { shouldDirty: true })
-                          }
-                          options={Array.from({ length: 12 }, (_, i) => ({
-                            value: String(i + 1),
-                            label: i === 0 ? '1x (à vista)' : `${i + 1}x`,
-                          }))}
-                        />
+                      <div>
+                        <span className={styles.labelData} id="label-max-parcelas">PARCELAR EM ATÉ</span>
+                        <div
+                          role="group"
+                          aria-labelledby="label-max-parcelas"
+                          className={styles.chipsParcelas}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
+                            const inviavel = gatingPagamentoAtivo && n > maxParcelaViavel
+                            return (
+                              <button
+                                key={n}
+                                type="button"
+                                aria-pressed={pagamentoMaxParcelas === n}
+                                disabled={inviavel}
+                                title={inviavel
+                                  ? `Para parcelar em ${n}x, o valor da inscrição precisa ser maior.`
+                                  : undefined}
+                                className={`${styles.chipParcela} ${pagamentoMaxParcelas === n ? styles.chipParcelaAtiva : ''} ${inviavel ? styles.chipParcelaDesabilitada : ''}`}
+                                onClick={() =>
+                                  setValue('pagamentoMaxParcelas', n, { shouldDirty: true })
+                                }
+                              >
+                                {n}x
+                              </button>
+                            )
+                          })}
+                        </div>
                         <span className={styles.campoHint}>
                           Quem paga escolhe quantas parcelas, até esse limite.
                         </span>
@@ -796,10 +872,12 @@ export function EventoForm(props: EventoFormProps) {
                     </Colapsavel>
 
                     <ResumoTaxaPagamento
-                      ativo={!!requerInscricao && tipoInscricao === 'PAGO'}
+                      ativo={simulacaoPagamentoAtiva}
                       preco={precoNumerico}
                       aceitaCartao={pagamentoAceitaCartao}
                       maxParcelas={pagamentoMaxParcelas}
+                      dados={opcoesSimuladas}
+                      erro={simulacaoPagamentoErro}
                     />
                   </Colapsavel>
                 </Revelar>

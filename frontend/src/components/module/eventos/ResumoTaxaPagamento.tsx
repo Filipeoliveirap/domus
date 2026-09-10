@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { eventosService } from '@/services/evento.service'
 import type { OpcoesPagamentoResponse } from '@/types/api.types'
 import { formatarMoeda } from '@/lib/formats/financeiro/movimentacaoFormat'
 import { Transicao } from '@/components/common/Transicao/Transicao'
@@ -9,37 +7,23 @@ import { Loader } from '@/components/common/Loader/Loader'
 import styles from './ResumoTaxaPagamento.module.css'
 
 interface Props {
-  /** Quando false (evento gratuito / sem inscrição), não renderiza nem chama a API. */
+  /** Quando false (evento gratuito / sem inscrição), não renderiza. */
   ativo: boolean
   /** Valor (em reais) que a igreja quer receber por inscrição. `undefined`/0 = não renderiza. */
   preco: number | undefined
   aceitaCartao: boolean
   maxParcelas: number
+  /** Opções calculadas pelo backend — o form é o dono da busca (uma só, sempre no máximo).
+   *  `null` = ainda carregando (ou nada pra mostrar). */
+  dados: OpcoesPagamentoResponse | null
+  erro: boolean
 }
 
 /** Resumo estilo e-commerce mostrado ao GESTOR no cadastro de evento pago: quanto o
  *  pagador vai pagar em cada meio (a taxa do Mercado Pago é repassada via gross-up).
- *  A igreja recebe sempre o mesmo — o `preco` cheio. */
-export function ResumoTaxaPagamento({ ativo, preco, aceitaCartao, maxParcelas }: Props) {
-  const [dados, setDados] = useState<OpcoesPagamentoResponse | null>(null)
-  const [erro, setErro] = useState(false)
-
-  useEffect(() => {
-    if (!ativo || !preco || preco <= 0) {
-      setDados(null)
-      setErro(false)
-      return
-    }
-    let vivo = true
-    const t = setTimeout(() => {
-      eventosService
-        .simularPagamento({ preco, aceitaCartao, maxParcelas })
-        .then((r) => { if (vivo) { setDados(r); setErro(false) } })
-        .catch(() => { if (vivo) setErro(true) })
-    }, 400) // debounce enquanto digita o preço — evita "pipoco" a cada tecla
-    return () => { vivo = false; clearTimeout(t) }
-  }, [ativo, preco, aceitaCartao, maxParcelas])
-
+ *  A igreja recebe sempre o mesmo — o `preco` cheio. Não busca nada: renderiza o
+ *  subconjunto das `dados` que corresponde à seleção atual de cartão/parcelas. */
+export function ResumoTaxaPagamento({ ativo, preco, aceitaCartao, maxParcelas, dados, erro }: Props) {
   if (!ativo || !preco || preco <= 0) return null
 
   if (erro) {
@@ -62,11 +46,13 @@ export function ResumoTaxaPagamento({ ativo, preco, aceitaCartao, maxParcelas }:
   }
 
   const pix = dados.opcoes.find((o) => o.meio === 'PIX')
-  const cartao = dados.opcoes.filter((o) => o.meio === 'CARTAO')
+  const cartao = aceitaCartao
+    ? dados.opcoes.filter((o) => o.meio === 'CARTAO' && o.parcelas <= maxParcelas)
+    : []
   // Assina o resultado atual — muda só quando um novo cálculo realmente chega (o debounce
-  // do fetch já impede que isso re-anime a cada tecla). Trocar a `key` remonta o bloco e
-  // re-dispara a animação de montagem do <Transicao>.
-  const assinatura = `${dados.valorEvento}-${dados.opcoes.length}-${dados.opcoes.map((o) => o.valorTotal).join(',')}`
+  // do fetch no form já impede que isso re-anime a cada tecla). Trocar a `key` remonta o
+  // bloco e re-dispara a animação de montagem do <Transicao>.
+  const assinatura = `${dados.valorEvento}-${aceitaCartao ? maxParcelas : 0}-${cartao.map((o) => o.valorTotal).join(',')}`
 
   return (
     <div className={`card-painel ${styles.painel}`}>

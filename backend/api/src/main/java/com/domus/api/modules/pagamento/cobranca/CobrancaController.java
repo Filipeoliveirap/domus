@@ -202,6 +202,21 @@ public class CobrancaController {
 
         java.math.BigDecimal valorACobrar = calculadoraTaxaPagamento.valorACobrar(
             cobranca.getIgrejaId(), cobranca.getValor(), request.meio(), request.parcelas());
+
+        // Mínimos do Mercado Pago (total e por parcela): uma requisição forjada não pode
+        // passar por aqui com uma faixa que o MP recusaria — a UI já não oferece, mas o
+        // servidor é quem garante. Mesma checagem que filtra as faixas em montarOpcoes.
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO) {
+            if (!service.acimaDoValorMinimoCartao(valorACobrar)) {
+                throw new BusinessException("CARTAO_VALOR_MINIMO",
+                    "Este valor não permite pagamento com cartão.");
+            }
+            if (!service.cartaoViavelParaValor(valorACobrar, request.parcelas())) {
+                throw new BusinessException("PARCELAS_INVIAVEIS_PARA_VALOR",
+                    "Este valor não permite parcelar em " + request.parcelas() + "x.");
+            }
+        }
+
         cobranca.registrarValorCobrado(valorACobrar);
 
         // O número de parcelas enviado ao Mercado Pago é o `parcelas` já validado (contra o

@@ -23,6 +23,7 @@ import { PreviaEvento } from './PreviaEvento'
 import { SeletorLocal } from './SeletorLocal'
 import { SeletorResponsavel } from './SeletorResponsavel'
 import { BlocoParaQuemE } from './BlocoParaQuemE'
+import { ResumoTaxaPagamento } from './ResumoTaxaPagamento'
 import { ModalImpactoRestricao } from './ModalImpactoRestricao'
 import { ModalImpactoMudancaPreco } from './ModalImpactoMudancaPreco'
 import { ModalEscopoEdicaoEvento } from './ModalEscopoEdicaoEvento'
@@ -98,6 +99,9 @@ export function EventoForm(props: EventoFormProps) {
   const inicioData = (watch('inicioData') as string) ?? ''
   const fimData = (watch('fimData') as string) ?? ''
   const preco = (watch('preco') as string) ?? ''
+  const precoNumerico = preco ? parseFloat(preco) : undefined
+  const pagamentoAceitaCartao = !!watch('pagamentoAceitaCartao')
+  const pagamentoMaxParcelas = Number(watch('pagamentoMaxParcelas')) || 1
   const precisaConectarContaPagamento = requerInscricao && tipoInscricao === 'PAGO'
     && !!contaPagamento && !contaPagamento.conectada
   const fotoIdAtual = watch('fotoId') as string | null | undefined
@@ -707,8 +711,8 @@ export function EventoForm(props: EventoFormProps) {
                 <Revelar>
                   <Input
                     id="preco"
-                    label="PREÇO"
-                    placeholder="R$ 0,00"
+                    label="QUANTO A IGREJA QUER RECEBER POR INSCRIÇÃO"
+                    placeholder="R$ 100,00"
                     inputMode="numeric"
                     error={errors.preco?.message}
                     value={formatarValorDigitado(preco)}
@@ -745,6 +749,59 @@ export function EventoForm(props: EventoFormProps) {
                     </span>
                   )}
                   </Transicao>
+
+                  <Colapsavel
+                    aberto={!!requerInscricao && tipoInscricao === 'PAGO'}
+                    className={styles.blocoPagamento}
+                  >
+                    <label className={styles.toggleRow}>
+                      <span className={styles.toggleTexto}>
+                        <span className={styles.toggleTitulo}>Aceitar cartão de crédito</span>
+                        <span className={styles.toggleDescricao}>
+                          Além do Pix. A taxa do cartão é repassada a quem paga — a igreja
+                          recebe o valor cheio.
+                        </span>
+                      </span>
+                      <span className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          className={styles.switchInput}
+                          checked={pagamentoAceitaCartao}
+                          onChange={(e) =>
+                            setValue('pagamentoAceitaCartao', e.target.checked, { shouldDirty: true })
+                          }
+                        />
+                        <span className={styles.switchTrilho} />
+                      </span>
+                    </label>
+
+                    <Colapsavel aberto={pagamentoAceitaCartao} className={styles.campos}>
+                      <div className={styles.grupoData}>
+                        <Select
+                          id="pagamento-max-parcelas"
+                          label="PARCELAR EM ATÉ"
+                          value={String(pagamentoMaxParcelas)}
+                          onChange={(e) =>
+                            setValue('pagamentoMaxParcelas', Number(e.target.value), { shouldDirty: true })
+                          }
+                          options={Array.from({ length: 12 }, (_, i) => ({
+                            value: String(i + 1),
+                            label: i === 0 ? '1x (à vista)' : `${i + 1}x`,
+                          }))}
+                        />
+                        <span className={styles.campoHint}>
+                          Quem paga escolhe quantas parcelas, até esse limite.
+                        </span>
+                      </div>
+                    </Colapsavel>
+
+                    <ResumoTaxaPagamento
+                      ativo={!!requerInscricao && tipoInscricao === 'PAGO'}
+                      preco={precoNumerico}
+                      aceitaCartao={pagamentoAceitaCartao}
+                      maxParcelas={pagamentoMaxParcelas}
+                    />
+                  </Colapsavel>
                 </Revelar>
               )}
 

@@ -218,9 +218,13 @@ Resposta (`OpcoesPagamentoResponse`):
   - vira o `transactionAmount` em `MercadoPagoClient.criarPagamentoComToken`
     (hoje passa `cobranca.getValor()` cru);
   - é persistido em `cobranca.valorCobrado`.
-- `installments` que já vem do Brick tem que **bater** com `parcelas` — se
-  divergir, 400 (`PARCELAS_DIVERGENTES`). Fonte da verdade é o `parcelas` do
-  request, validado contra `evento.pagamentoMaxParcelas`.
+- `installments` que já vem do Brick é **ignorado no servidor** (implementação
+  endureceu além desta spec): o número de parcelas mandado pro Mercado Pago é
+  sempre o `parcelas` validado contra `evento.pagamentoMaxParcelas`, nunca o
+  `installments` cru do request. Sem isso dava pra pedir gross-up de 1x (barato,
+  passa no teto) e `installments: 12` no mesmo request. O código de erro
+  `PARCELAS_DIVERGENTES` previsto aqui não chegou a existir — não é mais
+  necessário.
 - `meio == PIX` com `parcelas > 1` → 400 (`PIX_NAO_PARCELA`).
 - `meio == CARTAO` num evento com `pagamentoAceitaCartao == false` → 400
   (`CARTAO_NAO_ACEITO`).
@@ -231,10 +235,17 @@ Resposta (`OpcoesPagamentoResponse`):
 
 ```java
 BigDecimal valorBruto,    // transaction_amount
-BigDecimal taxaMercadoPago, // soma de fee_details[].amount onde type == "mercadopago_fee"
+BigDecimal taxaMercadoPago, // transaction_amount − net_received_amount
 BigDecimal valorLiquido   // transaction_details.net_received_amount
 ```
 
+- **Decisão fechada na implementação (resolve a questão aberta 2):**
+  `taxaMercadoPago = transaction_amount − net_received_amount`, **não** a soma de
+  `fee_details[].amount`. Motivo: `fee_details` não inclui a `financing_fee` do
+  parcelamento, então somar só as linhas `mercadopago_fee` subestimaria o que o
+  MP de fato reteve. `fee_details` é parseado só pra log/diagnóstico.
+- Sem `transaction_details` (pagamento ainda `pending`), os **três** campos
+  ficam `null` — inclusive `valorBruto`.
 - `RespostaPagamentoMercadoPago` (record interno) ganha os campos
   `transaction_amount`, `fee_details` (lista de `{ type, amount }`) e
   `transaction_details.net_received_amount`.

@@ -46,6 +46,11 @@ class ConviteControllerTest implements PostgresTestContainerSupport {
 
     @BeforeEach
     void setup() {
+        java.util.Set<String> chavesRateLimit = redisTemplate.keys("rl:*");
+        if (chavesRateLimit != null && !chavesRateLimit.isEmpty()) {
+            redisTemplate.delete(chavesRateLimit);
+        }
+
         igreja = igrejaRepository.save(Igreja.builder()
                 .nome("Igreja Teste Convite " + java.util.UUID.randomUUID())
                 .emailContato("convite-" + java.util.UUID.randomUUID() + "@teste.com")

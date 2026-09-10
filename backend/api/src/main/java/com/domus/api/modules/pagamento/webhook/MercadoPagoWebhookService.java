@@ -253,8 +253,12 @@ public class MercadoPagoWebhookService {
     }
 
     private String montarCorpoEmail(String nome, Evento evento, CobrancaEvento cobranca, String igrejaOrganizadora) {
+        // [I2] o comprovante mostra o que o pagador FOI DEBITADO (bruto, com a taxa do MP
+        // repassada — V40), não o alvo líquido `valor`. Num 6x a diferença passa de 10%.
+        java.math.BigDecimal valorCobrado = cobranca.getValorCobrado() != null
+            ? cobranca.getValorCobrado() : cobranca.getValor();
         String valorFormatado = java.text.NumberFormat.getCurrencyInstance(new Locale("pt", "BR"))
-            .format(cobranca.getValor());
+            .format(valorCobrado);
         String local = evento.getLocalExibicao();
 
         return """

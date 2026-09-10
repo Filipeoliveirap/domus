@@ -762,21 +762,28 @@ quem já estava confirmado, sem re-checar vaga. `ModalImpactoMudancaPreco` avisa
 os números antes de confirmar a mudança. Cobre também estorno em massa que falha (tag
 "Estorno pendente" com retry, ver `CobrancaEvento.estornoPendente`).
 
-### ~~Escolha de meio de pagamento + parcelamento por evento~~ / ~~Taxa do MP separada no financeiro~~ (**BACKEND FEITO** 2026-09-09, front pendente)
+### ~~Escolha de meio de pagamento + parcelamento por evento~~ / ~~Taxa do MP separada no financeiro~~ (**FEITO** 2026-09-10, PR #116/#117 → main)
 
-Os dois itens abaixo foram desenhados juntos (spec/plano em
-`docs/superpowers/{specs,plans}/2026-09-09-meio-pagamento-parcelamento-taxa-evento*`) e o
-**backend está implementado** (migration V40, Tasks 1–8, suíte verde). Decisões: repassar a
-taxa do MP pro pagador via **gross-up** (`valorACobrar = alvo / (1 − taxa%)`, arredonda pra
-cima); evento pago escolhe Pix-só ou Pix+cartão com teto de parcelas; financeiro registra
-ENTRADA bruta em "Eventos" + SAÍDA da taxa real (`transaction_amount − net_received_amount`)
-em categoria própria **"Taxas de pagamento"** auto-criada.
-
-**Falta:** frontend (Tasks 9–12: tipos/services, resumo e-commerce no `EventoForm`, tela
-`EscolhaMeioPagamento` antes do Payment Brick, nota no detalhe do evento) + validação e2e
-no sandbox do Mercado Pago (Task 13).
+Desenhados juntos (spec/plano em
+`docs/superpowers/{specs,plans}/2026-09-09-meio-pagamento-parcelamento-taxa-evento*`),
+**implementados e em `main`** (migration V40, back + front, suíte 1063/0). Decisões:
+repassar a taxa do MP pro pagador via **gross-up** (`valorACobrar = alvo / (1 − taxa%)`,
+arredonda pra cima); evento pago escolhe Pix-só ou Pix+cartão com teto de parcelas;
+financeiro registra ENTRADA bruta em "Eventos" + SAÍDA da taxa real
+(`transaction_amount − net_received_amount`) em categoria própria **"Taxas de pagamento"**
+auto-criada; faixas abaixo do mínimo do MP (`pagamento.limite.*`) filtradas.
 
 **Resíduos conhecidos deste scope (anotados pra não sumir):**
+- **UI de taxa negociada na config da igreja — NÃO foi construída.** A spec previa um campo
+  opcional em `/configuracoes` (aba de recebimentos) pra a igreja informar a taxa que
+  negociou com o MP. As colunas existem (`conta_pagamento_igreja.taxa_pix_percent` etc., V40),
+  o `ContaPagamentoIgreja.atualizarTaxasNegociadas(...)` existe, e o
+  `CalculadoraTaxaPagamento` já lê o override campo-a-campo (com teste). **Falta só:** um
+  endpoint pra salvar + os campos em `SecaoRecebimentos.tsx`. Hoje só dá pra setar editando
+  o banco na mão. Baixa prioridade pro piloto (a tabela padrão do MP em `pagamento.taxa.*` é
+  o que uma conta normal paga); vira relevante quando alguma igreja negociar plano.
+- **Cartão parcelado nunca foi testado no sandbox do MP** — o autor usa conta real. Backend
+  100% coberto por teste unitário; Pix testado ponta-a-ponta.
 - **`taxaDevolvida` no estorno = `BigDecimal.ZERO` fixo.** Um estorno total dentro da janela
   devolve a taxa do gateway, mas rastrear isso com precisão exige ler o `fee_details` do
   *refund* do MP. A SAÍDA bruta em "Eventos" já deixa o dinheiro certo; só a linha de

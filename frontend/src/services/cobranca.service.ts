@@ -45,12 +45,12 @@ export interface PagarCobrancaRequest {
    *  de parcelamento/preço pra alguns bancos emissores (`error_pricing`, código 10107)
    *  mesmo com token/cartão válidos. */
   issuerId: string | null
-  /** Meio escolhido na tela de opções (Task 10/11). Opcional por ora — `PaymentBrickCheckout`
-   *  ainda não passa; a Task 11 liga a tela de opções ao Brick e passa os dois.
-   *  TODO Task 11: tornar obrigatório quando o checkout enviar. */
-  meio?: MeioPagamento
-  /** Nº de parcelas escolhido (1 = à vista / Pix). Ver nota em `meio`. TODO Task 11. */
-  parcelas?: number
+  /** Meio escolhido na tela `<EscolhaMeioPagamento>` (Task 11). O backend recalcula o valor
+   *  a partir de `parcelas` e ignora `installments` do Brick; rejeita combinações inválidas
+   *  (`PIX_NAO_PARCELA`, `CARTAO_NAO_ACEITO`, `PARCELAS_ACIMA_DO_TETO`). */
+  meio: MeioPagamento
+  /** Nº de parcelas escolhido (1 = à vista / Pix). */
+  parcelas: number
 }
 
 export interface PagarCobrancaResponse {

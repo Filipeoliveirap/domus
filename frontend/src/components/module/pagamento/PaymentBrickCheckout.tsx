@@ -8,12 +8,17 @@ import { Loader } from '@/components/common/Loader/Loader'
 import { OverlayCarregando } from '@/components/common/OverlayCarregando/OverlayCarregando'
 import { cobrancaService } from '@/services/cobranca.service'
 import { TelaPix } from './TelaPix'
-import type { ApiError } from '@/types/api.types'
+import type { ApiError, MeioPagamento } from '@/types/api.types'
 import styles from './PaymentBrickCheckout.module.css'
 
 interface Props {
   cobrancaId: string
-  valor: number
+  /** Meio de pagamento já escolhido em `<EscolhaMeioPagamento>` — trava o Brick nele. */
+  meio: MeioPagamento
+  /** Nº de parcelas já escolhido (1 = à vista / Pix) — trava `min`/`maxInstallments` do Brick. */
+  parcelas: number
+  /** Total da opção escolhida (valor do evento + taxa do Mercado Pago) — é o `amount` do Brick. */
+  valorTotal: number
   /** Prazo da cobrança — repassado pro contador regressivo da tela do Pix. */
   expiraEm: string
   onPagamentoCriado: (mpPaymentId: string) => void
@@ -22,6 +27,13 @@ interface Props {
    *  já vem pronta do backend (`ApiError.message`), em português. O pai troca de tela em
    *  vez de deixar a pessoa martelar "Pagar" contra uma cobrança morta. */
   onCobrancaIndisponivel: (mensagem: string) => void
+  /** Avisa o pai quando existe uma tentativa de pagamento em voo no Mercado Pago (Pix com
+   *  QR na tela, ou cartão que já nasceu `pending`) — `true` logo após o `pagar()` que
+   *  criou o `mpPaymentId`, `false` quando `aoReiniciar` libera a cobrança. O pai usa isso
+   *  pra decidir se o "voltar / trocar forma de pagamento" precisa chamar `reiniciar`
+   *  antes de desmontar o Brick (senão a tentativa fica órfã e a próxima trava em
+   *  COBRANCA_JA_EM_PROCESSAMENTO). */
+  onTentativaEmVoo?: (emVoo: boolean) => void
 }
 
 /** Códigos de `BusinessException` de `CobrancaController.pagar` em que a cobrança em si
@@ -81,7 +93,7 @@ let chaveInicializada: string | null = null
  * PIX não gera `token`/`installments` (o Brick manda `undefined`) — o backend aceita os
  * dois nulos nesse caso.</p>
  */
-export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoCriado, onCobrancaIndisponivel }: Props) {
+export function PaymentBrickCheckout({ cobrancaId, meio, parcelas, valorTotal, expiraEm, onPagamentoCriado, onCobrancaIndisponivel, onTentativaEmVoo }: Props) {
   const publicKeyRef = useRef(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? '')
   const [enviando, setEnviando] = useState(false)
   // Só é preenchido quando o meio escolhido é Pix — nesse caso o pagamento nasce `pending`
@@ -104,9 +116,11 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // comentário logo antes do `useCallback`).
   const onPagamentoCriadoRef = useRef(onPagamentoCriado)
   const onCobrancaIndisponivelRef = useRef(onCobrancaIndisponivel)
+  const onTentativaEmVooRef = useRef(onTentativaEmVoo)
   useEffect(() => {
     onPagamentoCriadoRef.current = onPagamentoCriado
     onCobrancaIndisponivelRef.current = onCobrancaIndisponivel
+    onTentativaEmVooRef.current = onTentativaEmVoo
   })
 
   useEffect(() => {
@@ -168,8 +182,19 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // pelas dependências reais evita o Brick duplicado.
   // Sem `payer.email` pré-preenchido (removido por segurança — ver CobrancaCheckoutDTO,
   // 2026-08-26), o Brick sempre pede o e-mail à própria pessoa, do jeito documentado.
-  const initialization = useMemo(() => ({ amount: valor }), [valor])
-  const customization = useMemo(() => ({ paymentMethods: { bankTransfer: 'all' as const, creditCard: 'all' as const } }), [])
+  // `amount` = total da opção escolhida (com a taxa do MP já embutida) — o backend
+  // recalcula e valida por conta própria, mas o Brick precisa exibir o valor certo.
+  const initialization = useMemo(() => ({ amount: valorTotal }), [valorTotal])
+  // A pessoa já escolheu meio e parcelas na tela anterior — o Brick fica travado nisso:
+  // só o método escolhido aparece, e o seletor de parcelas fica fixo no número escolhido
+  // (`min` === `max`).
+  const customization = useMemo(
+    () =>
+      meio === 'PIX'
+        ? { paymentMethods: { bankTransfer: 'all' as const } }
+        : { paymentMethods: { creditCard: 'all' as const, maxInstallments: parcelas, minInstallments: parcelas } },
+    [meio, parcelas]
+  )
 
   // O componente `Payment` do SDK reagenda a criação do Brick (`useEffect` com
   // `onSubmit`/`onError` nas dependências) toda vez que essas funções chegam com uma
@@ -195,6 +220,8 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
           installments: formData.installments ?? null,
           payerEmail: formData.payer?.email ?? '',
           issuerId: formData.issuer_id ?? null,
+          meio,
+          parcelas,
         })
         if (resposta.qrCode && resposta.qrCodeBase64) {
           // Pix: o pagamento nasce `pending` — mostra o QR em vez de fechar o checkout
@@ -206,6 +233,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
             mpPaymentId: resposta.mpPaymentId, qrCode: resposta.qrCode, qrCodeBase64: resposta.qrCodeBase64,
             expiraEm: resposta.expiraEmPix ?? expiraEm,
           })
+          onTentativaEmVooRef.current?.(true)
         } else if (resposta.status === 'rejected') {
           // Achado testando o fluxo de ponta a ponta (2026-08-26): cartão recusado
           // devolve 200 com mpPaymentId igual a um aprovado — sem checar `status` aqui,
@@ -221,6 +249,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
           // Cobre também o cartão de teste "CONT" do Mercado Pago (nasce `pending`, sem
           // recusa) — mesma tela de "confirmando pagamento" que Pix usa, e o poll (front +
           // backend) resolve quando o status mudar de verdade.
+          onTentativaEmVooRef.current?.(true)
           onPagamentoCriadoRef.current(resposta.mpPaymentId)
         }
       } catch (erro) {
@@ -251,7 +280,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
         setEnviando(false)
       }
     },
-    [cobrancaId, expiraEm]
+    [cobrancaId, expiraEm, meio, parcelas]
   )
 
   // O SDK chama onError também para situações não-fatais (ex.: uma revalidação interna de
@@ -269,7 +298,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
   // é fixo e compartilhado entre qualquer instância do Brick na página; se duas chegarem a
   // coexistir (mesmo que por um instante, entre desmontar e montar de novo), colidem no
   // mesmo elemento.
-  const idContainer = `paymentBrick_${cobrancaId}`
+  const idContainer = `paymentBrick_${cobrancaId}_${meio}_${parcelas}`
 
   // "QR Code não funcionou / pagar de outro jeito" (achado ao vivo, 2026-08-27): libera a
   // cobrança no backend (cancela a tentativa presa no Mercado Pago) e volta pro formulário
@@ -281,6 +310,7 @@ export function PaymentBrickCheckout({ cobrancaId, valor, expiraEm, onPagamentoC
       // O Brick é montado do zero ao voltar pro formulário — espera o `onReady` de novo.
       setBrickPronto(false)
       setPix(null)
+      onTentativaEmVooRef.current?.(false)
     } finally {
       setReiniciando(false)
     }

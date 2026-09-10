@@ -2166,7 +2166,7 @@ class InscricaoServiceTest {
     }
 
     @Test
-    void aplicarMudancaValorPagoGeraCobrancaDeComplementoEVoltaParaAguardandoPagamento() {
+    void aplicarMudancaValorPagoAumento_criaComplemento_mantemConfirmada() {
         // Decisão do usuário (2026-08-27): tratar exatamente como aplicarEventoVirouPago —
         // mesma pendência, mesma tag "Pagamento pendente", mesmo lembrete/cancelamento.
         Pessoa pessoaComEmail = Pessoa.builder()
@@ -2194,8 +2194,9 @@ class InscricaoServiceTest {
                 eventoId, new java.math.BigDecimal("50.00"), new java.math.BigDecimal("80.00"), usuarioId);
 
         assertThat(processadas).isEqualTo(1);
-        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
-        verify(inscricaoRepository).save(minha);
+        // [C1] 2026-09-10: quem já pagou o original CONTINUA CONFIRMADA — a pendência do
+        // complemento aparece só pela tag "Falta complementar" na lista de inscritos.
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
 
         var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
@@ -2349,7 +2350,8 @@ class InscricaoServiceTest {
                 eventoId, new java.math.BigDecimal("100.00"), new java.math.BigDecimal("130.00"), usuarioId);
 
         assertThat(processadas).isEqualTo(1);
-        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
+        // [C1] 2026-09-10: continua CONFIRMADA; só cria a cobrança de complemento.
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(cobrancaEventoService).criarParaTerceiro(
                 eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
                 argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true));

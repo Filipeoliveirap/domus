@@ -1034,11 +1034,12 @@ public class InscricaoService {
         // Resolve "quem inscreveu" em UMA query (evita N+1); id ausente no mapa (conta arquivada) vira null explícito.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
         Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
-        // Quem já pagou algo (diferencia a tag "Pagamento pendente" de "Falta
-        // complementar" — ver InscritoResponse.pagamentoParcial).
+        // Quem já pagou o original E ainda deve um complemento de reajuste (a tag "Falta
+        // complementar" — ver InscritoResponse.pagamentoParcial). Continua valendo mesmo com
+        // a inscrição CONFIRMADA e o complemento já EXPIRADO ([C1], 2026-09-10).
         List<UUID> idsDaPagina = inscricoes.stream().map(InscricaoEvento::getId).toList();
-        java.util.Set<UUID> comCobrancaPaga = new java.util.HashSet<>(
-                cobrancaEventoRepository.findInscricaoIdsComCobrancaPaga(idsDaPagina));
+        java.util.Set<UUID> comComplementoDevido = new java.util.HashSet<>(
+                cobrancaEventoRepository.findInscricaoIdsComComplementoDevido(idsDaPagina));
         // Tag "Estorno pendente" (2026-08-27) — mapeia inscrição -> id da cobrança pendente
         // de retry (nunca mais de uma cobrança com estorno pendente por inscrição na prática).
         Map<UUID, UUID> comEstornoPendente = cobrancaEventoRepository
@@ -1051,7 +1052,7 @@ public class InscricaoService {
                         resolverPessoa(i, pessoas),
                         registrantes.get(i.getInscritoPorUsuarioId()),
                         resolverConvidadoPor(i, pessoas),
-                        comCobrancaPaga.contains(i.getId()),
+                        comComplementoDevido.contains(i.getId()),
                         comEstornoPendente.get(i.getId())))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
@@ -1647,13 +1648,13 @@ public class InscricaoService {
                         UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
                         CobrancaEvento complemento = cobrancaEventoService.criarParaTerceiro(
                                 inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, novoValorDevido, usuarioId, true);
-                        // Decisão do usuário (2026-08-27): tratar exatamente como
-                        // aplicarEventoVirouPago — a inscrição vira AGUARDANDO_PAGAMENTO até
-                        // a diferença ser paga (mesma pendência, mesma tag "Pagamento
-                        // pendente" na lista de inscritos, mesmo lembrete/cancelamento por
-                        // link — só o texto do e-mail muda).
-                        inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
-                        inscricaoRepository.save(inscricao);
+                        // Revisão da decisão de 2026-08-27 (ver AUDITORIA [C1], 2026-09-10):
+                        // a inscrição de quem JÁ pagou o original CONTINUA CONFIRMADA — não
+                        // volta pra AGUARDANDO_PAGAMENTO. A pendência do complemento aparece
+                        // pela tag "Falta complementar" na lista de inscritos (derivada do
+                        // estado das cobranças), e o CobrancaEventoExpiracaoJob não tira a
+                        // vaga dela se o complemento expirar. Só quem nunca pagou nada
+                        // (branch valorJaPago == 0 acima) fica AGUARDANDO_PAGAMENTO.
                         enviarEmailComplementoPagamento(inscricao, complemento, novoValorDevido);
                     } catch (RuntimeException e) {
                         log.error("Falha ao gerar cobrança de complemento. inscricaoId={}", inscricao.getId(), e);

@@ -60,6 +60,35 @@ public interface CobrancaEventoRepository extends JpaRepository<CobrancaEvento, 
         """)
     List<UUID> findInscricaoIdsComCobrancaPaga(@Param("inscricaoIds") List<UUID> inscricaoIds);
 
+    /** {@code true} quando a inscrição já tem PELO MENOS uma cobrança PAGO — usado pelo
+     *  {@code CobrancaEventoExpiracaoJob} pra NÃO cancelar quem já pagou o valor original e
+     *  só deve um complemento de reajuste (esse fica pendente na lista de inscritos até o
+     *  gestor decidir; ver AUDITORIA-MODULO-EVENTOS-PAGAMENTO [C1]). */
+    @Query("""
+        SELECT (COUNT(c) > 0) FROM CobrancaEvento c
+        WHERE c.inscricaoId = :inscricaoId
+          AND c.status = com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO
+        """)
+    boolean existePagaParaInscricao(@Param("inscricaoId") UUID inscricaoId);
+
+    /** Quais dessas inscrições têm um COMPLEMENTO em aberto: já pagaram algo (cobrança PAGO)
+     *  E ainda têm uma cobrança PENDENTE ou EXPIRADO (a diferença de um reajuste que não foi
+     *  quitada). Diferente de {@link #findInscricaoIdsComCobrancaPaga}, isto é o que
+     *  realmente vale a tag "Falta complementar" na lista de inscritos — e continua valendo
+     *  mesmo com a inscrição CONFIRMADA e o complemento já EXPIRADO ([C1]). */
+    @Query("""
+        SELECT DISTINCT pago.inscricaoId FROM CobrancaEvento pago
+        WHERE pago.inscricaoId IN :inscricaoIds
+          AND pago.status = com.domus.api.modules.pagamento.cobranca.StatusCobranca.PAGO
+          AND EXISTS (
+            SELECT 1 FROM CobrancaEvento dev
+            WHERE dev.inscricaoId = pago.inscricaoId
+              AND dev.status IN (com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE,
+                                 com.domus.api.modules.pagamento.cobranca.StatusCobranca.EXPIRADO)
+          )
+        """)
+    List<UUID> findInscricaoIdsComComplementoDevido(@Param("inscricaoIds") List<UUID> inscricaoIds);
+
     /** Cobranças com estorno pendente (2026-08-27) — usado pra montar a tag "Estorno
      *  pendente" com botão de retry na lista de inscritos; carrega a cobrança inteira (não
      *  só o inscricaoId) porque o retry precisa do {@code id} dela, não da inscrição. */

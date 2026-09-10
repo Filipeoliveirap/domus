@@ -962,6 +962,39 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('35111111-1111-1111-1111-111111111112', 'Igreja MP Down', 'mpdown@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('35333333-3333-3333-3333-333333333336', '35111111-1111-1111-1111-111111111112', 'Titular MP', 'titmp@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('46444444-4444-4444-4444-444444444447', '35111111-1111-1111-1111-111111111112', '35333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('35777777-7777-7777-7777-777777777778', '35111111-1111-1111-1111-111111111112', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao) VALUES ('35555555-5555-5555-5555-555555555556', '35111111-1111-1111-1111-111111111112', 'Retiro MP', now() + interval '10 days', '35777777-7777-7777-7777-777777777778', true, 100.00, true)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('35666666-6666-6666-6666-666666666667', '35111111-1111-1111-1111-111111111112', '35555555-5555-5555-5555-555555555556', '35333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_quandoMercadoPagoIndisponivel_devolve4xxNao500() throws Exception {
+        UUID igrejaId = UUID.fromString("35111111-1111-1111-1111-111111111112");
+        UUID usuarioId = UUID.fromString("46444444-4444-4444-4444-444444444447");
+        contaPagamentoIgrejaRepository.save(new ContaPagamentoIgreja(igrejaId, "mp-user-down",
+            credencialEncryptor.criptografar("access-token-fake"),
+            credencialEncryptor.criptografar("refresh-token-fake"),
+            Instant.now().plus(30, ChronoUnit.DAYS), usuarioId));
+        var cobranca = new CobrancaEvento(igrejaId,
+            UUID.fromString("35555555-5555-5555-5555-555555555556"),
+            UUID.fromString("35666666-6666-6666-6666-666666666667"),
+            UUID.fromString("35333333-3333-3333-3333-333333333336"),
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, "tok-mp");
+        cobrancaEventoRepository.save(cobranca);
+        when(mercadoPagoApi.criarPagamentoTokenizado(any(), any(), any(), any(), any(), any(), any(), any()))
+            .thenThrow(new com.domus.api.shared.exception.BusinessException("MP_INDISPONIVEL", "MP fora do ar"));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":1," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("MP_INDISPONIVEL")));
+    }
+
+    @Test
     void pagar_semMeio_recusaComoValidacao() throws Exception {
         mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)

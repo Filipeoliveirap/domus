@@ -930,9 +930,17 @@ erDiagram
   confirmação, estorno automático no cancelamento, token renovado sozinho antes de
   vencer, pagamento/estorno entrando no financeiro da igreja. Superou o texto original
   desta fase (que previa só uma recomendação, sem código) — decisão validada com uso real
-  no piloto, não só estudo de mesa. *Ainda em aberto, ver `docs/BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`:*
-  escolha de meio de pagamento/parcelamento por evento, quem absorve a taxa do Mercado
-  Pago, taxa aparecer separada no financeiro.
+  no piloto, não só estudo de mesa.
+- [x] **Meio de pagamento, parcelamento e taxa por evento (V40)** — **FEITO** (2026-09-10,
+  PR #116/#117). Evento pago escolhe se aceita cartão e o teto de parcelas; a taxa do
+  Mercado Pago é **repassada ao pagador** por gross-up (`evento.preco` virou o líquido que
+  a igreja quer receber); tela de escolha de meio no checkout; taxa registrada **separada**
+  no financeiro (categoria "Taxas de pagamento"); faixas abaixo do mínimo do MP filtradas.
+  Fecha os dois itens que estavam em aberto ("quem absorve a taxa" → o pagador; "taxa
+  separada no financeiro"). Spec/plano em `docs/superpowers/`. *Resíduos no BACKLOG:*
+  `taxaDevolvida` do estorno = 0 fixo; **UI de taxa negociada na config da igreja** (as
+  colunas e o cálculo do override existem, falta só o formulário); cartão parcelado nunca
+  testado no sandbox do MP.
 - [ ] **Estudo de pagamento (b: cobrança das igrejas pelos planos do Domus)** — ainda não
   feito, só o item (a) foi resolvido. Continua exatamente como descrito originalmente:
   decidir provedor/modelo pra cobrar a própria assinatura da igreja no Domus (distinto de

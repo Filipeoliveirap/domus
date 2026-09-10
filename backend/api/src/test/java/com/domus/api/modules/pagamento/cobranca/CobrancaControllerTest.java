@@ -969,4 +969,31 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.campos.meio").exists());
     }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('34111111-1111-1111-1111-111111111112', 'Igreja Encerrado', 'encerrado@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('34333333-3333-3333-3333-333333333336', '34111111-1111-1111-1111-111111111112', 'Titular Enc', 'titenc@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('45444444-4444-4444-4444-444444444447', '34111111-1111-1111-1111-111111111112', '34333333-3333-3333-3333-333333333336', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('34777777-7777-7777-7777-777777777778', '34111111-1111-1111-1111-111111111112', 'Salão')",
+        // evento que já ACONTECEU (inicio_em 3 dias atrás)
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco) VALUES ('34555555-5555-5555-5555-555555555556', '34111111-1111-1111-1111-111111111112', 'Retiro Passado', now() - interval '3 days', '34777777-7777-7777-7777-777777777778', true, 50.00)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('34666666-6666-6666-6666-666666666667', '34111111-1111-1111-1111-111111111112', '34555555-5555-5555-5555-555555555556', '34333333-3333-3333-3333-333333333336', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_eventoJaEncerrado_recusa() throws Exception {
+        UUID igrejaId = UUID.fromString("34111111-1111-1111-1111-111111111112");
+        var cobranca = new CobrancaEvento(igrejaId,
+            UUID.fromString("34555555-5555-5555-5555-555555555556"),
+            UUID.fromString("34666666-6666-6666-6666-666666666667"),
+            UUID.fromString("34333333-3333-3333-3333-333333333336"),
+            new BigDecimal("50.00"), Instant.now().plus(1, ChronoUnit.DAYS),
+            UUID.fromString("45444444-4444-4444-4444-444444444447"), "tok-enc");
+        cobrancaEventoRepository.save(cobranca);
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentMethodId\":\"pix\",\"payerEmail\":\"p@x.com\",\"meio\":\"PIX\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("EVENTO_ENCERRADO")));
+    }
 }

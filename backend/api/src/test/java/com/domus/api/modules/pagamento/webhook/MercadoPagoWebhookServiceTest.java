@@ -27,6 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MercadoPagoWebhookServiceTest {
 
+    private static com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento info(String status) {
+        return new com.domus.api.modules.pagamento.MercadoPagoApi.InformacoesPagamento(null, status, null, null, null);
+    }
+
     CobrancaEventoRepository cobrancaRepository;
     InscricaoRepository inscricaoRepository;
     NotificacaoService notificacaoService;
@@ -72,7 +76,7 @@ class MercadoPagoWebhookServiceTest {
                 .id(inscricaoId).status(StatusInscricao.AGUARDANDO_PAGAMENTO).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(inscricao);
@@ -96,10 +100,10 @@ class MercadoPagoWebhookServiceTest {
         when(pessoaRepository.findById(pessoaId)).thenReturn(Optional.of(
             Pessoa.builder().id(pessoaId).nome("Maria").igreja(igreja(igrejaId, "Igreja Teste")).build()));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(movimentacaoAutomaticaService).registrarEntradaDeEvento(
-            eq(igrejaId), eq(BigDecimal.TEN),
+            eq(igrejaId), eq(BigDecimal.TEN), eq(BigDecimal.ZERO),
             org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
     }
 
@@ -110,7 +114,7 @@ class MercadoPagoWebhookServiceTest {
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "pending");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("pending"));
 
         verifyNoInteractions(movimentacaoAutomaticaService);
     }
@@ -122,7 +126,7 @@ class MercadoPagoWebhookServiceTest {
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         assertThatCobrancaFoiMarcadaPaga(cobranca);
         verify(cobrancaRepository).save(cobranca);
@@ -139,7 +143,7 @@ class MercadoPagoWebhookServiceTest {
         cobranca.marcarComoPago("mp-payment-999");
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(cobrancaRepository, never()).save(any());
         verify(inscricaoRepository, never()).findById(any());
@@ -150,7 +154,7 @@ class MercadoPagoWebhookServiceTest {
     void ignoraSilenciosamenteQuandoCobrancaNaoExiste() {
         when(cobrancaRepository.findById(any())).thenReturn(Optional.empty());
 
-        service.confirmarPagamento(UUID.randomUUID().toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(UUID.randomUUID().toString(), "mp-payment-999", info("approved"));
 
         verify(cobrancaRepository, never()).save(any());
         verifyNoInteractions(notificacaoService);
@@ -163,7 +167,7 @@ class MercadoPagoWebhookServiceTest {
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verifyNoInteractions(notificacaoService);
     }
@@ -177,7 +181,7 @@ class MercadoPagoWebhookServiceTest {
             null, BigDecimal.TEN, Instant.now().plusSeconds(600), criadoPorUsuarioId, null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(notificacaoService).criar(
             eq(TipoNotificacao.COBRANCA_EVENTO_PAGA),
@@ -201,7 +205,7 @@ class MercadoPagoWebhookServiceTest {
             criadoPorUsuarioId, "token-abc");
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(notificacaoService).criar(
             eq(TipoNotificacao.COBRANCA_EVENTO_PAGA),
@@ -222,7 +226,7 @@ class MercadoPagoWebhookServiceTest {
             null, BigDecimal.TEN, Instant.now().plusSeconds(600), null, null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verifyNoInteractions(notificacaoService);
     }
@@ -235,7 +239,7 @@ class MercadoPagoWebhookServiceTest {
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "pending");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("pending"));
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
             .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
@@ -256,7 +260,7 @@ class MercadoPagoWebhookServiceTest {
             UUID.randomUUID(), BigDecimal.TEN, Instant.now().plusSeconds(600), UUID.randomUUID(), null);
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "rejected");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("rejected"));
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
             .isEqualTo(com.domus.api.modules.pagamento.cobranca.StatusCobranca.PENDENTE);
@@ -275,7 +279,7 @@ class MercadoPagoWebhookServiceTest {
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "rejected");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("rejected"));
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId()).isNull();
         org.assertj.core.api.Assertions.assertThat(cobranca.getStatus())
@@ -291,7 +295,7 @@ class MercadoPagoWebhookServiceTest {
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "cancelled");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("cancelled"));
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId()).isNull();
         verify(cobrancaRepository).save(cobranca);
@@ -307,7 +311,7 @@ class MercadoPagoWebhookServiceTest {
         cobranca.registrarTentativaPagamento("mp-payment-tentativa-1");
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", "pending");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-tentativa-1", info("pending"));
 
         org.assertj.core.api.Assertions.assertThat(cobranca.getMpPaymentId())
             .isEqualTo("mp-payment-tentativa-1");
@@ -333,7 +337,7 @@ class MercadoPagoWebhookServiceTest {
         when(pessoaRepository.findById(pessoaId)).thenReturn(Optional.of(pessoa));
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento(eventoId, igrejaDaPessoa)));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(emailService).enviar(eq("maria@teste.com"), contains("Retiro"), anyString());
     }
@@ -352,7 +356,7 @@ class MercadoPagoWebhookServiceTest {
                 .nomeConvidado("Fulano de Fora").build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verifyNoInteractions(emailService);
     }
@@ -373,7 +377,7 @@ class MercadoPagoWebhookServiceTest {
         Igreja igrejaOrganizadora = igreja(igrejaId, "Igreja Batista");
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento(eventoId, igrejaOrganizadora)));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(emailService).enviar(eq("fulano@teste.com"), contains("Retiro"), anyString());
     }
@@ -398,7 +402,7 @@ class MercadoPagoWebhookServiceTest {
         Igreja igrejaOrganizadora = igreja(igrejaDoEventoId, "Igreja Sede");
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento(eventoId, igrejaOrganizadora)));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(emailService).enviar(eq("maria@teste.com"), anyString(), contains("Igreja Sede"));
     }
@@ -424,7 +428,7 @@ class MercadoPagoWebhookServiceTest {
         doThrow(new RuntimeException("Falha no provedor de e-mail"))
                 .when(emailService).enviar(anyString(), anyString(), anyString());
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(inscricaoRepository).save(inscricao);
@@ -445,7 +449,7 @@ class MercadoPagoWebhookServiceTest {
                 .id(inscricaoId).status(StatusInscricao.CANCELADA).build();
         when(inscricaoRepository.findById(inscricaoId)).thenReturn(Optional.of(inscricao));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         assertThatCobrancaFoiMarcadaPaga(cobranca);
         assertThat(inscricao.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
@@ -463,7 +467,7 @@ class MercadoPagoWebhookServiceTest {
         cobranca.marcarComoCancelado();
         when(cobrancaRepository.findById(cobrancaId)).thenReturn(Optional.of(cobranca));
 
-        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", "approved");
+        service.confirmarPagamento(cobrancaId.toString(), "mp-payment-999", info("approved"));
 
         verify(cobrancaRepository, never()).save(any());
         verify(inscricaoRepository, never()).findById(any());

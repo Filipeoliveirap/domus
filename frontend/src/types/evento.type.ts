@@ -57,6 +57,10 @@ export interface EventoResponse {
   createdAt: string
   vagas: number | null
   preco: number | null
+  /** Evento pago aceita cartão de crédito (além de Pix). Sempre false em evento gratuito. */
+  pagamentoAceitaCartao: boolean
+  /** Teto de parcelas no cartão (1..12). 1 quando não aceita cartão / evento gratuito. */
+  pagamentoMaxParcelas: number
   exclusivoMembros: boolean
   requerInscricao: boolean
   controlaPresenca: boolean
@@ -108,6 +112,10 @@ export interface EventoRequest {
   fotoId?: string | null
   vagas?: number
   preco?: string
+  /** Backend força false quando o evento não é pago. */
+  pagamentoAceitaCartao?: boolean
+  /** Backend força 1 quando o evento não é pago / não aceita cartão. */
+  pagamentoMaxParcelas?: number
   exclusivoMembros?: boolean
   requerInscricao?: boolean
   inscricoesAte?: string | null

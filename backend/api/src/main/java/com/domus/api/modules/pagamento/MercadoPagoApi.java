@@ -183,7 +183,25 @@ public class MercadoPagoApi {
      * {@code pending}, {@code in_process}, {@code rejected}, {@code cancelled},
      * {@code refunded}, {@code charged_back}.
      */
-    public record InformacoesPagamento(String externalReference, String status) {}
+    public record InformacoesPagamento(String externalReference, String status,
+                                       BigDecimal valorBruto, BigDecimal taxaMercadoPago,
+                                       BigDecimal valorLiquido) {
+
+        /**
+         * valorBruto/taxaMercadoPago/valorLiquido vêm null enquanto o pagamento não
+         * confirmou (sem transaction_details). taxaMercadoPago = bruto - liquido (o que
+         * o MP reteve); fee_details é parseado só para log/diagnóstico, não entra na conta.
+         */
+        static InformacoesPagamento de(RespostaPagamentoMercadoPago r) {
+            // Contrato: sem transaction_details (pagamento pending) os TRÊS campos financeiros
+            // ficam null — não só taxa/liquido. valorBruto também, porque sem liquido não fecha a conta.
+            BigDecimal liquido = r.transactionDetails() != null
+                ? r.transactionDetails().netReceivedAmount() : null;
+            BigDecimal bruto = liquido != null ? r.transactionAmount() : null;
+            BigDecimal taxa = (bruto != null && liquido != null) ? bruto.subtract(liquido) : null;
+            return new InformacoesPagamento(r.externalReference(), r.status(), bruto, taxa, liquido);
+        }
+    }
 
     /**
      * Busca o pagamento pelo id no Mercado Pago e devolve o {@code external_reference}
@@ -225,20 +243,29 @@ public class MercadoPagoApi {
                 log.info("Pagamento recusado pelo Mercado Pago. mpPaymentId={} statusDetail={}",
                     mpPaymentId, pagamento.statusDetail());
             }
-            return new InformacoesPagamento(pagamento.externalReference(), pagamento.status());
+            return InformacoesPagamento.de(pagamento);
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record RespostaPagamentoMercadoPago(
+    record RespostaPagamentoMercadoPago(
         @JsonProperty("external_reference") String externalReference,
         String status,
         @JsonProperty("status_detail") String statusDetail,
         @JsonProperty("point_of_interaction") PontoDeInteracao pointOfInteraction,
-        @JsonProperty("date_of_expiration") String dateOfExpiration
+        @JsonProperty("date_of_expiration") String dateOfExpiration,
+        @JsonProperty("transaction_amount") BigDecimal transactionAmount,
+        @JsonProperty("fee_details") java.util.List<FeeDetail> feeDetails,
+        @JsonProperty("transaction_details") TransactionDetails transactionDetails
     ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record FeeDetail(String type, BigDecimal amount) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record TransactionDetails(@JsonProperty("net_received_amount") BigDecimal netReceivedAmount) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record PontoDeInteracao(@JsonProperty("transaction_data") DadosTransacaoPix transactionData) {}

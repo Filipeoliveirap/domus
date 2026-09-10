@@ -15,7 +15,16 @@ class EventoRequestTest {
                 titulo, descricao, LocalDateTime.now().plusDays(1), null,
                 null, localTexto, tipo, null, recorteEtario,
                 null, null, null, null,
-                null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null);
+    }
+
+    private EventoRequest baseComPagamento(java.math.BigDecimal preco, Boolean aceitaCartao, Integer maxParcelas) {
+        return new EventoRequest(
+                "Culto", "descrição curta", LocalDateTime.now().plusDays(1), null,
+                null, "Salão", "Culto", null, "Jovens",
+                null, null, null, null,
+                null, preco, aceitaCartao, maxParcelas, null, null, null,
                 null, null, null, null, null, null, null);
     }
 
@@ -53,5 +62,23 @@ class EventoRequestTest {
     void recorteEtarioAcimaDe40_recusaComViolacao() {
         Set<?> violacoes = VALIDATOR.validate(base("Culto", null, null, null, "a".repeat(41)));
         assertThat(violacoes).isNotEmpty();
+    }
+
+    @Test
+    void maxParcelasAcimaDe12_recusaComViolacao() {
+        var req = baseComPagamento(new java.math.BigDecimal("100.00"), true, 13);
+        assertThat(VALIDATOR.validate(req)).isNotEmpty();
+    }
+
+    @Test
+    void maxParcelasZero_recusaComViolacao() {
+        var req = baseComPagamento(new java.math.BigDecimal("100.00"), true, 0);
+        assertThat(VALIDATOR.validate(req)).isNotEmpty();
+    }
+
+    @Test
+    void pagamentoValido_naoGeraViolacao() {
+        var req = baseComPagamento(new java.math.BigDecimal("100.00"), true, 6);
+        assertThat(VALIDATOR.validate(req)).isEmpty();
     }
 }

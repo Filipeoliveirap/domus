@@ -241,14 +241,14 @@ public class EventoService {
         evento.setRestricaoSexo(data.restricaoSexo());
         evento.setAtualizadoPor(usuario);
 
-        // Vagas contam inscritos confirmados + convidados.
-        // Reduzir abaixo do total de confirmados é proibido; null = sem limite.
+        // [I3] Vagas contam quem já tem vaga garantida OU reservada (pagamento em curso).
+        // Reduzir abaixo disso é proibido; null = sem limite.
         if (data.vagas() != null) {
-            long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
-            if (data.vagas() < pessoasConfirmadas) {
+            long ocupadas = inscricaoService.contarOcupadas(evento);
+            if (data.vagas() < ocupadas) {
                 throw new BusinessException("VAGAS_MENOR_QUE_INSCRITOS",
                         "Não é possível reduzir as vagas para " + data.vagas() + ": "
-                        + pessoasConfirmadas + " pessoas já estão confirmadas neste evento. "
+                        + ocupadas + " pessoas já estão confirmadas ou reservando pagamento neste evento. "
                         + "Cancele inscrições antes de reduzir o limite.");
             }
         }

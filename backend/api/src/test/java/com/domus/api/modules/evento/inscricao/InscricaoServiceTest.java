@@ -925,6 +925,41 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void previaVirarGratuito_usaValorRestanteParaEstornar_naoOAlvo() {
+        InscricaoEvento paga = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobranca = cobrancaPagaComId("mp-payment-1"); // valor (alvo) = 50.00
+        cobranca.registrarValorCobrado(new java.math.BigDecimal("55.86")); // bruto com taxa
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(paga));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobranca));
+
+        var impacto = service.calcularImpactoEventoVirarGratuito(eventoId);
+
+        assertThat(impacto.pessoasComPagamentoPago()).isEqualTo(1);
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("55.86");
+    }
+
+    @Test
+    void previaVirarGratuito_descontaOQueJaFoiEstornado() {
+        InscricaoEvento paga = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        var cobranca = cobrancaPagaComId("mp-payment-1"); // valor (alvo) = 50.00
+        cobranca.registrarValorCobrado(new java.math.BigDecimal("55.86"));
+        cobranca.registrarEstorno(new java.math.BigDecimal("55.86")); // 100% já devolvido
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(paga));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId)).thenReturn(List.of(cobranca));
+
+        var impacto = service.calcularImpactoEventoVirarGratuito(eventoId);
+
+        assertThat(impacto.pessoasComPagamentoPago()).isZero();
+        assertThat(impacto.valorTotalAEstornar()).isEqualByComparingTo("0");
+    }
+
+    @Test
     void calcularImpactoEventoVirarGratuitoDevolveSemImpactoQuandoNaoHaConfirmadoNemAguardando() {
         when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of());
 

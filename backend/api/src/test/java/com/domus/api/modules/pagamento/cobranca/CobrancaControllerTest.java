@@ -815,6 +815,83 @@ class CobrancaControllerTest implements PostgresTestContainerSupport {
     }
 
     @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('5a111111-1111-1111-1111-111111111111', 'Igreja Inviavel', 'inviavel@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('5a333333-3333-3333-3333-333333333333', '5a111111-1111-1111-1111-111111111111', 'Pagador Inviavel', 'paginviavel@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('5a444444-4444-4444-4444-444444444444', '5a111111-1111-1111-1111-111111111111', " +
+            "'5a333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('5a777777-7777-7777-7777-777777777777', '5a111111-1111-1111-1111-111111111111', 'Salão Inviavel')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao, pagamento_max_parcelas) VALUES " +
+            "('5a555555-5555-5555-5555-555555555555', '5a111111-1111-1111-1111-111111111111', " +
+            "'Evento Barato 6x', now(), '5a777777-7777-7777-7777-777777777777', true, 12.00, true, 6)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('5a666666-6666-6666-6666-666666666666', '5a111111-1111-1111-1111-111111111111', " +
+            "'5a555555-5555-5555-5555-555555555555', '5a333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_parcelasInviaveisParaOValor_recusa() throws Exception {
+        // Evento de R$ 12,00 aceita até 6x (passa no teto), mas 6x daria ~R$ 2,41/parcela,
+        // abaixo do mínimo do Mercado Pago (R$ 5,00). Requisição forjada (a UI não oferece)
+        // tem que ser recusada antes de chamar o MP.
+        UUID igrejaId = UUID.fromString("5a111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("5a555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("5a666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("5a333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("5a444444-4444-4444-4444-444444444444");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("12.00"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":6," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":6}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("PARCELAS_INVIAVEIS_PARA_VALOR")));
+    }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES " +
+            "('5b111111-1111-1111-1111-111111111111', 'Igreja Minimo Cartao', 'minimocartao@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES " +
+            "('5b333333-3333-3333-3333-333333333333', '5b111111-1111-1111-1111-111111111111', 'Pagador Minimo', 'pagminimo@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES " +
+            "('5b444444-4444-4444-4444-444444444444', '5b111111-1111-1111-1111-111111111111', " +
+            "'5b333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES " +
+            "('5b777777-7777-7777-7777-777777777777', '5b111111-1111-1111-1111-111111111111', 'Salão Minimo')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao, preco, pagamento_aceita_cartao, pagamento_max_parcelas) VALUES " +
+            "('5b555555-5555-5555-5555-555555555555', '5b111111-1111-1111-1111-111111111111', " +
+            "'Evento Centavos', now(), '5b777777-7777-7777-7777-777777777777', true, 0.50, true, 1)",
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES " +
+            "('5b666666-6666-6666-6666-666666666666', '5b111111-1111-1111-1111-111111111111', " +
+            "'5b555555-5555-5555-5555-555555555555', '5b333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void pagar_totalAbaixoDoMinimoDeCartao_recusa() throws Exception {
+        // R$ 0,50: mesmo 1x, o total com gross-up (~R$ 0,53) fica abaixo do mínimo de
+        // cartão do MP (R$ 1,00) — cartão não é opção pra esse valor.
+        UUID igrejaId = UUID.fromString("5b111111-1111-1111-1111-111111111111");
+        UUID eventoId = UUID.fromString("5b555555-5555-5555-5555-555555555555");
+        UUID inscricaoId = UUID.fromString("5b666666-6666-6666-6666-666666666666");
+        UUID pessoaId = UUID.fromString("5b333333-3333-3333-3333-333333333333");
+        UUID usuarioId = UUID.fromString("5b444444-4444-4444-4444-444444444444");
+
+        var cobranca = cobrancaEventoRepository.save(new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
+            new BigDecimal("0.50"), Instant.now().plus(1, ChronoUnit.DAYS), usuarioId, null));
+
+        mockMvc.perform(post("/cobrancas/" + cobranca.getId() + "/pagar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"t\",\"paymentMethodId\":\"visa\",\"installments\":1," +
+                    "\"payerEmail\":\"p@x.com\",\"meio\":\"CARTAO\",\"parcelas\":1}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", is("CARTAO_VALOR_MINIMO")));
+    }
+
+    @Test
     void pagar_semMeio_recusaComoValidacao() throws Exception {
         mockMvc.perform(post("/cobrancas/" + UUID.randomUUID() + "/pagar")
                 .contentType(MediaType.APPLICATION_JSON)

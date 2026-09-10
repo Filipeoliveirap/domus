@@ -1,6 +1,7 @@
 package com.domus.api.modules.pagamento.cobranca;
 
 import com.domus.api.modules.pagamento.CalculadoraTaxaPagamento;
+import com.domus.api.modules.pagamento.LimitesPagamentoProperties;
 import com.domus.api.modules.pagamento.MeioPagamento;
 import com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse;
 import com.domus.api.shared.exception.BusinessException;
@@ -23,12 +24,39 @@ public class CobrancaEventoService {
 
     private final CobrancaEventoRepository repository;
     private final CalculadoraTaxaPagamento calculadora;
+    private final LimitesPagamentoProperties limites;
     private final SecureRandom random = new SecureRandom();
 
     public CobrancaEventoService(CobrancaEventoRepository repository,
-                                 CalculadoraTaxaPagamento calculadora) {
+                                 CalculadoraTaxaPagamento calculadora,
+                                 LimitesPagamentoProperties limites) {
         this.repository = repository;
         this.calculadora = calculadora;
+        this.limites = limites;
+    }
+
+    /**
+     * Uma faixa de cartão (total já com gross-up) só é oferecível se respeitar os mínimos
+     * do Mercado Pago: total {@code >=} mínimo de cartão E — quando parcelado — valor por
+     * parcela {@code >=} mínimo de parcela (truncando pra baixo, que é como o pagador vê a
+     * parcela). À vista (1x) não tem piso de parcela, só o de total. Reusado pelo
+     * {@code CobrancaController.pagar} pra barrar requisição forjada que passe pela UI.
+     */
+    public boolean cartaoViavelParaValor(BigDecimal valorTotalCartao, int parcelas) {
+        if (!acimaDoValorMinimoCartao(valorTotalCartao)) {
+            return false;
+        }
+        if (parcelas <= 1) {
+            return true;
+        }
+        BigDecimal porParcela = valorTotalCartao.divide(
+            BigDecimal.valueOf(parcelas), 2, RoundingMode.DOWN);
+        return porParcela.compareTo(limites.parcelaValorMinimo()) >= 0;
+    }
+
+    /** Total (gross-up) atinge o mínimo do MP pra qualquer pagamento com cartão. */
+    public boolean acimaDoValorMinimoCartao(BigDecimal valorTotalCartao) {
+        return valorTotalCartao.compareTo(limites.cartaoValorMinimo()) >= 0;
     }
 
     /**
@@ -46,7 +74,13 @@ public class CobrancaEventoService {
         if (aceitaCartao) {
             int teto = Math.max(1, Math.min(maxParcelas, 12));
             for (int p = 1; p <= teto; p++) {
-                opcoes.add(opcao(igrejaId, valorEvento, MeioPagamento.CARTAO, p));
+                BigDecimal total = calculadora.valorACobrar(igrejaId, valorEvento, MeioPagamento.CARTAO, p);
+                if (!cartaoViavelParaValor(total, p)) {
+                    continue; // faixa abaixo do mínimo do MP — não oferecer (travaria o Brick)
+                }
+                BigDecimal parcela = total.divide(BigDecimal.valueOf(p), 2, RoundingMode.HALF_UP);
+                opcoes.add(new OpcoesPagamentoResponse.OpcaoPagamento(
+                    MeioPagamento.CARTAO, p, total, parcela, calculadora.taxaEmReais(valorEvento, total)));
             }
         }
         return new OpcoesPagamentoResponse(valorEvento, opcoes);

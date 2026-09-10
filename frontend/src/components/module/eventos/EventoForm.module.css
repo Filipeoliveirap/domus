@@ -56,6 +56,14 @@
   gap: 20px;
 }
 
+/* Config de pagamento (evento pago): toggle de cartão + parcelas + resumo de taxa. */
+.blocoPagamento {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
 /* ─── Textarea ─── */
 .campoTextarea {
   display: flex;

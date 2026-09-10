@@ -125,7 +125,7 @@ class InscritoResponseTest {
     }
 
     @Test
-    void pagamentoParcialSoEhTrueQuandoAguardandoPagamentoComCobrancaPagaAnterior() {
+    void pagamentoParcialRefleteOComplementoDevido_independenteDoStatus() {
         Igreja igreja = igreja();
         InscricaoEvento aguardando = inscricaoBase(igreja);
         aguardando.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
@@ -133,8 +133,10 @@ class InscritoResponseTest {
         assertThat(InscritoResponse.from(aguardando, null, null, null, true, null).pagamentoParcial()).isTrue();
         // Sem cobrança paga anterior — "pagamento pendente" comum, nunca pagou nada.
         assertThat(InscritoResponse.from(aguardando, null, null, null, false, null).pagamentoParcial()).isFalse();
-        // CONFIRMADA nunca é "pagamento parcial", mesmo se o parâmetro vier true por engano.
+        // C1: CONFIRMADA com complemento devido continua marcada como "falta complementar"
+        // (o reajuste vencido não derruba quem já pagou o valor original).
         InscricaoEvento confirmada = inscricaoBase(igreja);
-        assertThat(InscritoResponse.from(confirmada, null, null, null, true, null).pagamentoParcial()).isFalse();
+        assertThat(InscritoResponse.from(confirmada, null, null, null, true, null).pagamentoParcial()).isTrue();
+        assertThat(InscritoResponse.from(confirmada, null, null, null, false, null).pagamentoParcial()).isFalse();
     }
 }

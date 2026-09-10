@@ -748,14 +748,19 @@ public class InscricaoService {
     }
 
     /** Espelha a entrada que {@code MercadoPagoWebhookService.registrarNoFinanceiro} criou
-     *  quando o pagamento foi confirmado — nunca quebra o cancelamento em si, só loga. */
+     *  quando o pagamento foi confirmado — nunca quebra o cancelamento em si, só loga.
+     *
+     *  <p>{@code valorReembolsado} já é o BRUTO (vem de {@link CobrancaEvento#valorRestanteParaEstornar()},
+     *  que passou a operar sobre {@code valorCobrado}), então a SAÍDA em "Eventos" já reflete
+     *  o dinheiro que de fato saiu. A {@code taxaDevolvida} vai ZERO por ora (decisão
+     *  consciente): um estorno total dentro da janela devolve a taxa do gateway, mas
+     *  rastrear isso com precisão exige ler o refund do Mercado Pago — deferido, fora do
+     *  escopo desta task. */
     private void registrarEstornoNoFinanceiro(InscricaoEvento inscricao, java.math.BigDecimal valorReembolsado) {
         try {
             String nomePagador = inscricao.getPessoa() != null
                 ? inscricao.getPessoa().getNome()
                 : inscricao.getNomeConvidado();
-            // Task 8 vai passar a taxa realmente devolvida pelo gateway aqui; por ora ZERO
-            // (sem lançamento de devolução de taxa) só pra manter o build coerente.
             movimentacaoAutomaticaService.registrarSaidaDeEvento(
                 inscricao.getIgreja().getId(), valorReembolsado, java.math.BigDecimal.ZERO,
                 "Reembolso — " + inscricao.getEvento().getTitulo() + " (" + nomePagador + ")",
@@ -1670,20 +1675,42 @@ public class InscricaoService {
                             .reduce((a, b) -> b); // a mais recente é a última da lista (ordem de criação)
                     if (cobrancaPagaMaisRecente.isEmpty()) continue; // defesa: valorJaPago > 0 implica ter uma
                     var cobrancaParaEstornar = cobrancaPagaMaisRecente.get();
-                    try {
-                        mercadoPagoClient.estornarParcial(
-                                inscricao.getIgreja().getId(), cobrancaParaEstornar.getMpPaymentId(), excedente);
-                    } catch (RuntimeException e) {
-                        log.error("Falha ao estornar parcialmente. inscricaoId={} mpPaymentId={}",
-                                inscricao.getId(), cobrancaParaEstornar.getMpPaymentId(), e);
-                        cobrancaParaEstornar.marcarEstornoPendente();
-                        cobrancaEventoRepository.save(cobrancaParaEstornar);
-                        continue;
+                    // valorCobrado / valor = fator de gross-up efetivo daquela compra. Aplica o
+                    // mesmo fator ao novo alvo pra achar o novo bruto e estornar só a diferença
+                    // de BRUTO (o que de fato saiu do pagador), não a diferença de alvo. Sem
+                    // valorCobrado (compra pré-taxa) o comportamento antigo vale: diferença de alvo.
+                    java.math.BigDecimal aEstornar;
+                    if (cobrancaParaEstornar.getValorCobrado() != null && cobrancaParaEstornar.getValor().signum() > 0) {
+                        java.math.BigDecimal fator = cobrancaParaEstornar.getValorCobrado()
+                                .divide(cobrancaParaEstornar.getValor(), java.math.MathContext.DECIMAL64);
+                        java.math.BigDecimal novoBruto = precoNovo.multiply(fator)
+                                .setScale(2, java.math.RoundingMode.CEILING);
+                        aEstornar = cobrancaParaEstornar.getValorCobrado().subtract(novoBruto);
+                    } else {
+                        aEstornar = excedente;
                     }
-                    cobrancaParaEstornar.registrarEstorno(excedente);
-                    cobrancaEventoRepository.save(cobrancaParaEstornar);
-                    registrarEstornoNoFinanceiro(inscricao, excedente);
-                    enviarEmailEstornoParcial(inscricao, excedente);
+                    java.math.BigDecimal restanteEstornavel = cobrancaParaEstornar.valorRestanteParaEstornar();
+                    if (aEstornar.compareTo(restanteEstornavel) > 0) aEstornar = restanteEstornavel;
+                    // Nada de bruto a devolver (novo alvo grossado >= o que ainda estava
+                    // retido): se também não há complemento pendente pra cancelar, nada muda.
+                    if (aEstornar.signum() <= 0) {
+                        if (cobrancaPendenteOpt.isEmpty()) continue;
+                    } else {
+                        try {
+                            mercadoPagoClient.estornarParcial(
+                                    inscricao.getIgreja().getId(), cobrancaParaEstornar.getMpPaymentId(), aEstornar);
+                        } catch (RuntimeException e) {
+                            log.error("Falha ao estornar parcialmente. inscricaoId={} mpPaymentId={}",
+                                    inscricao.getId(), cobrancaParaEstornar.getMpPaymentId(), e);
+                            cobrancaParaEstornar.marcarEstornoPendente();
+                            cobrancaEventoRepository.save(cobrancaParaEstornar);
+                            continue;
+                        }
+                        cobrancaParaEstornar.registrarEstorno(aEstornar);
+                        cobrancaEventoRepository.save(cobrancaParaEstornar);
+                        registrarEstornoNoFinanceiro(inscricao, aEstornar);
+                        enviarEmailEstornoParcial(inscricao, aEstornar);
+                    }
                 }
                 if (cobrancaPendenteOpt.isPresent()) {
                     var c = cobrancaPendenteOpt.get();

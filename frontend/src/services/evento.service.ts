@@ -6,6 +6,7 @@ import type {
   RelatorioEventoResponse, RelatorioGeralResponse, RelatorioGeralFiltros, EscopoEdicaoEvento,
 } from '@/types/evento.type'
 import type { PagedResponse } from '@/types/pagedResponse.type'
+import type { OpcoesPagamentoResponse } from '@/types/api.types'
 
 interface ListarEventosParams {
   q?: string
@@ -65,6 +66,12 @@ export const eventosService = {
   // desligar o preço de um evento com gente já confirmada/aguardando pagamento.
   impactoMudancaPreco: (id: string, data: EventoRequest): Promise<ImpactoMudancaPrecoResponse> =>
     api.post<ImpactoMudancaPrecoResponse>(Endpoints.eventos.IMPACTO_MUDANCA_PRECO(id), data).then(res => res.data),
+
+  /** Prévia das opções de pagamento pro GESTOR no cadastro de evento pago — o evento ainda
+   *  não existe, então manda os parâmetros crus (preço, se aceita cartão, teto de parcelas)
+   *  e o backend devolve o mesmo shape de `cobrancaService.opcoesPagamento`. */
+  simularPagamento: (body: { preco: number; aceitaCartao: boolean; maxParcelas: number }): Promise<OpcoesPagamentoResponse> =>
+    api.post<OpcoesPagamentoResponse>(Endpoints.eventos.SIMULAR_PAGAMENTO(), body).then(res => res.data),
 
   // Tipos já usados pela igreja (mais frequentes primeiro) seguidos das sementes — a ordem
   // vem pronta do backend, o front só respeita.

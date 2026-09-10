@@ -7,6 +7,7 @@ import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaCheckoutDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.CobrancaPublicaDTO;
 import com.domus.api.modules.pagamento.cobranca.DTOs.PagarCobrancaRequest;
 import com.domus.api.modules.pagamento.cobranca.DTOs.PagarCobrancaResponse;
+import com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.shared.exception.BusinessException;
 import com.domus.api.shared.exception.ResourceNotFoundException;
@@ -49,6 +50,7 @@ public class CobrancaController {
     private final com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
     private final MercadoPagoClient mercadoPagoClient;
+    private final com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento;
     private final PagamentoPollingService pagamentoPollingService;
     private final com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService;
     private final com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado;
@@ -59,6 +61,7 @@ public class CobrancaController {
                                com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
                                MercadoPagoClient mercadoPagoClient,
+                               com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento,
                                PagamentoPollingService pagamentoPollingService,
                                com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService,
                                com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado) {
@@ -68,6 +71,7 @@ public class CobrancaController {
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.mercadoPagoClient = mercadoPagoClient;
+        this.calculadoraTaxaPagamento = calculadoraTaxaPagamento;
         this.pagamentoPollingService = pagamentoPollingService;
         this.inscricaoService = inscricaoService;
         this.usuarioAutenticado = usuarioAutenticado;
@@ -183,9 +187,45 @@ public class CobrancaController {
             }
         }
 
+        // Recálculo do valor no back (gross-up por meio/parcela) — o valor cobrado NUNCA
+        // vem do front. As portas de cartão (aceita? teto de parcelas?) são do evento;
+        // PIX_NAO_PARCELA / PARCELAS_INVALIDAS já são lançados de dentro de valorACobrar.
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO
+                && !evento.isPagamentoAceitaCartao()) {
+            throw new BusinessException("CARTAO_NAO_ACEITO", "Este evento aceita apenas Pix.");
+        }
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO
+                && request.parcelas() > evento.getPagamentoMaxParcelas()) {
+            throw new BusinessException("PARCELAS_ACIMA_DO_TETO",
+                "Este evento aceita no máximo " + evento.getPagamentoMaxParcelas() + "x.");
+        }
+
+        java.math.BigDecimal valorACobrar = calculadoraTaxaPagamento.valorACobrar(
+            cobranca.getIgrejaId(), cobranca.getValor(), request.meio(), request.parcelas());
+
+        // Mínimos do Mercado Pago (total e por parcela): uma requisição forjada não pode
+        // passar por aqui com uma faixa que o MP recusaria — a UI já não oferece, mas o
+        // servidor é quem garante. Mesma checagem que filtra as faixas em montarOpcoes.
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO) {
+            if (!service.acimaDoValorMinimoCartao(valorACobrar)) {
+                throw new BusinessException("CARTAO_VALOR_MINIMO",
+                    "Este valor não permite pagamento com cartão.");
+            }
+            if (!service.cartaoViavelParaValor(valorACobrar, request.parcelas())) {
+                throw new BusinessException("PARCELAS_INVIAVEIS_PARA_VALOR",
+                    "Este valor não permite parcelar em " + request.parcelas() + "x.");
+            }
+        }
+
+        cobranca.registrarValorCobrado(valorACobrar);
+
+        // O número de parcelas enviado ao Mercado Pago é o `parcelas` já validado (contra o
+        // teto do evento e o gross-up), NUNCA o `installments` cru do Brick — senão dava pra
+        // mandar parcelas=1 (gross-up barato, passa no teto) + installments=12 e a igreja
+        // comeria o custo de 12x. `request.installments()` fica ignorado no servidor.
         var resultado = mercadoPagoClient.criarPagamentoComToken(
-            cobranca.getIgrejaId(), cobranca,
-            request.token(), request.paymentMethodId(), request.installments(), request.payerEmail(), request.issuerId());
+            cobranca.getIgrejaId(), cobranca, valorACobrar,
+            request.token(), request.paymentMethodId(), request.parcelas(), request.payerEmail(), request.issuerId());
 
         cobranca.registrarTentativaPagamento(resultado.mpPaymentId());
         cobrancaRepository.save(cobranca);
@@ -227,6 +267,21 @@ public class CobrancaController {
     }
 
     public record StatusCobrancaResponse(String status) {}
+
+    /**
+     * Opções de pagamento (Pix + faixas de cartão) pra a tela de escolha de método do
+     * checkout. Sem autenticação, mesmo motivo do resto da classe (posse do UUID da
+     * cobrança). O valor de cada opção é recalculado no back — o front só renderiza.
+     */
+    @GetMapping("/{id}/opcoes-pagamento")
+    public OpcoesPagamentoResponse opcoesPagamento(@PathVariable UUID id) {
+        var cobranca = cobrancaRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
+        var evento = eventoRepository.findById(cobranca.getEventoId())
+            .orElseThrow(() -> new ResourceNotFoundException("Evento da cobrança não encontrado."));
+        return service.montarOpcoes(cobranca.getValor(), evento.isPagamentoAceitaCartao(),
+            evento.getPagamentoMaxParcelas(), cobranca.getIgrejaId());
+    }
 
     /**
      * Recupera o QR/copia-e-cola de um pagamento Pix em andamento — pro caso de a pessoa

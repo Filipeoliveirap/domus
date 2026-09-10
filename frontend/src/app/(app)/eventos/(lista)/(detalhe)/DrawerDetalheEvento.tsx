@@ -222,6 +222,9 @@ export function DrawerDetalheEvento({ eventoId, onClose, abrirPendenciaAoMontar 
                   <div>
                     <p className={styles.infoLabel}>Preço</p>
                     <p className={styles.infoValor}>{formatarMoeda(evento.preco)} por pessoa</p>
+                    <p className={styles.infoSecundario}>
+                      A taxa de serviço do pagamento é somada no checkout, conforme a forma escolhida.
+                    </p>
                   </div>
                 </div>
               )}

@@ -21,9 +21,11 @@ export function proxy(request: NextRequest) {
     // serve os assets estáticos que o Brick injeta (fontes/scripts do form de cartão tokenizado).
     // `strict-dynamic` faz os navegadores modernos ignorarem a lista de hosts abaixo (a
     // confiança propaga do script com nonce). Os hosts ficam de fallback pra navegadores
-    // sem suporte a strict-dynamic. `*.mlstatic.com` (não só http2) + `www.mercadolibre.com`
-    // porque o Brick e o script de antifraude do MP carregam de vários subdomínios/da matriz.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client https://sdk.mercadopago.com https://*.mlstatic.com https://www.mercadolibre.com`,
+    // sem suporte a strict-dynamic. `*.mlstatic.com` (não só http2) + `*.mercadolibre.com`
+    // /`*.mercadolivre.com`(.br) porque o Brick e o script de antifraude do MP ("armor"/
+    // device fingerprint) carregam de vários subdomínios e das duas matrizes (mercadolibre =
+    // internacional, mercadolivre = Brasil; o beacon do armor usa a grafia BR).
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://accounts.google.com/gsi/client https://sdk.mercadopago.com https://*.mlstatic.com https://*.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br`,
     "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
     // O Payment Brick monta os campos de cartão (número/CVV) em iframes próprios servidos
     // pelo domínio do Mercado Pago — sem isso o navegador recusa renderizar o Brick.
@@ -35,11 +37,11 @@ export function proxy(request: NextRequest) {
     // www.mercadolibre.com entra pro device fingerprint / antifraude que o SDK do Mercado
     // Pago carrega (mercadolibre.com é a matriz; parte do checkout roda de lá). *.mlstatic.com
     // (não só http2) porque o CDN de assets do Brick usa vários subdomínios.
-    "frame-src https://accounts.google.com https://www.mercadopago.com.br https://www.mercadopago.com https://api.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://www.mercadolibre.com",
+    "frame-src https://accounts.google.com https://*.mercadopago.com.br https://*.mercadopago.com https://api.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://*.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br",
     // ws://localhost só em dev: é o websocket do Hot Module Reload (webpack-hmr) — sem
     // isso o navegador bloqueia a conexão e o Fast Refresh para de funcionar.
-    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://www.mercadolibre.com https://api.mercadolibre.com${isDev ? ' ws://localhost:*' : ''}`,
-    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://*.mlstatic.com https://www.mercadopago.com https://www.mercadolibre.com",
+    `connect-src 'self' https://accounts.google.com https://*.sentry.io https://viacep.com.br https://api.mercadopago.com https://*.mercadopago.com https://*.mlstatic.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com https://*.mercadolibre.com https://api.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br${isDev ? ' ws://localhost:*' : ''}`,
+    "img-src 'self' data: blob: https://*.googleusercontent.com https://accounts.google.com https://*.mlstatic.com https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadolivre.com https://*.mercadolivre.com.br",
     "font-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",

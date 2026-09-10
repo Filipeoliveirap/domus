@@ -86,6 +86,17 @@ public class EventoController {
                 id, usuario.getPessoa().getId(), usuario.getIgreja().getId()));
     }
 
+    /**
+     * Opções de pagamento (Pix + faixas de cartão) pro form de evento pago, antes de salvar.
+     * Autenticado (ADMIN/LIDER, ver SecurityConfig) — é ferramenta de quem cadastra evento,
+     * não do pagador. O checkout usa {@code GET /cobrancas/{id}/opcoes-pagamento}.
+     */
+    @PostMapping("/simular-pagamento")
+    public com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse simularPagamento(
+            @Valid @RequestBody com.domus.api.modules.pagamento.DTOs.SimularPagamentoRequest req) {
+        return eventoService.simularPagamento(usuarioAutenticado.getIgrejaId(), req);
+    }
+
     @PostMapping
     public ResponseEntity<EventoResponse> cadastrar(@Valid @RequestBody EventoRequest data) {
         UUID igrejaId = usuarioAutenticado.getIgrejaId();

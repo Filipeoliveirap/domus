@@ -82,7 +82,8 @@ class EventoServiceTest {
                 eventoRepository, igrejaRepository, cacheEvictor, outboxRegistrador,
                 inscricaoService, inscricaoRepository, fotoService, elegibilidadeService, pessoaRepository,
                 localEventoRepository, usuarioRepository, familiaIgrejaService, notificacaoService,
-                eventoSerieRepository
+                eventoSerieRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class)
         );
 
         when(familiaIgrejaService.idsDaFamiliaCompleta(any())).thenReturn(Set.of(igrejaId));
@@ -131,6 +132,8 @@ class EventoServiceTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 false,
                 false,
                 false,
@@ -152,14 +155,46 @@ class EventoServiceTest {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, preco, false, requerInscricao, false, false, null, null, null, null, null, null);
+                null, preco, null, null, false, requerInscricao, false, false, null, null, null, null, null, null);
+    }
+
+    private EventoRequest requestComPagamento(java.math.BigDecimal preco, Boolean aceitaCartao, Integer maxParcelas) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
+                null, null, "Salão Social", "Culto", null, null, null, null, null, null,
+                null, preco, aceitaCartao, maxParcelas, false, true, false, false,
+                null, null, null, null, null, null);
+    }
+
+    @Test
+    void eventoGratuitoIgnoraConfigDePagamento() {
+        EventoResponse r = service.cadastrarEvento(
+                requestComPagamento(null, true, 6), igrejaId, usuarioId);
+        assertThat(r.pagamentoAceitaCartao()).isFalse();
+        assertThat(r.pagamentoMaxParcelas()).isEqualTo(1);
+    }
+
+    @Test
+    void eventoPagoSemCartaoForcaParcelaUnica() {
+        EventoResponse r = service.cadastrarEvento(
+                requestComPagamento(new java.math.BigDecimal("50.00"), false, 6), igrejaId, usuarioId);
+        assertThat(r.pagamentoAceitaCartao()).isFalse();
+        assertThat(r.pagamentoMaxParcelas()).isEqualTo(1);
+    }
+
+    @Test
+    void eventoPagoComCartaoGuardaOTeto() {
+        EventoResponse r = service.cadastrarEvento(
+                requestComPagamento(new java.math.BigDecimal("50.00"), true, 6), igrejaId, usuarioId);
+        assertThat(r.pagamentoAceitaCartao()).isTrue();
+        assertThat(r.pagamentoMaxParcelas()).isEqualTo(6);
     }
 
     private EventoRequest requestComRecorrencia(com.domus.api.modules.evento.serie.DTOs.RecorrenciaRequest recorrencia) {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, false, false, false, null, recorrencia, null, null, null, null);
+                null, null, null, null, false, false, false, false, null, recorrencia, null, null, null, null);
     }
 
     private EventoRequest requestComLocalizacao(UUID localId, String localTexto,
@@ -167,28 +202,28 @@ class EventoServiceTest {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, localId, localTexto, "Culto", null, null, null, null, null, null,
-                null, null, false, false, false, false, null, null, enderecoLocal, null, null, null);
+                null, null, null, null, false, false, false, false, null, null, enderecoLocal, null, null, null);
     }
 
     private EventoRequest requestComNovoLocal(com.domus.api.modules.evento.local.DTOs.LocalEventoRequest novoLocal) {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, null, "Culto", null, null, null, null, null, null,
-                null, null, false, false, false, false, null, null, null, novoLocal, null, null);
+                null, null, null, null, false, false, false, false, null, null, null, novoLocal, null, null);
     }
 
     private EventoRequest requestComResponsaveis(java.util.List<UUID> ids) {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, null, "Culto", ids, null, null, null, null, null,
-                null, null, false, false, false, false, null, null, null, null, null, null);
+                null, null, null, null, false, false, false, false, null, null, null, null, null, null);
     }
 
     private EventoRequest requestComTitulo(String titulo) {
         return new EventoRequest(
                 titulo, "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, null, "Culto", null, null, null, null, null, null,
-                null, null, false, false, false, false, null, null, null, null, null, null);
+                null, null, null, null, false, false, false, false, null, null, null, null, null, null);
     }
 
     private Pessoa pessoaMock(UUID id, String nome) {
@@ -309,7 +344,7 @@ class EventoServiceTest {
         var novoLocal = new com.domus.api.modules.evento.local.DTOs.LocalEventoRequest("X", null, null, null);
         EventoRequest req = new EventoRequest(
                 "Culto", "d", LocalDateTime.now().plusDays(1), null, null, null, "Culto", null,
-                null, null, null, null, null, null, null, false, false, false, false, null, null,
+                null, null, null, null, null, null, null, null, null, false, false, false, false, null, null,
                 new com.domus.api.modules.pessoa.DTO.EnderecoDTO(null, null, null, null, null, "Recife", null),
                 novoLocal, null, null);
         assertThatThrownBy(() -> service.cadastrarEvento(req, igrejaId, usuarioId))
@@ -907,7 +942,7 @@ class EventoServiceTest {
         EventoRequest req = new EventoRequest(
                 "Culto Novo", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, null, "Culto", List.of(novoResponsavel), null, null, null, null, null,
-                null, null, false, false, false, false, null, null, null, null, null, null);
+                null, null, null, null, false, false, false, false, null, null, null, null, null, null);
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA_E_SEGUINTES);
 
@@ -939,7 +974,7 @@ class EventoServiceTest {
         EventoRequest req = new EventoRequest(
                 "Culto Dominical", "Descrição do evento", LocalDateTime.now().plusDays(1),
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, true, false, false, null, null, null, null, null,
+                null, null, null, null, false, true, false, false, null, null, null, null, null,
                 com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_SEM_REEMBOLSO);
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
@@ -971,7 +1006,7 @@ class EventoServiceTest {
         EventoRequest req = new EventoRequest(
                 "Culto Dominical", "Descrição do evento", inicioEm,
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, true, false, false, null, null, null, null,
+                null, null, null, null, false, true, false, false, null, null, null, null,
                 inicioEm.minusDays(1), com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO);
         service.atualizarEvento(eventoId, req, igrejaId, usuarioId, false,
                 com.domus.api.modules.evento.serie.EscopoEdicaoEvento.SERIE);
@@ -984,7 +1019,7 @@ class EventoServiceTest {
         return new EventoRequest(
                 "Culto Dominical", "Descrição do evento", inicioEm,
                 null, null, "Salão Social", "Culto", null, null, null, null, null, null,
-                null, null, false, requerInscricao, false, false, null, null, null, null,
+                null, null, null, null, false, requerInscricao, false, false, null, null, null, null,
                 inscricoesAte, null);
     }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavegacaoImersiva } from '@/hooks/useNavegacaoImersiva'
 import { Pencil, Archive, Grid3X3, Crown, Trash2 } from 'lucide-react'
 import { useCelulas } from '@/hooks/celula/useCelulas'
 import { useExcluirCelulaDefinitivamente } from '@/hooks/celula/useExcluirCelulaDefinitivamente'
@@ -32,7 +32,7 @@ function rotuloLideres(lideres: string[]): string {
 }
 
 export default function CelulasPage() {
-  const router = useRouter()
+  const { saindoId, entrar, prefetch } = useNavegacaoImersiva()
   const { data: celulas, isLoading, isError, refetch } = useCelulas()
   const hidratado = useAuthStore((s) => s.hidratado)
   const role = useAuthStore((s) => s.role)
@@ -99,7 +99,7 @@ export default function CelulasPage() {
           mensagem={`Comece cadastrando a primeira ${rotuloCelula.singular.toLowerCase()} da sua igreja.`}
           acaoPrimaria={podeGerenciar ? { label: `Nova ${rotuloCelula.singular.toLowerCase()}`, onClick: () => setFormAberto('novo') } : undefined} />
       ) : (
-        <div className={styles.grid}>
+        <div className={`${styles.grid} ${saindoId ? 'imersivo-navegando' : ''}`}>
           {celulas?.map((c) => {
             const podeEditarEsta = podeGerenciar || c.souLiderDestaCelula
             const acoes: ItemAcao[] = [
@@ -111,10 +111,19 @@ export default function CelulasPage() {
                 : []),
             ]
             return (
-              <div key={c.id} className={`${styles.card} card-interativo`}
+              <div key={c.id}
+                data-imersivo-card={c.id}
+                className={`${styles.card} card-interativo`}
                 role="button" tabIndex={0}
-                onClick={() => router.push(`/celulas/${c.id}`)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/celulas/${c.id}`) }}
+                onPointerEnter={() => {
+                  prefetch(`/celulas/${c.id}`)
+                  queryClient.prefetchQuery({
+                    queryKey: ['celulas', c.id],
+                    queryFn: () => celulaService.buscar(c.id),
+                  })
+                }}
+                onClick={() => entrar(`/celulas/${c.id}`, c.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') entrar(`/celulas/${c.id}`, c.id) }}
               >
                 {acoes.length > 0 && (
                   <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>

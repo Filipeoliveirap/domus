@@ -25,7 +25,10 @@ class CobrancaEventoServiceTest {
     @BeforeEach
     void setup() {
         repository = mock(CobrancaEventoRepository.class);
-        service = new CobrancaEventoService(repository);
+        service = new CobrancaEventoService(repository,
+            mock(com.domus.api.modules.pagamento.CalculadoraTaxaPagamento.class),
+            new com.domus.api.modules.pagamento.LimitesPagamentoProperties(
+                new BigDecimal("1.00"), new BigDecimal("5.00")));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 

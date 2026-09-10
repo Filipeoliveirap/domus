@@ -1,0 +1,302 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: entrar 0.32s ease-out both;
+}
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.centro {
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.erro {
+  padding: 24px 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.resumo {
+  padding: 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.pergunta {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  margin-bottom: 8px;
+}
+
+.valorEvento {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.valorEvento strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.aviso {
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Cartões estilo rádio ─── */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  width: 100%;
+  min-height: 64px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  animation: surgirCard 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes surgirCard {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+}
+
+.card:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.cardAtivo,
+.cardAtivo:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.cardIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.cardTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cardLabel {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.cardDescricao {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.radio {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border);
+  transition: border-color 0.15s ease;
+}
+
+.cardAtivo .radio {
+  border-color: var(--color-primary);
+  background:
+    radial-gradient(circle at center, var(--color-primary) 0 5px, transparent 6px);
+}
+
+/* ─── Painel revelado (Pix / parcelas do cartão) ─── */
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.resumoPreco {
+  padding: 4px 16px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.rpLinha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  text-align: left;
+}
+
+.rpLinha + .rpLinha {
+  border-top: 1px solid var(--color-border);
+}
+
+.rpLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.rpValor {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-dark);
+  text-align: right;
+}
+
+.rpTotal .rpLabel {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.rpTotal .rpValor {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.parcelas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.parcela {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dark);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.parcela:hover {
+  border-color: var(--color-primary);
+}
+
+.parcela:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.parcela:active {
+  transform: scale(0.98);
+}
+
+.parcelaAtiva,
+.parcelaAtiva:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.parcelaEsq {
+  font-weight: var(--font-weight-medium);
+}
+
+.parcelaDir {
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.continuar {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform 0.12s ease;
+}
+
+.continuar:hover {
+  background: var(--color-primary-dark);
+}
+
+.continuar:active {
+  transform: scale(0.98);
+}
+
+.continuar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrapper { animation: none; }
+  .card { animation: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+  .card:active,
+  .parcela:active,
+  .continuar:active { transform: none; }
+  .parcela { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+  .continuar { transition: background-color var(--transition-fast); }
+}
+
+@media (max-width: 480px) {
+  .resumo { padding: 16px; }
+  .card { padding: 14px; }
+}

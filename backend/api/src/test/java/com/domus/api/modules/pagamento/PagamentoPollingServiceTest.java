@@ -2,6 +2,7 @@ package com.domus.api.modules.pagamento;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -39,17 +40,18 @@ class PagamentoPollingServiceTest {
     @Test
     void confirmaQuandoMercadoPagoJaAprovou() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "approved"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "approved", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
-        verify(webhookService).confirmarPagamento(cobrancaId, mpPaymentId, "approved");
+        verify(webhookService).confirmarPagamento(eq(cobrancaId), eq(mpPaymentId),
+            argThat(info -> "approved".equals(info.status())));
     }
 
     @Test
     void naoConfirmaEnquantoPagamentoAindaEstaEmAberto() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "pending"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "pending", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
@@ -62,17 +64,18 @@ class PagamentoPollingServiceTest {
         // trata cada status do MP (inclusive liberar a cobrança pra nova tentativa) — a
         // reconferência não deve decidir isso sozinha, só repassar.
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "rejected"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "rejected", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
 
-        verify(webhookService).confirmarPagamento(cobrancaId, mpPaymentId, "rejected");
+        verify(webhookService).confirmarPagamento(eq(cobrancaId), eq(mpPaymentId),
+            argThat(info -> "rejected".equals(info.status())));
     }
 
     @Test
     void naoMartelaOMercadoPagoEmChamadasSeguidas() {
         when(mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId))
-            .thenReturn(new InformacoesPagamento(cobrancaId, "pending"));
+            .thenReturn(new InformacoesPagamento(cobrancaId, "pending", null, null, null));
 
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);
         service.reconferirAgora(igrejaId, cobrancaId, mpPaymentId);

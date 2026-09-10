@@ -72,7 +72,8 @@ class EventoServiceCamposInscricaoTest {
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
                 pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
-                notificacaoService, eventoSerieRepository);
+                notificacaoService, eventoSerieRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class));
 
         when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(inscricaoService.removerInscritosNaoElegiveis(any()))

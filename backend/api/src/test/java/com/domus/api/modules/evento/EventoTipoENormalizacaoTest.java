@@ -80,7 +80,8 @@ class EventoTipoENormalizacaoTest {
         service = new EventoService(eventoRepository, igrejaRepository, cacheEvictor,
                 outboxRegistrador, inscricaoService, inscricaoRepository, fotoService, elegibilidadeService,
                 pessoaRepository, localEventoRepository, usuarioRepository, familiaIgrejaService,
-                notificacaoService, eventoSerieRepository);
+                notificacaoService, eventoSerieRepository,
+                mock(com.domus.api.modules.pagamento.cobranca.CobrancaEventoService.class));
 
         eventosSalvos = new ArrayList<>();
         when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja(igrejaId)));

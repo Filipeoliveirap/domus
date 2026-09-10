@@ -35,6 +35,12 @@ public class CobrancaEvento {
     @Column(name = "mp_payment_id")
     private String mpPaymentId;
 
+    /** Valor efetivamente cobrado do pagador (alvo + taxa, com gross-up), gravado no
+     *  {@code POST /cobrancas/{id}/pagar}. {@code valor} continua sendo o alvo (o que a
+     *  igreja quer receber). NULL até a 1ª tentativa de pagamento. */
+    @Column(name = "valor_cobrado")
+    private BigDecimal valorCobrado;
+
     @Column(name = "token_link_publico", unique = true)
     private String tokenLinkPublico;
 
@@ -100,6 +106,10 @@ public class CobrancaEvento {
         this.mpPaymentId = mpPaymentId;
     }
 
+    /** Grava quanto foi efetivamente cobrado do pagador (alvo + taxa, com gross-up) no
+     *  {@code POST /pagar}. {@code valor} (o alvo) fica intacto. */
+    public void registrarValorCobrado(BigDecimal valorCobrado) { this.valorCobrado = valorCobrado; }
+
     /**
      * Libera a cobrança para uma nova tentativa de pagamento depois que a tentativa
      * anterior (que gravou {@code mpPaymentId} via {@link #registrarTentativaPagamento})
@@ -162,6 +172,7 @@ public class CobrancaEvento {
     public BigDecimal getValor() { return valor; }
     public StatusCobranca getStatus() { return status; }
     public String getMpPaymentId() { return mpPaymentId; }
+    public BigDecimal getValorCobrado() { return valorCobrado; }
     public String getTokenLinkPublico() { return tokenLinkPublico; }
     public Instant getExpiraEm() { return expiraEm; }
     public Instant getPagoEm() { return pagoEm; }

@@ -38,10 +38,11 @@ public class MercadoPagoClient {
      * INICIA o pagamento no Mercado Pago; a confirmação definitiva (marcar a
      * {@code CobrancaEvento} como PAGO) continua vindo assíncrona, pelo webhook (Task 10).
      */
-    public MercadoPagoApi.ResultadoPagamento criarPagamentoComToken(UUID igrejaId, CobrancaEvento cobranca, String token,
+    public MercadoPagoApi.ResultadoPagamento criarPagamentoComToken(UUID igrejaId, CobrancaEvento cobranca,
+                                          java.math.BigDecimal valorACobrar, String token,
                                           String paymentMethodId, Integer installments, String payerEmail, String issuerId) {
         String accessToken = obterAccessTokenPlano(igrejaId);
-        return api.criarPagamentoTokenizado(accessToken, cobranca.getId().toString(), cobranca.getValor(),
+        return api.criarPagamentoTokenizado(accessToken, cobranca.getId().toString(), valorACobrar,
             token, paymentMethodId, installments, payerEmail, issuerId);
     }
 

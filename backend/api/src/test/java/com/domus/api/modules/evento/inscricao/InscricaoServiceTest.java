@@ -756,7 +756,7 @@ class InscricaoServiceTest {
         service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
 
         verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
-            eq(igrejaId), eq(new java.math.BigDecimal("50.00")),
+            eq(igrejaId), eq(new java.math.BigDecimal("50.00")), eq(java.math.BigDecimal.ZERO),
             org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
     }
 
@@ -1058,7 +1058,7 @@ class InscricaoServiceTest {
         // o evento é que ficou gratuito, ninguém perdeu a vaga.
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
-                eq(igrejaId), eq(new java.math.BigDecimal("50.00")),
+                eq(igrejaId), eq(new java.math.BigDecimal("50.00")), eq(java.math.BigDecimal.ZERO),
                 org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
 
         var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
@@ -2235,7 +2235,7 @@ class InscricaoServiceTest {
         verify(mercadoPagoClient).estornarParcial(igrejaId, "mp-payment-1", new java.math.BigDecimal("30.00"));
         verify(cobrancaEventoService, never()).criarParaTerceiro(any(), any(), any(), any(), any(), any(), anyBoolean());
         verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
-                eq(igrejaId), eq(new java.math.BigDecimal("30.00")),
+                eq(igrejaId), eq(new java.math.BigDecimal("30.00")), eq(java.math.BigDecimal.ZERO),
                 org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
         verify(emailService).enviar(eq("maria@email.com"), any(), any());
     }

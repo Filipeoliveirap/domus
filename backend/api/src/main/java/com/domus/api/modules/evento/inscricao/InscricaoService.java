@@ -754,8 +754,10 @@ public class InscricaoService {
             String nomePagador = inscricao.getPessoa() != null
                 ? inscricao.getPessoa().getNome()
                 : inscricao.getNomeConvidado();
+            // Task 8 vai passar a taxa realmente devolvida pelo gateway aqui; por ora ZERO
+            // (sem lançamento de devolução de taxa) só pra manter o build coerente.
             movimentacaoAutomaticaService.registrarSaidaDeEvento(
-                inscricao.getIgreja().getId(), valorReembolsado,
+                inscricao.getIgreja().getId(), valorReembolsado, java.math.BigDecimal.ZERO,
                 "Reembolso — " + inscricao.getEvento().getTitulo() + " (" + nomePagador + ")",
                 inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null, nomePagador);
         } catch (RuntimeException e) {

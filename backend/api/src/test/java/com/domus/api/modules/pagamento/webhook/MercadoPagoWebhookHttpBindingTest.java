@@ -79,6 +79,6 @@ class MercadoPagoWebhookHttpBindingTest implements PostgresTestContainerSupport 
                         .param("user_id", "mp-user-1"))
                 .andExpect(status().isOk());
 
-        verify(service).confirmarPagamento("cobranca-abc", "999", "approved");
+        verify(service).confirmarPagamento(org.mockito.ArgumentMatchers.eq("cobranca-abc"), org.mockito.ArgumentMatchers.eq("999"), org.mockito.ArgumentMatchers.argThat(i -> "approved".equals(i.status())));
     }
 }

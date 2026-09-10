@@ -53,6 +53,7 @@ public class CobrancaController {
     private final com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento;
     private final PagamentoPollingService pagamentoPollingService;
     private final com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService;
+    private final com.domus.api.modules.pagamento.webhook.MercadoPagoWebhookService webhookService;
     private final com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado;
 
     public CobrancaController(CobrancaEventoService service,
@@ -64,6 +65,7 @@ public class CobrancaController {
                                com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento,
                                PagamentoPollingService pagamentoPollingService,
                                com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService,
+                               com.domus.api.modules.pagamento.webhook.MercadoPagoWebhookService webhookService,
                                com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado) {
         this.service = service;
         this.cobrancaRepository = cobrancaRepository;
@@ -74,6 +76,7 @@ public class CobrancaController {
         this.calculadoraTaxaPagamento = calculadoraTaxaPagamento;
         this.pagamentoPollingService = pagamentoPollingService;
         this.inscricaoService = inscricaoService;
+        this.webhookService = webhookService;
         this.usuarioAutenticado = usuarioAutenticado;
     }
 
@@ -179,6 +182,13 @@ public class CobrancaController {
         // primeiro aqui reserva; a segunda é recusada antes de chamar o Mercado Pago.
         var evento = eventoRepository.buscarComLock(cobranca.getEventoId(), cobranca.getIgrejaId())
             .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        // [I1] o link de pagamento (até 48h) não pode cobrar um evento que já ACONTECEU.
+        // O prazo de inscrição (inscricoes_ate), esse sim, NÃO barra aqui — uma inscrição
+        // pendente já existente pode ser concluída mesmo depois do prazo ([C4]).
+        if (evento.getSituacao() == com.domus.api.modules.evento.SituacaoEvento.ENCERRADO) {
+            throw new BusinessException("EVENTO_ENCERRADO",
+                "Este evento já terminou. Fale com a igreja para resolver o pagamento.");
+        }
         if (evento.getVagas() != null) {
             long ocupadas = cobrancaRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
             if (ocupadas >= evento.getVagas()) {
@@ -326,6 +336,15 @@ public class CobrancaController {
             .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada."));
         if (cobranca.getStatus() != StatusCobranca.PENDENTE || cobranca.getMpPaymentId() == null) {
             // Nada pra reiniciar — cobrança já resolvida, ou nunca teve tentativa em andamento.
+            return;
+        }
+        // [C3] reconfere no MP antes de descartar o mpPaymentId: se o pagamento aprovou na
+        // janela entre o poll e o clique, confirmar em vez de perder o rastro (senão vira
+        // pagamento órfão / risco de a pessoa pagar de novo). Se o cancelamento no MP
+        // falhar, `cancelarPagamento` lança e a cobrança NÃO é liberada (o front mostra o erro).
+        var info = mercadoPagoClient.buscarInformacoesPagamento(cobranca.getIgrejaId(), cobranca.getMpPaymentId());
+        if ("approved".equals(info.status())) {
+            webhookService.confirmarPagamento(id.toString(), cobranca.getMpPaymentId(), info);
             return;
         }
         mercadoPagoClient.cancelarPagamento(cobranca.getIgrejaId(), cobranca.getMpPaymentId());

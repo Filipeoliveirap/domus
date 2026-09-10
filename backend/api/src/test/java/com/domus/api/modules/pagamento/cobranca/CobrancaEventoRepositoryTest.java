@@ -162,4 +162,45 @@ class CobrancaEventoRepositoryTest implements PostgresTestContainerSupport {
 
         assertThat(encontrada).isPresent();
     }
+
+    @Test
+    @Sql(statements = {
+        "INSERT INTO igreja (id, nome, email) VALUES ('11111111-1111-1111-1111-111111111111', 'Igreja Teste', 'igreja@teste.com')",
+        "INSERT INTO pessoa (id, igreja_id, nome, email) VALUES ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'Fulano', 'fulano@teste.com')",
+        "INSERT INTO usuario (id, igreja_id, pessoa_id, role_id, ativo) VALUES ('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', (SELECT id FROM role WHERE nome = 'ADMIN_IGREJA'), true)",
+        "INSERT INTO local_evento (id, igreja_id, nome) VALUES ('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', 'Salão')",
+        "INSERT INTO evento (id, igreja_id, titulo, inicio_em, local_id, requer_inscricao) VALUES ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'Retiro', now(), '77777777-7777-7777-7777-777777777777', true)",
+        // inscrição A: pagou o original + complemento EXPIRADO -> deve entrar no resultado
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, status) VALUES ('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', '55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', 'CONFIRMADA')",
+        // inscrição B: só pagou tudo, sem complemento -> NÃO entra
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '55555555-5555-5555-5555-555555555555', NULL, 'Pago', '33333333-3333-3333-3333-333333333333', 'CONFIRMADA')",
+        // inscrição C: só pendente, nunca pagou -> NÃO entra
+        "INSERT INTO inscricao_evento (id, igreja_id, evento_id, pessoa_id, nome_convidado, convidado_por_pessoa_id, status) VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', '55555555-5555-5555-5555-555555555555', NULL, 'Pendente', '33333333-3333-3333-3333-333333333333', 'AGUARDANDO_PAGAMENTO')"
+    })
+    void findInscricaoIdsComComplementoDevido_soPagouOOriginalEDeveComplemento() {
+        UUID insA = UUID.fromString("66666666-6666-6666-6666-666666666666");
+        UUID insB = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        UUID insC = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var pagoA = new CobrancaEvento(igrejaId, eventoId, insA, pessoaId,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, null);
+        pagoA.marcarComoPago("mp-a");
+        entityManager.persist(pagoA);
+        var complementoA = new CobrancaEvento(igrejaId, eventoId, insA, pessoaId,
+            new BigDecimal("30.00"), Instant.now().minus(1, ChronoUnit.HOURS), usuarioId, "tok-a");
+        complementoA.marcarComoExpirado();
+        entityManager.persist(complementoA);
+        var pagoB = new CobrancaEvento(igrejaId, eventoId, insB, null,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, "tok-b");
+        pagoB.marcarComoPago("mp-b");
+        entityManager.persist(pagoB);
+        var pendenteC = new CobrancaEvento(igrejaId, eventoId, insC, null,
+            new BigDecimal("100.00"), Instant.now().plus(1, ChronoUnit.HOURS), usuarioId, "tok-c");
+        entityManager.persist(pendenteC);
+        entityManager.flush();
+        entityManager.clear();
+
+        var resultado = repository.findInscricaoIdsComComplementoDevido(java.util.List.of(insA, insB, insC));
+
+        assertThat(resultado).containsExactly(insA);
+    }
 }

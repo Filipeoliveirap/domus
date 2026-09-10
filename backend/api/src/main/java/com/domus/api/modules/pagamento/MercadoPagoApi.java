@@ -6,6 +6,7 @@ import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentCreateRequest;
 import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.core.MPRequestOptions;
+import com.domus.api.shared.exception.BusinessException;
 import com.mercadopago.exceptions.MPApiException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -93,7 +94,8 @@ public class MercadoPagoApi {
             return String.valueOf(pagamento.getId());
         } catch (Exception e) {
             logarDetalheSeApiException("Falha ao criar pagamento no Mercado Pago", e);
-            throw new IllegalStateException("Falha ao criar pagamento no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL",
+                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
         }
     }
 
@@ -172,7 +174,8 @@ public class MercadoPagoApi {
             );
         } catch (Exception e) {
             logarDetalheSeApiException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
-            throw new IllegalStateException("Falha ao criar pagamento tokenizado no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL",
+                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
         }
     }
 
@@ -232,7 +235,7 @@ public class MercadoPagoApi {
                 .retrieve()
                 .body(RespostaPagamentoMercadoPago.class);
             if (pagamento == null) {
-                throw new IllegalStateException("Resposta vazia do Mercado Pago ao consultar pagamento");
+                throw new BusinessException("MP_INDISPONIVEL", "O Mercado Pago não respondeu. Tente de novo em instantes.");
             }
             if ("rejected".equals(pagamento.status())) {
                 // `status` sozinho não diz o motivo — o Mercado Pago só expõe isso em
@@ -245,7 +248,8 @@ public class MercadoPagoApi {
             }
             return InformacoesPagamento.de(pagamento);
         } catch (Exception e) {
-            throw new IllegalStateException("Falha ao consultar pagamento no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL",
+                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
         }
     }
 
@@ -298,7 +302,7 @@ public class MercadoPagoApi {
                 .retrieve()
                 .body(RespostaPagamentoMercadoPago.class);
             if (pagamento == null) {
-                throw new IllegalStateException("Resposta vazia do Mercado Pago ao consultar pagamento");
+                throw new BusinessException("MP_INDISPONIVEL", "O Mercado Pago não respondeu. Tente de novo em instantes.");
             }
             var dados = pagamento.pointOfInteraction() != null ? pagamento.pointOfInteraction().transactionData() : null;
             return new QrCodePix(
@@ -309,7 +313,8 @@ public class MercadoPagoApi {
                     : null
             );
         } catch (Exception e) {
-            throw new IllegalStateException("Falha ao consultar QR Pix no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL",
+                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
         }
     }
 
@@ -339,7 +344,8 @@ public class MercadoPagoApi {
                 .retrieve()
                 .toBodilessEntity();
         } catch (Exception e) {
-            throw new IllegalStateException("Falha ao estornar parcialmente pagamento no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL",
+                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
         }
     }
 

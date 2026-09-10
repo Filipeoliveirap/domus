@@ -36,6 +36,10 @@ public class CobrancaEventoExpiracaoJob {
         var inscricaoIds = vencidas.stream().map(CobrancaEvento::getInscricaoId).toList();
         var inscricoes = inscricaoRepository.findAllById(inscricaoIds).stream()
                 .filter(InscricaoEvento::estaAguardandoPagamento)
+                // [C1] quem já pagou o valor original e só deve um complemento de reajuste
+                // NÃO perde a vaga aqui — o complemento fica pendente na lista de inscritos
+                // ("Falta complementar") até o gestor decidir manter/lembrar/remover.
+                .filter(i -> !repository.existePagaParaInscricao(i.getId()))
                 .toList();
         if (inscricoes.isEmpty()) return;
 

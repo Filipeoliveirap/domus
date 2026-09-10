@@ -165,6 +165,21 @@ public class CobrancaEvento {
         return restante.signum() > 0 ? restante : BigDecimal.ZERO;
     }
 
+    /** Quanto do ALVO (líquido) desta cobrança ainda está coberto pelo pagador — o alvo
+     *  menos a parte LÍQUIDA do que já foi estornado. Diferente de valorRestanteParaEstornar(),
+     *  que é BRUTO (o que se devolve ao pagador). Usado por InscricaoService.valorJaPago()
+     *  pra responder "quanto do preço líquido essa pessoa já cobriu?". */
+    public BigDecimal valorAlvoRestante() {
+        if (valorCobrado == null || valorCobrado.signum() == 0) {
+            BigDecimal r = valor.subtract(this.valorEstornado);
+            return r.signum() > 0 ? r : BigDecimal.ZERO;
+        }
+        BigDecimal fracaoRetida = valorCobrado.subtract(this.valorEstornado)
+            .divide(valorCobrado, java.math.MathContext.DECIMAL64);
+        BigDecimal r = valor.multiply(fracaoRetida).setScale(2, java.math.RoundingMode.HALF_UP);
+        return r.signum() > 0 ? r : BigDecimal.ZERO;
+    }
+
     /** Uma tentativa de estorno (em lote ou individual) falhou — fica marcada até alguém
      *  tentar de novo com sucesso ({@link #registrarEstorno} limpa) ou até o "restante" da
      *  cobrança já ter sido zerado por outro caminho. */

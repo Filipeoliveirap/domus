@@ -176,6 +176,9 @@ public class CobrancaEvento {
         }
         BigDecimal fracaoRetida = valorCobrado.subtract(this.valorEstornado)
             .divide(valorCobrado, java.math.MathContext.DECIMAL64);
+        // O arredondamento HALF_UP aqui é independente do CEILING aplicado ao novoBruto em
+        // InscricaoService.aplicarMudancaValorPago; pequena diferença de centavo em reajuste
+        // encadeado é esperada e inofensiva (não gera cobrança/estorno a mais).
         BigDecimal r = valor.multiply(fracaoRetida).setScale(2, java.math.RoundingMode.HALF_UP);
         return r.signum() > 0 ? r : BigDecimal.ZERO;
     }

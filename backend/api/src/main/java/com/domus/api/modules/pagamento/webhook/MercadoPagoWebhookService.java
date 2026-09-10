@@ -178,6 +178,9 @@ public class MercadoPagoWebhookService {
                 : (cobranca.getValorCobrado() != null ? cobranca.getValorCobrado() : cobranca.getValor());
             java.math.BigDecimal taxa = info.taxaMercadoPago() != null
                 ? info.taxaMercadoPago() : java.math.BigDecimal.ZERO;
+            if (info.taxaMercadoPago() == null) {
+                log.warn("Pagamento confirmado sem fee_details do Mercado Pago — taxa registrada como zero, receita pode estar superestimada. cobrancaId={} mpPaymentId={}", cobranca.getId(), cobranca.getMpPaymentId());
+            }
             movimentacaoAutomaticaService.registrarEntradaDeEvento(
                 cobranca.getIgrejaId(), bruto, taxa,
                 "Pagamento de inscrição — " + evento.getTitulo() + " (" + nomePagador + ")",

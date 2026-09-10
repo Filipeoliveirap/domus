@@ -353,7 +353,7 @@ export default function InscritosPage() {
                           {camposObrigatorios.length > 0 && (
                             <PendenciaCamposBadge nome={inscrito.nome} inscricaoId={inscrito.id} camposObrigatorios={camposObrigatorios} />
                           )}
-                          {inscrito.status === 'AGUARDANDO_PAGAMENTO' && (
+                          {(inscrito.status === 'AGUARDANDO_PAGAMENTO' || inscrito.pagamentoParcial) && (
                             <PagamentoPendenteBadge
                               nome={inscrito.nome}
                               eventoId={eventoId}

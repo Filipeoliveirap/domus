@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -2238,6 +2239,83 @@ class InscricaoServiceTest {
                 eq(igrejaId), eq(new java.math.BigDecimal("30.00")), eq(java.math.BigDecimal.ZERO),
                 org.mockito.ArgumentMatchers.contains("Maria"), eq(pessoaId), eq("Maria"));
         verify(emailService).enviar(eq("maria@email.com"), any(), any());
+    }
+
+    // ---- Task 8: estorno opera sobre o valor BRUTO cobrado (alvo + taxa), não o alvo ----
+
+    private com.domus.api.modules.pagamento.cobranca.CobrancaEvento cobrancaPagaComValorCobrado(
+            String mpPaymentId, String alvo, String bruto) {
+        var c = new com.domus.api.modules.pagamento.cobranca.CobrancaEvento(
+                igrejaId, eventoId, inscricaoId, pessoaId,
+                new java.math.BigDecimal(alvo), java.time.Instant.now().plusSeconds(3600),
+                usuarioId, "token-" + UUID.randomUUID());
+        c.marcarComoPago(mpPaymentId);
+        c.registrarValorCobrado(new java.math.BigDecimal(bruto));
+        return c;
+    }
+
+    @Test
+    void cancelamento_estornaOValorBrutoCobrado_naoOAlvo() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        // alvo 100, mas o pagador pagou 110.49 (alvo + taxa com gross-up)
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComValorCobrado("mp-payment-1", "100.00", "110.49")));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-payment-1"),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("110.49")) == 0));
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CANCELADA);
+    }
+
+    @Test
+    void cancelamento_registraSaidaBrutaNoFinanceiro() {
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(membro(Vinculo.MEMBRO))
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.buscarVisivelParaFamilia(inscricaoId, Set.of(igrejaId)))
+                .thenReturn(Optional.of(minha));
+        when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
+                .thenReturn(List.of(cobrancaPagaComValorCobrado("mp-payment-1", "100.00", "110.49")));
+
+        service.cancelar(inscricaoId, usuarioId, pessoaId, "ACESSO_COMUM", igrejaId);
+
+        verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
+                eq(igrejaId), argThat(v -> v.compareTo(new java.math.BigDecimal("110.49")) == 0),
+                eq(java.math.BigDecimal.ZERO), anyString(), eq(pessoaId), anyString());
+    }
+
+    @Test
+    void aplicarMudancaValorPago_deEventoPago_estornaDiferencaBrutaProporcional() {
+        Pessoa pessoaComEmail = Pessoa.builder()
+                .id(pessoaId).igreja(igreja()).nome("Maria").email("maria@email.com")
+                .vinculo(Vinculo.MEMBRO).build();
+        InscricaoEvento minha = InscricaoEvento.builder()
+                .id(inscricaoId).igreja(igreja()).evento(evento(10))
+                .pessoa(pessoaComEmail)
+                .status(StatusInscricao.CONFIRMADA).build();
+        when(inscricaoRepository.findByEventoId(eventoId)).thenReturn(List.of(minha));
+        // alvo 100, pago 110.49 (gross-up de ~10.49%). Preço cai pra 80:
+        // novoBruto = ceil(80 * 1.1049) = 88.40 ; diferencaBruto = 110.49 - 88.40 = 22.09
+        when(cobrancaEventoRepository.findByEventoId(eventoId))
+                .thenReturn(List.of(cobrancaPagaComValorCobrado("mp-payment-1", "100.00", "110.49")));
+
+        int processadas = service.aplicarMudancaValorPago(
+                eventoId, new java.math.BigDecimal("100.00"), new java.math.BigDecimal("80.00"), usuarioId);
+
+        assertThat(processadas).isEqualTo(1);
+        assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
+        verify(mercadoPagoClient).estornarParcial(eq(igrejaId), eq("mp-payment-1"),
+                argThat(v -> v.compareTo(new java.math.BigDecimal("22.09")) == 0));
+        verify(movimentacaoAutomaticaService).registrarSaidaDeEvento(
+                eq(igrejaId), argThat(v -> v.compareTo(new java.math.BigDecimal("22.09")) == 0),
+                eq(java.math.BigDecimal.ZERO), anyString(), eq(pessoaId), anyString());
     }
 
     @Test

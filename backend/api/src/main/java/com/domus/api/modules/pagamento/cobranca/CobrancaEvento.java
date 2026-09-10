@@ -145,15 +145,23 @@ public class CobrancaEvento {
     public void registrarEstorno(BigDecimal valor) {
         this.valorEstornado = this.valorEstornado.add(valor);
         this.estornoPendente = false;
-        if (this.valorEstornado.compareTo(this.valor) >= 0) {
+        if (this.valorEstornado.compareTo(baseDeEstorno()) >= 0) {
             this.status = StatusCobranca.REEMBOLSADO;
         }
     }
 
-    /** Quanto ainda dá pra estornar desta cobrança — o valor original menos o que já foi
-     *  devolvido em estornos parciais anteriores. Nunca negativo. */
+    /** Base sobre a qual todo estorno opera: o valor BRUTO efetivamente cobrado do pagador
+     *  ({@code valorCobrado}, alvo + taxa com gross-up) quando existe, senão o alvo
+     *  ({@code valor}). Devolver o bruto é o certo — foi o que saiu da conta do pagador. */
+    private BigDecimal baseDeEstorno() {
+        return valorCobrado != null ? valorCobrado : valor;
+    }
+
+    /** Quanto ainda dá pra estornar desta cobrança — o valor BRUTO cobrado (com taxa) menos
+     *  o que já foi devolvido em estornos parciais anteriores. Cai no alvo ({@code valor})
+     *  quando a cobrança nunca chegou a ser paga ({@code valorCobrado} nulo). Nunca negativo. */
     public BigDecimal valorRestanteParaEstornar() {
-        BigDecimal restante = this.valor.subtract(this.valorEstornado);
+        BigDecimal restante = baseDeEstorno().subtract(this.valorEstornado);
         return restante.signum() > 0 ? restante : BigDecimal.ZERO;
     }
 

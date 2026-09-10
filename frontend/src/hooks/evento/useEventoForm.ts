@@ -83,6 +83,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
       vagas: undefined,
       tipoInscricao: 'GRATUITO',
       preco: undefined,
+      pagamentoAceitaCartao: false,
+      pagamentoMaxParcelas: 1,
       exclusivoMembros: false,
       recorteEtario: null,
       idadeMin: undefined,
@@ -149,6 +151,8 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         // manda número e a máscara de dinheiro trabalha com string. Sem isto, editar um
         // evento pago falhava na validação até a pessoa apagar e redigitar o valor.
         preco: eventoInicial.preco != null ? String(eventoInicial.preco) : undefined,
+        pagamentoAceitaCartao: eventoInicial.pagamentoAceitaCartao ?? false,
+        pagamentoMaxParcelas: eventoInicial.pagamentoMaxParcelas ?? 1,
         exclusivoMembros: eventoInicial.exclusivoMembros,
         // Reidratação da elegibilidade: o <BlocoParaQuemE> deriva "modo faixa" destes
         // valores (idadeMin/idadeMax/restrições), não de um campo próprio — chegando
@@ -253,6 +257,13 @@ export function useEventoForm({ eventoId, eventoInicial }: UseEventoFormParams =
         preco: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.preco != null)
           ? data.preco
           : undefined,
+        // Backend reforça isto, mas mandamos já coerente: só faz sentido em evento pago.
+        pagamentoAceitaCartao: (data.requerInscricao && data.tipoInscricao === 'PAGO')
+          ? data.pagamentoAceitaCartao
+          : false,
+        pagamentoMaxParcelas: (data.requerInscricao && data.tipoInscricao === 'PAGO' && data.pagamentoAceitaCartao)
+          ? data.pagamentoMaxParcelas
+          : 1,
         recorteEtario: data.recorteEtario ?? null,
         idadeMin: data.idadeMin ?? null,
         idadeMax: data.idadeMax ?? null,

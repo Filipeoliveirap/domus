@@ -37,6 +37,19 @@ public record PagarCobrancaRequest(
     @Size(max = 254, message = "e-mail do pagador inválido")
     String payerEmail,
 
+    /** Meio de pagamento escolhido no checkout. Fonte da verdade do recálculo do valor no
+     *  back (gross-up por meio/parcela) — o valor cobrado NUNCA vem do front. */
+    @jakarta.validation.constraints.NotNull(message = "meio de pagamento é obrigatório")
+    com.domus.api.modules.pagamento.MeioPagamento meio,
+
+    /** Número de parcelas validado contra o teto do evento. {@code installments} (do Brick)
+     *  continua existindo pro Mercado Pago; {@code parcelas} é o que o back valida e usa no
+     *  cálculo da taxa. */
+    @jakarta.validation.constraints.NotNull(message = "número de parcelas é obrigatório")
+    @jakarta.validation.constraints.Min(value = 1, message = "número de parcelas inválido")
+    @jakarta.validation.constraints.Max(value = 12, message = "número de parcelas inválido")
+    Integer parcelas,
+
     /** {@code formData.issuer_id} do Brick — nulo pra Pix. Sem ele, o Mercado Pago falha o
      *  cálculo de parcelamento/preço pra alguns bancos emissores ({@code error_pricing},
      *  código 10107) mesmo com token/cartão válidos. */

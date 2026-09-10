@@ -78,7 +78,7 @@ public class PagamentoPollingService {
         try {
             var info = mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId);
             if (!STATUS_AINDA_EM_ABERTO.contains(info.status())) {
-                webhookService.confirmarPagamento(cobrancaId, mpPaymentId, info.status());
+                webhookService.confirmarPagamento(cobrancaId, mpPaymentId, info);
             }
         } catch (RuntimeException e) {
             log.warn("Reconferência imediata de pagamento falhou, seguindo com o status do banco. "
@@ -99,7 +99,7 @@ public class PagamentoPollingService {
             try {
                 var info = mercadoPagoClient.buscarInformacoesPagamento(igrejaId, mpPaymentId);
                 if (!STATUS_AINDA_EM_ABERTO.contains(info.status())) {
-                    webhookService.confirmarPagamento(cobrancaId, mpPaymentId, info.status());
+                    webhookService.confirmarPagamento(cobrancaId, mpPaymentId, info);
                     return;
                 }
             } catch (RuntimeException e) {

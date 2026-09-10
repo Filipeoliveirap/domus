@@ -2,6 +2,8 @@ package com.domus.api.modules.financeiro.movimentacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -14,8 +16,6 @@ import com.domus.api.modules.igreja.IgrejaRepository;
 import com.domus.api.modules.notificacao.NotificacaoService;
 import com.domus.api.modules.notificacao.TipoNotificacao;
 import com.domus.api.modules.outbox.OutboxRegistrador;
-import com.domus.api.modules.outbox.TipoEntidadeOutbox;
-import com.domus.api.modules.outbox.TipoEventoOutbox;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.usuario.Usuario;
@@ -28,6 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+/**
+ * Task 7 (2026-09-09): pagamento/estorno de evento pago passa a lançar DOIS registros no
+ * financeiro — o valor bruto na categoria "Eventos" e a taxa do Mercado Pago (ou a
+ * devolução dela) na categoria "Taxas de pagamento". A taxa só vira lançamento quando é
+ * maior que zero.
+ */
 class MovimentacaoAutomaticaServiceTest {
 
     CategoriaFinanceiraRepository categoriaRepository;
@@ -41,6 +47,9 @@ class MovimentacaoAutomaticaServiceTest {
     MovimentacaoAutomaticaService service;
 
     UUID igrejaId = UUID.randomUUID();
+    UUID pessoaId = UUID.randomUUID();
+
+    CategoriaFinanceira categoriaEventos;
 
     @BeforeEach
     void setup() {
@@ -57,37 +66,61 @@ class MovimentacaoAutomaticaServiceTest {
             outboxRegistrador, cacheEvictor);
 
         when(igrejaRepository.getReferenceById(igrejaId)).thenReturn(Igreja.builder().id(igrejaId).build());
+        when(pessoaRepository.getReferenceById(pessoaId)).thenReturn(Pessoa.builder().id(pessoaId).build());
         when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(igrejaId, "ADMIN_IGREJA")).thenReturn(List.of());
         when(usuarioRepository.findByIgrejaIdAndCapacidadeAndAtivoTrue(igrejaId, "TESOUREIRO")).thenReturn(List.of());
-    }
 
-    private CategoriaFinanceira categoriaExistente(String nome) {
-        return CategoriaFinanceira.builder().id(UUID.randomUUID())
-            .igreja(Igreja.builder().id(igrejaId).build()).nome(nome).tipo(TipoCategoria.AMBOS).build();
-    }
+        categoriaEventos = CategoriaFinanceira.builder().id(UUID.randomUUID())
+            .igreja(Igreja.builder().id(igrejaId).build()).nome("Eventos").tipo(TipoCategoria.AMBOS).build();
 
-    @Test
-    void reaproveitaCategoriaExistenteComNomeVariante() {
-        // "eventos" minúsculo, plural — não deve criar uma nova "Eventos" duplicada.
-        var categoria = categoriaExistente("eventos");
-        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of(categoria));
-
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null, "Maria");
-
-        verify(categoriaRepository, never()).save(any());
-        var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
-        verify(movimentacaoRepository).save(captor.capture());
-        assertThat(captor.getValue().getCategoria()).isEqualTo(categoria);
-    }
-
-    @Test
-    void criaCategoriaEventosQuandoNaoExisteENotificaAdminETesoureiro() {
-        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of());
+        // "Eventos" já existe; a categoria de taxa ainda não — força o caminho de criação.
+        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenAnswer(inv -> {
+            Set<String> nomes = inv.getArgument(1);
+            if (nomes.contains("taxas de pagamento")) return List.of();
+            return List.of(categoriaEventos);
+        });
         when(categoriaRepository.save(any())).thenAnswer(inv -> {
             CategoriaFinanceira c = inv.getArgument(0);
             return CategoriaFinanceira.builder().id(UUID.randomUUID()).igreja(c.getIgreja())
                 .nome(c.getNome()).tipo(c.getTipo()).build();
         });
+    }
+
+    @Test
+    void pagamentoConfirmado_registraEntradaBrutaEmEventosESaidaDeTaxa() {
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("110.49"), new BigDecimal("10.49"),
+            "Pagamento de inscrição — Acampamento (João)", pessoaId, "João");
+
+        ArgumentCaptor<MovimentacaoFinanceira> mov = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
+        verify(movimentacaoRepository, times(2)).save(mov.capture());
+        var salvos = mov.getAllValues();
+
+        var entrada = salvos.stream().filter(m -> m.getTipo() == TipoMovimentacao.ENTRADA).findFirst().orElseThrow();
+        assertThat(entrada.getValor()).isEqualByComparingTo("110.49");
+        assertThat(entrada.getCategoria().getNome()).isEqualTo("Eventos");
+        assertThat(entrada.getContribuintes()).hasSize(1);
+
+        var saida = salvos.stream().filter(m -> m.getTipo() == TipoMovimentacao.SAIDA).findFirst().orElseThrow();
+        assertThat(saida.getValor()).isEqualByComparingTo("10.49");
+        assertThat(saida.getCategoria().getNome()).isEqualTo("Taxas de pagamento");
+        assertThat(saida.getDescricao()).isEqualTo("Taxa Mercado Pago — Acampamento (João)");
+        assertThat(saida.getContribuintes()).isEmpty();
+    }
+
+    @Test
+    void taxaZeroOuNula_naoRegistraSaidaDeTaxa() {
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("100.00"), null,
+            "Pagamento de inscrição — Retiro (João)", pessoaId, "João");
+        verify(movimentacaoRepository, times(1)).save(any());
+
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("100.00"), BigDecimal.ZERO,
+            "Pagamento de inscrição — Retiro (João)", pessoaId, "João");
+        verify(movimentacaoRepository, times(2)).save(any()); // +1, só a entrada de novo
+        verify(categoriaRepository, never()).save(argThat(c -> "Taxas de pagamento".equals(c.getNome())));
+    }
+
+    @Test
+    void primeiraTaxa_criaCategoriaTaxasDePagamentoENotifica() {
         UUID adminId = UUID.randomUUID();
         UUID tesoureiroId = UUID.randomUUID();
         when(usuarioRepository.findByIgrejaIdAndRole_NomeAndAtivoTrue(igrejaId, "ADMIN_IGREJA"))
@@ -95,52 +128,76 @@ class MovimentacaoAutomaticaServiceTest {
         when(usuarioRepository.findByIgrejaIdAndCapacidadeAndAtivoTrue(igrejaId, "TESOUREIRO"))
             .thenReturn(List.of(Usuario.builder().id(tesoureiroId).build()));
 
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", null, "Maria");
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("104.70"), new BigDecimal("4.70"),
+            "Pagamento de inscrição — Congresso (João)", pessoaId, "João");
 
-        var categoriaCaptor = ArgumentCaptor.forClass(CategoriaFinanceira.class);
-        verify(categoriaRepository).save(categoriaCaptor.capture());
-        assertThat(categoriaCaptor.getValue().getNome()).isEqualTo("Eventos");
-        assertThat(categoriaCaptor.getValue().getTipo()).isEqualTo(TipoCategoria.AMBOS);
-
-        verify(notificacaoService).criar(eq(TipoNotificacao.CATEGORIA_FINANCEIRA_AUTO_CRIADA), eq(igrejaId), eq(adminId), any(), any());
-        verify(notificacaoService).criar(eq(TipoNotificacao.CATEGORIA_FINANCEIRA_AUTO_CRIADA), eq(igrejaId), eq(tesoureiroId), any(), any());
+        ArgumentCaptor<CategoriaFinanceira> cat = ArgumentCaptor.forClass(CategoriaFinanceira.class);
+        verify(categoriaRepository, atLeastOnce()).save(cat.capture());
+        assertThat(cat.getAllValues()).anySatisfy(c -> {
+            assertThat(c.getNome()).isEqualTo("Taxas de pagamento");
+            assertThat(c.getTipo()).isEqualTo(TipoCategoria.SAIDA);
+        });
+        verify(notificacaoService).criar(eq(TipoNotificacao.CATEGORIA_FINANCEIRA_AUTO_CRIADA),
+            eq(igrejaId), eq(adminId), contains("Taxas de pagamento"), any());
+        verify(notificacaoService).criar(eq(TipoNotificacao.CATEGORIA_FINANCEIRA_AUTO_CRIADA),
+            eq(igrejaId), eq(tesoureiroId), contains("Taxas de pagamento"), any());
     }
 
     @Test
-    void registraEntradaComContribuinteQuandoPessoaConhecida() {
-        var categoria = categoriaExistente("Eventos");
-        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of(categoria));
-        UUID pessoaId = UUID.randomUUID();
-        when(pessoaRepository.getReferenceById(pessoaId)).thenReturn(Pessoa.builder().id(pessoaId).build());
+    void categoriaTaxaJaExiste_toleraVariacaoDeNome() {
+        var existente = CategoriaFinanceira.builder().id(UUID.randomUUID())
+            .nome("Taxa de Pagamento").tipo(TipoCategoria.SAIDA).build();
+        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), argThat(s -> s.contains("taxa de pagamento"))))
+            .thenReturn(List.of(existente));
 
-        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("50.00"), "Pagamento — Retiro (Maria)", pessoaId, "Maria");
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("104.70"), new BigDecimal("4.70"),
+            "Pagamento de inscrição — Congresso (João)", pessoaId, "João");
 
-        var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
-        verify(movimentacaoRepository).save(captor.capture());
-        var mov = captor.getValue();
-        assertThat(mov.getTipo()).isEqualTo(TipoMovimentacao.ENTRADA);
-        assertThat(mov.getValor()).isEqualByComparingTo("50.00");
-        assertThat(mov.getContribuintes()).hasSize(1);
-        assertThat(mov.getContribuintes().get(0).getPessoa().getId()).isEqualTo(pessoaId);
-        verify(outboxRegistrador).registrar(eq(TipoEntidadeOutbox.MOVIMENTACAO), eq(TipoEventoOutbox.CRIADO), eq(mov.getId()), eq(igrejaId));
-        verify(cacheEvictor).evictPorIgreja("movimentacoes", igrejaId);
+        verify(categoriaRepository, never()).save(argThat(c -> "Taxas de pagamento".equals(c.getNome())));
+        ArgumentCaptor<MovimentacaoFinanceira> mov = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
+        verify(movimentacaoRepository, times(2)).save(mov.capture());
+        assertThat(mov.getAllValues()).anySatisfy(m ->
+            assertThat(m.getCategoria()).isEqualTo(existente));
     }
 
     @Test
-    void registraSaidaComNomeExternoQuandoPessoaDesconhecida() {
-        // Convidado sem cadastro/acompanhante (pessoaId nulo) — o contribuinte não fica
-        // vazio, entra com o nome, senão some da coluna Contribuinte/Beneficiário e do
-        // relatório por contribuinte (achado revisando com o usuário, 2026-08-26).
-        var categoria = categoriaExistente("Eventos");
-        when(categoriaRepository.buscarPorIgrejaENomeNormalizado(eq(igrejaId), any())).thenReturn(List.of(categoria));
+    void estorno_registraSaidaBrutaEmEventosEDevolucaoDeTaxa() {
+        service.registrarSaidaDeEvento(igrejaId, new BigDecimal("110.49"), new BigDecimal("10.49"),
+            "Reembolso — Acampamento (João)", pessoaId, "João");
 
-        service.registrarSaidaDeEvento(igrejaId, new BigDecimal("50.00"), "Reembolso — Retiro (Convidado)", null, "Convidado");
+        ArgumentCaptor<MovimentacaoFinanceira> mov = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
+        verify(movimentacaoRepository, times(2)).save(mov.capture());
 
-        var captor = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
-        verify(movimentacaoRepository).save(captor.capture());
-        assertThat(captor.getValue().getTipo()).isEqualTo(TipoMovimentacao.SAIDA);
-        assertThat(captor.getValue().getContribuintes()).hasSize(1);
-        assertThat(captor.getValue().getContribuintes().get(0).getPessoa()).isNull();
-        assertThat(captor.getValue().getContribuintes().get(0).getNomeExterno()).isEqualTo("Convidado");
+        var saidaEventos = mov.getAllValues().stream()
+            .filter(m -> m.getCategoria().getNome().equals("Eventos")).findFirst().orElseThrow();
+        assertThat(saidaEventos.getTipo()).isEqualTo(TipoMovimentacao.SAIDA);
+        assertThat(saidaEventos.getValor()).isEqualByComparingTo("110.49");
+
+        var entradaTaxa = mov.getAllValues().stream()
+            .filter(m -> m.getCategoria().getNome().equals("Taxas de pagamento")).findFirst().orElseThrow();
+        assertThat(entradaTaxa.getTipo()).isEqualTo(TipoMovimentacao.ENTRADA);
+        assertThat(entradaTaxa.getValor()).isEqualByComparingTo("10.49");
+        assertThat(entradaTaxa.getDescricao()).isEqualTo("Devolução de taxa — Acampamento (João)");
+    }
+
+    @Test
+    void estornoSemTaxaDevolvida_soRegistraSaidaEmEventos() {
+        service.registrarSaidaDeEvento(igrejaId, new BigDecimal("110.49"), BigDecimal.ZERO,
+            "Reembolso — Acampamento (João)", pessoaId, "João");
+        verify(movimentacaoRepository, times(1)).save(any());
+    }
+
+    @Test
+    void contribuinteSemCadastro_usaNomeExternoNaEntrada() {
+        service.registrarEntradaDeEvento(igrejaId, new BigDecimal("101.00"), new BigDecimal("1.00"),
+            "Pagamento de inscrição — Feira (Convidado Zé)", null, "Convidado Zé");
+
+        ArgumentCaptor<MovimentacaoFinanceira> mov = ArgumentCaptor.forClass(MovimentacaoFinanceira.class);
+        verify(movimentacaoRepository, times(2)).save(mov.capture());
+        var entrada = mov.getAllValues().stream()
+            .filter(m -> m.getTipo() == TipoMovimentacao.ENTRADA).findFirst().orElseThrow();
+        assertThat(entrada.getContribuintes()).hasSize(1);
+        assertThat(entrada.getContribuintes().get(0).getPessoa()).isNull();
+        assertThat(entrada.getContribuintes().get(0).getNomeExterno()).isEqualTo("Convidado Zé");
     }
 }

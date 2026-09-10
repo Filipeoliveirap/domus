@@ -66,6 +66,20 @@ public class EventoService {
     private final FamiliaIgrejaService familiaIgrejaService;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
     private final com.domus.api.modules.evento.serie.EventoSerieRepository eventoSerieRepository;
+    private final com.domus.api.modules.pagamento.cobranca.CobrancaEventoService cobrancaEventoService;
+
+    /**
+     * Simula as opções de pagamento pro form de cadastro/edição de evento pago — antes de
+     * o evento existir, então não passa por {@code CobrancaEvento}. Delega a montagem pro
+     * {@code CobrancaEventoService} (mesma lógica do checkout). {@code maxParcelas} só vale
+     * quando o cartão está habilitado; sem cartão, cai em 1 (só Pix).
+     */
+    public com.domus.api.modules.pagamento.cobranca.DTOs.OpcoesPagamentoResponse simularPagamento(
+            UUID igrejaId, com.domus.api.modules.pagamento.DTOs.SimularPagamentoRequest req) {
+        boolean aceitaCartao = Boolean.TRUE.equals(req.aceitaCartao());
+        int maxParcelas = aceitaCartao && req.maxParcelas() != null ? req.maxParcelas() : 1;
+        return cobrancaEventoService.montarOpcoes(req.preco(), aceitaCartao, maxParcelas, igrejaId);
+    }
 
     @Cacheable(
             value = "eventos",
@@ -143,6 +157,7 @@ public class EventoService {
                         ? com.domus.api.modules.evento.PoliticaCancelamentoAposPrazo.PERMITIDO_COM_REEMBOLSO
                         : data.politicaCancelamentoAposPrazo())
                 .build();
+        aplicarConfigPagamento(evento, data);
 
         java.util.List<EventoResponsavel> respAdicionados =
                 resolverResponsaveis(data.responsavelPessoaIds(), igrejaId, igreja, evento);
@@ -240,6 +255,7 @@ public class EventoService {
         evento.setVagas(data.vagas());
         java.math.BigDecimal precoAntigo = evento.getPreco();
         evento.setPreco(data.preco());
+        aplicarConfigPagamento(evento, data);
         boolean exclusivoMembros = Boolean.TRUE.equals(data.exclusivoMembros());
         evento.setExclusivoMembros(exclusivoMembros);
         evento.setRequerInscricao(Boolean.TRUE.equals(data.requerInscricao()));
@@ -450,6 +466,8 @@ public class EventoService {
         ocorrencia.setRestricaoSexo(editado.getRestricaoSexo());
         ocorrencia.setVagas(editado.getVagas());
         ocorrencia.setPreco(editado.getPreco());
+        ocorrencia.setPagamentoAceitaCartao(editado.isPagamentoAceitaCartao());
+        ocorrencia.setPagamentoMaxParcelas(editado.getPagamentoMaxParcelas());
         ocorrencia.setExclusivoMembros(editado.isExclusivoMembros());
         ocorrencia.setPoliticaCancelamentoAposPrazo(editado.getPoliticaCancelamentoAposPrazo());
         ocorrencia.setRequerInscricao(editado.isRequerInscricao());
@@ -693,6 +711,17 @@ public class EventoService {
             throw new BusinessException("FAIXA_INVALIDA",
                     "A idade mínima não pode ser maior que a máxima.");
         }
+    }
+
+    /** Config de meio de pagamento só vale em evento pago; sem cartão, o teto de parcelas
+     *  volta pra 1. Chamado no criar e no atualizar, depois de {@code preco} já resolvido. */
+    private void aplicarConfigPagamento(Evento evento, EventoRequest req) {
+        boolean pago = evento.getPreco() != null;
+        boolean aceitaCartao = pago && Boolean.TRUE.equals(req.pagamentoAceitaCartao());
+        evento.setPagamentoAceitaCartao(aceitaCartao);
+        int maxParcelas = aceitaCartao && req.pagamentoMaxParcelas() != null
+                ? req.pagamentoMaxParcelas() : 1;
+        evento.setPagamentoMaxParcelas(maxParcelas);
     }
 
     /** Record com no máximo um campo não-nulo — a forma de localização escolhida. */

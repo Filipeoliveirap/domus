@@ -39,7 +39,10 @@ import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/Visualiza
 export default function CelulaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const searchParams = useSearchParams()
-  const { data: celula, isLoading, isError, refetch } = useCelula(id)
+  const { data: celula, isLoading, isFetching, isError, refetch } = useCelula(id)
+  // Cabeçalho veio do cache da lista (transição de "entrar no card"); a lista de membros
+  // ainda está a caminho no primeiro fetch cheio.
+  const membrosCarregando = isFetching && (celula?.membros.length ?? 0) === 0
   const queryClient = useQueryClient()
   const role = useAuthStore(s => s.role)
   const capacidadesExtras = useAuthStore(s => s.capacidadesExtras)
@@ -229,6 +232,16 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
             ))}
           </div>
 
+          {membrosCarregando ? (
+            <div className={styles.lista}>
+              {[1, 2, 3].map(i => (
+                <div key={i} className={styles.membro}>
+                  <Skeleton width="40px" height="40px" radius="var(--radius-full)" />
+                  <Skeleton width="40%" height="16px" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <Transicao key={filtro} modo="fade" className={styles.lista} ref={listaRef}>
             {membrosVisiveis.map(m => {
               const podeGerenciar = podeGerenciarCelula
@@ -300,6 +313,7 @@ export default function CelulaDetalhePage({ params }: { params: Promise<{ id: st
               )
             })}
           </Transicao>
+          )}
         </>
       )}
 

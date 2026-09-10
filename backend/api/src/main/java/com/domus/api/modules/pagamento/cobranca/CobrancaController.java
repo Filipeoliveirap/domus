@@ -50,6 +50,7 @@ public class CobrancaController {
     private final com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
     private final MercadoPagoClient mercadoPagoClient;
+    private final com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento;
     private final PagamentoPollingService pagamentoPollingService;
     private final com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService;
     private final com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado;
@@ -60,6 +61,7 @@ public class CobrancaController {
                                com.domus.api.modules.evento.inscricao.InscricaoRepository inscricaoRepository,
                                PessoaRepository pessoaRepository,
                                MercadoPagoClient mercadoPagoClient,
+                               com.domus.api.modules.pagamento.CalculadoraTaxaPagamento calculadoraTaxaPagamento,
                                PagamentoPollingService pagamentoPollingService,
                                com.domus.api.modules.evento.inscricao.InscricaoService inscricaoService,
                                com.domus.api.shared.security.UsuarioAutenticado usuarioAutenticado) {
@@ -69,6 +71,7 @@ public class CobrancaController {
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.mercadoPagoClient = mercadoPagoClient;
+        this.calculadoraTaxaPagamento = calculadoraTaxaPagamento;
         this.pagamentoPollingService = pagamentoPollingService;
         this.inscricaoService = inscricaoService;
         this.usuarioAutenticado = usuarioAutenticado;
@@ -184,9 +187,30 @@ public class CobrancaController {
             }
         }
 
+        // Recálculo do valor no back (gross-up por meio/parcela) — o valor cobrado NUNCA
+        // vem do front. As portas de cartão (aceita? teto de parcelas?) são do evento;
+        // PIX_NAO_PARCELA / PARCELAS_INVALIDAS já são lançados de dentro de valorACobrar.
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO
+                && !evento.isPagamentoAceitaCartao()) {
+            throw new BusinessException("CARTAO_NAO_ACEITO", "Este evento aceita apenas Pix.");
+        }
+        if (request.meio() == com.domus.api.modules.pagamento.MeioPagamento.CARTAO
+                && request.parcelas() > evento.getPagamentoMaxParcelas()) {
+            throw new BusinessException("PARCELAS_ACIMA_DO_TETO",
+                "Este evento aceita no máximo " + evento.getPagamentoMaxParcelas() + "x.");
+        }
+
+        java.math.BigDecimal valorACobrar = calculadoraTaxaPagamento.valorACobrar(
+            cobranca.getIgrejaId(), cobranca.getValor(), request.meio(), request.parcelas());
+        cobranca.registrarValorCobrado(valorACobrar);
+
+        // O número de parcelas enviado ao Mercado Pago é o `parcelas` já validado (contra o
+        // teto do evento e o gross-up), NUNCA o `installments` cru do Brick — senão dava pra
+        // mandar parcelas=1 (gross-up barato, passa no teto) + installments=12 e a igreja
+        // comeria o custo de 12x. `request.installments()` fica ignorado no servidor.
         var resultado = mercadoPagoClient.criarPagamentoComToken(
-            cobranca.getIgrejaId(), cobranca,
-            request.token(), request.paymentMethodId(), request.installments(), request.payerEmail(), request.issuerId());
+            cobranca.getIgrejaId(), cobranca, valorACobrar,
+            request.token(), request.paymentMethodId(), request.parcelas(), request.payerEmail(), request.issuerId());
 
         cobranca.registrarTentativaPagamento(resultado.mpPaymentId());
         cobrancaRepository.save(cobranca);

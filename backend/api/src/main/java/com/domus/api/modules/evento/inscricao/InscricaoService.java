@@ -1284,8 +1284,11 @@ public class InscricaoService {
             }
             for (CobrancaEvento cobranca : cobrancaEventoRepository.findByInscricaoId(inscricao.getId())) {
                 if (cobranca.getStatus() == StatusCobranca.PAGO) {
-                    pessoasComPagamentoPago++;
-                    valorTotalAEstornar = valorTotalAEstornar.add(cobranca.getValor());
+                    java.math.BigDecimal restante = cobranca.valorRestanteParaEstornar();
+                    if (restante.signum() > 0) {
+                        pessoasComPagamentoPago++;
+                        valorTotalAEstornar = valorTotalAEstornar.add(restante);
+                    }
                 }
             }
         }

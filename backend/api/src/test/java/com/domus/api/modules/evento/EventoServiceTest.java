@@ -111,6 +111,36 @@ class EventoServiceTest {
         return requestComResponsavel(null, valor);
     }
 
+    private EventoRequest requestComPrazoInscricao(LocalDateTime inicioEm, LocalDateTime inscricoesAte) {
+        return new EventoRequest(
+                "Culto Dominical", "Descrição", inicioEm, null, null, "Salão", "Culto",
+                null, null, null, null, null, null, null, null, null, null,
+                false, true, false, false, null, null, null, null,
+                inscricoesAte, null);
+    }
+
+    @Test
+    void cadastrarEvento_comPrazoDeInscricaoNoPassado_recusa() {
+        var req = requestComPrazoInscricao(LocalDateTime.now().plusDays(10), LocalDateTime.now().minusDays(1));
+        assertThatThrownBy(() -> service.cadastrarEvento(req, igrejaId, usuarioId))
+                .isInstanceOf(com.domus.api.shared.exception.BusinessException.class)
+                .extracting("codigo").isEqualTo("PRAZO_NO_PASSADO");
+    }
+
+    @Test
+    void atualizarEvento_podeFecharInscricoesComPrazoNoPassado() {
+        UUID eventoId = UUID.randomUUID();
+        Evento existente = Evento.builder().id(eventoId)
+                .igreja(new Igreja() {{ setId(igrejaId); }})
+                .titulo("Culto").inicioEm(LocalDateTime.now().plusDays(10)).requerInscricao(true).build();
+        when(eventoRepository.findByIdAndIgrejaId(eventoId, igrejaId)).thenReturn(Optional.of(existente));
+        var req = requestComPrazoInscricao(LocalDateTime.now().plusDays(10), LocalDateTime.now().minusDays(1));
+
+        service.atualizarEvento(eventoId, req, igrejaId, usuarioId,
+                com.domus.api.modules.evento.serie.EscopoEdicaoEvento.ESTA);
+        // não lança
+    }
+
     private EventoRequest requestComResponsavel(UUID responsavelPessoaId) {
         return requestComResponsavel(responsavelPessoaId, false);
     }

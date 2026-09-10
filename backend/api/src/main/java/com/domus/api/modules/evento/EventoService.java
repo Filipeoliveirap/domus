@@ -119,7 +119,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
-        validarPrazoInscricao(data);
+        validarPrazoInscricao(data, true);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
@@ -200,7 +200,7 @@ public class EventoService {
         validarIdades(data);
         validarControlaPresenca(data);
         validarPreco(data);
-        validarPrazoInscricao(data);
+        validarPrazoInscricao(data, false);
         Localizacao loc = resolverLocalizacao(data, igrejaId);
 
         Evento evento = eventoRepository.findByIdAndIgrejaId(id, igrejaId)
@@ -241,14 +241,14 @@ public class EventoService {
         evento.setRestricaoSexo(data.restricaoSexo());
         evento.setAtualizadoPor(usuario);
 
-        // Vagas contam inscritos confirmados + convidados.
-        // Reduzir abaixo do total de confirmados é proibido; null = sem limite.
+        // [I3] Vagas contam quem já tem vaga garantida OU reservada (pagamento em curso).
+        // Reduzir abaixo disso é proibido; null = sem limite.
         if (data.vagas() != null) {
-            long pessoasConfirmadas = inscricaoService.contarPessoasConfirmadas(evento.getId());
-            if (data.vagas() < pessoasConfirmadas) {
+            long ocupadas = inscricaoService.contarOcupadas(evento);
+            if (data.vagas() < ocupadas) {
                 throw new BusinessException("VAGAS_MENOR_QUE_INSCRITOS",
                         "Não é possível reduzir as vagas para " + data.vagas() + ": "
-                        + pessoasConfirmadas + " pessoas já estão confirmadas neste evento. "
+                        + ocupadas + " pessoas já estão confirmadas ou reservando pagamento neste evento. "
                         + "Cancele inscrições antes de reduzir o limite.");
             }
         }
@@ -694,7 +694,7 @@ public class EventoService {
 
     /** Prazo de inscrição (V38): se informado, tem que ser antes do início e o evento
      *  precisa exigir inscrição — senão o prazo não significa nada. */
-    private void validarPrazoInscricao(EventoRequest data) {
+    private void validarPrazoInscricao(EventoRequest data, boolean criacao) {
         if (data.inscricoesAte() == null) return;
         if (!Boolean.TRUE.equals(data.requerInscricao())) {
             throw new BusinessException("PRAZO_SEM_INSCRICAO",
@@ -703,6 +703,12 @@ public class EventoService {
         if (data.inscricoesAte().isAfter(data.inicioEm())) {
             throw new BusinessException("PRAZO_APOS_INICIO",
                     "O prazo de inscrição tem que ser antes do início do evento.");
+        }
+        // [I11] no cadastro, prazo já vencido = evento nasce com inscrições fechadas sem
+        // aviso nenhum. Na edição pode ser intencional (fechar inscrições na marra).
+        if (criacao && data.inscricoesAte().isBefore(java.time.LocalDateTime.now())) {
+            throw new BusinessException("PRAZO_NO_PASSADO",
+                    "O prazo de inscrição já passou. Escolha uma data futura ou deixe em branco.");
         }
     }
 

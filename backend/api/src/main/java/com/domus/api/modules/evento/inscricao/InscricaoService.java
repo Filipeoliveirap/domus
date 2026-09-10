@@ -456,7 +456,7 @@ public class InscricaoService {
      * fato "segura" a vaga é a cobrança (expira e libera sozinha se ninguém pagar). Evento
      * gratuito continua exatamente como antes: conta inscrições confirmadas + convidados.
      */
-    private long contarOcupadas(Evento evento) {
+    public long contarOcupadas(Evento evento) {
         if (evento.getPreco() != null) {
             return cobrancaEventoRepository.contarPessoasComVagaReservada(evento.getId(), Instant.now());
         }
@@ -1034,11 +1034,12 @@ public class InscricaoService {
         // Resolve "quem inscreveu" em UMA query (evita N+1); id ausente no mapa (conta arquivada) vira null explícito.
         Map<UUID, RegistranteResumo> registrantes = buscarRegistrantesEmLote(inscricoes);
         Map<UUID, Pessoa> pessoas = resolverPessoasEmLote(inscricoes);
-        // Quem já pagou algo (diferencia a tag "Pagamento pendente" de "Falta
-        // complementar" — ver InscritoResponse.pagamentoParcial).
+        // Quem já pagou o original E ainda deve um complemento de reajuste (a tag "Falta
+        // complementar" — ver InscritoResponse.pagamentoParcial). Continua valendo mesmo com
+        // a inscrição CONFIRMADA e o complemento já EXPIRADO ([C1], 2026-09-10).
         List<UUID> idsDaPagina = inscricoes.stream().map(InscricaoEvento::getId).toList();
-        java.util.Set<UUID> comCobrancaPaga = new java.util.HashSet<>(
-                cobrancaEventoRepository.findInscricaoIdsComCobrancaPaga(idsDaPagina));
+        java.util.Set<UUID> comComplementoDevido = new java.util.HashSet<>(
+                cobrancaEventoRepository.findInscricaoIdsComComplementoDevido(idsDaPagina));
         // Tag "Estorno pendente" (2026-08-27) — mapeia inscrição -> id da cobrança pendente
         // de retry (nunca mais de uma cobrança com estorno pendente por inscrição na prática).
         Map<UUID, UUID> comEstornoPendente = cobrancaEventoRepository
@@ -1051,16 +1052,19 @@ public class InscricaoService {
                         resolverPessoa(i, pessoas),
                         registrantes.get(i.getInscritoPorUsuarioId()),
                         resolverConvidadoPor(i, pessoas),
-                        comCobrancaPaga.contains(i.getId()),
+                        comComplementoDevido.contains(i.getId()),
                         comEstornoPendente.get(i.getId())))
                 .toList();
         PagedResponse<InscritoResponse> paginaInscritos = PagedResponse.from(
                 new PageImpl<>(inscritosDaPagina, pageable, idsPagina.getTotalElements()));
 
         long total = inscricaoRepository.contarPessoasConfirmadas(eventoId);
+        // [I3] "vagas restantes" desconta também quem está reservando pagamento (cobrança
+        // PENDENTE não-vencida), igual ao que o /pagar checa — senão a tela oferece uma
+        // vaga que o backend recusa depois do cartão preenchido.
         Integer restantes = evento.getVagas() == null
                 ? null
-                : Math.max(0, evento.getVagas() - (int) total);
+                : Math.max(0, evento.getVagas() - (int) contarOcupadas(evento));
 
         return new ListaInscritosResponse(total, evento.getVagas(), restantes, paginaInscritos);
     }
@@ -1166,6 +1170,9 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int marcados = 0;
         for (InscricaoEvento inscricao : inscricoes) {
+            // [I9] só CONFIRMADA — canceladas e pendentes de pagamento não têm presença
+            // (o endpoint individual já recusa; o "todos" contava errado no relatório).
+            if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) continue;
             inscricao.setCompareceu(true);
             marcados++;
             inscricaoRepository.save(inscricao);
@@ -1191,6 +1198,7 @@ public class InscricaoService {
         List<InscricaoEvento> inscricoes = inscricaoRepository.listarPorEvento(eventoId);
         int desmarcados = 0;
         for (InscricaoEvento inscricao : inscricoes) {
+            if (inscricao.getStatus() != StatusInscricao.CONFIRMADA) continue; // [I9]
             inscricao.setCompareceu(false);
             desmarcados++;
             inscricaoRepository.save(inscricao);
@@ -1276,8 +1284,11 @@ public class InscricaoService {
             }
             for (CobrancaEvento cobranca : cobrancaEventoRepository.findByInscricaoId(inscricao.getId())) {
                 if (cobranca.getStatus() == StatusCobranca.PAGO) {
-                    pessoasComPagamentoPago++;
-                    valorTotalAEstornar = valorTotalAEstornar.add(cobranca.getValor());
+                    java.math.BigDecimal restante = cobranca.valorRestanteParaEstornar();
+                    if (restante.signum() > 0) {
+                        pessoasComPagamentoPago++;
+                        valorTotalAEstornar = valorTotalAEstornar.add(restante);
+                    }
                 }
             }
         }
@@ -1647,13 +1658,13 @@ public class InscricaoService {
                         UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
                         CobrancaEvento complemento = cobrancaEventoService.criarParaTerceiro(
                                 inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, novoValorDevido, usuarioId, true);
-                        // Decisão do usuário (2026-08-27): tratar exatamente como
-                        // aplicarEventoVirouPago — a inscrição vira AGUARDANDO_PAGAMENTO até
-                        // a diferença ser paga (mesma pendência, mesma tag "Pagamento
-                        // pendente" na lista de inscritos, mesmo lembrete/cancelamento por
-                        // link — só o texto do e-mail muda).
-                        inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
-                        inscricaoRepository.save(inscricao);
+                        // Revisão da decisão de 2026-08-27 (ver AUDITORIA [C1], 2026-09-10):
+                        // a inscrição de quem JÁ pagou o original CONTINUA CONFIRMADA — não
+                        // volta pra AGUARDANDO_PAGAMENTO. A pendência do complemento aparece
+                        // pela tag "Falta complementar" na lista de inscritos (derivada do
+                        // estado das cobranças), e o CobrancaEventoExpiracaoJob não tira a
+                        // vaga dela se o complemento expirar. Só quem nunca pagou nada
+                        // (branch valorJaPago == 0 acima) fica AGUARDANDO_PAGAMENTO.
                         enviarEmailComplementoPagamento(inscricao, complemento, novoValorDevido);
                     } catch (RuntimeException e) {
                         log.error("Falha ao gerar cobrança de complemento. inscricaoId={}", inscricao.getId(), e);
@@ -1843,7 +1854,7 @@ public class InscricaoService {
      * assim que a cobrança vence) — então não precisa criar uma nova.
      */
     @Transactional
-    public void enviarLembretePagamento(UUID inscricaoId, UUID igrejaId, String role) {
+    public void enviarLembretePagamento(UUID inscricaoId, UUID igrejaId, String role, UUID usuarioId) {
         if (!Permissoes.podeGerenciarInscricoes(role)) {
             throw new org.springframework.security.access.AccessDeniedException(
                     "Você não tem permissão para enviar lembretes de pagamento.");
@@ -1851,21 +1862,39 @@ public class InscricaoService {
 
         InscricaoEvento inscricao = inscricaoRepository.findByIdAndIgrejaId(inscricaoId, igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
-        if (!inscricao.estaAguardandoPagamento()) {
+
+        List<CobrancaEvento> cobrancasDaInscricao = cobrancaEventoRepository.findByInscricaoId(inscricaoId);
+        // Diferencia "nunca pagou nada" de "já pagou o valor original, só falta o
+        // complemento de um reajuste" — mesma distinção da tag "Falta complementar" na
+        // lista de inscritos. Desde [C1] (2026-09-10) o segundo caso é CONFIRMADA, não
+        // AGUARDANDO_PAGAMENTO, e o complemento pode já ter EXPIRADO.
+        boolean pagamentoParcial = cobrancasDaInscricao.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PAGO);
+        java.math.BigDecimal precoEvento = inscricao.getEvento().getPreco();
+        java.math.BigDecimal aindaDeve = precoEvento == null
+                ? java.math.BigDecimal.ZERO
+                : precoEvento.subtract(valorJaPago(cobrancasDaInscricao));
+
+        if (!inscricao.estaAguardandoPagamento() && !(pagamentoParcial && aindaDeve.signum() > 0)) {
             throw new ConflitoNegocioException("INSCRICAO_NAO_AGUARDA_PAGAMENTO",
                     "Esta inscrição não está com pagamento pendente.");
         }
 
-        List<CobrancaEvento> cobrancasDaInscricao = cobrancaEventoRepository.findByInscricaoId(inscricaoId);
         CobrancaEvento cobranca = cobrancasDaInscricao.stream()
                 .filter(c -> c.getStatus() == StatusCobranca.PENDENTE)
                 .findFirst()
-                .orElseThrow(() -> new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",
-                        "Não foi encontrada uma cobrança em aberto para esta inscrição."));
-        // Diferencia "nunca pagou nada" de "já pagou o valor original, só falta o
-        // complemento de um reajuste" — mesma distinção da tag "Falta complementar" na
-        // lista de inscritos (2026-08-27), agora também no texto do lembrete.
-        boolean pagamentoParcial = cobrancasDaInscricao.stream().anyMatch(c -> c.getStatus() == StatusCobranca.PAGO);
+                .orElse(null);
+        if (cobranca == null) {
+            if (pagamentoParcial && aindaDeve.signum() > 0) {
+                // "Falta complementar" cujo complemento já EXPIROU — recria uma cobrança
+                // nova pra o link do lembrete funcionar ([C1] botão "Lembrar").
+                UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
+                cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
+                        inscricaoId, pessoaId, aindaDeve, usuarioId, true);
+            } else {
+                throw new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",
+                        "Não foi encontrada uma cobrança em aberto para esta inscrição.");
+            }
+        }
 
         String nomeDestinatario;
         String email;
@@ -1922,8 +1951,14 @@ public class InscricaoService {
                 </div>
                 """.formatted(nomeDestinatario, paragrafoSituacao, evento.getTitulo(), paragrafoValor, link, linkCancelar);
 
-        emailService.enviar(email, "Lembrete de pagamento pendente — " + evento.getTitulo(), corpo);
-        log.info("Lembrete de pagamento enviado. inscricaoId={}, igrejaId={}", inscricaoId, igrejaId);
+        try {
+            emailService.enviar(email, "Lembrete de pagamento pendente — " + evento.getTitulo(), corpo);
+            log.info("Lembrete de pagamento enviado. inscricaoId={}, igrejaId={}", inscricaoId, igrejaId);
+        } catch (RuntimeException e) {
+            // [I7] falha do provedor de e-mail não pode dar rollback (a cobrança recriada
+            // no caso "Falta complementar" precisa persistir) — só loga, igual aos outros envios.
+            log.error("Falha ao enviar lembrete de pagamento. inscricaoId={}", inscricaoId, e);
+        }
         notificarPessoaSeForUsuario(inscricao, com.domus.api.modules.notificacao.TipoNotificacao.LEMBRETE_PAGAMENTO_PENDENTE,
                 "Lembrete: falta pagar " + valorFormatado + " pra confirmar sua inscrição em \"" + evento.getTitulo() + "\".");
     }

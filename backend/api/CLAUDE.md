@@ -941,6 +941,19 @@ erDiagram
   `taxaDevolvida` do estorno = 0 fixo; **UI de taxa negociada na config da igreja** (as
   colunas e o cálculo do override existem, falta só o formulário); cartão parcelado nunca
   testado no sandbox do MP.
+- [x] **Hardening pass do módulo eventos + pagamento** — **FEITO** (2026-09-10, PR #121;
+  auditoria PR #119, plano PR #120). Passada de fechamento antes do escopo comercial:
+  auditoria read-only de todo o módulo (`docs/AUDITORIA-MODULO-EVENTOS-PAGAMENTO.md`) e 12
+  correções com teste (`docs/superpowers/plans/2026-09-10-hardening-eventos-pagamento.md`).
+  Principais: reajuste de preço vencido não cancela mais quem já pagou o valor original
+  (fica CONFIRMADA com tag "falta complementar" + botão "Lembrar", decisão do gestor);
+  confirmação de pagamento transacional + lock pessimista (corrida webhook × poll);
+  `reiniciar` reconfere o status no MP antes de descartar o `mpPaymentId`; pós-prazo deixa
+  inscrição existente terminar de pagar e `/pagar` recusa evento encerrado; comprovante
+  mostra o valor com taxa; contagem de vaga passa a incluir a reserva (`AGUARDANDO_PAGAMENTO`);
+  falhas do MP viram 4xx; cadastro recusa prazo de inscrição no passado; prévia de "virar
+  gratuito" usa o valor real a estornar. Suíte: 1077 testes, 0 falhas. *Dívida anotada:*
+  `calcularImpactoEventoVirarPago` ainda estima sem gross-up.
 - [ ] **Estudo de pagamento (b: cobrança das igrejas pelos planos do Domus)** — ainda não
   feito, só o item (a) foi resolvido. Continua exatamente como descrito originalmente:
   decidir provedor/modelo pra cobrar a própria assinatura da igreja no Domus (distinto de

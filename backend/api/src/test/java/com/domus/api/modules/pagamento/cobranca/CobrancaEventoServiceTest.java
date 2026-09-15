@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
+import com.domus.api.modules.evento.Evento;
 import com.domus.api.shared.exception.BusinessException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,16 @@ class CobrancaEventoServiceTest {
     UUID inscricaoId = UUID.randomUUID();
     UUID pessoaId = UUID.randomUUID();
     UUID usuarioId = UUID.randomUUID();
+
+    /** Evento sem prazo de inscrição próprio e com início distante — não interfere no
+     *  teto de 48h do link, comportamento equivalente ao anterior à mudança. */
+    private Evento evento(LocalDateTime inicioEm, LocalDateTime inscricoesAte) {
+        return Evento.builder().id(eventoId).inicioEm(inicioEm).inscricoesAte(inscricoesAte).build();
+    }
+
+    private Evento eventoDistante() {
+        return evento(LocalDateTime.now().plusDays(30), null);
+    }
 
     @BeforeEach
     void setup() {
@@ -44,7 +56,7 @@ class CobrancaEventoServiceTest {
 
     @Test
     void criaCobrancaParaTerceiroPagandoAgoraComPrazoCurtoESemToken() {
-        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoDistante(), inscricaoId, pessoaId,
             BigDecimal.valueOf(150), usuarioId, false);
 
         assertThat(cobranca.getPessoaId()).isEqualTo(pessoaId);
@@ -53,7 +65,7 @@ class CobrancaEventoServiceTest {
 
     @Test
     void criaCobrancaParaTerceiroComLinkGeraTokenEPrazoLongo() {
-        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoDistante(), inscricaoId, pessoaId,
             BigDecimal.valueOf(150), usuarioId, true);
 
         assertThat(cobranca.getTokenLinkPublico()).isNotBlank();
@@ -61,10 +73,36 @@ class CobrancaEventoServiceTest {
     }
 
     @Test
+    void linkNaoSobrevoaOPrazoDeInscricaoQuandoMaisCurtoQue48Horas() {
+        LocalDateTime prazoEmSeisHoras = LocalDateTime.now().plusHours(6);
+        var evento = evento(LocalDateTime.now().plusDays(30), prazoEmSeisHoras);
+
+        var cobranca = service.criarParaTerceiro(igrejaId, evento, inscricaoId, pessoaId,
+            BigDecimal.valueOf(150), usuarioId, true);
+
+        assertThat(cobranca.getExpiraEm())
+            .isAfter(Instant.now().plus(5, java.time.temporal.ChronoUnit.HOURS))
+            .isBefore(Instant.now().plus(7, java.time.temporal.ChronoUnit.HOURS));
+    }
+
+    @Test
+    void linkUsaInicioDoEventoComoTetoQuandoNaoHaPrazoDeInscricaoProprio() {
+        LocalDateTime inicioEmDezHoras = LocalDateTime.now().plusHours(10);
+        var evento = evento(inicioEmDezHoras, null);
+
+        var cobranca = service.criarParaTerceiro(igrejaId, evento, inscricaoId, pessoaId,
+            BigDecimal.valueOf(150), usuarioId, true);
+
+        assertThat(cobranca.getExpiraEm())
+            .isAfter(Instant.now().plus(9, java.time.temporal.ChronoUnit.HOURS))
+            .isBefore(Instant.now().plus(11, java.time.temporal.ChronoUnit.HOURS));
+    }
+
+    @Test
     void tokensGeradosNaoSeRepetem() {
-        var c1 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, pessoaId,
+        var c1 = service.criarParaTerceiro(igrejaId, eventoDistante(), inscricaoId, pessoaId,
             BigDecimal.TEN, usuarioId, true);
-        var c2 = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, UUID.randomUUID(),
+        var c2 = service.criarParaTerceiro(igrejaId, eventoDistante(), inscricaoId, UUID.randomUUID(),
             BigDecimal.TEN, usuarioId, true);
 
         assertThat(c1.getTokenLinkPublico()).isNotEqualTo(c2.getTokenLinkPublico());
@@ -72,7 +110,7 @@ class CobrancaEventoServiceTest {
 
     @Test
     void criaCobrancaParaTerceiroConvidadoSemCadastroComPessoaIdNulo() {
-        var cobranca = service.criarParaTerceiro(igrejaId, eventoId, inscricaoId, null,
+        var cobranca = service.criarParaTerceiro(igrejaId, eventoDistante(), inscricaoId, null,
             BigDecimal.valueOf(150), usuarioId, false);
 
         assertThat(cobranca.getPessoaId()).isNull();

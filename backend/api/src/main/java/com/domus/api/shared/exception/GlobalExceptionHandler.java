@@ -8,9 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.HashMap;
@@ -49,6 +51,32 @@ public class GlobalExceptionHandler {
         });
 
         log.warn("Erro de validação de parâmetro. path={}, campos={}", request.getRequestURI(), campos);
+
+        return ResponseEntity
+                .badRequest()
+                .body(ErrorResponse.ofValidacao(campos));
+    }
+
+    /** @Valid direto num parâmetro que não é um @RequestBody de bean único — aqui,
+     *  {@code @Valid List<T>} como corpo inteiro (ex.: salvar campos personalizados em
+     *  lote). Spring 6.1+ não trata mais isso como {@link MethodArgumentNotValidException}
+     *  (essa só cobre @Valid em @RequestBody de um bean); sem este handler, caía no
+     *  genérico {@code Exception.class} e virava 500 em vez de 400 (achado em teste,
+     *  2026-09-15, ver CampoPersonalizadoControllerTest). */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidation(
+            HandlerMethodValidationException ex, HttpServletRequest request) {
+        Map<String, String> campos = new HashMap<>();
+        ex.getParameterValidationResults().forEach(resultado -> {
+            Integer indice = resultado.getContainerIndex();
+            resultado.getResolvableErrors().forEach(erro -> {
+                String campo = erro instanceof FieldError fe ? fe.getField() : "valor";
+                String chave = indice != null ? "[" + indice + "]." + campo : campo;
+                campos.put(chave, erro.getDefaultMessage());
+            });
+        });
+
+        log.warn("Erro de validação de método. path={}, campos={}", request.getRequestURI(), campos);
 
         return ResponseEntity
                 .badRequest()

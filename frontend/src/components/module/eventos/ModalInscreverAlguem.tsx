@@ -12,6 +12,7 @@ import { ModalCompartilharConvite } from './ModalCompartilharConvite'
 import { ModalCompartilharCobranca } from './ModalCompartilharCobranca'
 import { useVisitantesBuscaLeve } from '@/hooks/visitante/useVisitantesBuscaLeve'
 import { useCriarConvidado } from '@/hooks/inscricao/useCriarConvidado'
+import { useMostrarInscricaoFeita } from '@/hooks/inscricao/useMostrarInscricaoFeita'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -75,6 +76,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
 
   const { data: campos = [] } = useCamposPersonalizados(eventoId)
   const criarConvidado = useCriarConvidado(eventoId)
+  const mostrarInscricaoFeita = useMostrarInscricaoFeita()
 
   const [compartilharAberto, setCompartilharAberto] = useState(false)
   // Plano 4b: link de cobrança gerado pra um convidado (evento pago, "enviar link").
@@ -168,6 +170,7 @@ export function ModalInscreverAlguem({ eventoId, tituloEvento, exclusivoMembros,
           if (!resposta.cobrancaId) {
             // Evento gratuito — em vez de fechar direto, oferece o loop de "adicionar
             // outro convidado" (desenho confirmado com o usuário, Task 11).
+            mostrarInscricaoFeita()
             setMostrarConfirmacao(true)
             return
           }

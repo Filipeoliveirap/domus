@@ -1,5 +1,6 @@
 package com.domus.api.modules.pagamento.cobranca;
 
+import com.domus.api.modules.evento.Evento;
 import com.domus.api.modules.pagamento.CalculadoraTaxaPagamento;
 import com.domus.api.modules.pagamento.LimitesPagamentoProperties;
 import com.domus.api.modules.pagamento.MeioPagamento;
@@ -10,6 +11,7 @@ import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -99,15 +101,26 @@ public class CobrancaEventoService {
         return repository.save(cobranca);
     }
 
-    public CobrancaEvento criarParaTerceiro(UUID igrejaId, UUID eventoId, UUID inscricaoId,
+    public CobrancaEvento criarParaTerceiro(UUID igrejaId, Evento evento, UUID inscricaoId,
                                              UUID pessoaId, BigDecimal valor,
                                              UUID criadoPorUsuarioId, boolean gerarLink) {
         String token = gerarLink ? gerarToken() : null;
-        Duration prazo = gerarLink ? PRAZO_LINK_COMPARTILHADO : PRAZO_PAGAMENTO_IMEDIATO;
+        Instant expiraEm = gerarLink
+            ? expiracaoDoLink(evento)
+            : Instant.now().plus(PRAZO_PAGAMENTO_IMEDIATO);
 
-        var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId,
-            valor, Instant.now().plus(prazo), criadoPorUsuarioId, token);
+        var cobranca = new CobrancaEvento(igrejaId, evento.getId(), inscricaoId, pessoaId,
+            valor, expiraEm, criadoPorUsuarioId, token);
         return repository.save(cobranca);
+    }
+
+    /** Link compartilhado dura 48h, mas nunca sobrevive além do prazo em que a inscrição
+     *  ainda é possível (prazo próprio do evento, ou o início dele na ausência de um) —
+     *  senão o link continuaria "válido" pra uma inscrição que já não pode mais existir. */
+    private Instant expiracaoDoLink(Evento evento) {
+        Instant tetoPrazo = evento.prazoEfetivoInscricao().atZone(ZoneId.systemDefault()).toInstant();
+        Instant prazoPadrao = Instant.now().plus(PRAZO_LINK_COMPARTILHADO);
+        return prazoPadrao.isBefore(tetoPrazo) ? prazoPadrao : tetoPrazo;
     }
 
     public CobrancaEvento buscarPorToken(String token) {

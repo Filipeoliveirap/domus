@@ -13,6 +13,7 @@ import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { usePessoas } from '@/hooks/pessoa/usePessoas'
 import { useParticipantes } from '@/hooks/inscricao/useParticipantes'
 import { useInscreverPessoas } from '@/hooks/inscricao/useInscreverPessoas'
+import { useMostrarInscricaoFeita } from '@/hooks/inscricao/useMostrarInscricaoFeita'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
 import { useCamposPersonalizados } from '@/hooks/evento/useCamposPersonalizados'
 import { useResponderCampos } from '@/hooks/inscricao/useResponderCampos'
@@ -67,6 +68,7 @@ export function ModalInscreverPessoas({
   eventoId, tituloEvento, exclusivoMembros, preco, situacaoInscricao, onClose, embutido = false,
 }: Props) {
   const irParaCheckout = useIrParaCheckout()
+  const mostrarInscricaoFeita = useMostrarInscricaoFeita()
   const [busca, setBusca] = useState('')
   // Evento gratuito: seleção múltipla por checkbox (Map pra guardar nome/e-mail no momento
   // da seleção — a lista de busca pode mudar de página/termo depois, e precisamos saber
@@ -242,8 +244,12 @@ export function ModalInscreverPessoas({
     inscreverPessoas.mutate({ pessoaIds: simples.map((p) => p.id) }, {
       onSuccess: () => {
         setImpedimentosParaConfirmar(null)
-        if (comPendencia.length > 0) setFilaPendencias(comPendencia)
-        else onClose()
+        if (comPendencia.length > 0) {
+          setFilaPendencias(comPendencia)
+        } else {
+          mostrarInscricaoFeita()
+          onClose()
+        }
       },
       onError: () => setImpedimentosParaConfirmar(null),
     })
@@ -271,7 +277,10 @@ export function ModalInscreverPessoas({
         // "setState durante o render de outro componente").
         const eraUltimo = filaPendencias.length === 1
         setFilaPendencias((fila) => fila.slice(1))
-        if (eraUltimo) onClose()
+        if (eraUltimo) {
+          mostrarInscricaoFeita()
+          onClose()
+        }
       },
     })
   }
@@ -291,12 +300,19 @@ export function ModalInscreverPessoas({
               setImpedimentosParaConfirmar(null)
               const eraUltimo = filaPendencias.length === 1
               setFilaPendencias((fila) => fila.slice(1))
-              if (eraUltimo) onClose()
+              if (eraUltimo) {
+                mostrarInscricaoFeita()
+                onClose()
+              }
             },
           })
         } else {
           inscreverPessoas.mutate({ pessoaIds: Array.from(selecionados.keys()), confirmado: true }, {
-            onSuccess: () => { setImpedimentosParaConfirmar(null); onClose() },
+            onSuccess: () => {
+              setImpedimentosParaConfirmar(null)
+              mostrarInscricaoFeita()
+              onClose()
+            },
           })
         }
       }}

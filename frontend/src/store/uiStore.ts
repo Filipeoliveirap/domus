@@ -15,11 +15,14 @@ interface UiState {
   iniciarNav: () => void
   finalizarNav: () => void
 
-  // "Ponte" mostrada entre criar a inscrição de um evento pago e a rota de checkout abrir
-  // (fora do app shell). Vive aqui, e não no botão, pra sobreviver ao drawer/modal que
-  // dispara a navegação desmontar no meio da transição.
+  // Selo "Inscrição feita!" mostrado logo após QUALQUER "Se inscrever" (grátis ou pago).
+  // No evento pago dobra de "ponte" até a rota de checkout abrir (fora do app shell) —
+  // `ponteSubtitulo` carrega a legenda "Abrindo o pagamento…" nesse caso, null no grátis.
+  // Vive aqui, e não no botão, pra sobreviver ao drawer/modal que dispara a ação desmontar
+  // no meio da transição.
   ponteCheckout: boolean
-  abrirPonteCheckout: () => void
+  ponteSubtitulo: string | null
+  abrirPonteCheckout: (subtitulo?: string | null) => void
   fecharPonteCheckout: () => void
 
   // Animação de boas-vindas mostrada por cima do app shell logo que ele aparece.
@@ -42,7 +45,8 @@ export const useUiStore = create<UiState>((set) => ({
   finalizarNav: () => set((s) => (s.navegando ? { navegando: false } : s)),
 
   ponteCheckout: false,
-  abrirPonteCheckout: () => set({ ponteCheckout: true }),
+  ponteSubtitulo: null,
+  abrirPonteCheckout: (subtitulo) => set({ ponteCheckout: true, ponteSubtitulo: subtitulo ?? null }),
   fecharPonteCheckout: () => set((s) => (s.ponteCheckout ? { ponteCheckout: false } : s)),
 
   boasVindas: null,

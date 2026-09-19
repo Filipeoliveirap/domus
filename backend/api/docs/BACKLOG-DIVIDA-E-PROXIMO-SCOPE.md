@@ -515,8 +515,107 @@ Piloto em `VisitanteControllerTest`, cobrindo validação (`@Valid` não acionad
 real corrigido em `MoverParaCelulaRequest` nesta sessão) e autorização (403 por perfil, 401 sem
 sessão, 403 sem CSRF). Documentado na tabela de convenções de teste do `CLAUDE.md`.
 
-**Ficou de fora:** aplicar o harness aos demais controllers — hoje só `Visitante` está coberto.
-Expandir módulo a módulo conforme for mexendo neles, não de uma vez.
+**Ficou de fora:** aplicar o harness aos demais controllers. Progresso (conferido
+2026-09-15): já cobre `Visitante`, `Inscricao`, `Notificacao`, `OpcoesPagamento`,
+`ContaPagamento`, `Evento` (14 testes: GET liberado a todo perfil, POST/PUT/DELETE
+restrito a ADMIN/LIDER, `@Valid` no cadastro, CSRF, isolamento por igreja em
+`buscarPorId` → 404), **`Pessoa`** (novo, 15 testes) além de `AuthCsrfConfigTest` —
+8 arquivos usando `AutenticacaoTestSupport`. `Pessoa` é o caso mais rico até aqui: o
+`SecurityConfig` libera POST/PUT/DELETE `/pessoas/**` pra ADMIN/LIDER/COMUM igualmente —
+a restrição real ("só admin ou secretário gerencia pessoas") mora só no controller
+(`Permissoes.podeGerenciarPessoas`), e "secretário" é uma **capacidade extra**
+(`usuario_capacidade`) independente do role (testado: LIDER com a capacidade SECRETARIO
+gerencia igual ADMIN). Também prova a restrição de dados sensíveis por perfil
+(endereço/observações somem pra ACESSO_COMUM, aparecem pra ADMIN e pra `/me` da própria
+pessoa mesmo sem capacidade). **`Usuario`** (novo, 14 testes) — caso mais simples: o
+`SecurityConfig` restringe `/usuarios/**` inteiro a `hasRole(ADMIN)`, sem exceção por
+verbo ou capacidade, então o teste prova que LIDER fica barrado em qualquer endpoint do
+módulo (concessão/revogação de acesso, troca de role, arquivar, conceder capacidade) e
+ADMIN passa em todos. **`Igreja`** (novo, 12 testes) — **achou um bug real de
+autorização**: `PUT /igrejas/minha/rotulos` não tinha matcher próprio em `SecurityConfig`
+e caía em `anyRequest().authenticated()` — qualquer perfil logado (LIDER, ACESSO_COMUM)
+conseguia renomear os módulos da igreja inteira ("Ministério"/"Célula"/"Congregação").
+Terceira ocorrência da MESMA classe de bug que o arquivo já documentava duas vezes (era
+por isso que `/igrejas/minha/logo` tinha matcher próprio — o autor original sabia do
+padrão, só não cobriu `/rotulos`). Corrigido: `.requestMatchers("/igrejas/minha/rotulos")
+.hasRole(ADMIN)` adicionado, com comentário atualizado. **`MovimentacaoFinanceira`**
+(novo, 12 testes) — mesmo padrão de `Pessoa`: matcher libera ADMIN/LIDER/COMUM
+igualmente, restrição real é `Permissoes.podeVerFinanceiro` no controller + capacidade
+extra "TESOUREIRO" independente do role (testado: LIDER com a capacidade arquiva
+movimentação igual ADMIN). **`CategoriaFinanceira`** (novo, 12 testes) — mesmo padrão,
+mais o caso de exclusão definitiva (bloqueada quando tem movimentação, permitida quando
+não tem). **`Celula`** (novo, 13 testes) — sem matcher próprio (cai no
+`anyRequest().authenticated()`), autorização toda no controller/service: ADMIN/SECRETARIO
+gerencia o cadastro; editar/gerenciar membros exige ADMIN/SECRETARIO **ou o LÍDER DESTA
+célula específica** (`CelulaMembro.papel`, não o role LIDER genérico) — testado que um
+LIDER de OUTRA célula é barrado (autorização por dado, o caso de maior risco do módulo,
+que já teve bug real corrigido antes, ver memória `celula-visitante-review-e-correcoes`;
+passou de primeira desta vez). **`Ministerio`** (novo, 14 testes) — mesma estrutura de
+`Celula`: ADMIN/SECRETARIO gerencia o cadastro, editar/gerenciar membros exige
+ADMIN/SECRETARIO ou o LÍDER DESTE ministério específico (`MinisterioMembro.papel=LIDER`
++ `status=ATIVO`), líder de outro ministério barrado. Também cobre "pedir entrada" (aberto
+a qualquer autenticado). **`LocalEvento`** (novo, 13 testes) — sem checagem no controller,
+tudo em `SecurityConfig`: `GET /locais-evento` liberado a qualquer perfil, mas
+`/locais-evento/**` (criar/editar/arquivar/**arquivados**) exige ADMIN/LIDER — incluindo o
+`GET /locais-evento/arquivados`, que cai no matcher de wildcard e não no de listagem
+simples (testado explicitamente, é o tipo de detalhe que um teste de matcher pega e um
+Mockito nunca veria). **`CampoPersonalizado`** (novo, 8 testes) — **achou um segundo bug
+real**: `PUT /eventos/{id}/campos-personalizados` recebe `@Valid List<CampoPersonalizadoRequest>`
+como corpo inteiro (não um DTO com o campo `@Valid`); no Spring 6.1+ isso lança
+`HandlerMethodValidationException`, não `MethodArgumentNotValidException` — sem handler
+próprio, caía no genérico e virava **500** em vez de **400** pra qualquer campo inválido
+(rótulo vazio, opção única sem opções). Corrigido: handler novo em `GlobalExceptionHandler`
+extraindo campo+índice de `ParameterValidationResult`. **Achado colateral de infra de
+teste:** ao adicionar esta 8ª classe do harness, a suíte completa passou a falhar com
+**429** em cascata — o `RateLimitFilter` conta no mesmo Redis pra toda `@SpringBootTest`
+da mesma execução do Surefire (uma JVM só), e o volume acumulado de todo o harness estourou
+o limite GLOBAL de produção (100/min). Corrigido subindo `app.ratelimit.global-por-minuto`
+pra um valor alto só nos testes, via `@DynamicPropertySource` em
+`PostgresTestContainerSupport` (compartilhado por toda classe do harness) — o tier de
+`auth` ficou intocado de propósito, porque `RateLimitCsrfOrderTest` depende do valor real
+(10/min) pra provar o próprio limitador. **`Busca`** (novo, 12 testes) — desafio deste
+módulo: os endpoints de busca de verdade dependem de Elasticsearch, que este projeto não
+containeriza pra teste (só Postgres via `PostgresTestContainerSupport`). Contornado usando
+`q` em branco de propósito — o controller devolve lista vazia sem tocar no service nesse
+caso, o que já basta pra provar autorização (mesmo padrão `Pessoa`/`MovimentacaoFinanceira`
+em `/busca/usuarios`/`/busca/movimentacoes`/`/busca/categorias`, capacidade "TESOUREIRO")
+e `@Size`. **`Dashboard`** (novo, 4 testes) — mesmo padrão, endpoint único. **`Inicio`** (novo, 2
+testes) — sem restrição de perfil. **`Relatorio`** (novo, 7 testes) — dois eixos de
+autorização: capacidade "TESOUREIRO" (mesmo padrão financeiro) e o IDOR entre igrejas
+vinculadas — passar `igrejaId` de uma igreja fora da família (sede/congregações) é barrado
+por `FamiliaIgrejaService.resolverEscopo` → `AcessoNegadoException` → 403; testado que a
+própria congregação (via `igrejaMae`) passa, e uma igreja sem relação nenhuma é recusada.
+**`Balancete`** (novo, 6 testes) — mesmo padrão de capacidade, mais uma regra própria: o
+balancete do grupo (congregações) só é visível pela igreja SEDE, testado que a
+congregação (filha) é barrada mesmo sendo ADMIN dela mesma. **`Consolidado`** (já tinha
+`ConsolidadoControllerTest` Mockito puro chamando o controller direto — não passa pela
+`SecurityFilterChain`, e o próprio controller comenta que a autorização real de perfil só
+existe ali dentro. Completado com `ConsolidadoControllerAutorizacaoTest` novo, 4 testes
+via `AutenticacaoTestSupport`, provando 401/403/200 de ponta a ponta e a mesma regra
+"só a sede" do balancete). **`ExclusaoIgreja`** (novo, 10 testes) — só-ADMIN sem
+capacidade extra (ação irreversível, mesmo com carência de 10 dias); o caso de "nome de
+confirmação não confere" foi testado sem senha real, porque a checagem de nome roda antes
+da reautenticação no service. Notado en passant: o endpoint `POST .../rodar-job` (dispara
+o job de exclusão na hora, pra não esperar 10 dias em teste manual) está marcado
+"TEMPORÁRIO: remover antes de produção" no código-fonte desde antes desta sessão — ainda
+não removido; deixado aqui como lembrete, não é regressão desta rodada. Suíte completa
+1250/1250. **`TermoAceite`** (novo, 3 testes) — sem restrição de perfil; achado no processo:
+POST sem cookie nenhum bate no `CsrfFilter` antes de chegar na checagem de sessão (CSRF
+roda antes da autorização na chain) e devolve 403, não 401 — comportamento correto, só
+ajustei a expectativa do teste pra bater com a ordem real dos filtros. Suíte completa
+1253/1253. **`Vinculo`** (igrejas vinculadas, novo, 11 testes) — `GET` liberado a todo
+perfil, mas gerar código/entrar/desvincular/sair é só ADMIN (matcher); caso próprio: o
+código de vínculo (credencial pra entrar na família) só aparece na resposta pra ADMIN —
+LIDER/COMUM veem o resto do status com o código mascarado, testado explicitamente. Suíte
+completa 1264/1264. **`Reindexacao`** (novo, 3 testes) — **achou um terceiro bug real de
+autorização**: `POST /admin/reindexacao` não tinha checagem nenhuma no controller e caía
+no matcher genérico `/admin/**` (ADMIN/LIDER/COMUM) — qualquer perfil logado, de qualquer
+igreja, disparava uma reindexação GLOBAL (todas as igrejas de uma vez, `findAll()` sem
+filtro de tenant, ver `ReindexacaoService.reindexarTudo`) — potencial vetor de negação de
+serviço, além de vazamento de capacidade administrativa. Corrigido: `Permissoes.podeReindexar`
+(novo, só-ADMIN) + `exigirAdmin()` no controller, mesmo padrão de `ExclusaoIgrejaController`.
+Suíte completa 1267/1267. Segue expandindo módulo a módulo conforme for mexendo neles,
+não de uma vez.
 
 Ideal futuro: um `@SpringBootTest` com `@AutoConfigureMockMvc` (ou `WebMvcTest` importando o
 `SecurityConfig`) que suba a `SecurityFilterChain` real e teste, por perfil, quais rotas dão
@@ -729,26 +828,51 @@ abre `ModalConfirmacao` (`perigo`) avisando que eventos pagos deixam de consegui
 até reconectar, e que inscrições já pagas não são afetadas.
 `/login`) conforme esse campo.
 
-### Prazo do link de pagamento ("enviar link") fixo em 48h — devia acompanhar o evento
+### ~~Prazo de inscrição opcional no evento~~ (2026-08-26, **FEITO** — migration V38/V39)
 
-Levantado pelo autor testando o Plano 4b (2026-08-26): o link de pagamento gerado por
-"Enviar link pra pagar" (`CobrancaEventoService.PRAZO_LINK_COMPARTILHADO`, 48h fixas) não
-tem relação nenhuma com o evento em si — ideal seria valer até não dar mais pra se
-inscrever (hoje, na prática, até o evento começar). Depende da feature abaixo pra fazer
-sentido de verdade.
+Entregue: `evento.inscricoes_ate` (nulável) como segunda trava de "pode se inscrever",
+`evento.politica_cancelamento_apos_prazo` (`NAO_PERMITIDO`/`PERMITIDO_COM_REEMBOLSO`/
+`PERMITIDO_SEM_REEMBOLSO`) decidindo o cancelamento pós-prazo, `PrazoInscricaoJob` +
+`PrazoInscricaoProcessador` notificando inscritos com pagamento pendente e responsáveis
+quando o prazo se aproxima/fecha (carimbos `aviso_prazo_proximo_em`/`aviso_prazo_fechado_em`
+pra dedup). Membro comum barra no prazo; admin/líder furam; link público sempre barra. Faz
+parte do PR #121 (hardening de eventos/pagamento).
 
-### Prazo de inscrição opcional no evento (nova feature)
+### ~~Prazo do link de pagamento ("enviar link") ainda fixo em 48h~~ (2026-09-15, **RESOLVIDO**)
 
-Ideia do autor (2026-08-26), ainda não desenhada: eventos com inscrição já fecham
-naturalmente quando o evento começa (`situacao !== 'AGENDADO'` bloqueia — ver
-`BotaoConfirmarPresenca`), mas alguns eventos precisam de um prazo de inscrição **anterior**
-ao início (ex.: acampamento, evento que exige logística prévia). Em vez de um botão manual
-"encerrar inscrições", a ideia é um campo opcional na `EVENTO` (algo como
-`inscricao_ate`/`prazo_inscricao`, nulável) que, quando preenchido, some com a exigência
-`situacao === AGENDADO` como segunda trava de "pode se inscrever". Isso também resolveria o
-item acima: o prazo do link de pagamento passaria a acompanhar esse campo quando presente,
-em vez do fixo de 48h. Precisa de brainstorm completo (schema, UI de cadastro, mensagem pro
-usuário quando o prazo já passou mas o evento ainda não começou) antes de virar plano.
+`Evento.prazoEfetivoInscricao()` (novo) retorna `inscricoesAte` quando setado, senão
+`inicioEm`. `CobrancaEventoService.criarParaTerceiro` passou a receber `Evento` (em vez de
+só o `UUID eventoId`) e, quando gera link, calcula `expiraEm = min(agora + 48h,
+prazoEfetivoInscricao)` — o link nunca sobrevive além do que a inscrição ainda permite.
+Os 5 call sites em `InscricaoService` passaram a fornecer o `Evento` que já tinham em mãos
+(nenhuma query nova). Testes novos em `CobrancaEventoServiceTest` provam o corte (prazo
+curto) e o fallback pro início do evento; suíte completa 1079/1079.
+
+### ~~Bug: e-mail virou obrigatório em qualquer evento mas sumiu do formulário de convite
+público em evento grátis~~ (2026-09-15, **RESOLVIDO**)
+
+`InscricaoService.inscreverConvidado` já exigia e-mail sempre desde 2026-08-27 (decisão:
+avisar quem está inscrito sem cadastro se o evento virar pago depois), mas
+`FormularioConvidado.tsx` (convite público) só mostrava o campo quando `preco !== null` —
+convidado de evento grátis não tinha como preencher o campo que o backend recusava sem.
+Corrigido: campo sempre visível e obrigatório, com mensagem de dica que muda conforme o
+evento é pago ou não.
+
+### ~~Overlay "Inscrição feita!" só aparecia em inscrição paga~~ (2026-09-15, **RESOLVIDO**)
+
+O véu `<PonteParaCheckout>` (montado no layout raiz) só disparava no fluxo de checkout de
+evento pago. Generalizado: `uiStore.abrirPonteCheckout` ganhou um `subtitulo` opcional
+(pago mostra "Abrindo o pagamento…", grátis fica sem legenda) e um hook novo
+`useMostrarInscricaoFeita` (`src/hooks/inscricao/`) mostra o mesmo selo por 1,2s sem
+navegar. Aplicado em todo caminho de "Se inscrever" grátis que antes não tinha feedback
+nenhum: convidado sem cadastro pelo link (`FormularioConvidado`), pessoa logada pelo link
+(`EntrarLogado`), gestor inscrevendo visitante/pessoa de fora (`ModalInscreverAlguem`) e
+gestor inscrevendo pessoa(s) da igreja em lote (`ModalInscreverPessoas`). Corrigida de
+quebra uma regressão introduzida no meio do trabalho: `useIrParaCheckout` (usado pelos
+fluxos pagos de convite/gestor) tinha parado de passar a legenda "Abrindo o pagamento…"
+depois que o subtítulo virou parametrizável. Toggle "Eu vou" (evento sem `requerInscricao`)
+ficou de fora de propósito — já tem a própria animação (curtida/faíscas), overlay ali
+pesaria a UX (decisão do autor).
 
 ### ~~Trocar evento entre pago↔gratuito com gente já inscrita~~ (2026-08-26, **RESOLVIDO 2026-08-27**)
 
@@ -793,9 +917,14 @@ auto-criada; faixas abaixo do mínimo do MP (`pagamento.limite.*`) filtradas.
   a spec §7 previa a referência e ela caiu na implementação. Reconciliar "qual taxa é de
   qual pagamento" é text-matching; dois pagadores de mesmo nome no mesmo evento ficam
   indistinguíveis. Totais financeiros continuam certos.
-- **`MercadoPagoClient.criarPagamento(UUID, CobrancaEvento)`** ficou morto (só teste chama) e
-  agora cobraria `cobranca.getValor()` que mudou de significado (virou o alvo líquido) — sem
-  gross-up. Deletar quando for mexer no módulo, ou é uma armadilha.
+- ~~**`MercadoPagoClient.criarPagamento(UUID, CobrancaEvento)`** ficou morto~~ **RESOLVIDO**
+  (2026-09-15): removido junto com `MercadoPagoApi.criarPagamento` (só chamado por ele,
+  sem gross-up — cobraria `cobranca.getValor()` já com o significado novo de alvo líquido,
+  armadilha real se alguém reativasse por engano). Javadoc que referenciava o método morto
+  atualizado pra apontar `criarPagamentoTokenizado`. Teste que só provava esse método
+  (`criaPagamentoUsandoTokenDescriptografadoDaIgreja`) removido; o teste de erro
+  "sem conta conectada" que dependia dele foi reapontado pra `buscarQrCodePix` (mesma
+  checagem, método vivo). Suíte completa: 1078/1078.
 - **Aprender a taxa real do `fee_details`** pra corrigir o gross-up dos próximos pagamentos
   (hoje usa a tabela padrão do MP em `pagamento.taxa.*` + override opcional por igreja em
   `conta_pagamento_igreja`) — fica pra depois.

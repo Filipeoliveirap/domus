@@ -195,6 +195,12 @@ public class Evento {
         return SituacaoInscricao.ABERTA;
     }
 
+    /** Teto de "até quando dá pra se inscrever" — usado pra o link de pagamento
+     *  compartilhado (V40) não sobreviver além da inscrição em si. */
+    public LocalDateTime prazoEfetivoInscricao() {
+        return inscricoesAte != null ? inscricoesAte : inicioEm;
+    }
+
     public String getLocalExibicao() {
         if (local != null) return local.getNome();
         if (localTexto != null) return localTexto;

@@ -26,7 +26,9 @@ public class OutboxProcessador {
         }
     }
 
-    @Scheduled(fixedDelay = 3000)
+    @Scheduled(
+            fixedDelayString = "${app.outbox.intervalo-ms:30000}",
+            initialDelayString = "${app.outbox.delay-inicial-ms:5000}")
     @Transactional
     public void processar() {
         List<OutboxEvento> pendentes = outboxRepository.buscarPendentes(PageRequest.of(0, 100));

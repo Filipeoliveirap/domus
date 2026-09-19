@@ -79,30 +79,10 @@ public class MercadoPagoApi {
         }
     }
 
-    public String criarPagamento(String accessToken, String externalReference, BigDecimal valor) {
-        try {
-            PaymentClient client = new PaymentClient();
-            PaymentCreateRequest request = PaymentCreateRequest.builder()
-                .transactionAmount(valor)
-                .description("Inscrição em evento — Domus")
-                .externalReference(externalReference)
-                .build();
-            MPRequestOptions options = MPRequestOptions.builder()
-                .accessToken(accessToken)
-                .build();
-            var pagamento = client.create(request, options);
-            return String.valueOf(pagamento.getId());
-        } catch (Exception e) {
-            logarDetalheSeApiException("Falha ao criar pagamento no Mercado Pago", e);
-            throw new BusinessException("MP_INDISPONIVEL",
-                "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.");
-        }
-    }
-
     /**
      * Cria o pagamento a partir dos dados TOKENIZADOS pelo Payment Brick no navegador do
-     * pagador (Task 14). Diferente de {@link #criarPagamento}, aqui o cartão já foi
-     * tokenizado no cliente — o Domus nunca vê número de cartão, só o {@code token}
+     * pagador (Task 14). O cartão já foi tokenizado no cliente — o Domus nunca vê número
+     * de cartão, só o {@code token}
      * gerado pelo SDK JS do Mercado Pago. Campos ({@code token}, {@code paymentMethodId},
      * {@code installments}, {@code payer.email}) confirmados no jar real
      * ({@code sdk-java-2.1.16.jar}, via {@code jar xf} + {@code javap
@@ -208,7 +188,7 @@ public class MercadoPagoApi {
 
     /**
      * Busca o pagamento pelo id no Mercado Pago e devolve o {@code external_reference}
-     * (setado por {@link #criarPagamento}, é o id da nossa {@code CobrancaEvento}) junto
+     * (setado por {@link #criarPagamentoTokenizado}, é o id da nossa {@code CobrancaEvento}) junto
      * do {@code status} real do pagamento. Usado pelo webhook, que só manda {@code data.id}
      * — não o external_reference nem o status direto no payload.
      *

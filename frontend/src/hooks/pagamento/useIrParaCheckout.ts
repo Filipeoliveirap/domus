@@ -33,7 +33,7 @@ export function useIrParaCheckout() {
     ) => {
       const destino = `/eventos/${eventoId}/pagamento/${cobrancaId}`
       router.prefetch(destino)
-      abrirPonteCheckout()
+      abrirPonteCheckout('Abrindo o pagamento…')
       aoAntesDeNavegar?.()
       if (atrasoMs > 0) window.setTimeout(() => router.push(destino), atrasoMs)
       else router.push(destino)

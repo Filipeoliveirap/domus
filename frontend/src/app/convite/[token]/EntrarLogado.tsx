@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
+import { useMostrarInscricaoFeita } from '@/hooks/inscricao/useMostrarInscricaoFeita'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCamposPersonalizadosMinha } from '@/hooks/evento/useCamposPersonalizadosMinha'
@@ -22,6 +23,7 @@ interface Props {
 export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
   const router = useRouter()
   const irParaCheckout = useIrParaCheckout()
+  const mostrarInscricaoFeita = useMostrarInscricaoFeita()
   const { data: minha, isLoading } = useMinhaInscricao(eventoId)
   const inscrever = useInscrever(eventoId, true)
   const { data: campos = [] } = useCamposPersonalizadosMinha(eventoId)
@@ -93,6 +95,7 @@ export function EntrarLogado({ eventoId, nomeUsuario, onSucesso }: Props) {
     if (cobrancaId) {
       irParaCheckout(eventoId, cobrancaId, undefined, 0)
     } else {
+      mostrarInscricaoFeita()
       onSucesso()
     }
   }

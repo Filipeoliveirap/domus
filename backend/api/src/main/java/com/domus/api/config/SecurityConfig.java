@@ -88,10 +88,13 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
-                        // "/igrejas/minha" acima só casa o path exato — /minha/logo é outro path e,
-                        // sem matcher próprio, caía em anyRequest().authenticated() (qualquer perfil
-                        // logado trocava a logo da igreja). Mesma classe de bug do comentário abaixo.
+                        // "/igrejas/minha" acima só casa o path exato — /minha/logo e /minha/rotulos
+                        // são outros paths e, sem matcher próprio, caíam em anyRequest().authenticated()
+                        // (qualquer perfil logado trocava a logo/os rótulos da igreja inteira — achado
+                        // por teste, 2026-09-15, ver IgrejaControllerTest). Mesma classe de bug do
+                        // comentário abaixo — todo subcaminho de /igrejas/minha precisa do próprio matcher.
                         .requestMatchers("/igrejas/minha/logo").hasRole(ADMIN)
+                        .requestMatchers("/igrejas/minha/rotulos").hasRole(ADMIN)
                         // Consultar (GET /status, só devolve um booleano "conectada") é liberado
                         // pra QUALQUER perfil logado, não só admin — sem isso, o front tratava
                         // 403/sem-dado como "não conectada" e bloqueava/avisava errado quem não é

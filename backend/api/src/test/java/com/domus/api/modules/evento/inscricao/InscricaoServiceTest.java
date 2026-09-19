@@ -1018,7 +1018,8 @@ class InscricaoServiceTest {
                 new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
                 usuarioId, "token-gerado");
         when(cobrancaEventoService.criarParaTerceiro(
-                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true))
+                eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
+                eq(new java.math.BigDecimal("30.00")), eq(usuarioId), eq(true)))
                 .thenReturn(cobrancaCriada);
         UUID usuarioDaPessoaId = UUID.randomUUID();
         when(usuarioRepository.findByPessoaId(pessoaId))
@@ -1029,7 +1030,8 @@ class InscricaoServiceTest {
         assertThat(processadas).isEqualTo(1);
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
         verify(cobrancaEventoService).criarParaTerceiro(
-                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true);
+                eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
+                eq(new java.math.BigDecimal("30.00")), eq(usuarioId), eq(true));
 
         var assuntoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         var corpoCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
@@ -1779,7 +1781,7 @@ class InscricaoServiceTest {
             if (i.getId() == null) i.setId(UUID.randomUUID());
             return i;
         });
-        when(cobrancaEventoService.criarParaTerceiro(eq(igrejaId), eq(eventoId), any(),
+        when(cobrancaEventoService.criarParaTerceiro(eq(igrejaId), any(Evento.class), any(),
                 isNull(), eq(java.math.BigDecimal.valueOf(80)), any(), eq(false)))
                 .thenReturn(mock(com.domus.api.modules.pagamento.cobranca.CobrancaEvento.class));
 
@@ -1787,7 +1789,7 @@ class InscricaoServiceTest {
                 "fulano@teste.com", null, usuarioId, null, null, false);
 
         assertThat(resultado.inscricao().getStatus()).isEqualTo(StatusInscricao.AGUARDANDO_PAGAMENTO);
-        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), eq(eventoId), any(),
+        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), any(Evento.class), any(),
                 isNull(), eq(java.math.BigDecimal.valueOf(80)), any(), eq(false));
     }
 
@@ -2228,7 +2230,8 @@ class InscricaoServiceTest {
                 new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
                 usuarioId, "token-complemento");
         when(cobrancaEventoService.criarParaTerceiro(
-                igrejaId, eventoId, inscricaoId, pessoaId, new java.math.BigDecimal("30.00"), usuarioId, true))
+                eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
+                eq(new java.math.BigDecimal("30.00")), eq(usuarioId), eq(true)))
                 .thenReturn(complemento);
         UUID usuarioDaPessoaId = UUID.randomUUID();
         when(usuarioRepository.findByPessoaId(pessoaId))
@@ -2384,7 +2387,7 @@ class InscricaoServiceTest {
                 new java.math.BigDecimal("30.00"), java.time.Instant.now().plusSeconds(3600),
                 usuarioId, "token-complemento");
         when(cobrancaEventoService.criarParaTerceiro(
-                eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
                 argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true)))
                 .thenReturn(complemento);
         when(usuarioRepository.findByPessoaId(pessoaId))
@@ -2397,7 +2400,7 @@ class InscricaoServiceTest {
         // [C1] 2026-09-10: continua CONFIRMADA; só cria a cobrança de complemento.
         assertThat(minha.getStatus()).isEqualTo(StatusInscricao.CONFIRMADA);
         verify(cobrancaEventoService).criarParaTerceiro(
-                eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+                eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
                 argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true));
         verify(mercadoPagoClient, never()).estornarParcial(any(), any(), any());
     }
@@ -2613,13 +2616,13 @@ class InscricaoServiceTest {
         when(cobrancaEventoRepository.findByInscricaoId(inscricaoId))
                 .thenReturn(List.of(cobrancaPagaComId("mp-original"), cobrancaComplementoExpirada()));
         var nova = cobrancaPendente();
-        when(cobrancaEventoService.criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+        when(cobrancaEventoService.criarParaTerceiro(eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
                 argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true)))
                 .thenReturn(nova);
 
         service.enviarLembretePagamento(inscricaoId, igrejaId, "ADMIN_IGREJA", usuarioId);
 
-        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), eq(eventoId), eq(inscricaoId), eq(pessoaId),
+        verify(cobrancaEventoService).criarParaTerceiro(eq(igrejaId), any(Evento.class), eq(inscricaoId), eq(pessoaId),
                 argThat(v -> v.compareTo(new java.math.BigDecimal("30.00")) == 0), eq(usuarioId), eq(true));
         verify(emailService).enviar(eq("maria@email.com"), any(), any());
     }

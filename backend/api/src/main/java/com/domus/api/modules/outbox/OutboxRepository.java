@@ -16,4 +16,16 @@ public interface OutboxRepository extends JpaRepository<OutboxEvento, UUID> {
         ORDER BY o.createdAt ASC
     """)
     List<OutboxEvento> buscarPendentes(Pageable pageable);
+
+    /**
+     * Eventos que falharam 5 vezes e ficaram presos (a query de pendentes os exclui).
+     * OutboxLimpezaMortosJob roda diário para alertar — não deleta automaticamente.
+     */
+    @Query("""
+        SELECT o FROM OutboxEvento o
+        WHERE o.processado = false
+          AND o.tentativas >= 5
+        ORDER BY o.createdAt ASC
+    """)
+    List<OutboxEvento> buscarMortos();
 }

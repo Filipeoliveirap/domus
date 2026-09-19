@@ -9,6 +9,7 @@ import { useInscrever } from '@/hooks/inscricao/useInscrever'
 import { useCancelarInscricao } from '@/hooks/inscricao/useCancelarInscricao'
 import { useElegibilidade } from '@/hooks/inscricao/useElegibilidade'
 import { useContaPagamento } from '@/hooks/pagamento/useContaPagamento'
+import { useMostrarInscricaoFeita } from '@/hooks/inscricao/useMostrarInscricaoFeita'
 import { useUiStore } from '@/store/uiStore'
 import { useMinhaPessoa } from '@/hooks/pessoa/useMinhaPessoa'
 import { useDefinirEmailInicial } from '@/hooks/pessoa/useDefinirEmailInicial'
@@ -61,6 +62,7 @@ export function BotaoConfirmarPresenca({
   const router = useRouter()
   const abrirPonteCheckout = useUiStore((s) => s.abrirPonteCheckout)
   const fecharPonteCheckout = useUiStore((s) => s.fecharPonteCheckout)
+  const mostrarInscricaoFeita = useMostrarInscricaoFeita()
 
   // Evento pago: leva pro checkout com uma "ponte" — mostra o selo "Inscrição feita!",
   // deixa o drawer/modal animar a saída atrás do vidro fosco (~0,5s) e só então faz o route
@@ -68,7 +70,7 @@ export function BotaoConfirmarPresenca({
   // porque este componente desmonta junto com o drawer no meio da transição.
   function irParaCheckout(cobrancaId: string) {
     setNavegandoParaCheckout(true)
-    abrirPonteCheckout()
+    abrirPonteCheckout('Abrindo o pagamento…')
     onAntesDeNavegar?.()
     window.setTimeout(() => {
       router.push(`/eventos/${eventoId}/pagamento/${cobrancaId}`)
@@ -76,6 +78,7 @@ export function BotaoConfirmarPresenca({
     // Segurança: se a navegação não acontecer (erro), não deixa o véu preso.
     window.setTimeout(fecharPonteCheckout, 5000)
   }
+
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [semConta, setSemConta] = useState(false)
   // A mutation já resolveu (isPending vira false) antes do router.push completar a
@@ -194,6 +197,7 @@ export function BotaoConfirmarPresenca({
           if (resposta.cobrancaPendenteId) {
             irParaCheckout(resposta.cobrancaPendenteId)
           } else {
+            mostrarInscricaoFeita()
             onInscritoComSucesso?.()
           }
         },
@@ -332,6 +336,7 @@ export function BotaoConfirmarPresenca({
       inscrever.mutate({}, {
         onSuccess: async (resposta) => {
           await aoInscreverComSucesso(resposta)
+          mostrarInscricaoFeita()
           onInscritoComSucesso?.()
         },
       })

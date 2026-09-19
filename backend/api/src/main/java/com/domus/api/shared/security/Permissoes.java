@@ -74,4 +74,8 @@ public final class Permissoes {
 
     /** Agendar ou cancelar a exclusão definitiva da igreja — a ação de maior risco do sistema. */
     public static boolean podeExcluirIgreja(String role) { return tem(role, SO_ADMIN); }
+
+    /** Disparar reindexação manual do Elasticsearch — operação global, pesada, sem
+     *  filtro de tenant (reindexa todas as igrejas de uma vez). */
+    public static boolean podeReindexar(String role) { return tem(role, SO_ADMIN); }
 }

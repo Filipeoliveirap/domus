@@ -195,7 +195,7 @@ public class InscricaoService {
             // quando aparece na lista de um lote que ela mesma está confirmando.
             boolean podeVirarLink = gerarLinkSePago && !pessoaId.equals(minhaPessoaId);
             cobranca = podeVirarLink
-                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(), pessoaId,
+                    ? cobrancaEventoService.criarParaTerceiro(igrejaId, evento, salva.getId(), pessoaId,
                             evento.getPreco(), criadoPorUsuarioId, true)
                     : cobrancaEventoService.criarParaTitular(igrejaId, eventoId, salva.getId(), pessoaId,
                             evento.getPreco(), criadoPorUsuarioId);
@@ -543,7 +543,7 @@ public class InscricaoService {
         // (auto-registro anônimo via /convite/{token}, ver migration V30).
         CobrancaEvento cobranca = null;
         if (evento.getPreco() != null) {
-            cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, eventoId, salva.getId(),
+            cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, evento, salva.getId(),
                     null, evento.getPreco(), inscritoPorUsuarioId, gerarLink);
         }
 
@@ -1443,7 +1443,7 @@ public class InscricaoService {
         for (InscricaoEvento inscricao : confirmadas) {
             UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
             CobrancaEvento cobranca = cobrancaEventoService.criarParaTerceiro(
-                    inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, precoNovo, usuarioId, true);
+                    inscricao.getIgreja().getId(), inscricao.getEvento(), inscricao.getId(), pessoaId, precoNovo, usuarioId, true);
             inscricao.setStatus(StatusInscricao.AGUARDANDO_PAGAMENTO);
             inscricaoRepository.save(inscricao);
             enviarEmailEventoVirouPago(inscricao, cobranca, precoNovo);
@@ -1657,7 +1657,7 @@ public class InscricaoService {
                     try {
                         UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
                         CobrancaEvento complemento = cobrancaEventoService.criarParaTerceiro(
-                                inscricao.getIgreja().getId(), eventoId, inscricao.getId(), pessoaId, novoValorDevido, usuarioId, true);
+                                inscricao.getIgreja().getId(), inscricao.getEvento(), inscricao.getId(), pessoaId, novoValorDevido, usuarioId, true);
                         // Revisão da decisão de 2026-08-27 (ver AUDITORIA [C1], 2026-09-10):
                         // a inscrição de quem JÁ pagou o original CONTINUA CONFIRMADA — não
                         // volta pra AGUARDANDO_PAGAMENTO. A pendência do complemento aparece
@@ -1888,7 +1888,7 @@ public class InscricaoService {
                 // "Falta complementar" cujo complemento já EXPIROU — recria uma cobrança
                 // nova pra o link do lembrete funcionar ([C1] botão "Lembrar").
                 UUID pessoaId = inscricao.getPessoa() != null ? inscricao.getPessoa().getId() : null;
-                cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento().getId(),
+                cobranca = cobrancaEventoService.criarParaTerceiro(igrejaId, inscricao.getEvento(),
                         inscricaoId, pessoaId, aindaDeve, usuarioId, true);
             } else {
                 throw new ConflitoNegocioException("COBRANCA_NAO_ENCONTRADA",

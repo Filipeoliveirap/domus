@@ -5,6 +5,7 @@ import axios from 'axios'
 import Link from 'next/link'
 import { useEntrarComoConvidado } from '@/hooks/convite/useEntrarComoConvidado'
 import { useIrParaCheckout } from '@/hooks/pagamento/useIrParaCheckout'
+import { useMostrarInscricaoFeita } from '@/hooks/inscricao/useMostrarInscricaoFeita'
 import { useRolarParaErro } from '@/hooks/forms/useRolarParaErro'
 import { CamposExtrasForm } from '@/components/module/eventos/CamposExtrasForm'
 import { Transicao } from '@/components/common/Transicao/Transicao'
@@ -24,6 +25,7 @@ interface Props {
 
 export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso }: Props) {
   const irParaCheckout = useIrParaCheckout()
+  const mostrarInscricaoFeita = useMostrarInscricaoFeita()
   const entrar = useEntrarComoConvidado(token)
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -50,8 +52,7 @@ export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso 
   function aoConfirmar() {
     setTentouEnviar(true)
     const invalido =
-      !nome.trim() || !telefoneValido() || camposObrigatoriosPendentes() ||
-      (preco !== null && !emailValido())
+      !nome.trim() || !telefoneValido() || camposObrigatoriosPendentes() || !emailValido()
     if (invalido) {
       // deixa o React pintar os erros (tentouEnviar acabou de virar true) antes de rolar
       requestAnimationFrame(() => rolarParaErro())
@@ -66,6 +67,7 @@ export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso 
           if (resposta.cobrancaId) {
             irParaCheckout(eventoId, resposta.cobrancaId, undefined, 0)
           } else {
+            mostrarInscricaoFeita()
             onSucesso()
           }
         },
@@ -105,24 +107,26 @@ export function FormularioConvidado({ token, eventoId, campos, preco, onSucesso 
         )}
       </label>
 
-      {preco !== null && (
-        <label className={styles.campo}>
-          <span className={styles.label}>E-mail*</span>
-          <input
-            type="email"
-            placeholder="Ex.: maria@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <span className={styles.dica}>Evento pago — o comprovante de pagamento é enviado pra esse e-mail.</span>
-          {tentouEnviar && !email.trim() && (
-            <Transicao modo="fade"><span className={styles.erroTexto} data-campo-erro>O e-mail é obrigatório em evento pago.</span></Transicao>
-          )}
-          {tentouEnviar && email.trim() && !emailValido() && (
-            <Transicao modo="fade"><span className={styles.erroTexto} data-campo-erro>E-mail inválido.</span></Transicao>
-          )}
-        </label>
-      )}
+      <label className={styles.campo}>
+        <span className={styles.label}>E-mail*</span>
+        <input
+          type="email"
+          placeholder="Ex.: maria@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <span className={styles.dica}>
+          {preco !== null
+            ? 'Evento pago — o comprovante de pagamento é enviado pra esse e-mail.'
+            : 'Usamos esse e-mail pra te avisar de qualquer novidade sobre sua inscrição.'}
+        </span>
+        {tentouEnviar && !email.trim() && (
+          <Transicao modo="fade"><span className={styles.erroTexto} data-campo-erro>O e-mail é obrigatório.</span></Transicao>
+        )}
+        {tentouEnviar && email.trim() && !emailValido() && (
+          <Transicao modo="fade"><span className={styles.erroTexto} data-campo-erro>E-mail inválido.</span></Transicao>
+        )}
+      </label>
 
       <CamposExtrasForm campos={campos} valores={camposValores} onChange={(id, valor) => setCamposValores((v) => ({ ...v, [id]: valor }))} tentouEnviar={tentouEnviar} />
 

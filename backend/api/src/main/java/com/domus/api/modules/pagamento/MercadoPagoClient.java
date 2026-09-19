@@ -26,11 +26,6 @@ public class MercadoPagoClient {
         this.api = api;
     }
 
-    public String criarPagamento(UUID igrejaId, CobrancaEvento cobranca) {
-        String accessToken = obterAccessTokenPlano(igrejaId);
-        return api.criarPagamento(accessToken, cobranca.getId().toString(), cobranca.getValor());
-    }
-
     /**
      * Usado pelo endpoint {@code POST /cobrancas/{id}/pagar} (Task 14) — recebe os dados
      * já TOKENIZADOS pelo Payment Brick no navegador do pagador (nunca o número do

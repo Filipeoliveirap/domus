@@ -42,3 +42,9 @@ deploy/.env.prod
 
 # superpowers scratch (brainstorm mockups, SDD ledgers)
 .superpowers/
+
+# Estado local da maquina: settings, sessions, hooks customizados.
+# Os agents especializados (dev-back, code-reviewer) versionam em
+# `.claude/agents/` — o que fica fora disso é local.
+.claude/
+!.claude/agents/

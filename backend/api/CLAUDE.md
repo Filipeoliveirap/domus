@@ -1046,3 +1046,24 @@ Rules:
 
 **Last Updated**: 2026-08-26
 **Optimized with**: [Claude Token Optimizer](https://github.com/nadimtuhin/claude-token-optimizer)
+
+## Agent skills
+
+Configuração local das skills de engenharia (issue tracker, triage, ADRs). O contexto
+principal do repo continua no `## Modo de trabalho`, `## Stack`, `## Modelo de dados`,
+princípios e guardrails acima — não duplicar aqui.
+
+### Issue tracker
+
+Tracker custom: não usamos GitHub Issues. O "backlog" são os arquivos `BACKLOG-*.md` em
+`docs/`, atualizados a mão. Ver `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Vocabulário canônico configurado mesmo sem tracker formal (destrava caso um dia use
+GitHub Issues). Ver `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+`CONTEXT.md` aponta pro `CLAUDE.md` existente; `docs/adr/` vazio por ora. Ver
+`docs/agents/domain.md`.

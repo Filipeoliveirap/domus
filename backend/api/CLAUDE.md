@@ -664,7 +664,7 @@ erDiagram
   não são oferecidas nem no checkout nem no cadastro. No financeiro: **dois lançamentos** —
   ENTRADA do bruto em "Eventos" + SAÍDA da taxa real (`transaction_amount −
   net_received_amount`) em categoria própria **"Taxas de pagamento"** (auto-criada). Ver
-  spec/plano em `domus/docs/`. *Resíduos no BACKLOG: `taxaDevolvida` do estorno = 0
+  spec/plano em `docs/`. *Resíduos no BACKLOG: `taxaDevolvida` do estorno = 0
   fixo; os 2 lançamentos linkados só por descrição.*
 - **`MOVIMENTACAO_CONTRIBUINTE` (V15, ganhou `nome_externo` em V32):** uma movimentação
   pode ter **zero, um ou vários** contribuintes/beneficiários — cada linha soma pro valor
@@ -726,7 +726,7 @@ erDiagram
 - [x] Login E cadastro com Google (OAuth) — **FEITO** (endpoints `/auth/google/login` e
   `/auth/google/registrar`; ID token validado com `GoogleIdTokenVerifier`; `senha_hash`
   nullable + `google_sub` único; login nativo barra conta só-Google com `CONTA_SEM_SENHA`;
-  botões no front de login e cadastro). Ver spec/plano em `domus/docs/`.
+  botões no front de login e cadastro). Ver spec/plano em `docs/`.
 - Entra de novo: login E cadastro com Google. No cadastro, o Google cria igreja +
   primeiro membro + primeiro usuário (ADMIN_IGREJA) já com e-mail e nome verificados.
   *(Texto histórico da Fase 1: à época a tabela chamava-se `membro`; hoje é `pessoa`.)*
@@ -765,7 +765,7 @@ erDiagram
     - ⚠️ **A chave privada `age` é ponto único de falha** (Bitwarden + cópia offline).
     - ⚠️ **Ensaio manual trimestral** (`scripts/ensaio-restauracao.sh`) no calendário — a
       automação **não** prova que o arquivo abre com a sua chave; o CI não tem a privada.
-    - Ver spec/plano em `domus/docs/`.
+    - Ver spec/plano em `docs/`.
 
 - [x] **Rastreamento de erro (Sentry) + logs estruturados** — **FEITO** (2026-07-16):
     - *Back:* `sentry-spring-boot-starter-jakarta` (DSN por env, só captura 500, scrub de PII);
@@ -800,7 +800,7 @@ erDiagram
       **⚠️ Requisito de deploy que isso criou:** precisa de um proxy reverso real na frente do
       Next (`X-Forwarded-For`/`Proto`) + `RATELIMIT_TRUST_FORWARDED_FOR=true` +
       `FORWARD_HEADERS_STRATEGY=framework`, senão o rate limiting por IP vira um balde único.
-      Ver spec/plano em `domus/docs/` e os resíduos no BACKLOG.
+      Ver spec/plano em `docs/` e os resíduos no BACKLOG.
     - [x] **Vulnerabilidades de dependência (front)** — **FEITO** (2026-07-16, commit `ae95bb8`):
       `npm audit` saiu de 7 (1 baixa, 3 médias, 3 altas) para **0**. Como: `npm audit fix` (sem
       `--force`, que rebaixaria o Next p/ 9.3.3 e quebraria o build), `next@16.2.10` explícito e
@@ -840,7 +840,7 @@ erDiagram
   `app.fotos.arquivada-meses`). `pessoa.foto`/`evento.foto`/`igreja.logo_url` viraram FK
   (`ON DELETE RESTRICT`) pra `foto.id`. Componente único `<UploadFoto>` no front, com
   recorte obrigatório em pessoa/logo (formato fixo) e opcional no banner de evento. Ver
-  spec em `domus/docs/specs/2026-07-22-upload-foto-design.md`.
+  spec em `docs/specs/2026-07-22-upload-foto-design.md`.
     - *Ficou de fora* (fora de escopo desta entrega): galeria (múltiplas fotos por
       entidade), vídeo, CDN de borda, e WebP como formato de **entrada** (ver BACKLOG).
 
@@ -891,7 +891,7 @@ erDiagram
   `termo_aceite` (versionada, por `usuario`, com IP), enforcement no cadastro nativo e
   Google, `precisaAceitarTermos`/`termosAceitosEm` em `/auth/me` e login, modal bloqueante
   de reaceite (`ModalReaceitarTermos`), páginas estáticas `/termos` e `/privacidade`. Ver
-  spec/plano em `domus/docs/`.
+  spec/plano em `docs/`.
 
 ---
 
@@ -937,14 +937,14 @@ erDiagram
   a igreja quer receber); tela de escolha de meio no checkout; taxa registrada **separada**
   no financeiro (categoria "Taxas de pagamento"); faixas abaixo do mínimo do MP filtradas.
   Fecha os dois itens que estavam em aberto ("quem absorve a taxa" → o pagador; "taxa
-  separada no financeiro"). Spec/plano em `domus/docs/`. *Resíduos no BACKLOG:*
+  separada no financeiro"). Spec/plano em `docs/`. *Resíduos no BACKLOG:*
   `taxaDevolvida` do estorno = 0 fixo; **UI de taxa negociada na config da igreja** (as
   colunas e o cálculo do override existem, falta só o formulário); cartão parcelado nunca
   testado no sandbox do MP.
 - [x] **Hardening pass do módulo eventos + pagamento** — **FEITO** (2026-09-10, PR #121;
   auditoria PR #119, plano PR #120). Passada de fechamento antes do escopo comercial:
   auditoria read-only de todo o módulo (`docs/AUDITORIA-MODULO-EVENTOS-PAGAMENTO.md`) e 12
-  correções com teste (`domus/docs/plans/2026-09-10-hardening-eventos-pagamento.md`).
+  correções com teste (`docs/plans/2026-09-10-hardening-eventos-pagamento.md`).
   Principais: reajuste de preço vencido não cancela mais quem já pagou o valor original
   (fica CONFIRMADA com tag "falta complementar" + botão "Lembrar", decisão do gestor);
   confirmação de pagamento transacional + lock pessimista (corrida webhook × poll);

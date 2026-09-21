@@ -1,10 +1,19 @@
-import type { Viewport } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Geist } from 'next/font/google'
 import { Providers } from '@/components/common/Providers'
 import '@/styles/globals.css'
 import { Toaster } from 'sonner'
 import { PonteParaCheckout } from '@/components/module/pagamento/PonteParaCheckout'
 import { cn } from "@/lib/utils";
+
+// `metadata.title` é o que aparece na aba do navegador e nos resultados de busca.
+// Páginas específicas (ex.: detalhe de evento) sobrescrevem com `generateMetadata`
+// ou `metadata` local. O padrão aqui precisa fazer sentido na home e em qualquer
+// rota sem metadata própria — "Domus" + descrição curta do produto.
+export const metadata: Metadata = {
+  title: 'Domus',
+  description: 'Gestão administrativa para igrejas de pequeno e médio porte.',
+}
 
 // viewportFit: 'cover' é o que habilita `env(safe-area-inset-*)` no CSS — sem isso o header
 // fixo fica atrás da barra de status / Dynamic Island no iPhone (Chrome no iOS = motor Safari).

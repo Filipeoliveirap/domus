@@ -312,7 +312,7 @@ decide é o code-reviewer. Use pra ver o que escapou, não como gate.
 Pra tarefas no front, considerar (além dos globais de `~/.claude/agents/`):
 - `dev-front` *(planejado, ainda não criado)* — especialista Next/React/TanStack/RHF
   do Domus. Cobre o que `dev-back` cobre pro back: convenções, arquitetura, antipadrões
-  deste repo. Mesmo papel do `dev-back` (ver `backend/api/.claude/agents/dev-back.md`).
+  deste repo. Mesmo papel do `dev-back` (ver `domus/.claude/agents/dev-back.md`).
 - `test-writer` *(planejado)* — escreve os 3 tipos de teste seguindo as convenções
   acima. Ganha contexto via `dev-front` quando o código a testar já existe.
 

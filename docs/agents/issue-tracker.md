@@ -5,13 +5,13 @@ versionados no próprio repo, atualizados a mão conforme features e dívidas ap
 
 ## Onde mora
 
-`docs/BACKLOG-*.md` — três arquivos, cada um com escopo próprio:
+`domus/docs/BACKLOG/` — três arquivos, cada um com escopo próprio:
 
-| Arquivo | Quando usar |
-|---|---|
-| `BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md` | Dívida técnica consciente (YAGNI/tempo) + itens fora do scope do piloto. Este é o principal. |
-| `BACKLOG-PRE-VENDA.md` | Itens sem os quais não dá pra abrir o cadastro pra igrejas externas e cobrar com segurança. |
-| `BACKLOG-MELHORIAS-FUTURAS.md` | Pós-lançamento comercial — valor real mas não bloqueia. |
+**Onde mora (paths relativos a `domus/`):**
+
+- `docs/BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`
+- `docs/BACKLOG-PRE-VENDA.md`
+- `docs/BACKLOG-MELHORIAS-FUTURAS.md`
 
 ## Estados (não são labels, são marcadores inline)
 
@@ -32,5 +32,5 @@ Sem número de issue, sem label.
 ## Consumer rules para skills vizinhas
 
 `triage`, `to-tickets`, `to-spec`: ler **primeiro** este arquivo. Não tentar `gh issue
-list` — não vai achar nada. Operar sobre os arquivos `BACKLOG-*.md` na raiz de
-`docs/`.
+list` — não vai achar nada. Operar sobre os arquivos `BACKLOG-*.md` em
+`domus/docs/BACKLOG/`.

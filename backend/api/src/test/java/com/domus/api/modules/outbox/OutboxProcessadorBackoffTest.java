@@ -37,6 +37,23 @@ class OutboxProcessadorBackoffTest {
         assertEquals(300_000L, p.calcularBackoff(1_000_000L));
     }
 
+    /**
+     * Garante que o cap default do application.properties (300_000ms = 5min)
+     * é MAIOR OU IGUAL ao threshold de auto-suspend do Neon Free (5min).
+     * Se alguém reduzir o cap pra menos de 5min, o Neon nunca vai suspender
+     * e o objetivo de reduzir CU-h não se concretiza. Esse teste existe
+     * pra evitar regressão por alguém bem-intencionado querendo "melhorar
+     * a UX" sem perceber o impacto.
+     */
+    @Test
+    void capDefaultSuperaThresholdAutoSuspendNeon() {
+        long capDefaultMs = 300_000L;
+        long autoSuspendNeonMs = 300_000L; // 5min documentado pelo Neon
+        assert capDefaultMs >= autoSuspendNeonMs :
+                "Cap do backoff (" + capDefaultMs + "ms) precisa ser >= auto-suspend do Neon ("
+                        + autoSuspendNeonMs + "ms), senão o Neon nunca suspende e a redução de CU-h não acontece.";
+    }
+
     private void setField(Object o, String name, Object value) throws Exception {
         Field f = o.getClass().getDeclaredField(name);
         f.setAccessible(true);

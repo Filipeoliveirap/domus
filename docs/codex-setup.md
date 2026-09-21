@@ -2,7 +2,7 @@
 
 Este documento explica o **pré-requisito** pra usar o **Codex CLI** (`codex` da
 OpenAI) como esteira paralela de revisão/diagnóstico no projeto Domus. A orquestração
-acontece via agent **`@dev-cox`** (em `domus/.claude/agents/dev-cox.md`).
+acontece via agent **`@dev-cox`** (em `.claude/agents/dev-cox.md`).
 
 ## O que é o codex neste projeto
 
@@ -64,7 +64,7 @@ Esperado: `ok` impresso.
 
 ## Como `@dev-cox` usa o codex
 
-Ver `domus/.claude/agents/dev-cox.md` pra exemplos concretos. Resumo:
+Ver `.claude/agents/dev-cox.md` pra exemplos concretos. Resumo:
 
 ```bash
 # Review adversarial antes de merge (Fase 6 do WORKFLOW)
@@ -103,4 +103,4 @@ continua. Não bloqueia o trabalho. Adicione um lembrete ao autor:
 
 - **`codex`** (plugin OpenAI) — skills `codex-cli-runtime`, `codex-result-handling`,
   `gpt-5-4-prompting`. Subagentes: `codex:rescue`, `codex:setup`.
-- **`@dev-cox`** (em `domus/.claude/agents/`) — ponto de entrada canônico.
+- **`@dev-cox`** (em `.claude/agents/`) — ponto de entrada canônico.

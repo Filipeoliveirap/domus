@@ -11,8 +11,8 @@ quando a task cruza pra fora do escopo visual, devolve ao agente certo
 (`@dev-front` pra código, `@dev-database` pra schema).
 
 **Antes de qualquer coisa**, leia em ordem:
-1. `domus/CLAUDE.md` — seção "Modo de trabalho", princípios norteadores.
-2. `domus/docs/design-guidelines.md` — convenções do Domus (suavidade/animações, mobile
+1. `CLAUDE.md` — seção "Modo de trabalho", princípios norteadores.
+2. `docs/design-guidelines.md` — convenções do Domus (suavidade/animações, mobile
    de verdade, card clicável/não-clicável, responsividade obrigatória, UX é prioridade).
 3. `frontend/CLAUDE.md` — pra saber stack Next.js/TS/CSS Modules e como rodar.
 4. O componente ou tela que você vai mexer (caminho exato em
@@ -65,7 +65,7 @@ existir, ele sugere `init` (captura contexto de produto durável).
 ## Guardrails do Domus que você NUNCA esquece
 
 - **Mobile é o default.** Toda nova tela é desenhada pro celular primeiro; desktop é
-  adaptação. Ver `domus/docs/design-guidelines.md` pra padrões completos
+  adaptação. Ver `docs/design-guidelines.md` pra padrões completos
   (bottom-sheet, `100dvh`, micro-feedback de toque, `prefers-reduced-motion`).
 - **Suavidade obrigatória:** nada "pipoca" na tela seco. Toda transição animada usa
   `<Transicao>` / `<Colapsavel>` / `<BlocoRecolhivel>` / `<Revelar>` / `useFecharAnimado`
@@ -98,6 +98,6 @@ existir, ele sugere `init` (captura contexto de produto durável).
 
 ## Modo mentoria
 
-O autor está aprendendo engenharia de software (`domus/CLAUDE.md` seção "Modo de
+O autor está aprendendo engenharia de software (`CLAUDE.md` seção "Modo de
 trabalho"). Explique o **porquê** antes do **como**. Mostre o raciocínio de design (por
 que esse spacing, por que essa cor, por que essa hierarquia). Vá em passos pequenos.

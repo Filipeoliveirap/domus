@@ -5,9 +5,7 @@ versionados no próprio repo, atualizados a mão conforme features e dívidas ap
 
 ## Onde mora
 
-`domus/docs/BACKLOG/` — três arquivos, cada um com escopo próprio:
-
-**Onde mora (paths relativos a `domus/`):**
+`docs/BACKLOG/` — três arquivos, cada um com escopo próprio:
 
 - `docs/BACKLOG-DIVIDA-E-PROXIMO-SCOPE.md`
 - `docs/BACKLOG-PRE-VENDA.md`
@@ -33,4 +31,4 @@ Sem número de issue, sem label.
 
 `triage`, `to-tickets`, `to-spec`: ler **primeiro** este arquivo. Não tentar `gh issue
 list` — não vai achar nada. Operar sobre os arquivos `BACKLOG-*.md` em
-`domus/docs/BACKLOG/`.
+`docs/BACKLOG/`.

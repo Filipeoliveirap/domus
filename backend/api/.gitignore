@@ -63,4 +63,5 @@ jacoco.exec
 # ─── claude ─────────
 CLAUDE.md
 .claudeignore
+.claude/
 opencode.json

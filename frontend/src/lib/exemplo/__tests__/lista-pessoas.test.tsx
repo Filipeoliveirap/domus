@@ -42,8 +42,18 @@ describe("ListaPessoasExemplo", () => {
 
     renderizarComQuery(<ListaPessoasExemplo />);
 
-    expect(await screen.findByText("Maria Silva")).toBeInTheDocument();
-    expect(await screen.findByText("João Santos")).toBeInTheDocument();
+    // ListaPessoasExemplo renderiza <strong>{apelido}</strong>{" — "}{nome} —
+    // o nome fica num text node separado do apelido. findByText por string exata
+    // não casa, porque o texto visível está partido entre nodes. Matcher por
+    // função é o padrão RTL pra esse caso: matchea se o element "contém" o texto.
+    expect(
+      await screen.findByText((_, el) => el?.textContent === "Ma — Maria Silva"),
+    ).toBeInTheDocument();
+    // João sem apelido: o componente ainda renderiza o separador ` — ` antes do nome,
+    // então o textContent do <li> é ` — João Santos` (com espaço e em-dash no início).
+    expect(
+      await screen.findByText((_, el) => el?.textContent === " — João Santos"),
+    ).toBeInTheDocument();
 
     // Aparece o apelido de Maria, mas não de João.
     expect(screen.getByText("Ma")).toBeInTheDocument();

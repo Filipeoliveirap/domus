@@ -39,6 +39,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * 2s) para a query do outbox. A investigação revelou que o backoff estava
  * ausente e a fila fica vazia 99.99% do tempo em produção — causando
  * queries ociosas em massa que mantinham o Neon acordado.
+ *
+ * <p><strong>Por que cap em 5min:</strong> o Neon Free/Launch só suspende
+ * o compute após 5min de inatividade. Se o cap do backoff for menor que
+ * isso (ex.: 30s), cada poll reseta o timer de inatividade e o Neon
+ * nunca suspende — a redução de CU-h prometida não acontece. Cap de 5min
+ * iguala o threshold do Neon: em idle profundo, o compute SUSPENSA e
+ * deixa de consumir CU-h até o próximo INSERT/UPDATE na app.
  */
 @Component
 @RequiredArgsConstructor

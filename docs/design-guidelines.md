@@ -2,17 +2,17 @@
 
 Este arquivo é a **fonte da verdade** das regras de design do Domus que valem pra
 qualquer tela nova, não importando o módulo. Ele consolida — pra evitar repetir a cada
-módulo — o que as seções sujas de `domus/CLAUDE.md`, `backend/api/CLAUDE.md` e
+módulo — o que as seções sujas de `CLAUDE.md`, `backend/api/CLAUDE.md` e
 `frontend/CLAUDE.md` dizem em parágrafos diferentes.
 
 Quando uma regra for tocar a **implementação** de um componente específico, ela ainda
 aparece (com mais detalhes) no `frontend/CLAUDE.md`. Quando tocar **conceito de
-negócio**, ela aparece (com contexto) no `domus/CLAUDE.md`. Este arquivo é o índice
+negócio**, ela aparece (com contexto) no `CLAUDE.md`. Este arquivo é o índice
 **horizontal** com a regra pronta pra aplicar.
 
 **Workflow pra usar:** se você está prestes a desenhar uma tela/formulário/modal/drawer
 novo, leia este arquivo inteiro. Pra review antes de merge, delegue ao
-**`@ux-reviewer`** (em `domus/.claude/agents/`, cópia em
+**`@ux-reviewer`** (em `.claude/agents/`, cópia em
 `~/.claude/agents/ux-reviewer.md`).
 
 ---
@@ -87,7 +87,7 @@ de movimento já adotado — nada "pipoca" na tela seco.**
   de ação tingido) e define `--cor` com o token da área
   (`--cat-eventos|celulas|ministerios|financeiro`). Cor só em acento — glow do hover,
   selo, CTA, ícone; nunca no fundo do card ou no texto de conteúdo. Ver
-  `domus/docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
+  `docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
 - **Card NÃO clicável** (relatório, gráfico, número) usa `.card-painel` — só padroniza
   a sombra (suave parada + leve reforço no hover). Nada de lift/escala/glow (não
   fingir que é clicável). Mantém o próprio fundo/borda/raio.
@@ -123,7 +123,7 @@ A regra é uma só:
 - **Não** ternário `cor === 'evento' ? '#xxx' : ...`. Se a cor mudar, a UI não quebra.
 
 Ver especificação completa em
-`domus/docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
+`docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
 
 ---
 
@@ -147,7 +147,7 @@ editar N componentes, o desenho está errado.
 
 - Detalhes de stack Next.js (CSS Modules, TanStack Query, RHF+Zod):
   `frontend/CLAUDE.md`.
-- Princípios SOLID aplicados a permissões: `domus/CLAUDE.md` (seção "Design — programar
+- Princípios SOLID aplicados a permissões: `CLAUDE.md` (seção "Design — programar
   para interface").
 - Spec da cor por categoria e do card-interativo:
-  `domus/docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.
+  `docs/specs/2026-09-08-cor-por-categoria-e-card-interativo-design.md`.

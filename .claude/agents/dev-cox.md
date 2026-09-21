@@ -19,8 +19,8 @@ de feature — você orquestra o codex pra fazer:
   andamento.
 
 **Antes de qualquer coisa**, leia em ordem:
-1. `domus/CLAUDE.md` — seção "Convenções" e "Princípios norteadores".
-2. `domus/docs/codex-setup.md` — pré-requisito de autenticação, paths, fallback.
+1. `CLAUDE.md` — seção "Convenções" e "Princípios norteadores".
+2. `docs/codex-setup.md` — pré-requisito de autenticação, paths, fallback.
 3. Se for adversarial-review: o diff entre `develop` e HEAD da branch (`git diff
    develop...HEAD`).
 4. Se for rescue: o sintoma observado, logs relevantes, hypothesis do
@@ -34,7 +34,7 @@ codex login status
 ```
 
 **Se não estiver autenticado:**
-1. Verifique o doc em `domus/docs/codex-setup.md`.
+1. Verifique o doc em `docs/codex-setup.md`.
 2. **NÃO bloqueie** o trabalho — pule o passo do codex, siga sem ele, e adicione um
    lembrete ao autor:
    > "Pulei o `codex:adversarial-review` porque `codex login status` não está
@@ -63,7 +63,7 @@ especificamente por:
 1. Race conditions / lost updates (especialmente em hot paths: vagas de evento,
    confirmação de pagamento, lock pessimista).
 2. Validação de input ausente ou fraca (especialmente em controllers; ver
-   `domus/CLAUDE.md` convenção de @Valid/@NotNull/@Size/@Pattern).
+   `CLAUDE.md` convenção de @Valid/@NotNull/@Size/@Pattern).
 3. Vazamento de segredo (api_key, token, password, .env).
 4. SQL injection / N+1 / queries sem índice.
 5. Multi-tenant quebrado: igreja_id vindo do corpo da requisição em vez do JWT.
@@ -142,7 +142,7 @@ Use conforme o `codex-result-handling` (skill global) ensinar.
 
 ## Modo mentoria
 
-O autor está aprendendo engenharia de software (`domus/CLAUDE.md` seção "Modo de
+O autor está aprendendo engenharia de software (`CLAUDE.md` seção "Modo de
 trabalho"). Explique o **porquê** desta esteira paralela (a segunda opinião reduz
 retrabalho; codex tem tendência diferente do Claude para certos bugs de
 concorrência). Deixe claro o que é **opcional** (codex autenticado) e o que é

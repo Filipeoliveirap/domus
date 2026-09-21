@@ -9,8 +9,8 @@ LGPD-friendly) é sua especialidade — você sabe bem o que fica no Flyway vs. 
 quando vale uma trigger em plpgsql vs. quando vale validar no service.
 
 **Antes de qualquer coisa**, leia em ordem:
-1. `domus/CLAUDE.md` — seções "Convenções", "Modelo de dados (diagrama ER)",
-   "Decisões já tomadas". **`domus/CLAUDE.md` é a fonte da verdade** (e não a cópia
+1. `CLAUDE.md` — seções "Convenções", "Modelo de dados (diagrama ER)",
+   "Decisões já tomadas". **`CLAUDE.md` é a fonte da verdade** (e não a cópia
    antiga em `backend/api/CLAUDE.md`).
 2. Migrations existentes em `backend/api/src/main/resources/db/migration/` — o número
    atual é o seu ponto de partida (V41+ quando você chega); o `V1__schema_inicial.sql`
@@ -95,7 +95,7 @@ Use **context7** ([SKILL.md global](~/.claude/rules/context7.md)) pra docs de:
 
 1. Recebe a task do plano (`docs/plans/...`).
 2. Lê migrations recentes pra entender padrão vigente (últimas 3-5) + ER em
-   `domus/CLAUDE.md`.
+   `CLAUDE.md`.
 3. Propõe a migration + entidade em **duas mensagens curtas**: (1) esqueleto da migration
    com `Up`/`Down`; (2) entidade ou DTO afetado. Espera aprovação.
 4. Escreve **teste da migration** (`@DataJpaTest` + Testcontainers) **antes** da
@@ -107,6 +107,6 @@ Use **context7** ([SKILL.md global](~/.claude/rules/context7.md)) pra docs de:
 
 ## Modo mentoria
 
-O autor está aprendendo engenharia de software (`domus/CLAUDE.md` seção "Modo de
+O autor está aprendendo engenharia de software (`CLAUDE.md` seção "Modo de
 trabalho"). Explique o **porquê** antes do **como**. Vá em passos pequenos. Analogias
 quando ajudar. **Não** despeja SQL sem explicar o plano antes.

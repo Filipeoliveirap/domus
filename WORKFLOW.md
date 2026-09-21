@@ -13,13 +13,13 @@ seguir; eu te cobro de aprovar antes de eu seguir pra próxima.
 | 2. Grilling | `superpowers:grilling` + `AskUserQuestion` | Árvore de decisões, sem suposição silenciosa |
 | 2.5. Pressão extra | `@grilling-reviewer` (Grande feature) | Tenta quebrar a proposta antes do brainstorm |
 | 3. Brainstorm | `superpowers:brainstorming` | Abordagem, riscos, lista do que NÃO fazer |
-| 4. Plano + Worktree | `superpowers:writing-plans` + `superpowers:using-git-worktrees` | `domus/docs/plans/YYYY-MM-DD-titulo.md` + branch |
+| 4. Plano + Worktree | `superpowers:writing-plans` + `superpowers:using-git-worktrees` | `docs/plans/YYYY-MM-DD-titulo.md` + branch |
 | 5. Execução | `superpowers:subagent-driven-development` + agents do time | Código, testes, refatorações |
 | 6. Verificação | `superpowers:verification-before-completion` + `@code-reviewer` (+ `@dev-cox` adversarial) | Checklist pré-commit |
 | 7. Memória + retrospectiva | `@dev-docs` | Notas novas no MEMORY.md / backlog / ADRs |
 | 8. Release | `@dev-release` | Merge develop → main, push. **Sem PR** — você é solo. |
 
-## Regra-mãe (vinda do `domus/CLAUDE.md`)
+## Regra-mãe (vinda do `CLAUDE.md`)
 
 **Não commitar antes de você testar.** Toda fase acaba em **espera explícita** pela sua
 resposta. Eu aviso o que fiz e o que quero em seguida; você testa/aprova/corrige.
@@ -41,11 +41,11 @@ grilling.
 ## Fase 1 — Auditoria de contexto
 
 Em paralelo, leio:
-1. `domus/CLAUDE.md` (raiz) — focado nas seções do domínio da task.
-2. `domus/docs/agents/issue-tracker.md` — pra localizar item no `domus/docs/BACKLOG/`.
+1. `CLAUDE.md` (raiz) — focado nas seções do domínio da task.
+2. `docs/agents/issue-tracker.md` — pra localizar item no `docs/BACKLOG/`.
 3. Memórias em `~/.claude/projects/.../memory/` filtradas por palavra-chave.
 4. Código que vou mexer (`mcp__idea__search_*`, `grep` cirúrgico).
-5. Plan/spec existente em `domus/docs/{plans,specs}/` sobre o mesmo tema.
+5. Plan/spec existente em `docs/{plans,specs}/` sobre o mesmo tema.
 
 **Saída:** resumo de 5 linhas no chat, terminadas em "gaps conhecidos: A, B, C".
 **Espera:** você confirma que o resumo está certo antes da Fase 2.
@@ -63,7 +63,7 @@ com `Explore`/subagent — nunca pergunto a você o que posso descobrir sozinho.
 
 ## Fase 2.5 — Pressão extra (só pra Grande)
 
-Invoco `@grilling-reviewer` (em `domus/.claude/agents/`): recebe a proposta pós-grilling
+Invoco `@grilling-reviewer` (em `.claude/agents/`): recebe a proposta pós-grilling
 e tenta quebrá-la em 5 ângulos (segurança, UX, regra de negócio, consistência com
 guardrails do CLAUDE.md, regressão). Devolve contraponto. Eu incorporo ou descarto com
 justificativa.
@@ -83,9 +83,9 @@ Invoco `superpowers:brainstorming`. Saída:
 ## Fase 4 — Plano + Worktree
 
 1. Invoco `superpowers:writing-plans` → arquivo em
-   `domus/docs/plans/YYYY-MM-DD-titulo-curto.md` com tasks numeradas.
+   `docs/plans/YYYY-MM-DD-titulo-curto.md` com tasks numeradas.
 2. Invoco `superpowers:using-git-worktrees` → cria worktree dedicada
-   (`domus/.claude/worktrees/<slug>/`) e branch (`feat/<slug>` ou `fix/<slug>`).
+   (`.claude/worktrees/<slug>/`) e branch (`feat/<slug>` ou `fix/<slug>`).
 3. Te aviso: "essa feature pede sessão nova na worktree X".
 
 **Espera:** você confirma a branch e abre a sessão nova (ou pede pra continuar aqui, se
@@ -99,7 +99,7 @@ Invoco `superpowers:subagent-driven-development`. Cada task do plano vira uma ro
   Spring/Next/Flyway/Mercado Pago/etc. **antes** de confiar na memória de treinamento.
 - Agents **sugerem** memória nova ao final (você aprova, regra do MEMORY.md).
 - Cada task entregue passa pelo `@code-reviewer` antes de marcar como done.
-- Regra do `domus/CLAUDE.md`: **pedaço testável por vez**, não tudo de uma vez.
+- Regra do `CLAUDE.md`: **pedaço testável por vez**, não tudo de uma vez.
 - Tasks de UI/visual podem usar `@dev-design` (skill `impeccable`) **antes** do
   `@dev-front` implementar.
 
@@ -110,14 +110,14 @@ diz OK ou corrige.
 
 Invoco `superpowers:verification-before-completion`:
 - Todos os testes verdes (`mvn -q test` no back, `npm run test` no front).
-- Sem segredo no stdout (`domus/CLAUDE.md`).
-- Mobile ajustado (se houver UI nova — `domus/docs/design-guidelines.md`).
+- Sem segredo no stdout (`CLAUDE.md`).
+- Mobile ajustado (se houver UI nova — `docs/design-guidelines.md`).
 - Mensagem de commit segue convenção do repo (Conventional Commits já praticado).
-- **Commit único e coerente** (`domus/CLAUDE.md`: não vários parciais da mesma coisa).
+- **Commit único e coerente** (`CLAUDE.md`: não vários parciais da mesma coisa).
 
 **Opcional:** invoco `@dev-cox:adversarial-review` para uma segunda opinião antes de
 commitar (esteira paralela via Codex CLI; pré-requisito `codex login status` →
-autenticado — ver `domus/docs/codex-setup.md`).
+autenticado — ver `docs/codex-setup.md`).
 
 **Espera:** você dá OK final e eu commito.
 
@@ -125,10 +125,10 @@ autenticado — ver `domus/docs/codex-setup.md`).
 
 Invoco `@dev-docs`. Ele te pergunta (uma vez, no fim):
 1. Alguma coisa nova que merece virar nota de memória? (Sugiro rascunho, você aprova.)
-2. Algum item novo pro backlog `domus/docs/BACKLOG/`? (Sugiro, você aprova.)
-3. Algum guardrail novo que vale virar regra no `domus/CLAUDE.md`? (Sugiro, você
+2. Algum item novo pro backlog `docs/BACKLOG/`? (Sugiro, você aprova.)
+3. Algum guardrail novo que vale virar regra no `CLAUDE.md`? (Sugiro, você
    aprova.)
-4. Alguma decisão nova que merece virar ADR em `domus/docs/adr/`? (Sugiro, você aprova.)
+4. Alguma decisão nova que merece virar ADR em `docs/adr/`? (Sugiro, você aprova.)
 
 ## Fase 8 — Release (sem PR)
 
@@ -151,7 +151,7 @@ solo.
 
 ## Lista de agents especializados (resumo)
 
-Local (em `domus/.claude/agents/`):
+Local (em `.claude/agents/):
 - **`dev-back`** — Java 21, Spring Boot, padrão `controller→service→repo`, DTOs de
   retorno, soft delete, isolamento por igreja, Testcontainers para testes JPA.
 - **`dev-front`** — Next.js, TanStack Query, RHF+Zod, padrões do repo (`Transicao`,
@@ -161,7 +161,7 @@ Local (em `domus/.claude/agents/`):
   JPA.
 - **`dev-design`** — Wrapper da skill `impeccable` (UX/UI/visual/motion). Use quando
   pedir pra desenhar/polir/redesenhar uma tela.
-- **`dev-docs`** — Guardião do `domus/CLAUDE.md`, `WORKFLOW.md`, ADRs, retrospectiva.
+- **`dev-docs`** — Guardião do `CLAUDE.md`, `WORKFLOW.md`, ADRs, retrospectiva.
   Roda a Fase 7.
 - **`dev-release`** — Substitui o papel de PR. Worktree → develop → main → push.
 - **`dev-cox`** — Ponte pro Codex CLI (esteira paralela: adversarial-review, rescue).
@@ -170,7 +170,7 @@ Globais (`~/.claude/agents/`):
 - **`test-writer`** — Mockito puro por padrão; `@DataJpaTest` com
   `PostgresTestContainerSupport`; nomenclatura `snake_case` PT; um cenário = um teste.
 - **`ux-reviewer`** — rótulo com placeholder concreto, prévia interativa, mobile,
-  animação, acessibilidade básica. (Cópia local em `domus/.claude/agents/`.)
+  animação, acessibilidade básica. (Cópia local em `.claude/agents/`.)
 - **`security-reviewer`** — igreja_id do JWT (nunca do body), esconder no front
   não é esconder, validação de input, ordem de `requestMatchers`, segredos fora do log.
 - **`code-reviewer`** — bugs latentes, simplificação, padrões do CLAUDE.md, cobertura

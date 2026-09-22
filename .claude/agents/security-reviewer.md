@@ -14,53 +14,45 @@ concreto que ele permite.
 
 ## Checklist (em ordem de impacto)
 
-### 1. Isolamento por tenant (multi-tenant)
-- `igreja_id` (ou equivalente) sempre vem do **JWT**, nunca do body/query/path.
-- Toda query/filter pega o tenant — não confiar no controller. Se controller esquece de
-  passar, repo/service tem que aplicar sozinho.
-- Bug clássico: endpoint filtra por `id` mas esquece `WHERE igreja_id = ?` → cross-tenant
-  read. Procurar isso.
+### 1. Isolamento por tenant
+- `igreja_id` sempre vem do **JWT** (`SecurityContextHolder.getContext()`),
+  nunca do body/query/path.
+- Toda query/filter aplica `igreja_id` — nao confiar no controller.
+- Bug classico: endpoint filtra por `id` mas esquece `WHERE igreja_id = ?`.
 
-### 2. Autorização
-- Permissão se checa por **capacidade** (`podeGerenciarX(role)`), não por string de
-  identidade (`if role == 'ADMIN'`). Nome do perfil vive em **um arquivo só**.
-- Ordem de `requestMatchers` no Spring Security (ou equivalente) — rota mais específica
-  primeiro. Bloqueador: regra nova sem teste de 403.
+### 2. Autorizacao
+- Permissao se checa por **capacidade** (`podeGerenciarX(role)`), nao por string.
+- Ordem de `requestMatchers` no Spring Security — mais especifica primeiro.
+- Bloqueador: regra nova sem teste de 403.
 
-### 3. Esconder ≠ esconder
-- Campo que perfil não pode ver **não sai da API**. Se sai no JSON, basta abrir DevTools.
-- Restrição por perfil = DTO reduzido ou endpoint próprio. Front só reflete.
+### 3. Esconder nao e esconder
+- Campo que perfil nao pode ver **nao sai da API**. Se sai no JSON, abre DevTools.
+- DTO reduzido ou endpoint proprio para restricao por perfil.
 
-### 4. Validação de input
-- Toda entrada de usuário passa por `@Valid` (Bean Validation) ou equivalente no controller.
-- Anotações ausentes = blocker (histórico do repo: `MoverParaCelulaRequest` sem
-  `@Valid` quebrou validação silenciosamente).
-- Tamanho máximo em string livre (DoS por payload gigante).
-- Enum parse em endpoint — string crua vira 500 se vier valor inválido.
+### 4. Validacao de input
+- Toda entrada passa por `@Valid` (Bean Validation).
+- Anotacoes ausentes em DTO novo = blocker.
+- Tamanho maximo em string livre (DoS por payload gigante).
+- Enum parse: string invalida retorna 400, nao 500.
 
-### 5. Auth & sessão
-- Cookie de sessão: `httpOnly`, `Secure`, `SameSite=Lax` (ou `Strict`), `Path=/`.
-- JWT: assinatura verificada (algoritmo **não** `none`). Expiração curta no access,
-  refresh token separado.
-- Logout invalida token / revoga refresh.
-- Senha: hash com bcrypt/argon2 (nunca MD5/SHA1). Validação de força no cadastro.
-- CSRF: token em mutações (POST/PUT/PATCH/DELETE), não em GET.
+### 5. Auth e sessao
+- Cookie: `httpOnly`, `Secure`, `SameSite=Lax`.
+- JWT: assinatura verificada, algoritmo **nao** `none`. Expiracao curta.
+- Logout invalida token.
+- Senha: bcrypt/Argon2, nunca MD5/SHA1.
 
 ### 6. Segredos fora do log
-- Nunca `log.info("payload: {}", requestBody)` se tem token/senha/cookie.
-- `.env`/credentials nunca no stdout (CLAUDE.md: aconteceu, chave foi rotacionada).
-- Stack trace de produção sem path absoluto do filesystem interno.
+- Nunca `log.info("payload: {}", requestBody)` com token/senha/cookie.
+- `.env`/credentials nunca no stdout.
+- Stack trace sem path absoluto do filesystem interno.
 
 ### 7. Rate limit / brute force
 - Endpoint de login: rate limit por IP e por username.
-- Recuperação de senha: rate limit, não vaza se e-mail existe (resposta uniforme).
+- Resposta uniforme em recuperacao de senha (nao vazar se e-mail existe).
 
-### 8. Upload / arquivo
-- Validar MIME real (não só extensão). Limite de tamanho. Nome sanitizado.
-- Armazenar fora do webroot. URL assinada pra download (não path direto).
-
-### 9. Dependências
-- Versões com CVE conhecida. Pin de versão em prod.
+### 8. Outbox e filas
+- Credenciais do provedor (e-mail, SMS) fora do log.
+- Task assincrona roda com tenant correto (herda de quem criou)?
 
 ## Formato da saída
 

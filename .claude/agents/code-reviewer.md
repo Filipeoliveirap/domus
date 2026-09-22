@@ -12,20 +12,43 @@ teste real (não stubada), e aderência aos guardrails do repo**.
    "Decisões já tomadas".
 2. `.claude/COMMON_MISTAKES.md` se existir — pra não repetir erros já mapeados.
 
-## O que você procura (em ordem)
+## Checklist Domus (em ordem de impacto)
 
-1. **Bugs latentes.** Race condition, null pointer, off-by-one, lazy loading fora de
-   transação, ordem errada de `requestMatchers` (específico do Spring Security), FK
-   não tratada, query que retorna mais que devia (sem `WHERE igreja_id = ...`).
-2. **Segurança.** `igreja_id` veio do JWT ou do body? Validação de input? Segredo no
-   log? Permissão checada por capacidade ou identidade?
-3. **Regra de negócio.** O teste prova a regra, ou só prova que o método não joga exceção?
-4. **Padrões do repo.** DTO retornado por service, nunca entidade. Enum pra domínio.
-   Soft delete. Camadas limpas. Helper privado no teste, não base class compartilhada.
-5. **Cobertura de teste.** Cenário de sucesso E cenário de falha. Mockito puro onde dá.
-   Não há `verify(repo, never())` quando deveria ter.
-6. **Simplicação.** "Se isto mudar amanhã, em quantos arquivos eu mexo?" Se > 2, sinal
-   de desenho ruim. Flag, mas não é blocker pra merge.
+### 1. Bugs latentes de dominio
+- `Pessoa` sem `Celula` — query filtra mas nao trata `null`?
+- `MembroDaCelula` com `dataSaida` preenchida (soft delete) — aparece onde nao deve?
+- Datas em DST (Brasilia) — `ZonedDateTime` vs `LocalDateTime` misturado?
+- `BigDecimal` em valores financeiros (`dizimo`, `oferta`) — nao `double`/`float`?
+- `@Transactional` em metodo que chama outro `@Transactional` na mesma classe (Spring ignora proxy)?
+- `Optional.orElseThrow()` sem mensagem (qual campo faltou?)
+
+### 2. Seguranca
+- `igreja_id` vem do **JWT** (SecurityContext), nunca do body/query/path.
+- Validacao de input via Bean Validation (`@Valid`) em todo controller novo.
+- Enum parse: string invalida vira 400, nao 500.
+- Segredo no log? (`log.info("payload: {}", requestBody)` com token/senha)
+- Rate limit em endpoints publicos (login, busca global)?
+
+### 3. Regra de negocio
+- Outbox: evento persiste E entidade principal na mesma transacao?
+- Soft delete: repository usa `findAllAtivos()` ou similar por default?
+- Concorrencia: `@Version` em entidades que dois usuarios editam simultaneamente?
+- Migration altera dado existente? Se sim, ha script de migacao?
+
+### 4. Padroes do repo
+- **DTO** retornado pelo service, nunca entidade JPA.
+- **Enum** para dominio (status, tipo, perfil), nunca String crua.
+- **Soft delete** onde aplicavel.
+- Helper privado no teste, nao base class compartilhada.
+
+### 5. Cobertura de teste
+- Sucesso E falha testados.
+- `verify(repo, never())` onde deveria ter.
+- Vitest: `renderizarComQuery` com retry=false.
+
+### 6. Simplicacao
+- "Se isto mudar amanha, em quantos arquivos eu mexo?" Se > 2, desenho ruim.
+- Nao ha **drive-by refactor** (mudanca fora do escopo da task).
 
 ## O que você NÃO faz
 

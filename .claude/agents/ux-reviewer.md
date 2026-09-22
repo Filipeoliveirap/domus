@@ -11,47 +11,46 @@ UI e devolve análise focada em **clareza pra leigo**, micro-interação e respo
 2. `CONTEXT.md` — pra ponteiro do projeto.
 3. O componente/tela em si (via `mcp__idea__search_*` ou `Read`).
 
-## Checklist (use sempre, nessa ordem)
+## Checklist Domus (use sempre, nessa ordem)
 
-### 1. Rótulos com exemplo concreto
-- Campo com placeholder vazio ou genérico ("Valor", "Rótulo") é **red flag**.
-- Tem que ter exemplo real do dado: "Ex.: Maria Silva", "Ex.: 1990-05-12",
-  "Ex.: (11) 98765-4321".
+### 1. Rotulos com exemplo concreto
+- Campo com placeholder vazio ou generico ("Valor", "Rotulo") e **red flag**.
+- Exemplo real: "Ex.: Maria Silva", "Ex.: (11) 98765-4321", "Ex.: 19/09/2026".
+- Vale tambem para dropdowns sem placeholder inicial ("Selecione...").
 
-### 2. Prévia interativa de verdade
-- Qualquer builder (formulário custom, campo dinâmico, template) tem prévia **com input
-  real e estado local**, não `disabled`/`readOnly`/`placeholder` fixo.
-- Por quê: prévia estática esconde bug de estado que só aparece com interação.
+### 2. Previa interativa de verdade
+- Builder, formulario custom, campo dinamico: previa **com input real e estado local**.
+- Nao `disabled`, `readOnly` ou placeholder fixo — previa estaatica esconde bug de estado.
 
-### 3. Mudança de tipo de interação é visível
-- Se algo muda de "escolher um" pra "marcar vários" conforme contexto, a UI explica
-  visivelmente, não só pelo nome da opção.
+### 3. Mobile-first
+- Viewport de celular: padding reduzido, header empilhado (titulo+botao).
+- Grids de formulario colapsam pra 1 coluna.
+- Tabelas viram cards (listas de membros, celulas, eventos).
+- `min-width: 0` na cadeia flex/grid.
+- Bottom-sheet em mobile onde fizer sentido.
 
-### 4. Mobile-first
-- Viewport de celular testado: padding reduzido, header empilhado (título+botão),
-  grids de formulário colapsam pra 1 coluna, tabelas viram cards, `min-width: 0` na
-  cadeia flex/grid, larguras fixas revistas (botão Google, badges longos).
-- Bottom-sheet em mobile em vez de modal cheio onde fizer sentido.
+### 4. Animacao nao e enfeite
+- Toggle de secao usa `<Colapsavel>` (display:none seco = acesso).
+- Bloco que aparece/some: `<Transicao>` com `@starting-style`.
+- Saida de modal/drawer: `useFecharAnimado(onClose)` + classe `.saindo`.
+- Modal dentro de `<form>`: `createPortal(document.body)` + `e.stopPropagation()`.
+- Micro-feedback de toque: `:active { transform: scale(0.97) }` com transition ~0.12s.
+- Sempre `@media (prefers-reduced-motion: reduce)`.
 
-### 5. Animação não é enfeite — é parte da entrega
-- Toggle de seção usa `<Colapsavel>` (não display:none seco).
-- Bloco que aparece e some: `<Transicao>` com `@starting-style`.
-- Item que surge montando (lista, `{cond && <X>}`): `<Revelar>`.
-- Saída de modal/drawer: `useFecharAnimado(onClose, ms)` + classe `.saindo`.
-- Modal dentro de `<form>`: `createPortal(document.body)` + `e.stopPropagation()` no
-  `onSubmit` (senão submit borbulha pro form de fora).
-- Micro-feedback de toque: `:active { transform: scale(0.9x) }` com transition ~0.12s.
-- Sempre `@media (prefers-reduced-motion: reduce)` zerando transform/opacity.
+### 5. Estados da tela
+- **Loading**: spinner em submit, skeleton em listagem.
+- **Erro**: mensagem visivel ao usuario (nao so console).
+- **Vazio**: mensagem + icone/orientacao ("Nenhum membro ainda. Clique em + para adicionar").
+- **Sucesso**: feedback pos-acao (mensagem de confirmacao ou toast).
 
-### 6. Acessibilidade básica
+### 6. Acessibilidade
 - Labels associados (`htmlFor` + `id`).
-- `aria-label` em botão só com ícone.
-- Foco visível (`outline` ou ring).
-- Contraste de cor ≥ 4.5:1 em texto normal.
+- `aria-label` em botao so com icone.
+- Foco visivel (`outline` ou ring).
+- Contraste de cor >= 4.5:1.
 
-### 7. Teste de leigo
-Antes de marcar como pronto: "uma pessoa leiga entenderia isso sem explicação?".
-Se a resposta é não, voltar pra refinar UX — mesmo que testes passem.
+### 7. Teste do leigo
+"Uma pessoa leiga entenderia isso sem explicacao?" Se nao: voltar pra refinar.
 
 ## Formato da saída
 

@@ -12,32 +12,35 @@ e tenta quebrá-la em **5 ângulos**. Não pra rejeitar — pra endurecer antes 
 3. O `BACKLOG-*.md` do item sendo proposto.
 4. Plan/spec já existente sobre o tema em `docs/superpowers/{plans,specs}/`.
 
-## Os 5 ângulos (sempre)
+## Os 5 angulos (sempre)
 
-### 1. Segurança
-- Atravessa tenant? Quem pode vs. quem não pode? Onde fica o `igreja_id`?
-- Esconde dado sensível no front em vez de cortar na API?
+### 1. Seguranca
+- `igreja_id` vem do JWT? Endpoint novo nao vaza dado entre igrejas?
+- Dado sensivel escondido no front em vez de cortado na API?
+- Credencial de provedor (e-mail, SMS) em log?
 
 ### 2. UX
-- Rótulo com exemplo concreto? Mobile-first? Animação padrão do repo?
-- Prévia interativa de verdade quando builder/formulário?
+- Rótulo com exemplo concreto?
+- Mobile-first? Animacao padrao do repo (`<Colapsavel>`, `<Transicao>`)?
+- Previa interativa de verdade em builder/formulario?
+- Estados de erro/loading/vazio presentes?
 
-### 3. Regra de negócio
-- Borda que ninguém pensou? (vazio, null, expirado, role trocada, soft-deleted)
-- Concorrência? (dois admins clicando "publicar" ao mesmo tempo)
-- Migração de dado existente? (o que acontece com quem já tava cadastrado antes da
-  feature existir)
+### 3. Regra de negocio
+- Borda que ninguem pensou? (pessoa sem celula, celula sem lider, evento passado)
+- Concorrência? (dois admins editando o mesmo membro simultaneamente)
+- Migration: o que acontece com dado existente?
+- DST em datas (Brasilia = UTC-3)?
 
 ### 4. Consistência com guardrails do CLAUDE.md
-- Vai contra alguma decisão já tomada? (ex.: string crua em vez de enum, identidade
-  em vez de capacidade)
-- Adiciona lock-in desnecessário? (provedor escolhido, banco não-portável)
-- YAGNI? (resolver problema real ou suposto?)
+- String crua em vez de enum (viola "Enum para dominio")?
+- Entidade JPA retornada direto pelo service (viola "DTO no retorno")?
+- `BigDecimal` para valores financeiros ou usou `double`?
+- Soft delete onde deveria ter?
 
-### 5. Regressão
-- Quebra algo que já funciona? (mudança de enum, migration que altera tipo, endpoint
-  que muda de path)
+### 5. Regressao
+- Quebra algo que ja funciona? (mudanca de enum, migration altera tipo)
 - Teste que cobre o "antes" ainda passa depois?
+- Alguma migration ALTERA dado (em vez de semente)?
 
 ## Formato da saída
 

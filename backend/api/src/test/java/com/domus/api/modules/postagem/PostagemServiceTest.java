@@ -9,7 +9,7 @@ import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.postagem.dto.CriarPostagemRequest;
 import com.domus.api.modules.postagem.dto.PostagemResponse;
 import com.domus.api.modules.usuario.UsuarioRepository;
-import com.domus.api.shared.exception.RegraNegocioException;
+import com.domus.api.shared.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +58,7 @@ class PostagemServiceTest {
         );
 
         assertThatThrownBy(() -> postagemService.criarPostagem(igrejaId, pessoaId, "MEMBRO", request))
-                .isInstanceOf(RegraNegocioException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Apenas administradores e líderes");
     }
 

@@ -75,7 +75,7 @@ export function CaixaCriarPostagem() {
     )
   }
 
-  const urlPreviewFoto = urlFoto(fotoId, 'THUMB')
+  const urlPreviewFoto = urlFoto(fotoId, 'DISPLAY')
 
   return (
     <form className={styles.caixa} onSubmit={handleSubmit}>
@@ -100,14 +100,22 @@ export function CaixaCriarPostagem() {
       </div>
 
       {fotoId && urlPreviewFoto && (
-        <div style={{ position: 'relative', width: 80, height: 80, marginLeft: 52 }}>
-          <Image src={urlPreviewFoto} alt="Prévia" width={80} height={80} unoptimized style={{ borderRadius: 8, objectFit: 'cover' }} />
+        <div className={styles.previewContainer}>
+          <Image
+            src={urlPreviewFoto}
+            alt="Prévia da imagem"
+            width={600}
+            height={260}
+            unoptimized
+            className={styles.previewImagem}
+          />
           <button
             type="button"
+            className={styles.btnRemoverFoto}
             onClick={() => setFotoId(null)}
-            style={{ position: 'absolute', top: -4, right: -4, background: '#ba1a1a', color: '#fff', border: 'none', borderRadius: '50%', padding: 2, cursor: 'pointer' }}
+            aria-label="Remover foto"
           >
-            <X size={12} />
+            <X size={16} />
           </button>
         </div>
       )}

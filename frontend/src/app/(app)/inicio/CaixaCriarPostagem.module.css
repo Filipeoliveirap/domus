@@ -1,0 +1,140 @@
+.caixa {
+  background: var(--bg-surface, #ffffff);
+  border-radius: var(--radius-card, 16px);
+  padding: 16px 20px;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  box-shadow: 0 4px 12px rgba(19, 27, 46, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.autorLinha {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--color-primary, #004ac6);
+  flex-shrink: 0;
+}
+
+.corpoInput {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nomeAutor {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #131b2e);
+}
+
+.textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-main, #131b2e);
+  resize: none;
+  line-height: 1.5;
+}
+
+.textarea::placeholder {
+  color: var(--text-muted, #737686);
+}
+
+.seletorTags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, rgba(115, 118, 134, 0.1));
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.seletorTags::-webkit-scrollbar {
+  display: none;
+}
+
+.chipTag {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
+  background: var(--bg-surface-low, #faf8ff);
+  color: var(--text-muted, #737686);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.chipTagActive {
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  border-color: var(--color-primary, #004ac6);
+  font-weight: 600;
+}
+
+.barraAcoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, rgba(115, 118, 134, 0.1));
+}
+
+.btnAcaoIcone {
+  background: transparent;
+  border: none;
+  color: var(--color-primary, #004ac6);
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnAcaoIcone:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+}
+
+.btnPublicar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary, #004ac6);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+}
+
+.btnPublicar:active {
+  transform: scale(0.95);
+}
+
+.btnPublicar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

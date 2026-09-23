@@ -9,6 +9,7 @@ import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { api } from '@/lib/api'
 import { Endpoints } from '@/lib/endpoints'
+import { notificar } from '@/components/common/Notificacao/notificar'
 import type { TipoPostagem } from '@/types/postagem.type'
 import styles from './CaixaCriarPostagem.module.css'
 
@@ -41,14 +42,14 @@ export function CaixaCriarPostagem() {
     try {
       setCarregandoFoto(true)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('arquivo', file)
 
       const res = await api.post<{ id: string }>(Endpoints.fotos.UPLOAD, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
       })
       setFotoId(res.data.id)
     } catch {
-      alert('Erro ao carregar a foto. Tente novamente.')
+      notificar.erro('Não foi possível enviar a foto', 'Tente enviar a imagem novamente.')
     } finally {
       setCarregandoFoto(false)
     }

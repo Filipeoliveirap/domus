@@ -15,13 +15,16 @@ public interface FotoRepository extends JpaRepository<Foto, UUID> {
 
     List<Foto> findByIgrejaId(UUID igrejaId);
 
-    /** Órfãs: sem referência nas três tabelas — acontece quando o upload é abandonado sem salvar. */
+    /** Órfãs: sem referência nas tabelas que usam foto — acontece quando o upload é abandonado sem salvar. */
     @Query("""
         SELECT f FROM Foto f
         WHERE f.createdAt < :corte
           AND NOT EXISTS (SELECT 1 FROM Pessoa p WHERE p.foto = f)
           AND NOT EXISTS (SELECT 1 FROM Evento e WHERE e.foto = f)
           AND NOT EXISTS (SELECT 1 FROM Igreja i WHERE i.logoFoto = f)
+          AND NOT EXISTS (SELECT 1 FROM Ministerio m WHERE m.foto = f)
+          AND NOT EXISTS (SELECT 1 FROM Celula c WHERE c.foto = f)
+          AND NOT EXISTS (SELECT 1 FROM Postagem pos WHERE pos.foto = f)
     """)
     List<Foto> buscarOrfas(@Param("corte") LocalDateTime corte);
 

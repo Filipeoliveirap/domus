@@ -6,6 +6,7 @@ import { useMuralAvisos } from '@/hooks/postagem/useMuralAvisos'
 import { useAuthStore } from '@/store/authStore'
 import { ModalNovoAviso } from './ModalNovoAviso'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
+import { doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import type { Postagem } from '@/types/postagem.type'
 import styles from './MuralAvisosCarrossel.module.css'
 
@@ -108,7 +109,7 @@ export function MuralAvisosCarrossel() {
               <div className={styles.cardRodape}>
                 <div className={styles.autorInfo}>
                   <User size={14} />
-                  <span>{aviso.autor.nome}</span>
+                  <span>{doisPrimeirosNomes(aviso.autor.nome)}</span>
                 </div>
               </div>
             </article>

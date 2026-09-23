@@ -8,7 +8,7 @@ import { urlFoto } from '@/lib/urlFoto'
 import { useCurtirPostagem } from '@/hooks/postagem/useCurtirPostagem'
 import { useComentarPostagem } from '@/hooks/postagem/useComentarPostagem'
 import { Colapsavel } from '@/components/common/Transicao/Colapsavel'
-import type { Postagem } from '@/types/postagem.type'
+import type { Postagem, Comentario } from '@/types/postagem.type'
 import styles from './PostItem.module.css'
 
 export function PostItem({ postagem }: { postagem: Postagem }) {
@@ -86,7 +86,7 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
 
       <Colapsavel aberto={comentariosAbertos}>
         <div className={styles.secaoComentarios}>
-          {(postagem.comentariosRecentes ?? []).map((c) => (
+          {(postagem.comentariosRecentes ?? []).map((c: Comentario) => (
             <div key={c.id} className={styles.itemComentario}>
               <span className={styles.autorComentario}>{doisPrimeirosNomes(c.autor.nome)}:</span>
               <span>{c.conteudo}</span>

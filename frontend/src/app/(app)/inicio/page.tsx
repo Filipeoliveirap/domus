@@ -22,7 +22,6 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { MuralAvisosCarrossel } from './MuralAvisosCarrossel'
 import { FeedComunidade } from './FeedComunidade'
 import { ChipAtalhosMobile } from './ChipAtalhosMobile'
-import { doisPrimeirosNomes } from './CaixaCriarPostagem'
 import type { Aniversariante, EventoResumo } from '@/types/inicio.type'
 import styles from './inicio.module.css'
 
@@ -400,15 +399,15 @@ export default function InicioPage() {
       {fotoAniv && fotoAniv.fotoId && (
         <VisualizadorFoto
           fotoId={fotoAniv.fotoId}
-          nomePessoa={fotoAniv.nome}
-          aoFechar={() => setFotoAniv(null)}
+          descricao={fotoAniv.nome}
+          onClose={() => setFotoAniv(null)}
         />
       )}
 
       {pessoaDetalheId && (
         <DrawerDetalhePessoa
           pessoaId={pessoaDetalheId}
-          aoFechar={() => setPessoaDetalheId(null)}
+          onClose={() => setPessoaDetalheId(null)}
         />
       )}
     </div>

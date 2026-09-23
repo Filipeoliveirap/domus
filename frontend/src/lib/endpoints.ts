@@ -223,4 +223,12 @@ export const Endpoints = {
     PAPEL: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}/papel`,
     CONVERTER: (id: string, visitanteId: string) => `/celulas/${id}/converter/${visitanteId}`,
   },
+  postagens: {
+    MURAL: '/postagens/mural',
+    FEED: '/postagens/feed',
+    CRIAR: '/postagens',
+    CURTIR: (id: string) => `/postagens/${id}/curtir`,
+    COMENTAR: (id: string) => `/postagens/${id}/comentarios`,
+    DELETAR: (id: string) => `/postagens/${id}`,
+  },
 }

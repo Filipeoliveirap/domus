@@ -12,7 +12,7 @@ public record AutorResponse(
     public static AutorResponse from(Pessoa pessoa) {
         if (pessoa == null) return null;
         UUID fotoId = pessoa.getFoto() != null ? pessoa.getFoto().getId() : null;
-        String cargo = pessoa.getCargo() != null ? pessoa.getCargo().getNome() : null;
+        String cargo = pessoa.getCargo();
         return new AutorResponse(pessoa.getId(), pessoa.getNome(), fotoId, cargo);
     }
 }

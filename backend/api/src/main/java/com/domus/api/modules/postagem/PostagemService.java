@@ -10,8 +10,8 @@ import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.postagem.dto.*;
 import com.domus.api.modules.usuario.UsuarioRepository;
-import com.domus.api.shared.exception.RegraNegocioException;
-import com.domus.api.shared.exception.RecursoNaoEncontradoException;
+import com.domus.api.shared.exception.BusinessException;
+import com.domus.api.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,14 +51,14 @@ public class PostagemService {
     @Transactional
     public PostagemResponse criarPostagem(UUID igrejaId, UUID autorPessoaId, String perfilUsuario, CriarPostagemRequest request) {
         if (request.oficial() && !"ADMIN_IGREJA".equals(perfilUsuario) && !"LIDER".equals(perfilUsuario)) {
-            throw new RegraNegocioException("Apenas administradores e líderes podem publicar avisos oficiais no mural.");
+            throw new BusinessException("Apenas administradores e líderes podem publicar avisos oficiais no mural.");
         }
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Igreja não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
 
         Pessoa autor = pessoaRepository.findById(autorPessoaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa autor não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa autor não encontrada."));
 
         Foto foto = null;
         if (request.fotoId() != null) {
@@ -84,7 +84,7 @@ public class PostagemService {
     @Transactional
     public PostagemResponse alternarCurtida(UUID igrejaId, UUID pessoaId, UUID postagemId, TipoReacao tipoReacao) {
         Postagem post = postagemRepository.findByIdAndIgrejaId(postagemId, igrejaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Postagem não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Postagem não encontrada."));
 
         Optional<CurtidaPostagem> existente = curtidaRepository.findByPostagemIdAndPessoaId(postagemId, pessoaId);
 
@@ -98,7 +98,7 @@ public class PostagemService {
             }
         } else {
             Pessoa pessoa = pessoaRepository.findById(pessoaId)
-                    .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa não encontrada."));
+                    .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
 
             CurtidaPostagem nova = CurtidaPostagem.builder()
                     .postagem(post)
@@ -111,7 +111,7 @@ public class PostagemService {
             if (!post.getAutorPessoa().getId().equals(pessoaId)) {
                 usuarioRepository.findByPessoaId(post.getAutorPessoa().getId()).ifPresent(u ->
                         notificacaoService.criar(
-                                TipoNotificacao.SISTEMA,
+                                TipoNotificacao.NOVA_INTERACAO_POSTAGEM,
                                 igrejaId,
                                 u.getId(),
                                 pessoa.getNome() + " reagiu à sua postagem.",
@@ -127,10 +127,10 @@ public class PostagemService {
     @Transactional
     public ComentarioResponse comentar(UUID igrejaId, UUID pessoaId, UUID postagemId, String conteudo) {
         Postagem post = postagemRepository.findByIdAndIgrejaId(postagemId, igrejaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Postagem não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Postagem não encontrada."));
 
         Pessoa autor = pessoaRepository.findById(pessoaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
 
         ComentarioPostagem comentario = ComentarioPostagem.builder()
                 .postagem(post)
@@ -144,7 +144,7 @@ public class PostagemService {
         if (!post.getAutorPessoa().getId().equals(pessoaId)) {
             usuarioRepository.findByPessoaId(post.getAutorPessoa().getId()).ifPresent(u ->
                     notificacaoService.criar(
-                            TipoNotificacao.SISTEMA,
+                            TipoNotificacao.NOVA_INTERACAO_POSTAGEM,
                             igrejaId,
                             u.getId(),
                             autor.getNome() + " comentou na sua postagem.",
@@ -159,13 +159,13 @@ public class PostagemService {
     @Transactional
     public void deletarPostagem(UUID igrejaId, UUID pessoaId, String perfilUsuario, UUID postagemId) {
         Postagem post = postagemRepository.findByIdAndIgrejaId(postagemId, igrejaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Postagem não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Postagem não encontrada."));
 
         boolean ehAutor = post.getAutorPessoa().getId().equals(pessoaId);
         boolean ehAdmin = "ADMIN_IGREJA".equals(perfilUsuario);
 
         if (!ehAutor && !ehAdmin) {
-            throw new RegraNegocioException("Você não tem permissão para excluir esta postagem.");
+            throw new BusinessException("Você não tem permissão para excluir esta postagem.");
         }
 
         postagemRepository.delete(post);

@@ -38,7 +38,7 @@ public class PostagemController {
         return postagemService.criarPostagem(
                 usuarioAutenticado.getIgrejaId(),
                 usuarioAutenticado.getPessoaId(),
-                usuarioAutenticado.getPerfil(),
+                usuarioAutenticado.getRole(),
                 request
         );
     }
@@ -74,7 +74,7 @@ public class PostagemController {
         postagemService.deletarPostagem(
                 usuarioAutenticado.getIgrejaId(),
                 usuarioAutenticado.getPessoaId(),
-                usuarioAutenticado.getPerfil(),
+                usuarioAutenticado.getRole(),
                 id
         );
     }

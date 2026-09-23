@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react'
 import Image from 'next/image'
-import { Send, Image as ImageIcon, X } from 'lucide-react'
+import { Send, Image as ImageIcon, X, Pencil } from 'lucide-react'
+import { CropperFoto } from '@/components/common/UploadFoto/CropperFoto'
 import { useAuthStore } from '@/store/authStore'
 import { useCriarPostagem } from '@/hooks/postagem/useCriarPostagem'
 import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
@@ -32,17 +33,24 @@ export function CaixaCriarPostagem() {
   const [tipo, setTipo] = useState<TipoPostagem>('DEVOCIONAL')
   const [fotoId, setFotoId] = useState<string | null>(null)
   const [carregandoFoto, setCarregandoFoto] = useState(false)
+  const [arquivoParaRecorte, setArquivoParaRecorte] = useState<File | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelecionarArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setArquivoParaRecorte(file)
+    // Limpa valor do input para permitir re-selecionar o mesmo arquivo se necessário
+    e.target.value = ''
+  }
 
+  const handleConfirmarRecorte = async (arquivoRecortado: File) => {
+    setArquivoParaRecorte(null)
     try {
       setCarregandoFoto(true)
       const formData = new FormData()
-      formData.append('arquivo', file)
+      formData.append('arquivo', arquivoRecortado)
 
       const res = await api.post<{ id: string }>(Endpoints.fotos.UPLOAD, formData, {
         headers: { 'Content-Type': undefined },
@@ -101,6 +109,14 @@ export function CaixaCriarPostagem() {
 
       {fotoId && urlPreviewFoto && (
         <div className={styles.previewContainer}>
+          <button
+            type="button"
+            className={styles.btnEditarFoto}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Pencil size={13} />
+            Editar
+          </button>
           <Image
             src={urlPreviewFoto}
             alt="Prévia da imagem"
@@ -138,7 +154,7 @@ export function CaixaCriarPostagem() {
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleUploadFoto}
+            onChange={handleSelecionarArquivo}
             accept="image/*"
             style={{ display: 'none' }}
           />
@@ -163,6 +179,15 @@ export function CaixaCriarPostagem() {
           {criarPostagem.isPending ? 'Publicando...' : 'Publicar'}
         </button>
       </div>
+
+      {arquivoParaRecorte && (
+        <CropperFoto
+          arquivo={arquivoParaRecorte}
+          formato="banner"
+          onCancelar={() => setArquivoParaRecorte(null)}
+          onConfirmar={handleConfirmarRecorte}
+        />
+      )}
     </form>
   )
 }

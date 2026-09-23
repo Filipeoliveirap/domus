@@ -1,0 +1,45 @@
+.containerFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.abasFiltro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.abasFiltro::-webkit-scrollbar {
+  display: none;
+}
+
+.abaItem {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #737686);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.abaItemActive {
+  background: var(--bg-surface-highest, #dae2fd);
+  color: var(--color-primary, #004ac6);
+  font-weight: 600;
+}
+
+.listaPosts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

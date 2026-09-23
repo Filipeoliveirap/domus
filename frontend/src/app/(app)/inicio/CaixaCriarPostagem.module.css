@@ -175,6 +175,30 @@
   background: rgba(186, 26, 26, 0.9);
 }
 
-.btnRemoverFoto:active {
-  transform: scale(0.92);
+.btnEditarFoto {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(19, 27, 46, 0.75);
+  color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.btnEditarFoto:hover {
+  background: rgba(0, 74, 198, 0.9);
+}
+
+.btnEditarFoto:active {
+  transform: scale(0.95);
 }

@@ -12,8 +12,8 @@ import styles from './MuralAvisosCarrossel.module.css'
 
 export function MuralAvisosCarrossel() {
   const { data: avisos, isLoading } = useMuralAvisos()
-  const perfil = useAuthStore((s) => s.perfil)
-  const podeCriarAviso = perfil === 'ADMIN_IGREJA' || perfil === 'LIDER'
+  const role = useAuthStore((s) => s.role)
+  const podeCriarAviso = role === 'ADMIN_IGREJA' || role === 'LIDER'
   const [modalNovoAberto, setModalNovoAberto] = useState(false)
   const trilhaRef = useRef<HTMLDivElement>(null)
 

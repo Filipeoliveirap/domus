@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { Heart, MessageSquare, Send } from 'lucide-react'
-import { iniciais } from '@/lib/formats/pessoaFormat'
+import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { useCurtirPostagem } from '@/hooks/postagem/useCurtirPostagem'
 import { useComentarPostagem } from '@/hooks/postagem/useComentarPostagem'
@@ -48,7 +48,7 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
             )}
           </div>
           <div className={styles.autorInfo}>
-            <span className={styles.nomeAutor}>{postagem.autor.nome}</span>
+            <span className={styles.nomeAutor}>{doisPrimeirosNomes(postagem.autor.nome)}</span>
             <span className={styles.metaPost}>
               {new Date(postagem.criadoEm).toLocaleDateString('pt-BR')}
             </span>
@@ -88,7 +88,7 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
         <div className={styles.secaoComentarios}>
           {(postagem.comentariosRecentes ?? []).map((c) => (
             <div key={c.id} className={styles.itemComentario}>
-              <span className={styles.autorComentario}>{c.autor.nome}:</span>
+              <span className={styles.autorComentario}>{doisPrimeirosNomes(c.autor.nome)}:</span>
               <span>{c.conteudo}</span>
             </div>
           ))}

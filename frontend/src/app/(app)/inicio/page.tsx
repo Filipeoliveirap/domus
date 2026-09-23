@@ -12,7 +12,7 @@ import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/Drawe
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
-import { iniciais } from '@/lib/formats/pessoaFormat'
+import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'

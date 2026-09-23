@@ -5,8 +5,15 @@ import { X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
 import { useCriarPostagem } from '@/hooks/postagem/useCriarPostagem'
+import { Select } from '@/components/common/select/Select'
 import type { TipoPostagem } from '@/types/postagem.type'
 import styles from './ModalNovoAviso.module.css'
+
+const OPCOES_TIPO = [
+  { value: 'MURAL_AVISO', label: 'Comunicado Pastoral / Aviso Geral' },
+  { value: 'RESUMO_CULTO', label: 'Escala de Voluntários' },
+  { value: 'GERAL', label: 'Ação Social / Geral' },
+]
 
 export function ModalNovoAviso({ aoFechar }: { aoFechar: () => void }) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
@@ -59,21 +66,13 @@ export function ModalNovoAviso({ aoFechar }: { aoFechar: () => void }) {
 
         <form onSubmit={handleSubmit}>
           <div className={styles.modalCorpo}>
-            <div className={styles.campo}>
-              <label className={styles.label} htmlFor="tipo-aviso">
-                Tipo do Aviso
-              </label>
-              <select
-                id="tipo-aviso"
-                className={styles.select}
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoPostagem)}
-              >
-                <option value="MURAL_AVISO">Comunicado Pastoral / Aviso Geral</option>
-                <option value="RESUMO_CULTO">Escala de Voluntários</option>
-                <option value="GERAL">Ação Social / Geral</option>
-              </select>
-            </div>
+            <Select
+              id="tipo-aviso"
+              label="Tipo do Aviso"
+              value={tipo}
+              options={OPCOES_TIPO}
+              onChange={(e) => setTipo(e.target.value as TipoPostagem)}
+            />
 
             <div className={styles.campo}>
               <label className={styles.label} htmlFor="titulo-aviso">

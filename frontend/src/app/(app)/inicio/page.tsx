@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { MuralAvisosCarrossel } from './MuralAvisosCarrossel'
 import { FeedComunidade } from './FeedComunidade'
 import { ChipAtalhosMobile } from './ChipAtalhosMobile'
+import { doisPrimeirosNomes } from './CaixaCriarPostagem'
 import type { Aniversariante, EventoResumo } from '@/types/inicio.type'
 import styles from './inicio.module.css'
 
@@ -84,7 +85,7 @@ function ItemAniversariante({
   onAbrirPessoa: (id: string) => void
 }) {
   const ehHoje = a.dia === hoje
-  const primeiroNome = a.nome.trim().split(' ')[0]
+  const primeiroNome = doisPrimeirosNomes(a.nome)
   const linkParabens = ehHoje && a.telefone
     ? `https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Feliz aniversário, ${primeiroNome}! 🎉`)}`
     : null
@@ -99,7 +100,7 @@ function ItemAniversariante({
     >
       <Avatar nome={a.nome} fotoId={a.fotoId} onVerFoto={a.fotoId ? () => onVerFoto(a) : undefined} />
       <span className={styles.anivInfo}>
-        <span className={styles.anivNome}>{a.nome}</span>
+        <span className={styles.anivNome}>{primeiroNome}</span>
         <span className={styles.anivData}>{ehHoje ? 'Hoje' : `Dia ${a.dia}`}</span>
       </span>
       {linkParabens ? (
@@ -141,11 +142,19 @@ function ModalAniversariantes({
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [fechar])
+
   useEffect(() => {
-    const anterior = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = anterior }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [])
+
+  const handleAbrirPessoa = (id: string) => {
+    fechar()
+    onAbrirPessoa(id)
+  }
+
   return (
     <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
       <div
@@ -172,7 +181,7 @@ function ModalAniversariantes({
                 aniversariante={a}
                 hoje={hoje}
                 onVerFoto={onVerFoto}
-                onAbrirPessoa={onAbrirPessoa}
+                onAbrirPessoa={handleAbrirPessoa}
               />
             ))}
           </ul>
@@ -195,7 +204,7 @@ export default function InicioPage() {
   const router = useRouter()
   const nome = useAuthStore((s) => s.nome)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
-  const primeiroNome = nome?.trim().split(/\s+/)[0] ?? ''
+  const primeiroNome = doisPrimeirosNomes(nome ?? '')
   const versiculo = versiculoDoDia()
   const { data, isLoading, isError, refetch } = useInicio()
   const [modalAberto, setModalAberto] = useState(false)

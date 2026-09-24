@@ -1,0 +1,1 @@
+ALTER TABLE postagem ALTER COLUMN conteudo DROP NOT NULL;

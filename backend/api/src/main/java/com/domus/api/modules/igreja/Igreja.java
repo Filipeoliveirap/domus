@@ -36,8 +36,24 @@ public class Igreja {
     @Column(name = "telefone", length = 50)
     private String telefoneContato;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "plano", length = 50)
-    private String plano;
+    @Builder.Default
+    private PlanoAssinatura plano = PlanoAssinatura.BASICO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_assinatura", length = 30)
+    @Builder.Default
+    private StatusAssinatura statusAssinatura = StatusAssinatura.TRIAL;
+
+    @Column(name = "trial_expira_em")
+    private LocalDateTime trialExpiraEm;
+
+    @Column(name = "mp_preapproval_id", length = 100)
+    private String mpPreapprovalId;
+
+    @Column(name = "mp_payer_id", length = 100)
+    private String mpPayerId;
 
     @Column(name = "razao_social", length = 255)
     private String razaoSocial;

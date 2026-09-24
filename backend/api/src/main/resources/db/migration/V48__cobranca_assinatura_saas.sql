@@ -14,3 +14,6 @@ CREATE TABLE IF NOT EXISTS codigo_convite_congregacao (
     usado_em TIMESTAMP WITH TIME ZONE,
     igreja_filha_id BIGINT REFERENCES igreja(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_igreja_mp_preapproval_id ON igreja(mp_preapproval_id);
+CREATE INDEX IF NOT EXISTS idx_codigo_convite_matriz_id ON codigo_convite_congregacao(matriz_id);

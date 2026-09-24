@@ -313,6 +313,19 @@ public class MercadoPagoApi {
         }
     }
 
+    public java.util.Map<String, Object> consultarAssinaturaPreapproval(String accessToken, String preapprovalId) {
+        try {
+            return restClient.get()
+                .uri("https://api.mercadopago.com/preapproval/{id}", preapprovalId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {});
+        } catch (Exception e) {
+            logarDetalheSeApiException("Falha ao consultar assinatura no Mercado Pago", e);
+            return null;
+        }
+    }
+
     /**
      * Sempre com {@code amount} explícito — nunca um "estorno cheio" sem valor (2026-08-27):
      * cancelar uma inscrição que já tinha recebido um estorno parcial antes (reajuste de

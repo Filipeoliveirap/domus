@@ -46,13 +46,19 @@ class MercadoPagoSubscriptionServiceTest {
 
         CriarAssinaturaRequest req = new CriarAssinaturaRequest("token_123", "admin@teste.com", "12345678901");
 
-        when(mercadoPagoClient.criarAssinaturaPreapproval(any(), any()))
+        org.mockito.ArgumentCaptor<Map<String, Object>> bodyCaptor = org.mockito.ArgumentCaptor.forClass(Map.class);
+        when(mercadoPagoClient.criarAssinaturaPreapproval(any(), bodyCaptor.capture()))
             .thenReturn(Map.of("id", "preapproval_999", "status", "authorized"));
 
         AssinaturaResponse resp = subscriptionService.criarAssinaturaTrial(igreja, req);
 
         assertThat(resp.preapprovalId()).isEqualTo("preapproval_999");
         assertThat(resp.status()).isEqualTo("authorized");
+
+        Map<String, Object> body = bodyCaptor.getValue();
+        Map<?, ?> autoRecurring = (Map<?, ?>) body.get("auto_recurring");
+        assertThat(autoRecurring).isNotNull();
+        assertThat(autoRecurring.get("start_date")).isNotNull();
     }
 
     @Test

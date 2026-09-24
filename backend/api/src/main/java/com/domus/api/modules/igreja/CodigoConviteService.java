@@ -19,6 +19,17 @@ public class CodigoConviteService {
         this.igrejaRepository = igrejaRepository;
     }
 
+    private static final String ALFABETO_UNAMBIGUO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
+
+    private String geradorCodigoUnambiguo() {
+        StringBuilder sb = new StringBuilder("DOMUS-");
+        for (int i = 0; i < 6; i++) {
+            sb.append(ALFABETO_UNAMBIGUO.charAt(RANDOM.nextInt(ALFABETO_UNAMBIGUO.length())));
+        }
+        return sb.toString();
+    }
+
     @Transactional
     public GerarCodigoConviteResponse gerarCodigo(Igreja matriz) {
         long congregacoesAtuais = igrejaRepository.countByIgrejaMaeId(matriz.getId());
@@ -29,7 +40,7 @@ public class CodigoConviteService {
             );
         }
 
-        String codigo = "DOMUS-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        String codigo = geradorCodigoUnambiguo();
         CodigoConviteCongregacao convite = new CodigoConviteCongregacao();
         convite.setMatriz(matriz);
         convite.setCodigo(codigo);

@@ -18,5 +18,13 @@ describe('FeatureGuard', () => {
             </FeatureGuard>
         );
         expect(screen.getByText('Conteudo Privado')).toBeInTheDocument();
+    it('deve renderizar fallback quando a feature nao for permitida e fallback for fornecido', () => {
+        render(
+            <FeatureGuard feature="FEED_SOCIAL" featuresHabilitadas={[]} fallback={<div>Upgrade Necessario</div>}>
+                <div>Conteudo Privado</div>
+            </FeatureGuard>
+        );
+        expect(screen.queryByText('Conteudo Privado')).not.toBeInTheDocument();
+        expect(screen.getByText('Upgrade Necessario')).toBeInTheDocument();
     });
 });

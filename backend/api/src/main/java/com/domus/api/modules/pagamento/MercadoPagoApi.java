@@ -298,6 +298,21 @@ public class MercadoPagoApi {
         }
     }
 
+    public java.util.Map<String, Object> criarAssinaturaPreapproval(String accessToken, java.util.Map<String, Object> body) {
+        try {
+            return restClient.post()
+                .uri("https://api.mercadopago.com/preapproval")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {});
+        } catch (Exception e) {
+            logarDetalheSeApiException("Falha ao criar assinatura no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL", "Não foi possível criar assinatura no Mercado Pago agora.");
+        }
+    }
+
     /**
      * Sempre com {@code amount} explícito — nunca um "estorno cheio" sem valor (2026-08-27):
      * cancelar uma inscrição que já tinha recebido um estorno parcial antes (reajuste de

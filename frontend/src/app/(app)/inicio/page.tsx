@@ -206,9 +206,99 @@ function SkeletonLista() {
   )
 }
 
-export default function InicioPage() {
+function BlocoProximosEventos({
+  isLoading,
+  isError,
+  eventos,
+  refetch,
+  onAbrirEvento,
+  minhaIgrejaId,
+}: {
+  isLoading: boolean
+  isError: boolean
+  eventos: EventoResumo[]
+  refetch: () => void
+  onAbrirEvento: (id: string) => void
+  minhaIgrejaId: string | null
+}) {
   const router = useRouter()
   const carrosselEventosRef = useRef<CarrosselSuaveRef>(null)
+
+  return (
+    <section>
+      <div className={styles.secaoHeader}>
+        <h2 className={styles.secaoTitulo}>Próximos eventos</h2>
+        <button type="button" className={styles.verTodos} onClick={() => router.push('/eventos')}>
+          Ver todos <ArrowRight size={14} aria-hidden="true" />
+        </button>
+      </div>
+      <Transicao key={isLoading ? 'load' : isError ? 'erro' : eventos.length ? 'cheio' : 'vazio'} modo="fade">
+        {isLoading ? (
+          <SkeletonLista />
+        ) : isError ? (
+          <EstadoErro
+            titulo="Não foi possível carregar"
+            mensagem="Tente novamente."
+            aoTentarNovamente={() => refetch()}
+          />
+        ) : eventos.length === 0 ? (
+          <EstadoVazio
+            icone={Calendar}
+            titulo="Nenhum evento próximo"
+            mensagem="Quando a igreja marcar algo, aparece aqui."
+            acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
+          />
+        ) : (
+          <CarrosselSuave ref={carrosselEventosRef} className={styles.trilhaEventos}>
+            {eventos.map((e: EventoResumo) => {
+              const d = dataEvento(e.inicio)
+              const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
+              return (
+                <button
+                  key={e.id}
+                  className={`${styles.cardEvento} card-interativo`}
+                  onClick={() => onAbrirEvento(e.id)}
+                >
+                  <div>
+                    <div className={styles.cardEventoTopo}>
+                      <span className={styles.dataChip}>
+                        <span className={styles.dataMes}>{d.mes}</span>
+                        <span className={styles.dataDia}>{d.dia}</span>
+                      </span>
+                      <Calendar size={18} className={styles.iconeEvento} aria-hidden="true" />
+                    </div>
+                    <span className={styles.eventoTitulo}>{e.titulo}</span>
+                    <span className={styles.eventoMeta}>
+                      <Clock size={13} aria-hidden="true" /> {d.hora}
+                      {e.local && (
+                        <>
+                          <MapPin size={13} aria-hidden="true" /> {e.local}
+                        </>
+                      )}
+                    </span>
+                    {ehOutraIgreja && (
+                      <span className={styles.eventoIgreja}>
+                        <Building2 size={13} aria-hidden="true" />
+                        Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
+                      </span>
+                    )}
+                    <SeloInscritoCard eventoId={e.id} />
+                  </div>
+                  <span className={`${styles.eventoAcao} card-cta`}>
+                    Ver detalhes
+                    <ArrowRight size={13} className="card-seta" aria-hidden="true" />
+                  </span>
+                </button>
+              )
+            })}
+          </CarrosselSuave>
+        )}
+      </Transicao>
+    </section>
+  )
+}
+
+export default function InicioPage() {
   const nome = useAuthStore((s) => s.nome)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
   const primeiroNome = doisPrimeirosNomes(nome ?? '')
@@ -261,6 +351,18 @@ export default function InicioPage() {
       {/* Carrossel do Mural Oficial de Avisos */}
       <MuralAvisosCarrossel />
 
+      {/* Próximos Eventos em Mobile */}
+      <div className={styles.secaoProximosEventosMobile}>
+        <BlocoProximosEventos
+          isLoading={isLoading}
+          isError={isError}
+          eventos={eventos}
+          refetch={refetch}
+          onAbrirEvento={setEventoAberto}
+          minhaIgrejaId={minhaIgrejaId}
+        />
+      </div>
+
       {/* Atalhos rápidos para Mobile */}
       <ChipAtalhosMobile
         totalAniversariantes={aniversariantes.length}
@@ -282,76 +384,16 @@ export default function InicioPage() {
             <span className={styles.versiculoRef}>— {versiculo.ref}</span>
           </section>
 
-          <section>
-            <div className={styles.secaoHeader}>
-              <h2 className={styles.secaoTitulo}>Próximos eventos</h2>
-              <button className={styles.verTodos} onClick={() => router.push('/eventos')}>
-                Ver todos <ArrowRight size={14} aria-hidden="true" />
-              </button>
-            </div>
-            <Transicao key={isLoading ? 'load' : isError ? 'erro' : eventos.length ? 'cheio' : 'vazio'} modo="fade">
-              {isLoading ? (
-                <SkeletonLista />
-              ) : isError ? (
-                <EstadoErro
-                  titulo="Não foi possível carregar"
-                  mensagem="Tente novamente."
-                  aoTentarNovamente={() => refetch()}
-                />
-              ) : eventos.length === 0 ? (
-                <EstadoVazio
-                  icone={Calendar}
-                  titulo="Nenhum evento próximo"
-                  mensagem="Quando a igreja marcar algo, aparece aqui."
-                  acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
-                />
-              ) : (
-                <CarrosselSuave ref={carrosselEventosRef} className={styles.trilhaEventos}>
-                  {eventos.map((e: EventoResumo) => {
-                    const d = dataEvento(e.inicio)
-                    const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
-                    return (
-                      <button
-                        key={e.id}
-                        className={`${styles.cardEvento} card-interativo`}
-                        onClick={() => setEventoAberto(e.id)}
-                      >
-                        <div>
-                          <div className={styles.cardEventoTopo}>
-                            <span className={styles.dataChip}>
-                              <span className={styles.dataMes}>{d.mes}</span>
-                              <span className={styles.dataDia}>{d.dia}</span>
-                            </span>
-                            <Calendar size={18} className={styles.iconeEvento} aria-hidden="true" />
-                          </div>
-                          <span className={styles.eventoTitulo}>{e.titulo}</span>
-                          <span className={styles.eventoMeta}>
-                            <Clock size={13} aria-hidden="true" /> {d.hora}
-                            {e.local && (
-                              <>
-                                <MapPin size={13} aria-hidden="true" /> {e.local}
-                              </>
-                            )}
-                          </span>
-                          {ehOutraIgreja && (
-                            <span className={styles.eventoIgreja}>
-                              <Building2 size={13} aria-hidden="true" />
-                              Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
-                            </span>
-                          )}
-                          <SeloInscritoCard eventoId={e.id} />
-                        </div>
-                        <span className={`${styles.eventoAcao} card-cta`}>
-                          Ver detalhes
-                          <ArrowRight size={13} className="card-seta" aria-hidden="true" />
-                        </span>
-                      </button>
-                    )
-                  })}
-                </CarrosselSuave>
-              )}
-            </Transicao>
-          </section>
+          <div className={styles.secaoProximosEventosDesktop}>
+            <BlocoProximosEventos
+              isLoading={isLoading}
+              isError={isError}
+              eventos={eventos}
+              refetch={refetch}
+              onAbrirEvento={setEventoAberto}
+              minhaIgrejaId={minhaIgrejaId}
+            />
+          </div>
 
           <section>
             <div className={styles.secaoHeader}>

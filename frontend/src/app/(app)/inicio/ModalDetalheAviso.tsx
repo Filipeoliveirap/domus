@@ -24,9 +24,10 @@ interface Props {
   aviso: Postagem
   aoFechar: () => void
   onDeletar?: (avisoId: string) => void
+  onEditar?: (avisoId: string) => void
 }
 
-export function ModalDetalheAviso({ aviso, aoFechar, onDeletar }: Props) {
+export function ModalDetalheAviso({ aviso, aoFechar, onDeletar, onEditar }: Props) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
   const { congregacao, concordar } = useRotulos()
   const deletarPost = useDeletarPostagem()
@@ -209,7 +210,15 @@ export function ModalDetalheAviso({ aviso, aoFechar, onDeletar }: Props) {
       </div>
 
       {modalEditarAberto && (
-        <ModalEditarPostagem postagem={aviso} aoFechar={() => setModalEditarAberto(false)} />
+        <ModalEditarPostagem
+          postagem={aviso}
+          aoFechar={() => setModalEditarAberto(false)}
+          onEditarSuccess={(id) => {
+            setModalEditarAberto(false)
+            fechar()
+            onEditar?.(id)
+          }}
+        />
       )}
 
       {confirmarExcluir && (

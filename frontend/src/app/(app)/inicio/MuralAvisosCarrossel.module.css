@@ -222,6 +222,33 @@
   pointer-events: none;
 }
 
+.cardAviso.cardDestacado {
+  animation: cardDestaquePulse 1s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  z-index: 5;
+}
+
+@keyframes cardDestaquePulse {
+  0% {
+    box-shadow: 0 0 0 0px var(--color-primary, #004ac6), 0 4px 12px rgba(19, 27, 46, 0.04);
+    border-color: var(--color-primary, #004ac6);
+  }
+  30% {
+    box-shadow: 0 0 0 3px var(--color-primary, #004ac6), 0 8px 24px -4px rgba(0, 74, 198, 0.35);
+    border-color: var(--color-primary, #004ac6);
+    transform: translateY(-4px) scale(1.02);
+  }
+  70% {
+    box-shadow: 0 0 0 3px var(--color-primary, #004ac6), 0 8px 20px -4px rgba(0, 74, 198, 0.25);
+    border-color: var(--color-primary, #004ac6);
+    transform: translateY(-4px) scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0px transparent, 0 4px 12px rgba(19, 27, 46, 0.04);
+    border-color: var(--border-color, rgba(115, 118, 134, 0.15));
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes cardEntrada {
   0% {
     opacity: 0;

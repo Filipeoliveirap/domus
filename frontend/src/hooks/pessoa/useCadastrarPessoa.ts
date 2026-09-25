@@ -31,6 +31,10 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
   const { ministerio } = useRotulos()
   const ehEdicao = !!pessoaId
 
+  const [modalLimiteAberto, setModalLimiteAberto] = useState(false)
+
+  const [modalLimiteAberto, setModalLimiteAberto] = useState(false)
+
   const form = useAppForm<PessoaFormInput, PessoaFormData>({
     resolver: zodResolver(pessoaSchema),
     defaultValues: {
@@ -123,6 +127,10 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
         const e = error.response?.data
         if (e?.error === 'EMAIL_DUPLICADO') {
           form.setError('email', { type: 'server', message: e.message })
+          return
+        }
+        if (e?.error === 'PLANO_LIMITE_EXCEDIDO' || error.response?.status === 402) {
+          setErroGeral(e?.message ?? 'Limite de pessoas ativas da sua família de igrejas foi atingido. Faça upgrade do plano para continuar cadastrando.')
           return
         }
         setErroGeral(e?.message ?? 'Erro ao salvar pessoa. Tente novamente.')

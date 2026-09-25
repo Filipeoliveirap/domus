@@ -116,6 +116,10 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
         boolean getTemMinisterio();
     }
 
+    long countByIgrejaIdAndArquivadoFalse(UUID igrejaId);
+
+    long countByArquivadoFalse();
+
     @Modifying
     @Query(value = "DELETE FROM pessoa WHERE igreja_id = :igrejaId", nativeQuery = true)
     void deleteAllByIgrejaId(@Param("igrejaId") UUID igrejaId);

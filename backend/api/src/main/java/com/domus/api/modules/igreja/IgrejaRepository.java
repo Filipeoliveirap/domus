@@ -1,6 +1,8 @@
 package com.domus.api.modules.igreja;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,6 +17,12 @@ import java.util.UUID;
 @Repository
 public interface IgrejaRepository extends JpaRepository<Igreja, UUID> {
     boolean existsByCnpj(String cnpj);
+
+    Page<Igreja> findByNomeContainingIgnoreCaseOrCnpjContaining(String nome, String cnpj, org.springframework.data.domain.Pageable pageable);
+
+    long countByStatusTenant(StatusTenant statusTenant);
+
+    long countByStatusAssinatura(StatusAssinatura statusAssinatura);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Igreja i WHERE i.id = :id")

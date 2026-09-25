@@ -66,7 +66,7 @@ public class SecurityConfig {
                                 "/igrejas/registrar-congregacao",
                                 "/cobrancas/id/**", "/cobrancas/*/pagar", "/cobrancas/*/status",
                                 "/cobrancas/*/pix", "/cobrancas/*/reiniciar", "/cobrancas/*/cancelar-inscricao",
-                                "/cobrancas/*"))
+                                "/cobrancas/*", "/api/admin/auth/login"))
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
@@ -81,8 +81,10 @@ public class SecurityConfig {
                                 "/auth/refresh",
                                 "/auth/logout",
                                 "/auth/forgot-password",
-                                "/auth/reset-password"
+                                "/auth/reset-password",
+                                "/api/admin/auth/login"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_DOMUS_ADMIN")
                         .requestMatchers("/convites/**").permitAll()
                         .requestMatchers("/pagamentos/mercadopago/webhook").permitAll()
                         // Retry de "Estorno pendente" (2026-08-27) é ação de gestão, não do

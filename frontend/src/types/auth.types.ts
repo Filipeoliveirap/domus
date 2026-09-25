@@ -37,6 +37,8 @@ export interface Sessao {
     termosAceitosEm: string | null;
     /** Rótulos customizados pela igreja (Ministério/Congregação/Célula). null = padrão. */
     rotulos: RotulosCustomizados | null;
+    igrejaMaeId?: string | null;
+    statusAssinatura?: 'TRIAL' | 'ATIVA' | 'PAUSADA' | 'CANCELADA' | null;
 }
 
 export interface ForgotPasswordRequest {

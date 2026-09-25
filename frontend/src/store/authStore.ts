@@ -25,6 +25,8 @@ interface AuthState {
   precisaAceitarTermos: boolean
   termosAceitosEm: string | null
   rotulos: RotulosCustomizados | null
+  igrejaMaeId: string | null
+  statusAssinatura: 'TRIAL' | 'ATIVA' | 'PAUSADA' | 'CANCELADA' | null
   login: (data: Sessao) => void
   logout: () => void
   atualizarUsuarioLogado: (data: Partial<Pick<AuthState, 'nome' | 'role' | 'fotoId' | 'cargo' | 'igrejaSigla' | 'igrejaLogoId' | 'rotulos'>>) => void
@@ -51,6 +53,8 @@ const estadoDeslogado = {
   precisaAceitarTermos: false,
   termosAceitosEm: null,
   rotulos: null,
+  igrejaMaeId: null,
+  statusAssinatura: null,
 } as const
 
 export const useAuthStore = create<AuthState>()((set) => ({

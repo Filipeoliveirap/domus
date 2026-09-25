@@ -33,7 +33,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
         new com.domus.api.modules.igreja.DTO.RotulosDTO(
             u.igreja.ministerioNomeSingular, u.igreja.ministerioNomePlural, u.igreja.ministerioGenero,
             u.igreja.congregacaoNomeSingular, u.igreja.congregacaoNomePlural, u.igreja.congregacaoGenero,
-            u.igreja.celulaNomeSingular, u.igreja.celulaNomePlural, u.igreja.celulaGenero))
+            u.igreja.celulaNomeSingular, u.igreja.celulaNomePlural, u.igreja.celulaGenero),
+        u.igreja.igrejaMae.id, u.igreja.statusAssinatura)
     FROM Usuario u
     WHERE u.id = :id
     """)

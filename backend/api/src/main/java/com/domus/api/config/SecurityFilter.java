@@ -60,12 +60,26 @@ public class SecurityFilter extends OncePerRequestFilter {
                     Usuario usuario = cache == null ? null : principalCacheService.reidratar(cache);
                     if (usuario != null && usuario.isEnabled()) {
                         // Verifica se o tenant está suspenso
-                        if (usuario.getIgreja() != null && usuario.getIgreja().getStatusTenant() == StatusTenant.SUSPENSO) {
-                            log.warn("Bloqueando requisição de tenant suspenso. igreja_id={}", usuario.getIgreja().getId());
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json;charset=UTF-8");
-                            objectMapper.writeValue(response.getWriter(), ErrorResponse.of(403, "TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte"));
-                            return;
+                        if (usuario.getIgreja() != null) {
+                            var igrejaEfetiva = (usuario.getIgreja().getIgrejaMae() != null) ? usuario.getIgreja().getIgrejaMae() : usuario.getIgreja();
+                            if (igrejaEfetiva.getStatusTenant() == StatusTenant.SUSPENSO) {
+                                log.warn("Bloqueando requisição de tenant suspenso. igreja_id={}", usuario.getIgreja().getId());
+                                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                response.setContentType("application/json;charset=UTF-8");
+                                objectMapper.writeValue(response.getWriter(), ErrorResponse.of(403, "TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte"));
+                                return;
+                            }
+
+                            // Trava de Leitura Apenas (Dunning / Status PAUSADA) para requisições de escrita (POST, PUT, PATCH, DELETE)
+                            String method = request.getMethod();
+                            if (igrejaEfetiva.getStatusAssinatura() == com.domus.api.modules.igreja.StatusAssinatura.PAUSADA
+                                    && ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method))) {
+                                log.warn("Bloqueando requisição de escrita em conta pausada por dunning. igreja_id={}", usuario.getIgreja().getId());
+                                response.setStatus(402); // Payment Required
+                                response.setContentType("application/json;charset=UTF-8");
+                                objectMapper.writeValue(response.getWriter(), ErrorResponse.of(402, "ASSINATURA_PAUSADA_LEITURA_APENAS", "Sua assinatura está temporariamente pausada por pendência no pagamento. Atualize o cartão para liberar alterações no sistema."));
+                                return;
+                            }
                         }
 
                         var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());

@@ -197,6 +197,9 @@ public class VinculoService {
         filha.setIgrejaMae(null);
         filha.setVinculadoEm(null);
         filha.setVinculadoPor(null);
+        filha.setPlano(com.domus.api.modules.igreja.PlanoAssinatura.BASICO);
+        filha.setStatusAssinatura(com.domus.api.modules.igreja.StatusAssinatura.TRIAL);
+        filha.setTrialExpiraEm(java.time.LocalDateTime.now().plusDays(14));
     }
 
     /** Endereço é opcional, então cidade/uf podem vir nulos — a tela trata. */

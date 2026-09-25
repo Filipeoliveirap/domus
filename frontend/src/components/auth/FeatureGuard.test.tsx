@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import FeatureGuard from './FeatureGuard';
 
@@ -18,6 +19,8 @@ describe('FeatureGuard', () => {
             </FeatureGuard>
         );
         expect(screen.getByText('Conteudo Privado')).toBeInTheDocument();
+    });
+
     it('deve renderizar fallback quando a feature nao for permitida e fallback for fornecido', () => {
         render(
             <FeatureGuard feature="FEED_SOCIAL" featuresHabilitadas={[]} fallback={<div>Upgrade Necessario</div>}>

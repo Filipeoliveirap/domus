@@ -63,6 +63,7 @@ public class SecurityConfig {
                         // normal, como qualquer outra rota autenticada. O resto de /cobrancas/**
                         // continua sem CSRF por não ter sessão (prova de posse pelo UUID do id).
                         .ignoringRequestMatchers("/convites/**", "/pagamentos/mercadopago/webhook",
+                                "/igrejas/registrar-congregacao",
                                 "/cobrancas/id/**", "/cobrancas/*/pagar", "/cobrancas/*/status",
                                 "/cobrancas/*/pix", "/cobrancas/*/reiniciar", "/cobrancas/*/cancelar-inscricao",
                                 "/cobrancas/*"))
@@ -72,6 +73,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/igrejas/registrar",
+                                "/igrejas/registrar-congregacao",
                                 "/auth/login",
                                 "/auth/google/login",
                                 "/auth/google/registrar",

@@ -8,6 +8,27 @@ export interface PlanoServidor {
     descricoesFeaturesHabilitadas: string[];
 }
 
+export interface CadastroCongregacaoPayload {
+    codigoConvite: string;
+    nome: string;
+    nomeAdmin: string;
+    emailAdmin: string;
+    senha: string;
+}
+
+export async function registrarCongregacaoFilha(payload: CadastroCongregacaoPayload): Promise<any> {
+    const response = await fetch('/api/igrejas/registrar-congregacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Falha ao cadastrar congregação');
+    }
+    return response.json();
+}
+
 export async function buscarPlanosServidor(): Promise<PlanoServidor[]> {
     try {
         const response = await fetch('/api/planos');

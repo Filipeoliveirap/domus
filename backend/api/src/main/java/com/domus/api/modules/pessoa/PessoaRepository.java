@@ -61,6 +61,7 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
     java.util.List<Pessoa> findByIgrejaIdAndTelefoneIsNotNull(UUID igrejaId);
 
     long countByIgrejaId(UUID igrejaId);
+    long countByIgrejaIdAndDeletedAtIsNull(UUID igrejaId);
 
     long countByIgrejaIdAndCreatedAtAfter(UUID igrejaId, java.time.LocalDateTime desde);
 

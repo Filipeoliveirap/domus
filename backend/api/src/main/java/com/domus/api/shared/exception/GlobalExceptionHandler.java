@@ -111,6 +111,15 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.ofElegibilidade(ex.getCodigo(), ex.getMessage(), detalhes));
     }
 
+    @ExceptionHandler(com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException.class)
+    public ResponseEntity<ErrorResponse> handlePlanoLimiteExcedido(
+            com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException ex, HttpServletRequest request) {
+        log.warn("Limite do plano excedido. path={}", request.getRequestURI());
+        return ResponseEntity
+                .status(402)
+                .body(ErrorResponse.of(402, "LIMITE_PLANO_EXCEDIDO", ex.getMessage()));
+    }
+
     @ExceptionHandler(SessaoExpiradaException.class)
     public ResponseEntity<ErrorResponse> handleSessaoExpirada(SessaoExpiradaException ex, HttpServletRequest request) {
         log.warn("Sessão expirada ou inválida. path={}, codigo={}", request.getRequestURI(), ex.getCodigo());

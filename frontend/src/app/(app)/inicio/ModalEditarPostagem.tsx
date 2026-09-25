@@ -31,9 +31,10 @@ const OPCOES_TIPO_AVISO = [
 interface Props {
   postagem: Postagem
   aoFechar: () => void
+  onEditarSuccess?: (id: string) => void
 }
 
-export function ModalEditarPostagem({ postagem, aoFechar }: Props) {
+export function ModalEditarPostagem({ postagem, aoFechar, onEditarSuccess }: Props) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
   const { data: vinculoStatus } = useVinculoStatus()
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
@@ -78,6 +79,7 @@ export function ModalEditarPostagem({ postagem, aoFechar }: Props) {
       },
       {
         onSuccess: () => {
+          onEditarSuccess?.(postagem.id)
           fechar()
         },
         onError: () => {

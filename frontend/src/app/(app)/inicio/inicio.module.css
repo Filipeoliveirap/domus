@@ -594,17 +594,35 @@ button.avatar:active { transform: scale(0.92); }
   }
 }
 
+/* ---- Visibilidade da Seção de Eventos ---- */
+.secaoProximosEventosMobile {
+  display: none;
+}
+
+.secaoProximosEventosDesktop {
+  display: block;
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 1023px) {
+  .secaoProximosEventosMobile {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .secaoProximosEventosDesktop {
+    display: none;
+  }
   .colunas {
     flex-direction: column;
     gap: 24px;
   }
-  .colunaPrincipal,
-  .colunaLateral {
+  .colunaPrincipal {
     width: 100%;
     max-width: 100%;
+  }
+  .colunaLateral {
+    display: none;
   }
 }
 

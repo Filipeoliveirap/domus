@@ -7,6 +7,8 @@ import com.domus.api.modules.foto.Foto;
 import com.domus.api.modules.foto.FotoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.PlanoAssinatura;
+import com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException;
 import com.domus.api.modules.outbox.OutboxRegistrador;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaResponse;
@@ -85,6 +87,21 @@ class PessoaServiceTest {
     private PessoaRequestDTO dto(Vinculo vinculo, LocalDate dataBatismo, UUID fotoId) {
         return new PessoaRequestDTO("Maria", null, null, null, null,
                 vinculo, null, null, null, null, dataBatismo, fotoId);
+    }
+
+    @Test
+    void deveRecusarCadastroPessoaQuandoAtingirLimiteDoPlano() {
+        Igreja igreja = new Igreja();
+        igreja.setId(igrejaId);
+        igreja.setPlano(PlanoAssinatura.BASICO);
+
+        when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
+        when(pessoaRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId)).thenReturn(60L);
+
+        assertThatThrownBy(() -> service.cadastrarMembro(dto(Vinculo.MEMBRO, null), igrejaId))
+                .isInstanceOf(PlanoLimiteExcedidoException.class)
+                .hasMessageContaining("limite de 60 pessoas");
+        verify(pessoaRepository, never()).save(any());
     }
 
     @Test

@@ -118,6 +118,12 @@ export function useLogin() {
                     setErroGeral(e.message)
                     return
                 }
+                if (e?.error === 'ASSINATURA_CANCELADA') {
+                    if (e?.message?.includes('assinatura da sua igreja foi cancelada')) {
+                        router.push('/assinatura-cancelada')
+                        return
+                    }
+                }
                 if (e?.error === 'RATE_LIMIT_EXCEDIDO') {
                     setErroGeral(mensagemRateLimit(error))
                     return

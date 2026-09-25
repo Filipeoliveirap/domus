@@ -57,6 +57,35 @@ public class GoogleAuthService {
                     "Sua conta está desativada. Entre em contato com o administrador.");
         }
 
+        if (usuario.getIgreja() != null) {
+            var igreja = usuario.getIgreja();
+            var igrejaEfetiva = (igreja.getIgrejaMae() != null) ? igreja.getIgrejaMae() : igreja;
+            boolean ehAdmin = usuario.getRole() != null && "ADMIN_IGREJA".equals(usuario.getRole().getNome());
+            boolean ehFilha = igreja.getIgrejaMae() != null;
+
+            if (igrejaEfetiva.getStatusTenant() == com.domus.api.modules.igreja.StatusTenant.SUSPENSO) {
+                log.warn("Tentativa de login Google em tenant suspenso. igreja_id={}, ehAdmin={}, ehFilha={}", igreja.getId(), ehAdmin, ehFilha);
+                if (ehAdmin && !ehFilha) {
+                    throw new BusinessException("TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte do Domus.");
+                } else if (ehAdmin && ehFilha) {
+                    throw new BusinessException("TENANT_SUSPENSO", "A conta da família de igrejas foi suspensa. Entre em contato com a igreja contratante do plano.");
+                } else {
+                    throw new BusinessException("TENANT_SUSPENSO", String.format("A conta da igreja %s foi suspensa.", igreja.getNome()));
+                }
+            }
+
+            if (igrejaEfetiva.getStatusAssinatura() == com.domus.api.modules.igreja.StatusAssinatura.CANCELADA) {
+                log.warn("Tentativa de login Google em assinatura cancelada. igreja_id={}, ehAdmin={}, ehFilha={}", igreja.getId(), ehAdmin, ehFilha);
+                if (ehAdmin && !ehFilha) {
+                    throw new BusinessException("ASSINATURA_CANCELADA", "A assinatura da sua igreja foi cancelada.");
+                } else if (ehAdmin && ehFilha) {
+                    throw new BusinessException("ASSINATURA_CANCELADA", "A conta da família de igrejas foi cancelada. Entre em contato com a igreja contratante do plano.");
+                } else {
+                    throw new BusinessException("ASSINATURA_CANCELADA", String.format("A conta da igreja %s foi cancelada.", igreja.getNome()));
+                }
+            }
+        }
+
         usuario.registrarLogin();
         usuarioRepository.save(usuario);
 

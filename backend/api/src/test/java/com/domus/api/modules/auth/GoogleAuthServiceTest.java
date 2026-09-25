@@ -90,6 +90,7 @@ class GoogleAuthServiceTest {
     void login_achaPorGoogleSub_emiteSessao() throws Exception {
         when(verifier.verify("t")).thenReturn(tokenComPayload("sub1", "a@a.com", true, "A"));
         Usuario u = usuarioFake();
+        u.getIgreja().setStatusTenant(com.domus.api.modules.igreja.StatusTenant.ATIVO);
         u.setGoogleSub("sub1");
         when(usuarioRepository.findByGoogleSub("sub1")).thenReturn(Optional.of(u));
         when(tokenService.generateToken(u)).thenReturn("jwt");
@@ -100,6 +101,19 @@ class GoogleAuthServiceTest {
         assertThat(resp.token()).isEqualTo("jwt");
         assertThat(resp.refreshToken()).isEqualTo("refresh");
         verify(usuarioRepository, never()).findByEmail(any());
+    }
+
+    @Test
+    void login_googleTenantSuspenso_lancaExcecao() throws Exception {
+        when(verifier.verify("t")).thenReturn(tokenComPayload("sub1", "a@a.com", true, "A"));
+        Usuario u = usuarioFake();
+        u.getIgreja().setStatusTenant(com.domus.api.modules.igreja.StatusTenant.SUSPENSO);
+        u.setGoogleSub("sub1");
+        when(usuarioRepository.findByGoogleSub("sub1")).thenReturn(Optional.of(u));
+
+        assertThatThrownBy(() -> service.login("t"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("suspensa");
     }
 
     @Test

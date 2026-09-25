@@ -315,6 +315,7 @@ atrito de troca, provável motivo de perder venda pra concorrente que já tem is
   ordem/nome que o Domus usa).
 - Validação linha a linha (mesma validação do cadastro manual — `@Valid` já existe nos DTOs,
   reusa) com relatório do que deu certo/errado, não tudo-ou-nada.
+- **Validação de cota do plano prévia**: antes de gravar o lote (`saveAll`), calcular se o total de linhas válidas somado às pessoas ativas da família de igrejas ultrapassa o `limitePessoas` do plano da matriz. Se estourar, aborta o lote antes da persistência e exibe aviso amigável: *"Importação cancelada: Este arquivo contém X pessoas, mas sua família de igrejas possui capacidade para apenas mais Y."*
 - E-mail duplicado (`pessoa.email` é único) precisa de uma decisão de UX: pula a linha, ou
   deixa a pessoa escolher se sobrescreve?
 - Fora de escopo desta entrega: importação de outros módulos (eventos, financeiro histórico)

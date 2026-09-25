@@ -12,6 +12,8 @@ import { useCurtirComentario } from '@/hooks/postagem/useCurtirComentario'
 import { useDeletarComentario } from '@/hooks/postagem/useDeletarComentario'
 import { ModalEditarComentario } from './ModalEditarComentario'
 import { ModalConfirmacaoExclusao } from '@/components/common/ModalConfirmacaoExclusao/ModalConfirmacaoExclusao'
+import { ModalPerfilResumo, type PerfilResumoDados, type PosicaoTarget } from '@/components/common/ModalPerfilResumo/ModalPerfilResumo'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
 import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
@@ -50,7 +52,34 @@ export function ModalComentariosMobile({ postagem, aoFechar }: Props) {
   const [confirmarExcluirId, setConfirmarExcluirId] = useState<string | null>(null)
   const [saindoComentarioId, setSaindoComentarioId] = useState<string | null>(null)
   const [respostaParaComentario, setRespostaParaComentario] = useState<{ id: string; autorNome: string } | null>(null)
+  const [perfilResumo, setPerfilResumo] = useState<PerfilResumoDados | null>(null)
+  const [posicaoTarget, setPosicaoTarget] = useState<PosicaoTarget | null>(null)
+  const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const abrirPerfilComentario = (
+    e: React.MouseEvent,
+    autor: { id?: string; nome: string; fotoId?: string | null; cargo?: string | null },
+    igrejaAutor?: { id?: string; nome: string; sigla?: string | null } | null,
+  ) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosicaoTarget({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+    })
+    setPerfilResumo({
+      id: autor.id,
+      nome: autor.nome,
+      fotoId: autor.fotoId,
+      cargo: autor.cargo,
+      igreja: igrejaAutor,
+    })
+  }
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -177,7 +206,13 @@ export function ModalComentariosMobile({ postagem, aoFechar }: Props) {
                       background: nivel > 0 ? 'rgba(250, 248, 255, 0.75)' : undefined,
                     }}
                   >
-                    <div className={postItemStyles.avatarComentario}>
+                    <div
+                      className={`${postItemStyles.avatarComentario} ${postItemStyles.avatarClicavel}`}
+                      onClick={(e) => abrirPerfilComentario(e, c.autor, c.igrejaAutor)}
+                      role="button"
+                      tabIndex={0}
+                      style={{ cursor: 'pointer' }}
+                    >
                       {urlAvatarComentario ? (
                         <Image src={urlAvatarComentario} alt="" width={24} height={24} unoptimized style={{ borderRadius: '50%' }} />
                       ) : (
@@ -187,7 +222,13 @@ export function ModalComentariosMobile({ postagem, aoFechar }: Props) {
 
                     <div className={postItemStyles.corpoComentario}>
                       <div className={postItemStyles.cabecalhoComentario}>
-                        <span className={postItemStyles.autorComentario}>
+                        <span
+                          className={postItemStyles.autorComentario}
+                          onClick={(e) => abrirPerfilComentario(e, c.autor, c.igrejaAutor)}
+                          role="button"
+                          tabIndex={0}
+                          style={{ cursor: 'pointer' }}
+                        >
                           {doisPrimeirosNomes(c.autor.nome)}
                           {ehOutraIgrejaComentario && (
                             <span className={postItemStyles.badgeIgrejaComentario} title={c.igrejaAutor?.nome}>
@@ -326,6 +367,25 @@ export function ModalComentariosMobile({ postagem, aoFechar }: Props) {
           carregando={deletarComentario.isPending}
           onConfirmar={() => handleExecutarExclusao(confirmarExcluirId)}
           onClose={() => setConfirmarExcluirId(null)}
+        />
+      )}
+
+      {perfilResumo && (
+        <ModalPerfilResumo
+          dados={perfilResumo}
+          posicaoTarget={posicaoTarget}
+          aoFechar={() => {
+            setPerfilResumo(null)
+            setPosicaoTarget(null)
+          }}
+          onVerDetalhesCompletos={(id) => setPessoaDetalheId(id)}
+        />
+      )}
+
+      {pessoaDetalheId && (
+        <DrawerDetalhePessoa
+          pessoaId={pessoaDetalheId}
+          onClose={() => setPessoaDetalheId(null)}
         />
       )}
     </>

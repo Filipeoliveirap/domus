@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -37,6 +38,7 @@ class PostagemControllerTest implements PostgresTestContainerSupport {
     @Autowired PessoaRepository pessoaRepository;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired RoleRepository roleRepository;
+    @Autowired PostagemRepository postagemRepository;
     @Autowired EntityManager entityManager;
 
     AutenticacaoTestSupport auth;
@@ -80,5 +82,41 @@ class PostagemControllerTest implements PostgresTestContainerSupport {
         Usuario comum = usuarioComRole("ACESSO_COMUM");
         mockMvc.perform(auth.autenticado(get("/postagens/feed"), comum))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void listarFeed_naoDeveIncluirAvisosOficiais() throws Exception {
+        Usuario admin = usuarioComRole("ADMIN_IGREJA");
+
+        postagemRepository.save(Postagem.builder()
+                .igreja(igreja)
+                .autorPessoa(admin.getPessoa())
+                .tipo(TipoPostagem.MURAL_AVISO)
+                .oficial(true)
+                .titulo("Aviso Oficial")
+                .conteudo("Conteudo do aviso no mural")
+                .build());
+
+        postagemRepository.save(Postagem.builder()
+                .igreja(igreja)
+                .autorPessoa(admin.getPessoa())
+                .tipo(TipoPostagem.DEVOCIONAL)
+                .oficial(false)
+                .conteudo("Postagem de devocional no feed")
+                .build());
+
+        entityManager.flush();
+
+        mockMvc.perform(auth.autenticado(get("/postagens/feed"), admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].oficial").value(false))
+                .andExpect(jsonPath("$.content[0].conteudo").value("Postagem de devocional no feed"));
+
+        mockMvc.perform(auth.autenticado(get("/postagens/mural"), admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].oficial").value(true))
+                .andExpect(jsonPath("$[0].titulo").value("Aviso Oficial"));
     }
 }

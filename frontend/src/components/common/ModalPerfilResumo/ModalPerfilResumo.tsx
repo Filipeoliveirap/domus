@@ -67,8 +67,10 @@ export function ModalPerfilResumo({ dados, posicaoTarget, aoFechar, onVerDetalhe
   const urlAvatar = urlFoto(fotoIdParaUsar, 'DISPLAY')
   const nomeCompleto = pessoaInfo?.nome ?? dados.nome
   const cargoTexto = dados.cargo ?? pessoaInfo?.vinculo ?? 'Membro'
-  const nomeIgreja = dados.igreja?.nome ?? (pessoaInfo?.igrejaId ? 'Congregação Local' : null)
+  const nomeIgreja = dados.igreja?.nome ?? 'Congregação Local'
   const siglaIgreja = dados.igreja?.sigla
+
+  const bairroPessoa = pessoaInfo?.endereco?.bairro
 
   const estiloPopover = useMemo<React.CSSProperties>(() => {
     if (typeof window === 'undefined' || window.innerWidth < 768 || !posicaoTarget) {
@@ -163,12 +165,12 @@ export function ModalPerfilResumo({ dados, posicaoTarget, aoFechar, onVerDetalhe
               </div>
             )}
 
-            {(pessoaInfo?.bairro || pessoaInfo?.email || pessoaInfo?.telefone) && (
+            {(bairroPessoa || pessoaInfo?.email || pessoaInfo?.telefone) && (
               <div className={styles.detalhesAdicionais}>
-                {pessoaInfo?.bairro && (
+                {bairroPessoa && (
                   <div className={styles.itemDetalhe}>
                     <MapPin size={13} aria-hidden="true" />
-                    <span>{pessoaInfo.bairro}</span>
+                    <span>{bairroPessoa}</span>
                   </div>
                 )}
                 {pessoaInfo?.email && (

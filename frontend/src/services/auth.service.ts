@@ -16,7 +16,7 @@ function garantirCsrfCookie(): Promise<void> {
         return Promise.resolve();
     }
     if (!primingCsrf) {
-        primingCsrf = api.get(Endpoints.auth.ME).catch(() => undefined).then(() => undefined);
+        primingCsrf = api.get(Endpoints.auth.ME, { skipAuthRedirect: true }).catch(() => undefined).then(() => undefined);
     }
     return primingCsrf;
 }

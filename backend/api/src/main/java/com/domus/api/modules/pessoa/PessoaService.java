@@ -4,6 +4,7 @@ import com.domus.api.config.redis.CacheEvictor;
 import com.domus.api.modules.financeiro.movimentacao.busca.ReindexacaoMovimentacaoService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException;
 import com.domus.api.modules.pessoa.DTO.EnderecoDTO;
 import com.domus.api.modules.pessoa.DTO.PessoaArquivadaResponse;
 import com.domus.api.modules.pessoa.DTO.PessoaRequestDTO;
@@ -93,6 +94,16 @@ public class PessoaService {
 
         Igreja igreja = igrejaRepository.findById(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+
+        if (igreja.getPlano() != null) {
+            long totalAtivas = membroRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId);
+            if (totalAtivas >= igreja.getPlano().getLimitePessoas()) {
+                throw new PlanoLimiteExcedidoException(
+                        String.format("Sua igreja atingiu o limite de %d pessoas do plano %s.",
+                                igreja.getPlano().getLimitePessoas(), igreja.getPlano().getNomeExibicao())
+                );
+            }
+        }
 
         Foto foto = fotoService.buscarParaVincular(data.fotoId(), igrejaId);
 

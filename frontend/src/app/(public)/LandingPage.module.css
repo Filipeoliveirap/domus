@@ -1,0 +1,438 @@
+/* LandingPage.module.css — Domus SaaS Public Landing Page */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar, 20);
+  background-color: var(--color-bg-glass, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
+  transition: var(--transition-fast, 150ms ease);
+}
+
+.navContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-extrabold, 800);
+  color: var(--color-primary, #2563EB);
+  letter-spacing: -0.04em;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.navLink {
+  color: var(--color-text-muted, #64748B);
+  font-size: var(--font-size-base, 14px);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.navLink:hover {
+  color: var(--color-primary);
+}
+
+.btnAcessar {
+  background-color: var(--color-primary-light, #EFF6FF);
+  color: var(--color-primary-dark, #004AC6);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-base, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btnAcessar:hover {
+  background-color: #DBEAFE;
+}
+
+.btnAcessar:active {
+  transform: scale(0.96);
+}
+
+/* ─── Hero Section ────────────────────────────────────────── */
+
+.heroSection {
+  position: relative;
+  padding: 5rem 2rem;
+  background-color: var(--color-bg-page, #F8FAFC);
+  background-image: radial-gradient(#DAE2FD 1.5px, transparent 1.5px);
+  background-size: 32px 32px;
+  overflow: hidden;
+}
+
+.heroContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .heroContainer {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-xs, 10px);
+  font-weight: var(--font-weight-bold, 700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+
+.heroTitle {
+  font-size: 3.25rem;
+  font-weight: var(--font-weight-extrabold, 800);
+  line-height: var(--line-height-tight, 1.2);
+  color: var(--color-text-dark, #131B2E);
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.heroTitleItalic {
+  color: var(--color-primary);
+  font-style: italic;
+  font-weight: var(--font-weight-regular, 400);
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-md, 16px);
+  color: var(--color-text-secondary, #434655);
+  line-height: var(--line-height-relaxed, 1.6);
+  margin-bottom: 2rem;
+  max-width: 500px;
+}
+
+.heroCtas {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .heroCtas {
+    flex-direction: column;
+  }
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: #FFFFFF;
+  padding: 0.875rem 2rem;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-btn-primary);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  text-align: center;
+}
+
+.btnPrimary:hover {
+  opacity: 0.95;
+  transform: translateY(-2px);
+}
+
+.btnPrimary:active {
+  transform: scale(0.96);
+}
+
+.btnSecondary {
+  background: transparent;
+  color: var(--color-text-dark);
+  padding: 0.875rem 2rem;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  text-align: center;
+}
+
+.btnSecondary:hover {
+  background-color: var(--color-bg-white);
+  border-color: var(--color-primary);
+}
+
+.btnSecondary:active {
+  transform: scale(0.96);
+}
+
+/* ─── Bento Features Grid ─────────────────────────────────── */
+
+.section {
+  padding: 5rem 2rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.sectionHeader {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 3.5rem auto;
+}
+
+.sectionTitle {
+  font-size: 2.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+  margin-bottom: 0.75rem;
+}
+
+.sectionSubtitle {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .bentoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bentoLarge {
+  grid-column: span 2;
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.bentoLarge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 900px) {
+  .bentoLarge {
+    grid-column: span 1;
+  }
+}
+
+.bentoCard {
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.bentoCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+.cardIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ─── Planos Cards ────────────────────────────────────────── */
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 4rem;
+}
+
+@media (max-width: 1024px) {
+  .plansGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .plansGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.planCard {
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.planCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.planCardPopular {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.2);
+}
+
+.badgePopular {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.planName {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-dark);
+}
+
+.planPrice {
+  font-size: 2.25rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text-dark);
+  margin: 1rem 0 0.5rem 0;
+}
+
+.planPeriod {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.planDesc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+  margin-bottom: 1.5rem;
+}
+
+.planList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.planItem {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkIcon {
+  color: var(--color-success);
+  font-weight: bold;
+}
+
+/* ─── Tabela Comparativa ─────────────────────────────────── */
+
+.tableWrapper {
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th, .table td {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th:first-child, .table td:first-child {
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ─── Footer ─────────────────────────────────────────────── */
+
+.footer {
+  background-color: var(--color-bg-page);
+  border-top: 1px solid var(--color-border);
+  padding: 4rem 2rem 2rem 2rem;
+}
+
+.footerContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.footerCopy {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}

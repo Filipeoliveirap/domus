@@ -47,8 +47,6 @@ public class AuthService {
             throw new ContaBloqueadaException(minutos);
         }
 
-        // Conta só-Google (senha_hash == null): login nativo não se aplica. Barra antes de
-        // deixar o passwordEncoder tropeçar no null, com mensagem que orienta a pessoa.
         usuarioRepository.findByEmail(data.email())
                 .filter(u -> u.getSenhaHash() == null)
                 .ifPresent(u -> {
@@ -63,9 +61,33 @@ public class AuthService {
 
             var usuario = (Usuario) auth.getPrincipal();
 
-            if (usuario.getIgreja() != null && usuario.getIgreja().getStatusTenant() == com.domus.api.modules.igreja.StatusTenant.SUSPENSO) {
-                log.warn("Tentativa de login em tenant suspenso. igreja_id={}", usuario.getIgreja().getId());
-                throw new BusinessException("TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte");
+            if (usuario.getIgreja() != null) {
+                var igreja = usuario.getIgreja();
+                var igrejaEfetiva = (igreja.getIgrejaMae() != null) ? igreja.getIgrejaMae() : igreja;
+                boolean ehAdmin = usuario.getRole() != null && "ADMIN_IGREJA".equals(usuario.getRole().getNome());
+                boolean ehFilha = igreja.getIgrejaMae() != null;
+
+                if (igrejaEfetiva.getStatusTenant() == com.domus.api.modules.igreja.StatusTenant.SUSPENSO) {
+                    log.warn("Tentativa de login em tenant suspenso. igreja_id={}, ehAdmin={}, ehFilha={}", igreja.getId(), ehAdmin, ehFilha);
+                    if (ehAdmin && !ehFilha) {
+                        throw new BusinessException("TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte do Domus.");
+                    } else if (ehAdmin && ehFilha) {
+                        throw new BusinessException("TENANT_SUSPENSO", "A conta da família de igrejas foi suspensa. Entre em contato com a igreja contratante do plano.");
+                    } else {
+                        throw new BusinessException("TENANT_SUSPENSO", String.format("A conta da igreja %s foi suspensa.", igreja.getNome()));
+                    }
+                }
+
+                if (igrejaEfetiva.getStatusAssinatura() == com.domus.api.modules.igreja.StatusAssinatura.CANCELADA) {
+                    log.warn("Tentativa de login em assinatura cancelada. igreja_id={}, ehAdmin={}, ehFilha={}", igreja.getId(), ehAdmin, ehFilha);
+                    if (ehAdmin && !ehFilha) {
+                        throw new BusinessException("ASSINATURA_CANCELADA", "A assinatura da sua igreja foi cancelada.");
+                    } else if (ehAdmin && ehFilha) {
+                        throw new BusinessException("ASSINATURA_CANCELADA", "A conta da família de igrejas foi cancelada. Entre em contato com a igreja contratante do plano.");
+                    } else {
+                        throw new BusinessException("ASSINATURA_CANCELADA", String.format("A conta da igreja %s foi cancelada.", igreja.getNome()));
+                    }
+                }
             }
 
             var token = tokenService.generateToken(usuario);
@@ -73,63 +95,18 @@ public class AuthService {
 
             loginAttemptService.registrarSucesso(data.email());
 
-            usuario.registrarLogin();
-            usuarioRepository.save(usuario);
-            log.info("Login bem-sucedido. email={}, igreja_id={}", usuario.getEmail(), usuario.getIgreja().getId());
+            log.info("Login realizado com sucesso. email={}", data.email());
 
-            return new LoginResponseDTO(
-                    usuario.getId(),
-                    usuario.getNome(),
-                    usuario.getRole().getNome(),
-                    usuario.getIgreja().getId(),
-                    usuario.getIgreja().getNome(),
-                    usuarioRepository.findFotoIdById(usuario.getId()),
-                    usuario.getPessoa().getCargo(),
-                    usuario.getIgreja().getSigla(),
-                    usuario.getIgreja().getLogoFoto() != null
-                            ? usuario.getIgreja().getLogoFoto().getId() : null,
-                    token,
-                    refreshToken,
-                    capacidadeRepository.findByUsuarioId(usuario.getId()).stream()
-                            .map(UsuarioCapacidade::getCapacidade).toList()
-            );
+            return new LoginResponseDTO(new TokenPairDTO(token, refreshToken));
 
-        } catch (BadCredentialsException | InternalAuthenticationServiceException e) {
-            Usuario arquivado = usuarioRepository.findByEmailIncluindoArquivados(data.email())
-                    .filter(u -> u.getDeleteAt() != null)
-                    .filter(u -> passwordEncoder.matches(data.senha(), u.getSenhaHash()))
-                    .orElse(null);
-
-            if (arquivado != null) {
-                throw new BusinessException("CONTA_ARQUIVADA",
-                        "Esta conta foi arquivada. Entre em contato com um administrador.");
-            }
-
+        } catch (BadCredentialsException e) {
             loginAttemptService.registrarFalha(data.email());
-            throw new BusinessException("CREDENCIAIS_INVALIDAS", "E-mail ou senha incorretos.");
+            log.warn("Credenciais inválidas no login. email={}", data.email());
+            throw new BadCredentialsException("E-mail ou senha incorretos.");
+        } catch (DisabledException e) {
+            log.warn("Tentativa de login com usuário desativado. email={}", data.email());
+            throw new DisabledException("Sua conta está desativada. Entre em contato com a administração.");
         }
-    }
-
-    public TokenPairDTO refresh(String refreshToken) {
-        // Rotaciona: valida, detecta reuso (lança SESSAO_REVOGADA) e emite o próximo token.
-        RefreshTokenService.ResultadoRotacao rotacao = refreshTokenService.rotacionar(refreshToken);
-        if (rotacao == null) {
-            log.warn("Tentativa de refresh com token inválido ou expirado.");
-            throw new SessaoExpiradaException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
-        }
-
-        Usuario usuario = usuarioRepository.findById(rotacao.usuarioId())
-                .filter(Usuario::isEnabled)
-                .orElse(null);
-        if (usuario == null) {
-            refreshTokenService.revogar(rotacao.novoToken());
-            log.warn("Refresh de usuário inexistente ou desativado. usuario_id={}", rotacao.usuarioId());
-            throw new SessaoExpiradaException("REFRESH_INVALIDO", "Sessão expirada. Faça login novamente.");
-        }
-
-        String novoAccess = tokenService.generateToken(usuario);
-        log.info("Access token renovado via refresh. usuario_id={}", rotacao.usuarioId());
-        return new TokenPairDTO(novoAccess, rotacao.novoToken());
     }
 
     public void logout(String refreshToken) {
@@ -137,7 +114,6 @@ public class AuthService {
         log.info("Logout efetuado (refresh token revogado).");
     }
 
-    /** Carrega os dados de sessão para {@code GET /auth/me}. */
     public SessaoDTO sessaoDe(UUID usuarioId) {
         SessaoDTO sessao = usuarioRepository.findSessaoById(usuarioId)
                 .orElseThrow(() -> {
@@ -155,7 +131,6 @@ public class AuthService {
                 sessao.rotulos());
     }
 
-    /** Troca a própria senha e revoga as demais sessões, preservando a atual. */
     public void alterarSenha(UUID usuarioId, String refreshTokenAtual, ChangePasswordDTO data) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new SessaoExpiradaException("SESSAO_INVALIDA",

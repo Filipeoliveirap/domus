@@ -88,6 +88,14 @@ public class MercadoPagoClient {
         return api.buscarQrCodePix(accessToken, mpPaymentId);
     }
 
+    public java.util.Map<String, Object> criarAssinaturaPreapproval(String accessToken, java.util.Map<String, Object> body) {
+        return api.criarAssinaturaPreapproval(accessToken, body);
+    }
+
+    public java.util.Map<String, Object> consultarAssinaturaPreapproval(String accessToken, String preapprovalId) {
+        return api.consultarAssinaturaPreapproval(accessToken, preapprovalId);
+    }
+
     private String obterAccessTokenPlano(UUID igrejaId) {
         var conta = contaRepository.findByIgrejaId(igrejaId)
             .orElseThrow(() -> new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",

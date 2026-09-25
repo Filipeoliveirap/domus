@@ -1,28 +1,32 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2, CheckCircle2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { CarrosselSuave, type CarrosselSuaveRef } from '@/components/common/CarrosselSuave/CarrosselSuave'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
+import { ModalPerfilResumo, type PerfilResumoDados, type PosicaoTarget } from '@/components/common/ModalPerfilResumo/ModalPerfilResumo'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
-import { iniciais } from '@/lib/formats/pessoaFormat'
+import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
 import { EstadoErro } from '@/components/common/EstadoErro/EstadoErro'
 import { EstadoVazio } from '@/components/common/EstadoVazio/EstadoVazio'
 import { Transicao } from '@/components/common/Transicao/Transicao'
 import { ModalEventoResumo } from './ModalEventoResumo'
 import { Skeleton } from '@/components/common/Skeleton/Skeleton'
+import { MuralAvisosCarrossel } from './MuralAvisosCarrossel'
+import { FeedComunidade } from './FeedComunidade'
+import { ChipAtalhosMobile } from './ChipAtalhosMobile'
 import type { Aniversariante, EventoResumo } from '@/types/inicio.type'
 import styles from './inicio.module.css'
 
-/** Quantos aniversariantes cabem no card antes de valer a pena abrir o modal. */
 const ANIVERSARIANTES_NO_CARD = 4
 
 function dataEvento(iso: string): { dia: string; mes: string; hora: string } {
@@ -34,7 +38,6 @@ function dataEvento(iso: string): { dia: string; mes: string; hora: string } {
   }
 }
 
-/** Foto quando existe, iniciais quando não — nunca uma silhueta genérica. */
 function Avatar({ nome, fotoId, onVerFoto }: { nome: string; fotoId: string | null; onVerFoto?: () => void }) {
   const url = urlFoto(fotoId, 'THUMB')
   if (url && onVerFoto) {
@@ -60,8 +63,6 @@ function Avatar({ nome, fotoId, onVerFoto }: { nome: string; fotoId: string | nu
   )
 }
 
-/** Selo leve "Você está inscrito" nos cards compactos de evento — mesma checagem do modal
- *  de detalhe, só que sem precisar abri-lo pra saber. */
 function SeloInscritoCard({ eventoId }: { eventoId: string }) {
   const { data: minha } = useMinhaInscricao(eventoId)
   if (!minha?.inscrito) return null
@@ -78,14 +79,16 @@ function ItemAniversariante({
   hoje,
   onVerFoto,
   onAbrirPessoa,
+  onAbrirPerfil,
 }: {
   aniversariante: Aniversariante
   hoje: number
   onVerFoto: (a: Aniversariante) => void
   onAbrirPessoa: (id: string) => void
+  onAbrirPerfil: (e: React.MouseEvent, a: Aniversariante) => void
 }) {
   const ehHoje = a.dia === hoje
-  const primeiroNome = a.nome.trim().split(' ')[0]
+  const primeiroNome = doisPrimeirosNomes(a.nome)
   const linkParabens = ehHoje && a.telefone
     ? `https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Feliz aniversário, ${primeiroNome}! 🎉`)}`
     : null
@@ -93,14 +96,14 @@ function ItemAniversariante({
   return (
     <li
       className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''} ${styles.itemAnivClicavel}`}
-      onClick={() => onAbrirPessoa(a.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPessoa(a.id) }}
+      onClick={(e) => onAbrirPerfil(e, a)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPerfil(a) }}
       role="button"
       tabIndex={0}
     >
       <Avatar nome={a.nome} fotoId={a.fotoId} onVerFoto={a.fotoId ? () => onVerFoto(a) : undefined} />
       <span className={styles.anivInfo}>
-        <span className={styles.anivNome}>{a.nome}</span>
+        <span className={styles.anivNome}>{primeiroNome}</span>
         <span className={styles.anivData}>{ehHoje ? 'Hoje' : `Dia ${a.dia}`}</span>
       </span>
       {linkParabens ? (
@@ -127,15 +130,16 @@ function ModalAniversariantes({
   aoFechar,
   onVerFoto,
   onAbrirPessoa,
+  onAbrirPerfil,
 }: {
   aniversariantes: Aniversariante[]
   hoje: number
   aoFechar: () => void
   onVerFoto: (a: Aniversariante) => void
   onAbrirPessoa: (id: string) => void
+  onAbrirPerfil: (a: Aniversariante) => void
 }) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
-
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.key === 'Escape') fechar()
@@ -145,10 +149,16 @@ function ModalAniversariantes({
   }, [fechar])
 
   useEffect(() => {
-    const anterior = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = anterior }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [])
+
+  const handleAbrirPessoa = (id: string) => {
+    fechar()
+    onAbrirPessoa(id)
+  }
 
   return (
     <div className={clsx(styles.overlay, saindo && styles.saindo)} onMouseDown={fechar}>
@@ -168,8 +178,6 @@ function ModalAniversariantes({
             <X size={18} />
           </button>
         </div>
-
-        {/* A rolagem fica no corpo, não no modal: assim o cabeçalho continua visível. */}
         <div className={styles.modalCorpo}>
           <ul className={styles.listaAniv}>
             {aniversariantes.map((a) => (
@@ -178,7 +186,8 @@ function ModalAniversariantes({
                 aniversariante={a}
                 hoje={hoje}
                 onVerFoto={onVerFoto}
-                onAbrirPessoa={onAbrirPessoa}
+                onAbrirPessoa={handleAbrirPessoa}
+                onAbrirPerfil={onAbrirPerfil}
               />
             ))}
           </ul>
@@ -188,32 +197,45 @@ function ModalAniversariantes({
   )
 }
 
+function SkeletonLista() {
+  return (
+    <div className={styles.trilhaEventos}>
+      <Skeleton style={{ height: 140, borderRadius: 16 }} />
+      <Skeleton style={{ height: 140, borderRadius: 16 }} />
+    </div>
+  )
+}
+
 export default function InicioPage() {
   const router = useRouter()
+  const carrosselEventosRef = useRef<CarrosselSuaveRef>(null)
   const nome = useAuthStore((s) => s.nome)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
-  const primeiroNome = nome?.trim().split(/\s+/)[0] ?? ''
+  const primeiroNome = doisPrimeirosNomes(nome ?? '')
   const versiculo = versiculoDoDia()
   const { data, isLoading, isError, refetch } = useInicio()
   const [modalAberto, setModalAberto] = useState(false)
-  // Detalhe do evento abre AQUI mesmo, sem sair do início.
   const [eventoAberto, setEventoAberto] = useState<string | null>(null)
-  // Interação com os cards de aniversariante: ver a foto grande e abrir o detalhe da pessoa
-  // — em camadas por cima da lista/modal, sem sair do início.
   const [fotoAniv, setFotoAniv] = useState<Aniversariante | null>(null)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
+  const [perfilResumo, setPerfilResumo] = useState<PerfilResumoDados | null>(null)
+  const [posicaoTarget, setPosicaoTarget] = useState<PosicaoTarget | null>(null)
 
+  const handleAbrirPerfil = (e: React.MouseEvent, a: Aniversariante) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosicaoTarget({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+    })
+    setPerfilResumo({ id: a.id, nome: a.nome, fotoId: a.fotoId })
+  }
   const hoje = new Date().getDate()
   const eventos = data?.proximosEventos ?? []
 
-  /*
-   * O backend devolve por dia do mês (1, 2, 3...). Aqui reordenamos para o que interessa
-   * a quem abre a tela: HOJE primeiro, depois quem ainda vem, e só então quem já passou.
-   *
-   * A terceira faixa importa por causa do card, que mostra apenas os 4 primeiros: sem ela,
-   * um aniversariante de hoje viria seguido dos dias 1, 2 e 3 — três datas já passadas —
-   * escondendo no modal justamente as pessoas que ainda dá tempo de parabenizar.
-   */
   const aniversariantes = useMemo(() => {
     const faixa = (dia: number) => (dia === hoje ? 0 : dia > hoje ? 1 : 2)
     return [...(data?.aniversariantesMes ?? [])].sort(
@@ -236,8 +258,23 @@ export default function InicioPage() {
         </div>
       </section>
 
+      {/* Carrossel do Mural Oficial de Avisos */}
+      <MuralAvisosCarrossel />
+
+      {/* Atalhos rápidos para Mobile */}
+      <ChipAtalhosMobile
+        totalAniversariantes={aniversariantes.length}
+        onAbrirAniversariantes={() => setModalAberto(true)}
+      />
+
       <div className={styles.colunas}>
+        {/* Coluna Principal: Feed da Comunidade (Estilo X / Microblog) */}
         <div className={styles.colunaPrincipal}>
+          <FeedComunidade />
+        </div>
+
+        {/* Coluna Lateral: Versículo, Próximos Eventos e Aniversariantes */}
+        <aside className={styles.colunaLateral}>
           <section className={styles.versiculo}>
             <Quote size={96} className={styles.versiculoAspas} aria-hidden="true" />
             <span className={styles.versiculoLabel}>Versículo do dia</span>
@@ -252,84 +289,88 @@ export default function InicioPage() {
                 Ver todos <ArrowRight size={14} aria-hidden="true" />
               </button>
             </div>
-
             <Transicao key={isLoading ? 'load' : isError ? 'erro' : eventos.length ? 'cheio' : 'vazio'} modo="fade">
-            {isLoading ? (
-              <SkeletonLista />
-            ) : isError ? (
-              <EstadoErro
-                titulo="Não foi possível carregar"
-                mensagem="Tente novamente."
-                aoTentarNovamente={() => refetch()}
-              />
-            ) : eventos.length === 0 ? (
-              <EstadoVazio
-                icone={Calendar}
-                titulo="Nenhum evento próximo"
-                mensagem="Quando a igreja marcar algo, aparece aqui."
-                acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
-              />
-            ) : (
-              <div className={styles.trilhaEventos}>
-                {eventos.map((e: EventoResumo) => {
-                  const d = dataEvento(e.inicio)
-                  const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
-                  return (
-                    <button
-                      key={e.id}
-                      className={`${styles.cardEvento} card-interativo`}
-                      onClick={() => setEventoAberto(e.id)}
-                    >
-                      <div>
-                        <div className={styles.cardEventoTopo}>
-                          <span className={styles.dataChip}>
-                            <span className={styles.dataMes}>{d.mes}</span>
-                            <span className={styles.dataDia}>{d.dia}</span>
+              {isLoading ? (
+                <SkeletonLista />
+              ) : isError ? (
+                <EstadoErro
+                  titulo="Não foi possível carregar"
+                  mensagem="Tente novamente."
+                  aoTentarNovamente={() => refetch()}
+                />
+              ) : eventos.length === 0 ? (
+                <EstadoVazio
+                  icone={Calendar}
+                  titulo="Nenhum evento próximo"
+                  mensagem="Quando a igreja marcar algo, aparece aqui."
+                  acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
+                />
+              ) : (
+                <CarrosselSuave ref={carrosselEventosRef} className={styles.trilhaEventos}>
+                  {eventos.map((e: EventoResumo) => {
+                    const d = dataEvento(e.inicio)
+                    const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
+                    return (
+                      <button
+                        key={e.id}
+                        className={`${styles.cardEvento} card-interativo`}
+                        onClick={() => setEventoAberto(e.id)}
+                      >
+                        <div>
+                          <div className={styles.cardEventoTopo}>
+                            <span className={styles.dataChip}>
+                              <span className={styles.dataMes}>{d.mes}</span>
+                              <span className={styles.dataDia}>{d.dia}</span>
+                            </span>
+                            <Calendar size={18} className={styles.iconeEvento} aria-hidden="true" />
+                          </div>
+                          <span className={styles.eventoTitulo}>{e.titulo}</span>
+                          <span className={styles.eventoMeta}>
+                            <Clock size={13} aria-hidden="true" /> {d.hora}
+                            {e.local && (
+                              <>
+                                <MapPin size={13} aria-hidden="true" /> {e.local}
+                              </>
+                            )}
                           </span>
-                          <Calendar size={18} className={styles.iconeEvento} aria-hidden="true" />
-                        </div>
-                        <span className={styles.eventoTitulo}>{e.titulo}</span>
-                        <span className={styles.eventoMeta}>
-                          <Clock size={13} aria-hidden="true" /> {d.hora}
-                          {e.local && (
-                            <>
-                              <MapPin size={13} aria-hidden="true" /> {e.local}
-                            </>
+                          {ehOutraIgreja && (
+                            <span className={styles.eventoIgreja}>
+                              <Building2 size={13} aria-hidden="true" />
+                              Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
+                            </span>
                           )}
+                          <SeloInscritoCard eventoId={e.id} />
+                        </div>
+                        <span className={`${styles.eventoAcao} card-cta`}>
+                          Ver detalhes
+                          <ArrowRight size={13} className="card-seta" aria-hidden="true" />
                         </span>
-                        {ehOutraIgreja && (
-                          <span className={styles.eventoIgreja}>
-                            <Building2 size={13} aria-hidden="true" />
-                            Compartilhado por {e.igrejaOrganizadora.sigla ?? e.igrejaOrganizadora.nome}
-                          </span>
-                        )}
-                        <SeloInscritoCard eventoId={e.id} />
-                      </div>
-                      <span className={`${styles.eventoAcao} card-cta`}>
-                        Ver detalhes
-                        <ArrowRight size={13} className="card-seta" aria-hidden="true" />
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+                      </button>
+                    )
+                  })}
+                </CarrosselSuave>
+              )}
             </Transicao>
           </section>
-        </div>
 
-        <div className={styles.colunaLateral}>
-          <section className={styles.cardLateral}>
-            <div className={styles.cardLateralHeader}>
-              <span className={styles.cardLateralIcone}>
-                <Cake size={16} aria-hidden="true" />
-              </span>
-              <h2 className={styles.cardLateralTitulo}>Aniversariantes do mês</h2>
+          <section>
+            <div className={styles.secaoHeader}>
+              <div className={styles.tituloComIcone}>
+                <Cake size={18} className={styles.iconeSecao} aria-hidden="true" />
+                <h2 className={styles.secaoTitulo}>Aniversariantes do mês</h2>
+              </div>
+              {aniversariantes.length > ANIVERSARIANTES_NO_CARD && (
+                <button
+                  type="button"
+                  className={styles.verTodos}
+                  onClick={() => setModalAberto(true)}
+                >
+                  Ver todos ({aniversariantes.length})
+                </button>
+              )}
             </div>
-
-            <Transicao key={isLoading ? 'load' : isError ? 'erro' : aniversariantes.length ? 'cheio' : 'vazio'} modo="fade">
             {isLoading ? (
-              <SkeletonLista />
+              <Skeleton style={{ height: 120, borderRadius: 16 }} />
             ) : isError ? (
               <EstadoErro
                 titulo="Não foi possível carregar"
@@ -337,13 +378,13 @@ export default function InicioPage() {
                 aoTentarNovamente={() => refetch()}
               />
             ) : aniversariantes.length === 0 ? (
-              <EstadoVazio
-                icone={Cake}
-                titulo="Ninguém faz aniversário este mês"
-                mensagem="Os aniversariantes do mês aparecem aqui."
-              />
+              <div className={`${styles.cardAnivVazio} card-painel`}>
+                <p className={styles.anivVazioTexto}>
+                  Nenhum aniversariante cadastrado neste mês.
+                </p>
+              </div>
             ) : (
-              <>
+              <div className={`${styles.cardAniv} card-painel`}>
                 <ul className={styles.listaAniv}>
                   {aniversariantes.slice(0, ANIVERSARIANTES_NO_CARD).map((a) => (
                     <ItemAniversariante
@@ -352,26 +393,15 @@ export default function InicioPage() {
                       hoje={hoje}
                       onVerFoto={setFotoAniv}
                       onAbrirPessoa={setPessoaDetalheId}
+                      onAbrirPerfil={handleAbrirPerfil}
                     />
                   ))}
                 </ul>
-
-                {/* Só oferece o modal quando há mais gente do que cabe no card. */}
-                {aniversariantes.length > ANIVERSARIANTES_NO_CARD && (
-                  <button className={styles.botaoVerTodos} onClick={() => setModalAberto(true)}>
-                    Ver todos os {aniversariantes.length} aniversariantes
-                  </button>
-                )}
-              </>
+              </div>
             )}
-            </Transicao>
           </section>
-        </div>
+        </aside>
       </div>
-
-      {eventoAberto && (
-        <ModalEventoResumo eventoId={eventoAberto} aoFechar={() => setEventoAberto(null)} />
-      )}
 
       {modalAberto && (
         <ModalAniversariantes
@@ -380,33 +410,43 @@ export default function InicioPage() {
           aoFechar={() => setModalAberto(false)}
           onVerFoto={setFotoAniv}
           onAbrirPessoa={setPessoaDetalheId}
+          onAbrirPerfil={handleAbrirPerfil}
         />
       )}
 
-      {fotoAniv?.fotoId && (
+      {eventoAberto && (
+        <ModalEventoResumo
+          eventoId={eventoAberto}
+          aoFechar={() => setEventoAberto(null)}
+        />
+      )}
+
+      {fotoAniv && fotoAniv.fotoId && (
         <VisualizadorFoto
           fotoId={fotoAniv.fotoId}
-          descricao={`Foto de ${fotoAniv.nome}`}
+          descricao={fotoAniv.nome}
           onClose={() => setFotoAniv(null)}
         />
       )}
 
       {pessoaDetalheId && (
-        <DrawerDetalhePessoa pessoaId={pessoaDetalheId} onClose={() => setPessoaDetalheId(null)} />
+        <DrawerDetalhePessoa
+          pessoaId={pessoaDetalheId}
+          onClose={() => setPessoaDetalheId(null)}
+        />
       )}
-    </div>
-  )
-}
 
-function SkeletonLista() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {[0, 1, 2].map((i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Skeleton width="40px" height="40px" radius="var(--radius-full)" />
-          <Skeleton width="60%" height="14px" />
-        </div>
-      ))}
+      {perfilResumo && (
+        <ModalPerfilResumo
+          dados={perfilResumo}
+          posicaoTarget={posicaoTarget}
+          aoFechar={() => {
+            setPerfilResumo(null)
+            setPosicaoTarget(null)
+          }}
+          onVerDetalhesCompletos={(id) => setPessoaDetalheId(id)}
+        />
+      )}
     </div>
   )
 }

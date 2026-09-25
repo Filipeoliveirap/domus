@@ -6,6 +6,12 @@ export function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
 }
 
+export function doisPrimeirosNomes(nomeCompleto: string): string {
+  if (!nomeCompleto) return ''
+  const partes = nomeCompleto.trim().split(/\s+/)
+  return partes.slice(0, 2).join(' ')
+}
+
 export function rotuloVinculo(vinculo: Vinculo): string {
   const mapa: Record<Vinculo, string> = {
     MEMBRO: 'Membro',

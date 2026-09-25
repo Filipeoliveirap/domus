@@ -15,6 +15,9 @@ const FORMAS: Record<string, { MASCULINO: string; FEMININO: string }> = {
   vinculados: { MASCULINO: 'vinculados', FEMININO: 'vinculadas' },
   os: { MASCULINO: 'Os', FEMININO: 'As' },
   os_min: { MASCULINO: 'os', FEMININO: 'as' },
+  com_os_demais: { MASCULINO: 'com os demais', FEMININO: 'com as demais' },
+  com_outros: { MASCULINO: 'com outros', FEMININO: 'com outras' },
+  seu: { MASCULINO: 'o seu', FEMININO: 'a sua' },
 }
 
 export function concordar(genero: Genero, forma: keyof typeof FORMAS): string {

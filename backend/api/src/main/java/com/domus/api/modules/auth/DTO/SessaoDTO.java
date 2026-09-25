@@ -6,6 +6,7 @@ import java.util.UUID;
 /** Não carrega token — tokens viajam em cookie httpOnly, JS nunca os vê. */
 public record SessaoDTO(
         UUID id,
+        UUID pessoaId,
         String nome,
         String role,
         UUID igrejaId,
@@ -29,22 +30,44 @@ public record SessaoDTO(
 ) {
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
-        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+        this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                List.of(), false, null, null);
+    }
+
+    public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
+        this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
                 List.of(), false, null, null);
     }
 
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
                       List<String> capacidadesExtras) {
-        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+        this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
                 capacidadesExtras, false, null, null);
     }
 
-    /** Usado pela projeção JPQL de {@code findSessaoById} — carrega só o essencial + rótulos. */
+    public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
+                      List<String> capacidadesExtras) {
+        this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                capacidadesExtras, false, null, null);
+    }
+
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
+                      List<String> capacidadesExtras, boolean precisaAceitarTermos,
+                      java.time.LocalDateTime termosAceitosEm,
                       com.domus.api.modules.igreja.DTO.RotulosDTO rotulos) {
-        this(id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+        this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
+                capacidadesExtras, precisaAceitarTermos, termosAceitosEm, rotulos);
+    }
+
+    /** Usado pela projeção JPQL de {@code findSessaoById} — carrega só o essencial + rótulos. */
+    public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
+                      UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
+                      com.domus.api.modules.igreja.DTO.RotulosDTO rotulos) {
+        this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
                 List.of(), false, null, rotulos);
     }
 }

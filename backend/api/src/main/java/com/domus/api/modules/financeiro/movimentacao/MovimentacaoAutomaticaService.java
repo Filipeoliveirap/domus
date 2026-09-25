@@ -110,6 +110,23 @@ public class MovimentacaoAutomaticaService {
             "Devolução de taxa — " + semPrefixo(descricao));
     }
 
+    /**
+     * Registra a exclusão de uma conta a pagar no financeiro, criando uma SAÍDA (estorno)
+     * para cada pagamento não-estornado já realizado na conta.
+     */
+    public void registrarExclusaoConta(UUID igrejaId, String categoriaNome, List<BigDecimal> valoresLiquidos,
+                                        List<UUID> pessoaIds, List<String> nomesPessoas, String descricaoConta) {
+        if (valoresLiquidos == null || valoresLiquidos.isEmpty()) return;
+        CategoriaFinanceira categoria = buscarOuCriarCategoria(igrejaId, categoriaNome,
+                Set.of(categoriaNome.toLowerCase()), TipoCategoria.SAIDA);
+        for (int i = 0; i < valoresLiquidos.size(); i++) {
+            String descEstorno = "Estorno (exclusão de conta) — " + descricaoConta;
+            UUID pid = pessoaIds != null && i < pessoaIds.size() ? pessoaIds.get(i) : null;
+            String nomeP = nomesPessoas != null && i < nomesPessoas.size() ? nomesPessoas.get(i) : null;
+            registrar(igrejaId, TipoMovimentacao.SAIDA, valoresLiquidos.get(i), descEstorno, pid, nomeP, categoria);
+        }
+    }
+
     private void registrar(UUID igrejaId, TipoMovimentacao tipo, BigDecimal valor, String descricao,
                             UUID pessoaId, String nomePagador, CategoriaFinanceira categoria) {
         MovimentacaoFinanceira mov = MovimentacaoFinanceira.builder()

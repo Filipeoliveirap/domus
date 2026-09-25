@@ -1,0 +1,111 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.cartao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  transition: box-shadow var(--transition-fast);
+}
+
+.cartao:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Cores da borda lateral */
+.amarelo { border-left-color: var(--color-warning); }
+.vermelho { border-left-color: var(--color-danger); }
+.verde    { border-left-color: var(--color-success); }
+.azul     { border-left-color: #0D6EFD; } /* azul-petróleo: tom próximo ao primary, mais escuro */
+
+.iconeWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.amarelo .iconeWrapper { background: var(--color-warning-bg); color: var(--color-warning); }
+.vermelho .iconeWrapper { background: var(--color-danger-bg); color: var(--color-danger); }
+.verde .iconeWrapper { background: var(--color-success-bg); color: var(--color-success); }
+.azul .iconeWrapper { background: #EFF6FF; color: #0D6EFD; }
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rotulo {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.valor {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.esqueleto {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--color-bg-page) 25%, var(--color-border) 50%, var(--color-bg-page) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .cartao {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .valor {
+    font-size: var(--font-size-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cartao { transition: none; }
+  .esqueleto { animation: none; }
+}

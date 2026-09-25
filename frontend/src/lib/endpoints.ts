@@ -223,4 +223,13 @@ export const Endpoints = {
     PAPEL: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}/papel`,
     CONVERTER: (id: string, visitanteId: string) => `/celulas/${id}/converter/${visitanteId}`,
   },
+
+  financeiro: {
+    CONTAS_A_PAGAR: '/financeiro/contas-a-pagar',
+  },
+
+  anexos: {
+    UPLOAD: '/anexos',
+    DELETE: (id: string) => `/anexos/${id}`,
+  },
 }

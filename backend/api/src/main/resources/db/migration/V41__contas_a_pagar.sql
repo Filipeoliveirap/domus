@@ -9,12 +9,19 @@ CREATE TABLE conta_a_pagar (
     id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     igreja_id                   UUID NOT NULL REFERENCES igreja(id),
     categoria_id                UUID NOT NULL REFERENCES categoria_financeira(id),
-    fornecedor                  VARCHAR(120) NOT NULL,
+    -- Beneficiario: pra quem e a conta.
+    -- XOR entre pessoa cadastrada (pessoa_id) e texto livre (texto).
+    -- Exatamente um preenchido: quando o beneficiario e cadastrado, NULL no texto;
+    -- quando e avulso ("Energia Eletrica", "Imobiliaria X"), NULL no pessoa_id.
+    -- Quando a pessoa for excluida (LGPD), o servico converte o vinculo em texto
+    -- ("Pessoa removida do sistema") - mesmo padrao de EVENTO_RESPONSAVEL/V37.
+    beneficiario_pessoa_id       UUID NULL REFERENCES pessoa(id),
+    beneficiario_texto          VARCHAR(120) NULL,
     descricao                   VARCHAR(255),
     competencia                 DATE,
     linha_digitavel             VARCHAR(80),
     documento_numero            VARCHAR(40),
-    cnpj_fornecedor             VARCHAR(20),
+    cnpj_beneficiario           VARCHAR(20) NULL,
     valor                       NUMERIC(15,2) NOT NULL CHECK (valor > 0),
     vencimento                  DATE NOT NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'EM_ABERTO',
@@ -43,10 +50,21 @@ CREATE INDEX idx_conta_a_pagar_igreja_status_venc
 CREATE INDEX idx_conta_a_pagar_serie
     ON public.conta_a_pagar (serie_id);
 
--- Fornecedor: busca textual por nome da igreja (case-insensitive via unaccent
--- em qualquer query que precise; o indice simples serve de base).
-CREATE INDEX idx_conta_a_pagar_fornecedor
-    ON public.conta_a_pagar (igreja_id, fornecedor);
+-- Beneficiario (texto): busca textual por nome avulso (case-insensitive via
+-- unaccent em qualquer query que precise; o indice simples serve de base).
+CREATE INDEX idx_conta_a_pagar_beneficiario_texto
+    ON public.conta_a_pagar (igreja_id, beneficiario_texto)
+    WHERE beneficiario_texto IS NOT NULL;
+
+-- Beneficiario (pessoa): relatorios por pessoa ("total pago a Joao em 2026").
+CREATE INDEX idx_conta_a_pagar_beneficiario_pessoa
+    ON public.conta_a_pagar (igreja_id, beneficiario_pessoa_id)
+    WHERE beneficiario_pessoa_id IS NOT NULL;
+
+-- CHECK: exatamente um preenchido (pessoa_id XOR texto).
+ALTER TABLE conta_a_pagar
+    ADD CONSTRAINT chk_conta_beneficiario_xor
+    CHECK ((beneficiario_pessoa_id IS NULL) <> (beneficiario_texto IS NULL));
 
 -- CHECKs de dominio.
 ALTER TABLE conta_a_pagar

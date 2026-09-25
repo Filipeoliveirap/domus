@@ -149,9 +149,10 @@
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  scroll-padding: 0 16px;
   gap: 16px;
-  padding: 14px 4px 14px 4px;
-  margin: -14px -4px -14px -4px;
+  padding: 14px 16px 14px 16px;
+  margin: -14px -16px -14px -16px;
   -ms-overflow-style: none;
   scrollbar-width: none;
   cursor: grab;
@@ -182,6 +183,15 @@
   box-shadow: 0 4px 12px rgba(19, 27, 46, 0.04);
   transition: opacity 0.25s ease, transform 0.25s ease;
   animation: cardEntrada 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center center;
+}
+
+.cardAviso:first-child {
+  transform-origin: left center;
+}
+
+.cardAviso:last-child {
+  transform-origin: right center;
 }
 
 @media (max-width: 767px) {

@@ -182,13 +182,14 @@
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 14px 4px 14px 4px;
-  margin: -14px -4px -14px -4px;
+  padding: 14px 16px 14px 16px;
+  margin: -14px -16px -14px -16px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   cursor: grab;
   user-select: none;
   scroll-snap-type: x mandatory;
+  scroll-padding: 0 16px;
 }
 
 .trilhaEventos::-webkit-scrollbar {
@@ -208,12 +209,24 @@
   flex: 0 0 260px;
   min-width: 260px;
   scroll-snap-align: start;
-  min-width: 0;
   padding: 16px;
   border-radius: var(--radius-md);
   background: var(--color-bg-white);
   border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
   text-align: left;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(19, 27, 46, 0.04);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform-origin: center center;
+}
+
+.cardEvento:first-child {
+  transform-origin: left center;
+}
+
+.cardEvento:last-child {
+  transform-origin: right center;
 }
 
 .cardEventoTopo {

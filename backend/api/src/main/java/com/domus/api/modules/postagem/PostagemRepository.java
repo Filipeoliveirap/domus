@@ -16,7 +16,7 @@ public interface PostagemRepository extends JpaRepository<Postagem, UUID> {
     @Query("SELECT p FROM Postagem p WHERE (p.igreja.id = :minhaIgrejaId OR (p.igreja.id IN :restoDaFamilia AND p.restritoPropriaIgreja = false)) AND p.oficial = true ORDER BY p.fixado DESC, p.criadoEm DESC")
     List<Postagem> findMuralAvisos(@Param("minhaIgrejaId") UUID minhaIgrejaId, @Param("restoDaFamilia") Collection<UUID> restoDaFamilia);
 
-    @Query("SELECT p FROM Postagem p WHERE (p.igreja.id = :minhaIgrejaId OR (p.igreja.id IN :restoDaFamilia AND p.restritoPropriaIgreja = false)) AND (:tipo IS NULL OR p.tipo = :tipo) ORDER BY p.criadoEm DESC")
+    @Query("SELECT p FROM Postagem p WHERE (p.igreja.id = :minhaIgrejaId OR (p.igreja.id IN :restoDaFamilia AND p.restritoPropriaIgreja = false)) AND p.oficial = false AND (:tipo IS NULL OR p.tipo = :tipo) ORDER BY p.criadoEm DESC")
     Page<Postagem> findFeed(@Param("minhaIgrejaId") UUID minhaIgrejaId, @Param("restoDaFamilia") Collection<UUID> restoDaFamilia, @Param("tipo") TipoPostagem tipo, Pageable pageable);
 
     @Query("SELECT p FROM Postagem p WHERE p.id = :id AND (p.igreja.id = :minhaIgrejaId OR (p.igreja.id IN :restoDaFamilia AND p.restritoPropriaIgreja = false))")

@@ -27,8 +27,8 @@ export function useCriarPostagem() {
             }
           },
         )
+        queryClient.invalidateQueries({ queryKey: ['feed-postagens'] })
       }
-      queryClient.invalidateQueries({ queryKey: ['feed-postagens'] })
     },
   })
 }

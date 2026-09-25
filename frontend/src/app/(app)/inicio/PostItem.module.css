@@ -34,6 +34,12 @@
   margin-top: 2px;
 }
 
+.tagsContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .autorBloco {
   display: flex;
   align-items: center;
@@ -133,6 +139,7 @@
   border-radius: 12px;
   background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
   color: var(--color-primary, #004ac6);
+  white-space: nowrap;
 }
 
 .tagRede {
@@ -147,6 +154,24 @@
   align-items: center;
   gap: 3px;
   border: 1px solid rgba(0, 74, 198, 0.25);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .postCard {
+    padding: 22px 18px;
+    gap: 16px;
+  }
+
+  .headerAcoes {
+    align-items: flex-start;
+  }
+
+  .tagsContainer {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
 }
 
 .conteudo {
@@ -345,6 +370,12 @@
   font-weight: 600;
   color: var(--text-main, #131b2e);
   font-size: 12px;
+  transition: color 0.15s ease;
+}
+
+.autorComentario:hover {
+  color: var(--color-primary, #004ac6);
+  text-decoration: underline;
 }
 
 .acoesComentario {

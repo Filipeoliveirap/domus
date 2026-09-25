@@ -102,6 +102,7 @@ export function MuralAvisosCarrossel() {
   const [posicaoTarget, setPosicaoTarget] = useState<PosicaoTarget | null>(null)
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS')
   const [estadoScroll, setEstadoScroll] = useState({ noInicio: true, noFim: false })
+  const [destaqueAvisoId, setDestaqueAvisoId] = useState<string | null>(null)
 
   const carrosselRef = useRef<CarrosselSuaveRef>(null)
   const idAnteriorRef = useRef<string | null>(null)
@@ -114,11 +115,22 @@ export function MuralAvisosCarrossel() {
 
   const primeiroAvisoId = listaAvisos[0]?.id
 
-  useEffect(() => {
-    if (idAnteriorRef.current && primeiroAvisoId && idAnteriorRef.current !== primeiroAvisoId) {
+  const destacarAviso = (id: string, rolar = true) => {
+    setFiltroTipo('TODOS')
+    setDestaqueAvisoId(id)
+    if (rolar) {
       setTimeout(() => {
         carrosselRef.current?.rolarParaInicio()
       }, 80)
+    }
+    setTimeout(() => {
+      setDestaqueAvisoId((atual) => (atual === id ? null : atual))
+    }, 1100)
+  }
+
+  useEffect(() => {
+    if (idAnteriorRef.current && primeiroAvisoId && idAnteriorRef.current !== primeiroAvisoId) {
+      destacarAviso(primeiroAvisoId, true)
     }
     idAnteriorRef.current = primeiroAvisoId ?? null
   }, [primeiroAvisoId])
@@ -233,11 +245,12 @@ export function MuralAvisosCarrossel() {
           {listaAvisos.map((aviso: Postagem) => {
             const estaSaindo = aviso.id === saindoAvisoId
             const ehOutraIgreja = aviso.igrejaAutor != null && aviso.igrejaAutor.id !== minhaIgrejaId
+            const ehDestacado = aviso.id === destaqueAvisoId
 
             return (
               <article
                 key={aviso.id}
-                className={`${styles.cardAviso} ${estaSaindo ? styles.saindoCard : ''} card-interativo`}
+                className={`${styles.cardAviso} ${estaSaindo ? styles.saindoCard : ''} ${ehDestacado ? styles.cardDestacado : ''} card-interativo`}
                 onClick={() => setAvisoSelecionado(aviso)}
                 role="button"
                 tabIndex={0}
@@ -319,10 +332,7 @@ export function MuralAvisosCarrossel() {
         <ModalNovoAviso
           aoFechar={() => setModalNovoAberto(false)}
           aoCriar={() => {
-            setFiltroTipo('TODOS')
-            setTimeout(() => {
-              carrosselRef.current?.rolarParaInicio()
-            }, 80)
+            if (primeiroAvisoId) destacarAviso(primeiroAvisoId, true)
           }}
         />
       )}
@@ -332,6 +342,7 @@ export function MuralAvisosCarrossel() {
           aviso={avisoAtualizado}
           aoFechar={() => setAvisoSelecionado(null)}
           onDeletar={handleDeletarAviso}
+          onEditar={(avisoId) => destacarAviso(avisoId, false)}
         />
       )}
 

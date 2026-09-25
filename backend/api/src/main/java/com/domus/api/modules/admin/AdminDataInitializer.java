@@ -15,16 +15,16 @@ public class AdminDataInitializer implements CommandLineRunner {
     private final UsuarioDomusAdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${domus.admin.email:admin@domus.com}")
+    @Value("${domus.admin.email}")
     private String adminEmail;
 
-    @Value("${domus.admin.password:AdminDomus2026!}")
+    @Value("${domus.admin.password}")
     private String adminPassword;
 
     @Override
     public void run(String... args) throws Exception {
         if (adminRepository.count() == 0) {
-            log.info("Nenhum administrador Domus encontrado. Criando superadmin inicial a partir das configurações...");
+            log.info("Nenhum administrador Domus encontrado. Criando superadmin inicial a partir das variáveis de ambiente...");
             var admin = UsuarioDomusAdmin.builder()
                     .nome("SuperAdmin Domus")
                     .email(adminEmail.toLowerCase().trim())

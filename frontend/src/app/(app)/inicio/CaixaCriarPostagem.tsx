@@ -11,6 +11,8 @@ import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { useArrastarParaRolar } from '@/hooks/useArrastarParaRolar'
 import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
+import { ModalPerfilResumo, type PerfilResumoDados, type PosicaoTarget } from '@/components/common/ModalPerfilResumo/ModalPerfilResumo'
+import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
 import type { TipoPostagem } from '@/types/postagem.type'
 import styles from './CaixaCriarPostagem.module.css'
 
@@ -23,6 +25,9 @@ const TAGS_CATEGORIA: { label: string; valor: TipoPostagem }[] = [
 ]
 
 export function CaixaCriarPostagem() {
+  const meuId = useAuthStore((s) => s.id)
+  const meuPessoaId = useAuthStore((s) => s.pessoaId) ?? meuId
+  const role = useAuthStore((s) => s.role)
   const nomeCompleto = useAuthStore((s) => s.nome) ?? 'Membro'
   const nomeCurto = doisPrimeirosNomes(nomeCompleto)
   const fotoIdPerfil = useAuthStore((s) => s.fotoId)
@@ -37,11 +42,34 @@ export function CaixaCriarPostagem() {
   const [tipo, setTipo] = useState<TipoPostagem>('DEVOCIONAL')
   const [fotoId, setFotoId] = useState<string | null>(null)
   const [compartilharRede, setCompartilharRede] = useState(false)
+  const [perfilResumo, setPerfilResumo] = useState<PerfilResumoDados | null>(null)
+  const [posicaoTarget, setPosicaoTarget] = useState<PosicaoTarget | null>(null)
+  const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
 
   const seletorFotoRef = useRef<SeletorEPreviaFotoRef>(null)
   const { ref: refSeletorTags, propsArrasto: propsArrastoTags } = useArrastarParaRolar<HTMLDivElement>()
 
   const podePublicar = Boolean(conteudo.trim() || fotoId)
+
+  const abrirPerfilUsuario = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!meuPessoaId) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosicaoTarget({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+    })
+    setPerfilResumo({
+      id: meuPessoaId,
+      nome: nomeCompleto,
+      fotoId: fotoIdPerfil,
+      cargo: role === 'ADMIN_IGREJA' ? 'Administrador' : role === 'LIDER' ? 'Líder' : 'Membro',
+    })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,17 +96,31 @@ export function CaixaCriarPostagem() {
   const textoRotuloRede = `${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`
 
   return (
-    <form className={styles.caixa} onSubmit={handleSubmit}>
-      <div className={styles.autorLinha}>
-        <div className={styles.avatar}>
-          {urlPerfil ? (
-            <Image src={urlPerfil} alt="" width={40} height={40} unoptimized style={{ borderRadius: '50%' }} />
-          ) : (
-            iniciais(nomeCompleto)
-          )}
-        </div>
-        <div className={styles.corpoInput}>
-          <span className={styles.nomeAutor}>{nomeCurto}</span>
+    <>
+      <form className={styles.caixa} onSubmit={handleSubmit}>
+        <div className={styles.autorLinha}>
+          <div
+            className={`${styles.avatar} ${styles.avatarClicavel}`}
+            onClick={abrirPerfilUsuario}
+            role="button"
+            tabIndex={0}
+          >
+            {urlPerfil ? (
+              <Image src={urlPerfil} alt="" width={40} height={40} unoptimized style={{ borderRadius: '50%' }} />
+            ) : (
+              iniciais(nomeCompleto)
+            )}
+          </div>
+          <div className={styles.corpoInput}>
+            <span
+              className={styles.nomeAutor}
+              onClick={abrirPerfilUsuario}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'pointer' }}
+            >
+              {nomeCurto}
+            </span>
           <textarea
             className={styles.textarea}
             rows={2}
@@ -175,5 +217,25 @@ export function CaixaCriarPostagem() {
         </button>
       </div>
     </form>
+
+    {perfilResumo && (
+      <ModalPerfilResumo
+        dados={perfilResumo}
+        posicaoTarget={posicaoTarget}
+        aoFechar={() => {
+          setPerfilResumo(null)
+          setPosicaoTarget(null)
+        }}
+        onVerDetalhesCompletos={(id) => setPessoaDetalheId(id)}
+      />
+    )}
+
+    {pessoaDetalheId && (
+      <DrawerDetalhePessoa
+        pessoaId={pessoaDetalheId}
+        onClose={() => setPessoaDetalheId(null)}
+      />
+    )}
+  </>
   )
 }

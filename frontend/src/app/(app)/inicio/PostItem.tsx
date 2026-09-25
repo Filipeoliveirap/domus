@@ -159,6 +159,30 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
     })
   }
 
+  const abrirPerfilComentario = (
+    e: React.MouseEvent,
+    autor: { id?: string; nome: string; fotoId?: string | null; cargo?: string | null },
+    igrejaAutor?: { id?: string; nome: string; sigla?: string | null } | null,
+  ) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosicaoTarget({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+    })
+    setPerfilResumo({
+      id: autor.id,
+      nome: autor.nome,
+      fotoId: autor.fotoId,
+      cargo: autor.cargo,
+      igreja: igrejaAutor,
+    })
+  }
+
   const abrirFotoPost = () => {
     if (postagem.fotoId) {
       setFotoModal({ id: postagem.fotoId, descricao: 'Foto da postagem' })
@@ -200,16 +224,18 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
         </div>
 
         <div className={styles.headerAcoes}>
-          {postagem.restritoPropriaIgreja === false && (
-            <span
-              className={styles.tagRede}
-              title={`Compartilhado com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`}
-            >
-              <Globe size={11} aria-hidden="true" />
-              {congregacao.plural}
-            </span>
-          )}
-          <span className={styles.tagPost}>{postagem.tipo.replace('_', ' ')}</span>
+          <div className={styles.tagsContainer}>
+            {postagem.restritoPropriaIgreja === false && (
+              <span
+                className={styles.tagRede}
+                title={`Compartilhado com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`}
+              >
+                <Globe size={11} aria-hidden="true" />
+                {congregacao.plural}
+              </span>
+            )}
+            <span className={styles.tagPost}>{postagem.tipo.replace('_', ' ')}</span>
+          </div>
           {podeGerenciarPost && (
             <div className={styles.menuWrapper} ref={menuPostRef}>
               <button
@@ -366,14 +392,11 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
                   }}
                 >
                   <div
-                    className={`${styles.avatarComentario} ${c.autor.fotoId ? styles.avatarClicavel : ''}`}
-                    onClick={() => {
-                      if (c.autor.fotoId) {
-                        setFotoModal({ id: c.autor.fotoId, descricao: `Foto de ${c.autor.nome}` })
-                      }
-                    }}
-                    role={c.autor.fotoId ? 'button' : undefined}
-                    tabIndex={c.autor.fotoId ? 0 : undefined}
+                    className={`${styles.avatarComentario} ${styles.avatarClicavel}`}
+                    onClick={(e) => abrirPerfilComentario(e, c.autor, c.igrejaAutor)}
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
                   >
                     {urlAvatarComentario ? (
                       <Image
@@ -391,7 +414,13 @@ export function PostItem({ postagem }: { postagem: Postagem }) {
 
                   <div className={styles.corpoComentario}>
                     <div className={styles.cabecalhoComentario}>
-                      <span className={styles.autorComentario}>
+                      <span
+                        className={styles.autorComentario}
+                        onClick={(e) => abrirPerfilComentario(e, c.autor, c.igrejaAutor)}
+                        role="button"
+                        tabIndex={0}
+                        style={{ cursor: 'pointer' }}
+                      >
                         {doisPrimeirosNomes(c.autor.nome)}
                         {ehOutraIgrejaComentario && (
                           <span className={styles.badgeIgrejaComentario} title={c.igrejaAutor?.nome}>

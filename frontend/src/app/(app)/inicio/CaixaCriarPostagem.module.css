@@ -29,6 +29,19 @@
   flex-shrink: 0;
 }
 
+.avatarClicavel {
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.avatarClicavel:hover {
+  opacity: 0.88;
+}
+
+.avatarClicavel:active {
+  transform: scale(0.95);
+}
+
 .corpoInput {
   flex: 1;
   display: flex;
@@ -40,6 +53,13 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-main, #131b2e);
+  width: fit-content;
+  transition: color 0.15s ease;
+}
+
+.nomeAutor:hover {
+  color: var(--color-primary, #004ac6);
+  text-decoration: underline;
 }
 
 .textarea {

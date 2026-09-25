@@ -23,6 +23,22 @@ test.describe('SaaS Subscription & Limit Enforcement E2E', () => {
     await expect(inputCodigo).toHaveValue('DOMUS-K7M9P2');
   });
 
+  test('renderiza a página de assinatura cancelada em /assinatura-cancelada', async ({ page }) => {
+    await page.goto('/assinatura-cancelada');
+
+    await expect(page.getByRole('heading', { name: /Assinatura Cancelada/i })).toBeVisible();
+    await expect(page.getByText(/A assinatura do plano Domus da sua igreja foi cancelada/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /Reativar Assinatura Agora/i })).toBeVisible();
+  });
+
+  test('renderiza a tela de login do superadmin em /admin/login', async ({ page }) => {
+    await page.goto('/admin/login');
+
+    await expect(page.getByRole('heading', { name: /Domus Admin/i })).toBeVisible();
+    await expect(page.getByPlaceholder('admin@domus.com')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Acessar Painel Admin/i })).toBeVisible();
+  });
+
   test.describe('Mobile Viewport (iPhone 14)', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 

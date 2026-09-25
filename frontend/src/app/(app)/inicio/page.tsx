@@ -97,7 +97,7 @@ function ItemAniversariante({
     <li
       className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''} ${styles.itemAnivClicavel}`}
       onClick={(e) => onAbrirPerfil(e, a)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPerfil(a) }}
+      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPessoa(a.id) }}
       role="button"
       tabIndex={0}
     >
@@ -137,7 +137,7 @@ function ModalAniversariantes({
   aoFechar: () => void
   onVerFoto: (a: Aniversariante) => void
   onAbrirPessoa: (id: string) => void
-  onAbrirPerfil: (a: Aniversariante) => void
+  onAbrirPerfil: (e: React.MouseEvent, a: Aniversariante) => void
 }) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
   useEffect(() => {

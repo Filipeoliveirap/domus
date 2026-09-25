@@ -152,7 +152,9 @@ public class AuthService {
                         .map(UsuarioCapacidade::getCapacidade).toList(),
                 termoAceiteService.precisaAceitar(usuarioId),
                 termoAceiteService.dataUltimoAceite(usuarioId),
-                sessao.rotulos());
+                sessao.rotulos(),
+                sessao.igrejaMaeId(),
+                sessao.statusAssinatura());
     }
 
     /** Troca a própria senha e revoga as demais sessões, preservando a atual. */

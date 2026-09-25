@@ -1,4 +1,4 @@
--- V52: Ajustes retroativos de schema na tabela conta_a_pagar
+-- V54: Ajustes de schema na tabela conta_a_pagar para versao 54 no Neon DB
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS beneficiario_pessoa_id UUID REFERENCES pessoa(id);
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS beneficiario_texto VARCHAR(120);
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS competencia DATE;
@@ -11,7 +11,6 @@ ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS recorrencia_dia_ancora INT CH
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS observacoes TEXT;
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS criado_por_usuario_id UUID REFERENCES usuario(id);
 ALTER TABLE conta_a_pagar ADD COLUMN IF NOT EXISTS criado_por_texto VARCHAR(255);
-
 DO $$
 BEGIN
     IF EXISTS (

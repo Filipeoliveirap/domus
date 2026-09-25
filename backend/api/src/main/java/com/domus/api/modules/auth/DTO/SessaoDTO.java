@@ -1,5 +1,8 @@
 package com.domus.api.modules.auth.DTO;
 
+import com.domus.api.modules.igreja.DTO.RotulosDTO;
+import com.domus.api.modules.igreja.StatusAssinatura;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -26,48 +29,50 @@ public record SessaoDTO(
         /** Data do último aceite (independente da versão) — exibida no perfil. */
         java.time.LocalDateTime termosAceitosEm,
         /** Rótulos customizados pela igreja (Ministério/Congregação/Célula). Null = padrão. */
-        com.domus.api.modules.igreja.DTO.RotulosDTO rotulos
+        RotulosDTO rotulos,
+        UUID igrejaMaeId,
+        StatusAssinatura statusAssinatura
 ) {
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
         this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                List.of(), false, null, null);
+                List.of(), false, null, null, null, null);
     }
 
     public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId) {
         this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                List.of(), false, null, null);
+                List.of(), false, null, null, null, null);
     }
 
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
                       List<String> capacidadesExtras) {
         this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                capacidadesExtras, false, null, null);
+                capacidadesExtras, false, null, null, null, null);
     }
 
     public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
                       List<String> capacidadesExtras) {
         this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                capacidadesExtras, false, null, null);
+                capacidadesExtras, false, null, null, null, null);
     }
 
     public SessaoDTO(UUID id, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
                       List<String> capacidadesExtras, boolean precisaAceitarTermos,
                       java.time.LocalDateTime termosAceitosEm,
-                      com.domus.api.modules.igreja.DTO.RotulosDTO rotulos) {
+                      RotulosDTO rotulos) {
         this(id, id, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                capacidadesExtras, precisaAceitarTermos, termosAceitosEm, rotulos);
+                capacidadesExtras, precisaAceitarTermos, termosAceitosEm, rotulos, null, null);
     }
 
-    /** Usado pela projeção JPQL de {@code findSessaoById} — carrega só o essencial + rótulos. */
+    /** Usado pela projeção JPQL de {@code findSessaoById} — carrega só o essencial + rótulos + vinculo/status. */
     public SessaoDTO(UUID id, UUID pessoaId, String nome, String role, UUID igrejaId, String igrejaNome,
                       UUID fotoId, String cargo, String igrejaSigla, UUID igrejaLogoId,
-                      com.domus.api.modules.igreja.DTO.RotulosDTO rotulos) {
+                      RotulosDTO rotulos, UUID igrejaMaeId, StatusAssinatura statusAssinatura) {
         this(id, pessoaId, nome, role, igrejaId, igrejaNome, fotoId, cargo, igrejaSigla, igrejaLogoId,
-                List.of(), false, null, rotulos);
+                List.of(), false, null, rotulos, igrejaMaeId, statusAssinatura);
     }
 }

@@ -24,7 +24,16 @@ export const api = axios.create({
 // Token vive em cookie httpOnly; sem interceptor de request, o navegador e o axios (XSRF default) cuidam disso sozinhos.
 
 // /auth/me fica de fora de propósito: se o access expirou mas o refresh é válido, o load deve renovar a sessão, não deslogar.
-const rotasAuth = [Endpoints.auth.LOGIN, Endpoints.auth.REFRESH, Endpoints.auth.LOGOUT]
+const rotasAuth = [
+  Endpoints.auth.LOGIN,
+  Endpoints.auth.GOOGLE_LOGIN,
+  Endpoints.auth.GOOGLE_REGISTRAR,
+  Endpoints.auth.REFRESH,
+  Endpoints.auth.LOGOUT,
+  Endpoints.auth.FORGOT_PASSWORD,
+  Endpoints.auth.RESET_PASSWORD,
+  Endpoints.auth.REGISTER_IGREJA,
+]
 
 // Single-flight: 401s concorrentes esperam a mesma promessa em vez de refreshes paralelos (a rotação do backend invalidaria um ao outro).
 let refreshPromise: Promise<void> | null = null
@@ -71,7 +80,7 @@ async function renovarAccessToken(): Promise<void> {
 // GET qualquer (mesmo 401) já grava um XSRF-TOKEN novo — mesmo mecanismo de
 // garantirCsrfCookie() do auth.service.ts, reaproveitado aqui pro caso pós-login.
 async function renovarTokenCsrf(): Promise<void> {
-  await api.get(Endpoints.auth.ME).catch(() => undefined)
+  await api.get(Endpoints.auth.ME, { skipAuthRedirect: true }).catch(() => undefined)
 }
 
 // `skipAuthRedirect`: rota pública (ex.: /convite/[token]) que checa "estou logado?" sem

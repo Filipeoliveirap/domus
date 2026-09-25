@@ -18,7 +18,12 @@ const OPCOES_TIPO = [
   { value: 'GERAL', label: 'Ação Social / Geral' },
 ]
 
-export function ModalNovoAviso({ aoFechar }: { aoFechar: () => void }) {
+interface Props {
+  aoFechar: () => void
+  aoCriar?: () => void
+}
+
+export function ModalNovoAviso({ aoFechar, aoCriar }: Props) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
   const { data: vinculoStatus } = useVinculoStatus()
   const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
@@ -58,7 +63,10 @@ export function ModalNovoAviso({ aoFechar }: { aoFechar: () => void }) {
         restritoPropriaIgreja: temFamilia ? !compartilharRede : true,
       },
       {
-        onSuccess: () => fechar(),
+        onSuccess: () => {
+          aoCriar?.()
+          fechar()
+        },
       },
     )
   }

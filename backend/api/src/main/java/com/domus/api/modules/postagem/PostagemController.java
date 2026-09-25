@@ -22,14 +22,24 @@ public class PostagemController {
 
     @GetMapping("/mural")
     public List<PostagemResponse> listarMural() {
-        return postagemService.listarMural(usuarioAutenticado.getIgrejaId());
+        return postagemService.listarMural(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole()
+        );
     }
 
     @GetMapping("/feed")
     public Page<PostagemResponse> listarFeed(
             @RequestParam(required = false) TipoPostagem tipo,
             Pageable pageable) {
-        return postagemService.listarFeed(usuarioAutenticado.getIgrejaId(), tipo, pageable);
+        return postagemService.listarFeed(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
+                tipo,
+                pageable
+        );
     }
 
     @PostMapping
@@ -50,6 +60,7 @@ public class PostagemController {
         return postagemService.alternarCurtida(
                 usuarioAutenticado.getIgrejaId(),
                 usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
                 id,
                 request.tipo()
         );
@@ -63,8 +74,62 @@ public class PostagemController {
         return postagemService.comentar(
                 usuarioAutenticado.getIgrejaId(),
                 usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
                 id,
+                request.conteudo(),
+                request.paiComentarioId()
+        );
+    }
+
+    @PostMapping("/comentarios/{comentarioId}/curtir")
+    public ComentarioResponse curtirComentario(@PathVariable UUID comentarioId) {
+        return postagemService.alternarCurtidaComentario(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
+                comentarioId
+        );
+    }
+
+    @PutMapping("/{id}")
+    public PostagemResponse atualizar(
+            @PathVariable UUID id,
+            @RequestBody @Valid CriarPostagemRequest request) {
+        return postagemService.atualizarPostagem(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
+                id,
+                request
+        );
+    }
+
+    @PutMapping("/{postagemId}/comentarios/{comentarioId}")
+    public ComentarioResponse atualizarComentario(
+            @PathVariable UUID postagemId,
+            @PathVariable UUID comentarioId,
+            @RequestBody @Valid CriarComentarioRequest request) {
+        return postagemService.atualizarComentario(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
+                postagemId,
+                comentarioId,
                 request.conteudo()
+        );
+    }
+
+    @DeleteMapping("/{postagemId}/comentarios/{comentarioId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletarComentario(
+            @PathVariable UUID postagemId,
+            @PathVariable UUID comentarioId) {
+        postagemService.deletarComentario(
+                usuarioAutenticado.getIgrejaId(),
+                usuarioAutenticado.getPessoaId(),
+                usuarioAutenticado.getRole(),
+                postagemId,
+                comentarioId
         );
     }
 

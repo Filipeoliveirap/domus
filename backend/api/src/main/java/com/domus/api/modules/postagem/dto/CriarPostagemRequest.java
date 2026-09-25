@@ -16,7 +16,6 @@ public record CriarPostagemRequest(
         @Size(max = 150, message = "Título pode ter no máximo 150 caracteres")
         String titulo,
 
-        @NotBlank(message = "Conteúdo da postagem é obrigatório")
         String conteudo,
 
         UUID fotoId,
@@ -24,5 +23,7 @@ public record CriarPostagemRequest(
         @Size(max = 100, message = "Referência de versículo pode ter no máximo 100 caracteres")
         String versiculoRef,
 
-        boolean fixado
+        boolean fixado,
+
+        Boolean restritoPropriaIgreja
 ) {}

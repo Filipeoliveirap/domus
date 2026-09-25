@@ -35,6 +35,7 @@
   margin: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -45,6 +46,9 @@
   color: var(--color-danger, #ba1a1a);
   padding: 2px 8px;
   border-radius: 12px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .subtitulo {
@@ -66,11 +70,22 @@
   background: transparent;
   color: var(--text-main, #131b2e);
   cursor: pointer;
-  transition: background 0.15s, transform 0.12s;
+  transition: all 0.2s ease;
 }
 
-.btnNavegacao:active {
-  transform: scale(0.95);
+.btnNavegacao:hover:not(:disabled) {
+  background: var(--bg-surface-high, #e2e7ff);
+  border-color: var(--color-primary, #004ac6);
+}
+
+.btnNavegacao:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.btnNavegacao:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--border-color, rgba(115, 118, 134, 0.1));
 }
 
 .btnNovoAviso {
@@ -92,32 +107,68 @@
   transform: scale(0.95);
 }
 
-.carrosselTrilha {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+.barraFiltros {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 2px 0;
+  scrollbar-width: none;
 }
 
-@media (max-width: 1023px) {
-  .carrosselTrilha {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 12px;
-    padding-bottom: 4px;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .carrosselTrilha::-webkit-scrollbar {
-    display: none;
-  }
-  .cardAviso {
-    min-width: 280px;
-    scroll-snap-align: start;
-  }
+.barraFiltros::-webkit-scrollbar {
+  display: none;
+}
+
+.chipFiltro {
+  background: var(--bg-surface-low, #faf8ff);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  color: var(--text-muted, #737686);
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.chipFiltro:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+  color: var(--text-main, #131b2e);
+}
+
+.chipFiltroAtivo {
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  border-color: var(--color-primary, #004ac6);
+  font-weight: 600;
+}
+
+.carrosselTrilha {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 16px;
+  padding-bottom: 6px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.carrosselTrilha::-webkit-scrollbar {
+  display: none;
+}
+
+.carrosselTrilha:active {
+  cursor: grabbing;
 }
 
 .cardAviso {
+  flex: 0 0 calc((100% - 32px) / 3);
+  min-width: 280px;
+  scroll-snap-align: start;
   background: var(--bg-surface, #ffffff);
   border-radius: var(--radius-card, 16px);
   padding: 16px;
@@ -128,6 +179,66 @@
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 4px 12px rgba(19, 27, 46, 0.04);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  animation: cardEntrada 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 767px) {
+  .cabecalho {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .controles {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .titulo {
+    font-size: 15px;
+  }
+  .subtitulo {
+    font-size: 11px;
+  }
+  .cardAviso {
+    flex: 0 0 85vw;
+    min-width: 260px;
+    padding: 14px;
+  }
+}
+
+.cardAviso.saindoCard {
+  animation: cardSaida 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes cardEntrada {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-10px);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes cardSaida {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-10px);
+  }
 }
 
 .faixaDestaque {
@@ -156,6 +267,35 @@
   color: var(--color-primary, #004ac6);
 }
 
+.tagRede {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.12));
+  color: var(--color-primary, #004ac6);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(0, 74, 198, 0.25);
+}
+
+.badgeIgreja {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  margin-left: 4px;
+  word-break: break-word;
+  max-width: 100%;
+}
+
 .dataTime {
   font-size: 11px;
   color: var(--text-muted, #737686);
@@ -182,6 +322,29 @@
   margin-bottom: 12px;
 }
 
+.fotoCardContainer {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fotoCardAviso {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+}
+
 .cardRodape {
   padding-top: 10px;
   border-top: 1px solid var(--border-color, rgba(115, 118, 134, 0.1));
@@ -194,7 +357,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-main, #131b2e);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.autorInfo:hover {
+  color: var(--color-primary, #004ac6);
+}
+
+.autorInfo:hover span {
+  text-decoration: underline;
 }

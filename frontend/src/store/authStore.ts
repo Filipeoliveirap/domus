@@ -6,6 +6,7 @@ import type { RotulosCustomizados } from '@/types/igreja/igreja.type'
 // Estado em memória, nunca localStorage: o cookie httpOnly pode expirar enquanto o localStorage seguiria afirmando sessão ativa.
 interface AuthState {
   id: string | null
+  pessoaId: string | null
   nome: string | null
   role: Role | null
   fotoId: string | null
@@ -34,6 +35,7 @@ interface AuthState {
 
 const estadoDeslogado = {
   id: null,
+  pessoaId: null,
   nome: null,
   role: null,
   fotoId: null,

@@ -16,6 +16,7 @@ export interface GoogleRegistrarRequest {
 // Sem token de propósito: viajam em cookie httpOnly, JavaScript nunca os vê.
 export interface Sessao {
     id: string;
+    pessoaId?: string | null;
     nome: string;
     role: Role;
     igrejaId: string;

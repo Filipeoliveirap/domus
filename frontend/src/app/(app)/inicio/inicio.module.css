@@ -1,8 +1,11 @@
 .pagina {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   min-width: 0;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* ---- Hero de boas-vindas ---- */
@@ -11,11 +14,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 200px;
-  padding: 40px;
+  min-height: 180px;
+  padding: 24px 32px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--color-primary-light);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
 }
 
 .heroImagem {
@@ -67,18 +71,30 @@
 /* ---- Grade principal ---- */
 
 .colunas {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  display: flex;
+  justify-content: space-between;
   gap: 32px;
   align-items: start;
+  width: 100%;
 }
 
-.colunaPrincipal,
+.colunaPrincipal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  width: 690px; max-width: 690px;
+  flex-shrink: 0;
+}
+
 .colunaLateral {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
   min-width: 0;
+  width: 350px;
+  max-width: 350px;
+  flex-shrink: 0;
 }
 
 /* ---- Versículo do dia ---- */
@@ -86,10 +102,10 @@
 .versiculo {
   position: relative;
   overflow: hidden;
-  padding: 32px;
+  padding: 20px 24px;
   border-radius: var(--radius-lg);
   background: var(--color-bg-white);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
 }
 
 .versiculoAspas {
@@ -168,10 +184,18 @@
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  scroll-snap-type: x mandatory;
 }
 
 .trilhaEventos::-webkit-scrollbar {
   display: none;
+}
+
+.trilhaEventos:active {
+  cursor: grabbing;
 }
 
 .cardEvento {
@@ -181,11 +205,13 @@
   justify-content: space-between;
   gap: 12px;
   flex: 0 0 260px;
+  min-width: 260px;
+  scroll-snap-align: start;
   min-width: 0;
-  padding: 20px;
+  padding: 16px;
   border-radius: var(--radius-md);
   background: var(--color-bg-white);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
   text-align: left;
 }
 
@@ -284,10 +310,10 @@
 /* ---- Card de aniversariantes ---- */
 
 .cardLateral {
-  padding: 24px;
+  padding: 18px 20px;
   border-radius: var(--radius-lg);
   background: var(--color-bg-white);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
   min-width: 0;
 }
 
@@ -340,6 +366,7 @@
 }
 @media (hover: hover) {
   .itemAnivClicavel:hover { background: var(--color-bg-page); }
+  .itemAnivClicavel:hover .anivNome { color: var(--color-primary); text-decoration: underline; }
 }
 .itemAnivClicavel:active { transform: scale(0.99); }
 @media (prefers-reduced-motion: reduce) {
@@ -557,8 +584,13 @@ button.avatar:active { transform: scale(0.92); }
 
 @media (max-width: 1023px) {
   .colunas {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 24px;
+  }
+  .colunaPrincipal,
+  .colunaLateral {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -595,8 +627,8 @@ button.avatar:active { transform: scale(0.92); }
   }
 
   .cardEvento {
-    /* Quase a largura da tela: mostra que há mais cards para o lado. */
-    flex-basis: 82vw;
+    flex: 0 0 82vw;
+    min-width: 240px;
   }
 
   .cardLateral {

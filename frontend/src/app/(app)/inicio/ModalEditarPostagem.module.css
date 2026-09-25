@@ -68,6 +68,34 @@
   overflow-y: auto;
 }
 
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #737686);
+}
+
+.inputTitulo {
+  width: 100%;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
+  background: var(--bg-surface-low, #faf8ff);
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 12px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-main, #131b2e);
+}
+
+.inputTitulo:focus {
+  border-color: var(--color-primary, #004ac6);
+}
+
 .textarea {
   width: 100%;
   border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
@@ -93,6 +121,18 @@
   gap: 8px;
   overflow-x: auto;
   padding-top: 4px;
+  cursor: grab;
+  user-select: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.seletorTags::-webkit-scrollbar {
+  display: none;
+}
+
+.seletorTags:active {
+  cursor: grabbing;
 }
 
 .chipTag {
@@ -108,63 +148,16 @@
   transition: all 0.15s ease;
 }
 
+.chipTag:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+  color: var(--text-main, #131b2e);
+}
+
 .chipTagActive {
   background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
   color: var(--color-primary, #004ac6);
   border-color: var(--color-primary, #004ac6);
   font-weight: 600;
-}
-
-.previewContainer {
-  position: relative;
-  width: 100%;
-  max-height: 280px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
-}
-
-.previewImagem {
-  width: 100%;
-  height: auto;
-  max-height: 280px;
-  object-fit: cover;
-  display: block;
-}
-
-.btnRemoverFoto {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(19, 27, 46, 0.65);
-  color: #ffffff;
-  border: none;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-}
-
-.btnEditarFoto {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(19, 27, 46, 0.75);
-  color: #ffffff;
-  border: none;
-  border-radius: 16px;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
 }
 
 .modalRodape {
@@ -182,6 +175,12 @@
   padding: 6px;
   border-radius: 50%;
   cursor: pointer;
+}
+
+.btnRedeAtivo {
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.15)) !important;
+  color: var(--color-primary, #004ac6) !important;
+  box-shadow: 0 0 0 1px var(--color-primary, #004ac6);
 }
 
 .btnCancelar {
@@ -209,6 +208,32 @@
   cursor: pointer;
 }
 
+@media (max-width: 767px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    max-width: 100%;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    animation: sheetSobe 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .overlay.saindo .modal {
+    animation: sheetDesce 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+}
+
+@keyframes sheetSobe {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sheetDesce {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -224,4 +249,185 @@
 @keyframes modalSaida {
   from { transform: translateY(0); opacity: 1; }
   to { transform: translateY(20px); opacity: 0; }
+}
+
+.opcaoRedeCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--bg-surface-low, #faf8ff);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.18));
+  transition: all 0.15s ease;
+}
+
+.opcaoRedeCardAtivo {
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.06));
+  border-color: rgba(0, 74, 198, 0.3);
+}
+
+.opcaoRedeInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.opcaoRedeIconeWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.opcaoRedeTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.opcaoRedeTitulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main, #131b2e);
+  line-height: 1.3;
+}
+
+.opcaoRedeSubtitulo {
+  font-size: 11px;
+  color: var(--text-muted, #737686);
+  line-height: 1.3;
+}
+
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+}
+
+.switchInput {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.switchTrilho {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(115, 118, 134, 0.25);
+  transition: background-color 0.2s ease;
+}
+
+.switchTrilho::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.switchInput:checked + .switchTrilho {
+  background: var(--color-primary, #004ac6);
+}
+
+.switchInput:checked + .switchTrilho::before {
+  transform: translateX(16px);
+}
+
+.tagRedeCompartilhada {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.08));
+  border: 1px solid rgba(0, 74, 198, 0.2);
+  color: var(--color-primary, #004ac6);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.btnRemoverTagRede {
+  background: transparent;
+  border: none;
+  color: var(--color-primary, #004ac6);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.btnRemoverTagRede:hover {
+  opacity: 1;
+}
+
+.tooltipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltipBox {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--bg-surface-dark, #131b2e);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(19, 27, 46, 0.25);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.tooltipBox::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: var(--bg-surface-dark, #131b2e) transparent transparent transparent;
+}
+
+.tooltipWrap:hover .tooltipBox,
+.tooltipWrap:focus-within .tooltipBox {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }

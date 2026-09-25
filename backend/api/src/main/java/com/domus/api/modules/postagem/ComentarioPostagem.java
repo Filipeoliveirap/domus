@@ -31,6 +31,10 @@ public class ComentarioPostagem {
     @JoinColumn(name = "autor_pessoa_id", nullable = false)
     private Pessoa autorPessoa;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pai_comentario_id")
+    private ComentarioPostagem paiComentario;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String conteudo;
 

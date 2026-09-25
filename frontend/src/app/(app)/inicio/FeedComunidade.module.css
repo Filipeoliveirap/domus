@@ -1,7 +1,7 @@
 .containerFeed {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .abasFiltro {
@@ -9,8 +9,8 @@
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -32,6 +32,11 @@
   transition: all 0.15s ease;
 }
 
+.abaItem:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+  color: var(--text-main, #131b2e);
+}
+
 .abaItemActive {
   background: var(--bg-surface-highest, #dae2fd);
   color: var(--color-primary, #004ac6);
@@ -41,5 +46,22 @@
 .listaPosts {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.wrapperSkeletonPost {
+  animation: skeletonEntrada 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 16px;
+}
+
+@keyframes skeletonEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

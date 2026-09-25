@@ -41,7 +41,6 @@ export function ModalEditarComentario({
       { postagemId, comentarioId, conteudo: conteudo.trim() },
       {
         onSuccess: () => {
-          notificar.sucesso('Comentário atualizado', 'O comentário foi alterado com sucesso.')
           fechar()
         },
         onError: () => {

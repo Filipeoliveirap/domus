@@ -139,7 +139,7 @@ public class AuthService {
                     return new SessaoExpiradaException("SESSAO_INVALIDA",
                             "Sessão expirada. Faça login novamente.");
                 });
-        return new SessaoDTO(sessao.id(), sessao.nome(), sessao.role(),
+        return new SessaoDTO(sessao.id(), sessao.pessoaId(), sessao.nome(), sessao.role(),
                 sessao.igrejaId(), sessao.igrejaNome(), sessao.fotoId(),
                 sessao.cargo(), sessao.igrejaSigla(), sessao.igrejaLogoId(),
                 capacidadeRepository.findByUsuarioId(usuarioId).stream()

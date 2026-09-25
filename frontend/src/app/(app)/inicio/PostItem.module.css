@@ -1,18 +1,37 @@
 .postCard {
   background: var(--bg-surface, #ffffff);
-  border-radius: var(--radius-card, 16px);
-  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(19, 27, 46, 0.04);
+  border-radius: 16px;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
+  padding: 18px 24px;
+  box-shadow: 0 2px 8px rgba(19, 27, 46, 0.04);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: postEntrada 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes postEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .cabecalho {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+}
+
+.headerAcoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
 }
 
 .autorBloco {
@@ -34,20 +53,76 @@
   color: var(--color-primary, #004ac6);
 }
 
+.avatarClicavel {
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.avatarClicavel:hover {
+  opacity: 0.88;
+}
+
+.avatarClicavel:active {
+  transform: scale(0.95);
+}
+
 .autorInfo {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.autorLinhaNome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .nomeAutor {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-main, #131b2e);
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.nomeAutor:hover {
+  color: var(--color-primary, #004ac6);
+  text-decoration: underline;
 }
 
 .metaPost {
   font-size: 11px;
   color: var(--text-muted, #737686);
+}
+
+.badgeIgreja {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.badgeIgrejaComentario {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  margin-left: 4px;
 }
 
 .tagPost {
@@ -60,11 +135,55 @@
   color: var(--color-primary, #004ac6);
 }
 
+.tagRede {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.12));
+  color: var(--color-primary, #004ac6);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(0, 74, 198, 0.25);
+}
+
 .conteudo {
   font-size: 14px;
   color: var(--text-main, #131b2e);
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.fotoContainer {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.18));
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fotoContainer:hover {
+  opacity: 0.95;
+  filter: brightness(0.97);
+}
+
+.postImagem {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 560px;
+  object-fit: contain;
+  display: block;
 }
 
 .blocoVersiculo {
@@ -112,11 +231,16 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.12s;
+  transition: transform 0.08s ease, background 0.1s ease, color 0.1s ease;
+}
+
+.btnAmemAtivo {
+  background: var(--color-primary, #004ac6);
+  color: #ffffff;
 }
 
 .btnAmem:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .btnComentarToggle {
@@ -143,12 +267,348 @@
   border-radius: var(--radius-sm, 8px);
   padding: 8px 12px;
   font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: comentarioEntrada 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.itemComentarioEmFoco {
+  border: 1px solid var(--color-primary, #004ac6) !important;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.08)) !important;
+  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.15);
+}
+
+.itemComentarioResposta {
+  margin-left: 20px;
+  position: relative;
+  border-left: 2px solid var(--border-color, rgba(115, 118, 134, 0.25));
+  background: rgba(250, 248, 255, 0.75);
+}
+
+.itemComentarioResposta::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -12px;
+  width: 10px;
+  height: 18px;
+  border-left: 2px solid var(--border-color, rgba(115, 118, 134, 0.3));
+  border-bottom: 2px solid var(--border-color, rgba(115, 118, 134, 0.3));
+  border-bottom-left-radius: 6px;
+  pointer-events: none;
+}
+
+.autorComentarioResposta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tagRespondendoAutor {
+  color: var(--color-primary, #004ac6);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.avatarComentario {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-primary, #004ac6);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.corpoComentario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.cabecalhoComentario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .autorComentario {
   font-weight: 600;
   color: var(--text-main, #131b2e);
-  margin-right: 6px;
+  font-size: 12px;
+}
+
+.acoesComentario {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btnAcaoComentario {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #737686);
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.btnAcaoComentario:hover {
+  color: var(--color-primary, #004ac6);
+  background: var(--bg-surface-high, #e2e7ff);
+}
+
+.btnExcluirComentario:hover {
+  color: #d32f2f;
+  background: rgba(211, 47, 47, 0.08);
+}
+
+.menuWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.btnMenu3Pontos {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #737686);
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btnMenu3Pontos:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+  color: var(--text-main, #131b2e);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: 0 10px 25px -5px rgba(19, 27, 46, 0.15);
+  z-index: 20;
+  min-width: 130px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: modalEntrada 0.15s ease-out;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main, #131b2e);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.dropdownItem:hover {
+  background: var(--bg-surface-low, #faf8ff);
+}
+
+.dropdownItemExcluir {
+  color: #d32f2f;
+}
+
+.dropdownItemExcluir:hover {
+  background: rgba(211, 47, 47, 0.08);
+}
+
+.textoComentario {
+  color: var(--text-main, #131b2e);
+  line-height: 1.4;
+  font-size: 12px;
+}
+
+.rodapeComentario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btnInteracaoComentario {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #737686);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.12s ease;
+}
+
+.btnInteracaoComentario:hover {
+  color: var(--color-primary, #004ac6);
+}
+
+.btnCurtidoComentario {
+  color: var(--color-danger, #ba1a1a);
+}
+
+.badgeRespostaTag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.btnCancelarResposta {
+  background: transparent;
+  border: none;
+  color: var(--color-primary, #004ac6);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemComentarioEnviando {
+  background: var(--bg-surface-low, #faf8ff);
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: comentarioEntrada 0.28s cubic-bezier(0.16, 1, 0.3, 1), pulsoSuave 1.5s ease-in-out infinite;
+}
+
+.corpoComentarioEnviando {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.cabecalhoComentarioEnviando {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.badgeEnviando {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-primary, #004ac6);
+  font-style: italic;
+}
+
+.btnComentarioEnviando {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.spinnerIcone {
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes pulsoSuave {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+@keyframes comentarioEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+.postCard.saindoPost {
+  animation: postSaida 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+.itemComentario.saindoComentario {
+  animation: comentarioSaida 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes postSaida {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes comentarioSaida {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@media (max-width: 767px) {
+  .postCard {
+    padding: 14px 16px;
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
+  }
+  .fotoContainer { width: fit-content; max-width: 100%; max-height: 480px; margin: 6px auto 0; }
+  .postImagem { width: auto; height: auto; max-width: 100%; max-height: 480px; object-fit: contain; display: block; margin: 0 auto; }
 }
 
 .formComentario {

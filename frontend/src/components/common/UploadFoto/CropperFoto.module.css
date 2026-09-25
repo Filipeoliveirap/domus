@@ -143,6 +143,51 @@
   display: block;
 }
 
+.seletorAspecto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.aspectoLabel {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--color-text-muted, #737686);
+  margin-right: 4px;
+}
+
+.btnAspecto {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, rgba(115, 118, 134, 0.2));
+  background: var(--color-bg-page, #f8fafc);
+  color: var(--color-text-secondary, #475569);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnAspecto:hover:not(:disabled) {
+  background: var(--color-bg-white, #ffffff);
+  border-color: var(--color-primary, #004ac6);
+  color: var(--color-primary, #004ac6);
+}
+
+.btnAspectoAtivo {
+  background: var(--color-primary, #004ac6) !important;
+  border-color: var(--color-primary, #004ac6) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.btnAspecto:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .controles {
   display: flex;
   align-items: center;

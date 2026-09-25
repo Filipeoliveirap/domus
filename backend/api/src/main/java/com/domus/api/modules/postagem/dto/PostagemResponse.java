@@ -11,6 +11,7 @@ import java.util.UUID;
 public record PostagemResponse(
         UUID id,
         AutorResponse autor,
+        IgrejaResumo igrejaAutor,
         TipoPostagem tipo,
         boolean oficial,
         String titulo,
@@ -18,6 +19,9 @@ public record PostagemResponse(
         UUID fotoId,
         String versiculoRef,
         boolean fixado,
+        boolean restritoPropriaIgreja,
+        boolean podeEditar,
+        boolean podeDeletar,
         LocalDateTime criadoEm,
         long totalCurtidas,
         long totalComentarios,
@@ -29,12 +33,16 @@ public record PostagemResponse(
             long totalCurtidas,
             long totalComentarios,
             TipoReacao minhaReacao,
-            List<ComentarioResponse> comentariosRecentes
+            List<ComentarioResponse> comentariosRecentes,
+            boolean podeEditar,
+            boolean podeDeletar
     ) {
         UUID fotoId = p.getFoto() != null ? p.getFoto().getId() : null;
+        IgrejaResumo igrejaAutor = IgrejaResumo.de(p.getIgreja());
         return new PostagemResponse(
                 p.getId(),
                 AutorResponse.from(p.getAutorPessoa()),
+                igrejaAutor,
                 p.getTipo(),
                 p.isOficial(),
                 p.getTitulo(),
@@ -42,6 +50,9 @@ public record PostagemResponse(
                 fotoId,
                 p.getVersiculoRef(),
                 p.isFixado(),
+                p.isRestritoPropriaIgreja(),
+                podeEditar,
+                podeDeletar,
                 p.getCriadoEm(),
                 totalCurtidas,
                 totalComentarios,

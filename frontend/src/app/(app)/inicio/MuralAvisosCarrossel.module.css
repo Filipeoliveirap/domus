@@ -150,7 +150,8 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   gap: 16px;
-  padding-bottom: 6px;
+  padding: 6px 4px 10px 4px;
+  margin: -6px -4px -10px -4px;
   -ms-overflow-style: none;
   scrollbar-width: none;
   cursor: grab;

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { useCadastrarPessoa } from '@/hooks/pessoa/useCadastrarPessoa'
 import { PessoaForm } from '@/components/module/pessoas/PessoaForm'
+import { ModalLimiteExcedido } from '@/components/module/pessoas/ModalLimiteExcedido'
 import styles from './page.module.css'
 import { useAuthStore } from '@/store/authStore'
 import { AcessoRestrito } from '@/components/common/AcessoRestrito/AcessoRestrito'
@@ -39,6 +40,11 @@ export default function CadastrarPessoaPage() {
       </header>
 
       <PessoaForm {...form} />
+
+      <ModalLimiteExcedido
+        aberto={form.modalLimiteAberto}
+        onFechar={() => form.setModalLimiteAberto(false)}
+      />
     </div>
   )
 }

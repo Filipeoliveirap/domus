@@ -76,6 +76,31 @@ const MOCK_CONTA_PARCIAL = {
 
 test.describe('Contas a Pagar — E2E', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock de sessão autenticada para evitar ser redirecionado para /login durante o E2E de rotas protegidas
+    await page.route('**/auth/me*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'usr-e2e',
+          nome: 'Admin E2E',
+          role: 'ADMIN_IGREJA',
+          igrejaId: 'ig-e2e',
+          igrejaNome: 'Igreja E2E',
+          fotoId: null,
+          cargo: 'Pastor',
+          igrejaSigla: 'IE2E',
+          igrejaLogoId: null,
+          capacidadesExtras: [],
+          precisaAceitarTermos: false,
+          termosAceitosEm: '2026-01-01T00:00:00Z',
+          rotulos: null,
+          igrejaMaeId: null,
+          statusAssinatura: 'ATIVA',
+        }),
+      })
+    })
+
     // Intercepta rotas da API para fornecer respostas mockadas confiáveis nos testes E2E
     await page.route('**/contas-a-pagar/resumo*', async (route) => {
       await route.fulfill({

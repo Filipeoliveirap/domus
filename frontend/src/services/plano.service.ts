@@ -56,6 +56,24 @@ export async function buscarPlanosServidor(): Promise<PlanoServidor[]> {
                 valorMensal: 179,
                 featuresHabilitadas: ['FEED_SOCIAL', 'CONTAS_A_PAGAR', 'CHECKOUT_EVENTO'],
                 descricoesFeaturesHabilitadas: ['Mural & Feed Social', 'Contas a Pagar', 'Cobrança de Eventos']
+            },
+            {
+                id: 'PRO_PLUS',
+                nomeExibicao: 'Pro+',
+                limitePessoas: 800,
+                limiteCongregacoes: 5,
+                valorMensal: 299,
+                featuresHabilitadas: ['FEED_SOCIAL', 'CONTAS_A_PAGAR', 'CHECKOUT_EVENTO', 'RELATORIOS_AVANCADOS'],
+                descricoesFeaturesHabilitadas: ['Mural & Feed Social', 'Contas a Pagar', 'Cobrança de Eventos', 'Relatórios Avançados']
+            },
+            {
+                id: 'ENTERPRISE',
+                nomeExibicao: 'Enterprise',
+                limitePessoas: 99999,
+                limiteCongregacoes: 9999,
+                valorMensal: 499,
+                featuresHabilitadas: ['FEED_SOCIAL', 'CONTAS_A_PAGAR', 'CHECKOUT_EVENTO', 'RELATORIOS_AVANCADOS', 'CAMPOS_PERSONALIZADOS'],
+                descricoesFeaturesHabilitadas: ['Todas as Funcionalidades', 'Suporte Prioritário']
             }
         ];
     }

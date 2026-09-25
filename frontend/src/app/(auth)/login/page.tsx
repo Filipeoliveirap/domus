@@ -36,7 +36,7 @@ export default function LoginPage() {
   // useLogin() só pelo botão do Google, e não pode herdar este redirecionamento —
   // senão o link de convite de um novo admin cairia na sessão de quem já está logado.
   useEffect(() => {
-    authService.me()
+    authService.me({ semRedirect: true })
       .then((sessao) => aplicarSessao(sessao))
       .catch(() => {
         // 401 (sem sessão) é o caminho normal: fica na tela de login mesmo.

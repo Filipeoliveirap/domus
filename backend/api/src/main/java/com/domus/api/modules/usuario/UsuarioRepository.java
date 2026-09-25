@@ -124,6 +124,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     long countByIgrejaId(UUID igrejaId);
 
+    List<Usuario> findAllByIgrejaId(UUID igrejaId);
+
     /** E-mails de todos os ADMIN_IGREJA ativos — usado pra avisar todo mundo que pode agir
      *  sobre a exclusão da igreja, não só quem agendou. */
     @Query("""

@@ -36,6 +36,14 @@ public class Igreja {
     @Column(name = "telefone", length = 50)
     private String telefoneContato;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_tenant", length = 20, nullable = false)
+    @Builder.Default
+    private StatusTenant statusTenant = StatusTenant.ATIVO;
+
+    @Column(name = "motivo_suspensao", length = 255)
+    private String motivoSuspensao;
+
     @Column(name = "plano", length = 50)
     private String plano;
 

@@ -223,6 +223,7 @@ export const Endpoints = {
     PAPEL: (id: string, membroId: string) => `/celulas/${id}/membros/${membroId}/papel`,
     CONVERTER: (id: string, visitanteId: string) => `/celulas/${id}/converter/${visitanteId}`,
   },
+
   postagens: {
     MURAL: '/postagens/mural',
     FEED: '/postagens/feed',
@@ -234,5 +235,14 @@ export const Endpoints = {
     ATUALIZAR_COMENTARIO: (postagemId: string, comentarioId: string) => `/postagens/${postagemId}/comentarios/${comentarioId}`,
     DELETAR_COMENTARIO: (postagemId: string, comentarioId: string) => `/postagens/${postagemId}/comentarios/${comentarioId}`,
     DELETAR: (id: string) => `/postagens/${id}`,
+  },
+
+  financeiro: {
+    CONTAS_A_PAGAR: '/financeiro/contas-a-pagar',
+  },
+
+  anexos: {
+    UPLOAD: '/anexos',
+    DELETE: (id: string) => `/anexos/${id}`,
   },
 }

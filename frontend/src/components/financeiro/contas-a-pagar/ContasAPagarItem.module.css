@@ -1,0 +1,344 @@
+/* Desktop: tabela */
+.item {
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:hover {
+  background: var(--color-bg-page);
+}
+
+.novo {
+  animation: highlightNew 2s ease-out;
+}
+
+@keyframes highlightNew {
+  0%   { background: #DBEAFE; }
+  100% { background: transparent; }
+}
+
+/* Linha de tabela */
+.linha {
+  display: grid;
+  grid-template-columns: 32px 1fr 160px 130px 100px 110px 100px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+}
+
+/* Status badge (canto esquerdo) */
+.statusBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.status_EM_ABERTO .statusBadge { background: var(--color-warning-bg); color: var(--color-warning); }
+.status_PAGA .statusBadge      { background: var(--color-success-bg); color: var(--color-success); }
+.status_PARCIAL .statusBadge   { background: #DBEAFE; color: #0D6EFD; }
+
+/* Descrição + beneficiário */
+.descricao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.descricaoTitulo {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.beneficiario {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Categoria badge */
+.categoriaBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.categoriaCor {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.categoriaNome {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Valor */
+.valorColuna {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.valor {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.valorPago {
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+}
+
+/* Vencimento */
+.vencimento {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.data {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.dias {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.vencido .data,
+.vencido.dias {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Status pill */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.amarelo { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.verde   { background: var(--color-success-bg); color: var(--color-success-text); }
+.azul    { background: #DBEAFE; color: #1D4ED8; }
+
+.iconeRecorrencia {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* Ações */
+.iconeAnexo {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.btnAcao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.btnAcao:hover {
+  background: var(--color-bg-page);
+  color: var(--color-primary);
+}
+
+.btnAcao:active {
+  transform: scale(0.92);
+}
+
+.btnExcluir:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Mobile card */
+.cardMobile {
+  display: none;
+  flex-direction: column;
+  padding: 14px 16px;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardDesc {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-top: 4px;
+}
+
+.cardValor {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-dark);
+}
+
+.cardDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cardValue {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagamentosLista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pagamentoItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.estornadoBadge {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.btnCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.btnCard:active {
+  transform: scale(0.96);
+}
+
+.btnPagar {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btnEditar {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btnExcluir {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.btnExcluir:hover {
+  background: var(--color-danger-bg);
+}
+
+/* Desktop: esconde cardMobile; Mobile: esconde linha */
+@media (max-width: 767px) {
+  .linha { display: none; }
+  .cardMobile { display: flex; }
+  .item { border-bottom: none; }
+  .statusBadge { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .novo { animation: none; }
+  .btnAcao, .btnCard { transition: none; }
+  .btnAcao:active, .btnCard:active { transform: none; }
+}

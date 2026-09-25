@@ -41,6 +41,7 @@ planilha de fora, e:
 | 11 | **Bug recorrência > mensal**: job busca a última ocorrência materializada da série (não `vencimento + 45 dias`) pra calcular a próxima — cobre TRIMESTRAL/SEMESTRAL/ANUAL. | Janela rolante de 45 dias não cobre 90/180/365. Idempotência preservada via check `existeOcorrenciaFutura`. |
 | 12 | **Endpoint de projeção** (`GET .../series/{id}/projecao`): devolve ocorrências materializadas **+ previstas** até o teto (`recorrenciaAte` ou `recorrenciaVezes`). Previstas vêm marcadas `materializada=false` (não existem fisicamente, só projeção). | Mostra "aluguel vence em 14/10, 14/11, 14/12..." sem materializar tudo. |
 | 13 | **Filtro por fornecedor (texto, `LIKE %x%`)** na listagem + **endpoint de totais** (`GET .../resumo` → 4 números: vence hoje / a vencer no mês / atrasadas / pagas no mês). | Reduz round-trips do front (KPI cards + tabela numa só chamada). |
+| 14 | **`fornecedor` vira `beneficiario` (XOR pessoa cadastrada OU texto livre)** — `beneficiario_pessoa_id UUID NULL FK pessoa(id)` XOR `beneficiario_texto VARCHAR(120) NULL`, CHECK garante disjuncção. `cnpj_beneficiario` mantido texto, NULL por padrão. | "Fornecedor" é nome torto pra esse conceito — uma conta a pagar pode ser pra uma pessoa (reembolso ao João, ajuda de custo à Maria, diária ao pregador Carlos) ou pra um terceiro sem cadastro (Cemig, Copasa, Diocese). Modelo segue padrão da casa (`EVENTO_RESPONSAVEL` V37, `MOVIMENTACAO_CONTRIBUINTE` V32): FK XOR texto livre, com conversão automática pra texto quando a pessoa for excluída por LGPD. |
 
 ## Modelo
 
@@ -50,7 +51,10 @@ planilha de fora, e:
 id                        UUID PK
 igreja_id                 UUID NOT NULL FK igreja          (isolamento multi-tenant)
 categoria_id              UUID NOT NULL FK categoria_financeira (validada tipo SAIDA no service)
-fornecedor                VARCHAR(120) NOT NULL             (texto livre — sem tabela própria, YAGNI)
+-- Beneficiario (XOR pessoa cadastrada OU texto livre). Decisao #14.
+beneficiario_pessoa_id    UUID NULL FK pessoa(id)         -- quando beneficiario e pessoa cadastrada (membro/visitante da igreja)
+beneficiario_texto        VARCHAR(120) NULL               -- quando beneficiario e texto livre ("Energia Eletrica", "Diocese")
+cnpj_beneficiario         VARCHAR(20) NULL                -- so faz sentido pra texto livre (PJ avulsa)
 descricao                 VARCHAR(255)                      (opcional; "conta de luz de setembro")
 valor                     NUMERIC(15,2) NOT NULL CHECK (valor > 0)
 vencimento                DATE NOT NULL
@@ -70,7 +74,10 @@ deleted_at, created_at, updated_at                          (soft-delete padrão
 ```
 
 Índices: `(igreja_id, status, vencimento)`, `(igreja_id, serie_id)`,
-`(igreja_id, fornecedor)` (v2, pro filtro de listagem).
+`(igreja_id, beneficiario_texto) WHERE beneficiario_texto IS NOT NULL` (v2/14, filtro de listagem, índice parcial — XOR garante disjuncção),
+`(igreja_id, beneficiario_pessoa_id) WHERE beneficiario_pessoa_id IS NOT NULL` (v14, relatório por pessoa).
+
+CHECK `(chk_conta_beneficiario_xor)`: `(beneficiario_pessoa_id IS NULL) <> (beneficiario_texto IS NULL)` — exatamente um preenchido.
 
 ### Pagamentos parciais: `pagamento_conta` (linha por lançamento)
 
@@ -113,11 +120,37 @@ Regras (atualizado 2026-09-16, 2ª rodada do brainstorm com o protótipo do Stit
 | `competencia` | DATE (nullable) | mês de referência da despesa ("aluguel de novembro"), distinto do vencimento; usado em agrupamento futuro |
 | `linha_digitavel` | VARCHAR(80) (nullable) | código de barras/linha digitável de boleto; botão "copiar" no front. Ler-via-câmera fica fora (v2) |
 | `documento_numero` | VARCHAR(40) (nullable) | nº do documento/título (ex.: #CPFL-202411-982) |
-| `cnpj_fornecedor` | VARCHAR(20) (nullable) | texto livre validado só no front (máscara); **sem** tabela de fornecedor |
+| `cnpj_beneficiario` | VARCHAR(20) (nullable) | texto livre validado só no front (máscara); **sem** tabela de beneficiário. NULL quando beneficiário é pessoa cadastrada (pessoa física tem CPF, não CNPJ) |
 | `observacoes` | TEXT (nullable) | notas internas |
 | `anexo` | arquivo único (nullable) | **(v2 refinado)** FK pra `anexo` (não arquivo binário inline). Anexo carrega o PDF/JPEG/PNG da fatura. O **comprovante do pagamento** é FK análoga em `pagamento_conta.anexo_id`. Ver seção "Anexos" abaixo. |
 
-Status exibido: além de EM_ABERTO/PAGA, o front mostra badge **"Parcial"** quando
+### LGPD: beneficiário pessoa → texto quando a pessoa é excluída
+
+Quando o admin da igreja **exclui (definitivo)** uma pessoa que era
+beneficiária de uma ou mais `conta_a_pagar`, o serviço de pessoas
+(`PessoaService.excluirDefinitivo` ou similar — já presente no projeto) chama
+`ContaAPagarService.desvincularBeneficiario(pessoaId)` que:
+
+1. Encontra todas as `conta_a_pagar` com `beneficiario_pessoa_id = pessoaId`
+   e `deleted_at IS NULL`.
+2. Para cada uma: `beneficiario_pessoa_id = NULL`, `beneficiario_texto =
+   'Pessoa removida do sistema'`, `updated_at = NOW()`.
+3. Tudo em batch único (não loop com N updates).
+
+**Por quê não cascade:** a movimentação financeira já gerada para pagamentos
+dessa conta continua apontando pra `movimentacao_contribuinte.pessoa_id` (que
+também é desvinculada pelo mesmo evento de exclusão). A `conta_a_pagar` em si
+preserva o histórico contábil com o nome genérico, igual ao
+`EVENTO_RESPONSAVEL.desvincularPessoa`.
+
+**Exposição no front:** a tela da conta mostra "Pessoa removida do sistema"
+(mesma string usada em outros lugares do projeto) sem revelar nome/email
+anteriores. As movimentações históricas mantêm o texto original via
+`MOVIMENTACAO_CONTRIBUINTE.nome_externo` — fora do escopo desta spec.
+
+### Status exibido
+
+Além de EM_ABERTO/PAGA, o front mostra badge **"Parcial"** quando
 `valor_pago > 0 && valor_pago < valor` — o protótipo acertou esse ponto.
 
 ### Recorrência (v1 simples, modelo da Spec C adaptado; refinado em v2)
@@ -284,7 +317,7 @@ Validações no upload (no `AnexoService`, antes de tocar storage):
 4. **`resumo(UUID igrejaId, YearMonth mes)`**: novo método, alimenta
    `GET /financeiro/contas-a-pagar/resumo`. 4 contagens agregadas em SQL
    nativo (não JPQL) pra ficar simples e barato.
-5. **`listar`** ganha `fornecedor: String` opcional (LIKE `%x%`).
+5. **`listar`** ganha `beneficiarioTexto: String` opcional (`LIKE '%x%'`, sobre `beneficiario_texto` — usa o índice parcial da v14; contas com `beneficiario_pessoa_id` não entram no filtro textual).
 6. **Diverge-da-série no escopo**: ao editar `escopo=ESTA_E_SEGUINTES` ou
    `SERIE`, todas as ocorrências alvo passam a `diverge_da_serie=true` (exceto
    a geradora). Necessário pro job de recorrência saber que não deve
@@ -343,8 +376,8 @@ quebra nada. O `down` é opcional e listado em comentário no topo do arquivo.
 5. Estornar um pagamento que tinha comprovante anexo: o comprovante **permanece**
    vinculado ao `pagamento_conta` (estorno não apaga histórico; mesmo padrão da
    movimentação).
-6. Filtro `?fornecedor=CPFL` retorna só contas com fornecedor contendo "CPFL"
-   (case-insensitive).
+6. Filtro `?beneficiarioTexto=CPFL` retorna só contas com `beneficiario_texto`
+   contendo "CPFL" (case-insensitive).
 7. `ContaAPagarServiceTest` cobre: dia-âncora inválido recusa; recorrência
    trimestral gera próxima ocorrência a partir da última materializada;
    `projetarSerie` para no teto e marca `materializada=false` corretamente;

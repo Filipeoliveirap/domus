@@ -116,7 +116,9 @@ export function MuralAvisosCarrossel() {
 
   useEffect(() => {
     if (idAnteriorRef.current && primeiroAvisoId && idAnteriorRef.current !== primeiroAvisoId) {
-      carrosselRef.current?.rolarParaInicio()
+      setTimeout(() => {
+        carrosselRef.current?.rolarParaInicio()
+      }, 80)
     }
     idAnteriorRef.current = primeiroAvisoId ?? null
   }, [primeiroAvisoId])
@@ -313,7 +315,17 @@ export function MuralAvisosCarrossel() {
         </CarrosselSuave>
       )}
 
-      {modalNovoAberto && <ModalNovoAviso aoFechar={() => setModalNovoAberto(false)} />}
+      {modalNovoAberto && (
+        <ModalNovoAviso
+          aoFechar={() => setModalNovoAberto(false)}
+          aoCriar={() => {
+            setFiltroTipo('TODOS')
+            setTimeout(() => {
+              carrosselRef.current?.rolarParaInicio()
+            }, 80)
+          }}
+        />
+      )}
 
       {avisoSelecionado && avisoAtualizado && (
         <ModalDetalheAviso

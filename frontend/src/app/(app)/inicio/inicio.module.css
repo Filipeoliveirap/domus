@@ -182,8 +182,8 @@
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 6px 4px 10px 4px;
-  margin: -6px -4px -10px -4px;
+  padding: 14px 4px 14px 4px;
+  margin: -14px -4px -14px -4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   cursor: grab;

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -81,5 +82,15 @@ class CadastroCongregacaoControllerTest implements PostgresTestContainerSupport 
         assertThat(optConvite).isPresent();
         assertThat(optConvite.get().getUsadoEm()).isNotNull();
         assertThat(optConvite.get().getIgrejaFilha().getIgrejaMae().getId()).isEqualTo(matriz.getId());
+    }
+
+    @Test
+    void consultarCodigo_valido_retornaDadosDaMatriz() throws Exception {
+        var respCodigo = codigoConviteService.gerarCodigo(matriz);
+
+        mockMvc.perform(get("/igrejas/convites/" + respCodigo.codigo()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("VALIDO"))
+                .andExpect(jsonPath("$.matrizNome").value(matriz.getNome()));
     }
 }

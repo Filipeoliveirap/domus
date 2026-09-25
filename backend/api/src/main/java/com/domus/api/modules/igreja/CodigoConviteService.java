@@ -1,5 +1,6 @@
 package com.domus.api.modules.igreja;
 
+import com.domus.api.modules.igreja.dto.ConsultaConviteResponse;
 import com.domus.api.modules.igreja.dto.GerarCodigoConviteResponse;
 import com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,35 @@ public class CodigoConviteService {
 
         codigoConviteRepository.save(convite);
         return new GerarCodigoConviteResponse(codigo);
+    }
+
+    @Transactional(readOnly = true)
+    public ConsultaConviteResponse consultarCodigo(String codigo) {
+        var optConvite = codigoConviteRepository.findByCodigo(codigo);
+        if (optConvite.isEmpty()) {
+            return ConsultaConviteResponse.expirado();
+        }
+
+        CodigoConviteCongregacao convite = optConvite.get();
+        if (convite.getUsadoEm() != null) {
+            return ConsultaConviteResponse.jaUtilizado(convite.getMatriz().getNome());
+        }
+
+        Igreja matriz = convite.getMatriz();
+        long congregacoesAtuais = igrejaRepository.countByIgrejaMaeId(matriz.getId());
+        if (matriz.getPlano() != null && congregacoesAtuais >= matriz.getPlano().getLimiteCongregacoes()) {
+            return ConsultaConviteResponse.limiteExcedido(matriz.getNome(), matriz.getPlano().getNomeExibicao());
+        }
+
+        UUID logoId = matriz.getLogoFoto() != null ? matriz.getLogoFoto().getId() : null;
+        return ConsultaConviteResponse.valido(
+                matriz.getNome(),
+                null,
+                matriz.getPlano() != null ? matriz.getPlano().getNomeExibicao() : "Pro",
+                matriz.getPlano() != null ? matriz.getPlano().getLimiteCongregacoes() : 3,
+                congregacoesAtuais,
+                logoId
+        );
     }
 
     @Transactional

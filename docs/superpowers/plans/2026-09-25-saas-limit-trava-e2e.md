@@ -1,10 +1,10 @@
-# SaaS Subscription Limits, Daughter Church Onboarding, Upgrade Modal & E2E Plan
+# SaaS Subscription Limits, Daughter Church Onboarding & UI Feedback Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement backend active people limit enforcement (`limitePessoas`), daughter church registration via invite code bypassing payment checkout, a reusable animated `<ModalUpgradePlano />`, and an E2E Playwright test suite.
+**Goal:** Implement full SaaS active people limit enforcement, public daughter church registration with invite code validation and visual feedback (handling expired, already used, and limit exceeded cases), official Domus branding, and E2E Playwright tests.
 
-**Architecture:** Active people limit is validated inside `PessoaService.criar` against `Igreja.getPlano().getLimitePessoas()`. Congregation registration uses `CodigoConviteService` with `POST /api/igrejas/registrar-congregacao` (public) and `POST /api/igrejas-vinculadas/codigo-convite` (protected). Frontend uses `<ModalUpgradePlano />` with `useFecharAnimado` and `@starting-style` for seamless mobile bottom-sheet and desktop modal transitions.
+**Architecture:** Backend enforces limit checks in `PessoaService` and `CodigoConviteService`. `CadastroCongregacaoController` exposes `POST /igrejas/registrar-congregacao` and `GET /convites/congregacao/{codigo}`. Frontend connects Landing Page ("Resgatar Convite") and `/cadastro/congregacao` using the Stitch SaaS UI design, official Domus logo (`/images/logo.png`), and distinct error feedback screens.
 
 **Tech Stack:** Java 21, Spring Boot, Spring Data JPA, Next.js 15, TypeScript, Vitest, Playwright E2E.
 
@@ -13,197 +13,147 @@
 ## Global Constraints
 - `limitePessoas`: BASICO (60), PRO (300), PRO_PLUS (800), ENTERPRISE (99999).
 - `limiteCongregacoes`: BASICO (0), PRO (3), PRO_PLUS (5), ENTERPRISE (9999).
-- Error Code on limit exceeded: `LIMITE_PESSOAS_EXCEDIDO` with HTTP status `402 Payment Required`.
+- Error Code on limit exceeded: `LIMITE_PESSOAS_EXCEDIDO` (HTTP 402 Payment Required).
 - Invite Code format: `DOMUS-XXXXXX` (6 unambiguous chars).
 
 ## Review Focus
-1. `PessoaService.criar` must count active people (`deleted_at IS NULL`) per church before saving a new `Pessoa`.
-2. `CadastroCongregacaoService` must validate that the host church (`matriz`) has not reached its `limiteCongregacoes` limit before creating a daughter church.
-3. Daughter church registration must set `status_assinatura = ATIVA` and `igreja_mae_id = matriz.id` without requiring credit card payment.
-4. `ModalUpgradePlano` must follow Domus UI standards (`useFecharAnimado`, `@starting-style`, bottom-sheet in mobile with `.grabber`).
-5. Playwright E2E tests must pass on Chromium and WebKit browsers.
+1. `GET /convites/congregacao/{codigo}` must distinguish code states: `VALIDO`, `EXPIRADO`, `JA_UTILIZADO`, `MATRIZ_LIMITE_EXCEDIDO`.
+2. `/cadastro/congregacao` must render dedicated UI feedback for each error state:
+   - Expired / Not Found -> `TimerOff` badge with instructions to request a new code.
+   - Already Used -> Custom feedback message informing the code was already redeemed.
+   - Matriz Limit Exceeded -> Card advising to contact `{nomeMatriz}` + CTA link to `/planos`.
+3. Landing Page (`/`) must feature a **"Resgatar Convite de Filial"** CTA button that opens the code input flow.
+4. Logo throughout the invite flow must use the official Domus asset `/images/logo.png`.
 
 ---
 
-### Task 1: Backend `PessoaService` Active People Limit Enforcement
+### Task 1: Backend Invite Code Validation Endpoint (`GET /convites/congregacao/{codigo}`)
 
 **Files:**
-- Modify: `backend/api/src/main/java/com/domus/api/modules/pessoa/PessoaService.java`
-- Modify: `backend/api/src/main/java/com/domus/api/shared/exception/GlobalExceptionHandler.java`
-- Modify: `backend/api/src/test/java/com/domus/api/modules/pessoa/PessoaServiceTest.java`
+- Modify: `backend/api/src/main/java/com/domus/api/modules/igreja/CodigoConviteService.java`
+- Modify: `backend/api/src/main/java/com/domus/api/modules/igreja/CadastroCongregacaoController.java`
+- Create: `backend/api/src/main/java/com/domus/api/modules/igreja/dto/ConsultaConviteResponse.java`
+- Modify: `backend/api/src/main/java/com/domus/api/config/SecurityConfig.java`
+- Modify: `backend/api/src/test/java/com/domus/api/modules/igreja/CadastroCongregacaoControllerTest.java`
 
 **Interfaces:**
-- Consumes: `PessoaRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId)` and `Igreja.getPlano().getLimitePessoas()`.
-- Produces: `PlanoLimiteExcedidoException("LIMITE_PESSOAS_EXCEDIDO", ...)` when `totalActivePessoas >= limitePessoas`.
+- Consumes: `CodigoConviteService.consultarCodigo(codigo)`.
+- Produces: `GET /convites/congregacao/{codigo}` -> `ConsultaConviteResponse(estado, matrizNome, matrizPastor, planoNome, limiteCongregacoes, vagasRestantes, logoFotoId)`.
 
-- [ ] **Step 1: Write the failing test in `PessoaServiceTest.java`**
+- [ ] **Step 1: Write failing test for `consultarCodigo` endpoint in `CadastroCongregacaoControllerTest.java`**
 ```java
 @Test
-@DisplayName("deve_recusar_cadastro_pessoa_quando_atingir_limite_do_plano")
-void deveRecusarCadastroPessoaQuandoAtingirLimiteDoPlano() {
-    UUID igrejaId = UUID.randomUUID();
-    UUID autorPessoaId = UUID.randomUUID();
+void consultarCodigo_valido_retornaDadosDaMatriz() throws Exception {
+    var respCodigo = codigoConviteService.gerarCodigo(matriz);
 
-    Igreja igreja = new Igreja();
-    igreja.setId(igrejaId);
-    igreja.setPlano(PlanoAssinatura.BASICO); // limite 60
-
-    when(igrejaRepository.findById(igrejaId)).thenReturn(Optional.of(igreja));
-    when(pessoaRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId)).thenReturn(60L);
-
-    PessoaRequestDTO request = new PessoaRequestDTO("Nova Pessoa", "email@teste.com", null, null, null, Vinculo.MEMBRO, null, null, null, null, null);
-
-    assertThatThrownBy(() -> pessoaService.criar(igrejaId, autorPessoaId, request))
-            .isInstanceOf(PlanoLimiteExcedidoException.class)
-            .hasMessageContaining("limite de 60 pessoas");
+    mockMvc.perform(get("/convites/congregacao/" + respCodigo.codigo()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.estado").value("VALIDO"))
+            .andExpect(jsonPath("$.matrizNome").value(matriz.getNome()));
 }
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
-Run: `cd backend/api && mvn -q test -Dtest=PessoaServiceTest`
-Expected: FAIL (no limit check in `PessoaService.criar`).
+Run: `cd backend/api && mvn -q test -Dtest=CadastroCongregacaoControllerTest`
+Expected: FAIL (endpoint not implemented).
 
-- [ ] **Step 3: Implement active people limit check in `PessoaService.java`**
-```java
-long totalAtivas = membroRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId);
-if (totalAtivas >= igreja.getPlano().getLimitePessoas()) {
-    throw new PlanoLimiteExcedidoException(
-        "LIMITE_PESSOAS_EXCEDIDO",
-        String.format("Sua igreja atingiu o limite de %d pessoas do plano %s.",
-            igreja.getPlano().getLimitePessoas(), igreja.getPlano().getNomeExibicao())
-    );
-}
-```
+- [ ] **Step 3: Implement `consultarCodigo` method and endpoint**
+Add `ConsultaConviteResponse` DTO and `GET /convites/congregacao/{codigo}` in `CadastroCongregacaoController`.
 
 - [ ] **Step 4: Run test to verify it passes**
-Run: `cd backend/api && mvn -q test -Dtest=PessoaServiceTest`
+Run: `cd backend/api && mvn -q test -Dtest=CadastroCongregacaoControllerTest`
 Expected: PASS.
 
 - [ ] **Step 5: Commit Task 1**
 ```bash
-git add backend/api/src/main/java/com/domus/api/modules/pessoa/PessoaService.java backend/api/src/main/java/com/domus/api/shared/exception/GlobalExceptionHandler.java backend/api/src/test/java/com/domus/api/modules/pessoa/PessoaServiceTest.java
-git commit -m "feat(saas): adiciona trava de limite de pessoas ativas por plano no PessoaService"
+git add backend/api/src/main/java/com/domus/api/modules/igreja/ backend/api/src/main/java/com/domus/api/config/SecurityConfig.java backend/api/src/test/java/com/domus/api/modules/igreja/CadastroCongregacaoControllerTest.java
+git commit -m "feat(saas): adiciona endpoint publico GET /convites/congregacao/{codigo} para validacao de convite"
 ```
 
 ---
 
-### Task 2: Daughter Church Registration & Invite Code Endpoints
+### Task 2: Frontend Invite Resolution & Distinct Error UI Feedback
 
 **Files:**
-- Create: `backend/api/src/main/java/com/domus/api/modules/igreja/CadastroCongregacaoController.java`
-- Create: `backend/api/src/main/java/com/domus/api/modules/igreja/CadastroCongregacaoService.java`
-- Create: `backend/api/src/main/java/com/domus/api/modules/igreja/CodigoConviteController.java`
-- Create: `backend/api/src/test/java/com/domus/api/modules/igreja/CadastroCongregacaoControllerTest.java`
+- Modify: `frontend/src/services/plano.service.ts`
+- Modify: `frontend/src/app/(public)/cadastro/congregacao/page.tsx`
+- Modify: `frontend/src/app/(public)/page.tsx`
 
 **Interfaces:**
-- Consumes: `CodigoConviteService.validarEConsumirCodigo(codigo, igrejaFilha)`.
-- Produces: `POST /api/igrejas/registrar-congregacao` (public) & `POST /api/igrejas-vinculadas/codigo-convite` (protected).
+- Consumes: `consultarConvite(codigo)` API service.
+- Produces: UI with distinct feedback states (`VALIDO`, `EXPIRADO`, `JA_UTILIZADO`, `MATRIZ_LIMITE_EXCEDIDO`).
 
-- [ ] **Step 1: Write the failing integration test**
-```java
-@Test
-void registrarCongregacao_comCodigoValido_cadastraESemCheckout() throws Exception {
-    // Generates invite code for matriz and tests public POST /api/igrejas/registrar-congregacao
+- [ ] **Step 1: Add `consultarConvite` function in `plano.service.ts`**
+```ts
+export interface ConsultaConviteResult {
+  estado: 'VALIDO' | 'EXPIRADO' | 'JA_UTILIZADO' | 'MATRIZ_LIMITE_EXCEDIDO';
+  matrizNome?: string;
+  matrizPastor?: string;
+  planoNome?: string;
+  limiteCongregacoes?: number;
+  vagasRestantes?: number;
+  logoFotoId?: string | null;
+}
+
+export async function consultarConvite(codigo: string): Promise<ConsultaConviteResult> {
+  const response = await fetch(`/api/convites/congregacao/${encodeURIComponent(codigo)}`);
+  if (!response.ok) {
+    return { estado: 'EXPIRADO' };
+  }
+  return response.json();
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
-Run: `cd backend/api && mvn -q test -Dtest=CadastroCongregacaoControllerTest`
-Expected: FAIL (endpoints do not exist).
+- [ ] **Step 2: Update `/cadastro/congregacao/page.tsx` with Stitch SaaS UI layout and error states**
+Render official `/images/logo.png`, Matriz details card when valid, `TimerOff` component when expired, already used alert, and Matriz limit exceeded card linking to `/planos`.
 
-- [ ] **Step 3: Implement `CadastroCongregacaoService` and Controllers**
-Create `CadastroCongregacaoController` endpoint handling `POST /api/igrejas/registrar-congregacao` returning `SessaoDTO` upon registration.
+- [ ] **Step 3: Add "Resgatar Convite de Filial" CTA on Landing Page (`src/app/(public)/page.tsx`)**
+Add button linking directly to `/cadastro/congregacao`.
 
-- [ ] **Step 4: Run test to verify it passes**
-Run: `cd backend/api && mvn -q test -Dtest=CadastroCongregacaoControllerTest`
-Expected: PASS.
-
-- [ ] **Step 5: Commit Task 2**
-```bash
-git add backend/api/src/main/java/com/domus/api/modules/igreja/ backend/api/src/test/java/com/domus/api/modules/igreja/
-git commit -m "feat(saas): adiciona endpoints de registro de congregação por código de convite"
-```
-
----
-
-### Task 3: Frontend Reusable `<ModalUpgradePlano />` & Limit Integration
-
-**Files:**
-- Create: `frontend/src/components/common/ModalUpgradePlano/ModalUpgradePlano.tsx`
-- Create: `frontend/src/components/common/ModalUpgradePlano/ModalUpgradePlano.module.css`
-- Modify: `frontend/src/app/(public)/cadastro/congregacao/page.tsx`
-- Modify: `frontend/src/components/auth/FeatureGuard.tsx`
-
-**Interfaces:**
-- Consumes: `ModalUpgradePlano({ aberto, aoFechar, titulo, descricao, planoAtual, planoSugerido, progressoCurrent, progressoMax })`.
-- Produces: Reusable animated modal and connected congregation registration page.
-
-- [ ] **Step 1: Create `<ModalUpgradePlano />` component with animation and responsive design**
-Create component using `useFecharAnimado`, `@starting-style`, bottom-sheet layout on mobile with `.grabber`.
-
-- [ ] **Step 2: Connect `CadastroCongregacaoPage` (`/cadastro/congregacao`) to backend API**
-Update `src/app/(public)/cadastro/congregacao/page.tsx` to handle `?codigo=` from URL and call `planoService.registrarCongregacao(payload)`.
-
-- [ ] **Step 3: Check TypeScript build and unit tests**
+- [ ] **Step 4: Check TypeScript and Unit tests**
 Run: `cd frontend && npx tsc --noEmit && npx vitest run`
 Expected: 0 errors.
 
-- [ ] **Step 4: Commit Task 3**
+- [ ] **Step 5: Commit Task 2**
 ```bash
-git add frontend/src/components/common/ModalUpgradePlano/ frontend/src/app/\(public\)/cadastro/congregacao/
-git commit -m "feat(saas): adiciona ModalUpgradePlano animado e conecta cadastro de congregações"
+git add frontend/src/services/plano.service.ts frontend/src/app/\(public\)/cadastro/congregacao/page.tsx frontend/src/app/\(public\)/page.tsx
+git commit -m "feat(saas): atualiza cadastro de congregacao com design SaaS, logo oficial e feedbacks de erro"
 ```
 
 ---
 
-### Task 4: Playwright E2E Test Suite (`saas-assinatura-limites.spec.ts`)
+### Task 3: Playwright E2E Test Suite Update (`saas-assinatura-limites.spec.ts`)
 
 **Files:**
-- Create: `frontend/e2e/saas-assinatura-limites.spec.ts`
+- Modify: `frontend/e2e/saas-assinatura-limites.spec.ts`
 
 **Interfaces:**
-- Consumes: Playwright chromium & webkit browser fixtures.
-- Produces: E2E test verification of plan list, invite code flow, and upgrade modal.
+- Consumes: Playwright browser test runner.
+- Produces: Verified E2E scenarios for plans page, invite code redemption, and error feedback states.
 
-- [ ] **Step 1: Write `saas-assinatura-limites.spec.ts`**
+- [ ] **Step 1: Update `saas-assinatura-limites.spec.ts` with Landing Page CTA and error state checks**
 ```ts
-import { test, expect } from '@playwright/test';
-
-test.describe('SaaS Subscription Limits & Invite Flow', () => {
-  test('exibe planos e valores corretamente em /planos', async ({ page }) => {
-    await page.goto('/planos');
-    await expect(page.getByText('Básico')).toBeVisible();
-    await expect(page.getByText('Pro')).toBeVisible();
-  });
-
-  test('preenche codigo de convite automaticamente em /cadastro/congregacao?codigo=DOMUS-TEST12', async ({ page }) => {
-    await page.goto('/cadastro/congregacao?codigo=DOMUS-TEST12');
-    const input = page.locator('#codigoConvite');
-    await expect(input).toHaveValue('DOMUS-TEST12');
-  });
+test('navega da landing page para resgate de convite', async ({ page }) => {
+  await page.goto('/');
+  await page.click('text=Resgatar Convite de Filial');
+  await expect(page).toHaveURL(/\/cadastro\/congregacao/);
 });
 ```
 
-- [ ] **Step 2: Run Playwright E2E tests**
+- [ ] **Step 2: Run E2E tests**
 Run: `cd frontend && npm run test:e2e`
-Expected: PASS on chromium and webkit.
+Expected: PASS.
 
-- [ ] **Step 3: Commit Task 4**
+- [ ] **Step 3: Commit Task 3**
 ```bash
 git add frontend/e2e/saas-assinatura-limites.spec.ts
-git commit -m "test(e2e): adiciona testes Playwright para limites de assinatura e convite de congregação"
+git commit -m "test(e2e): atualiza suíte E2E para fluxo de resgate de convite e landing page"
 ```
 
 ---
 
-### Task 5: Workflow Audit & Verification Run (Ultracode Orchestration)
+### Task 4: Final Verification & Test Suite Execution
 
-**Files:**
-- Run Workflow script via `Workflow` tool orchestrating parallel audit agents.
-
-- [ ] **Step 1: Run Workflow security & logic review**
-Audit backend multi-tenancy boundaries, Mercado Pago webhook verification, and limit checks across all layers.
-
-- [ ] **Step 2: Verify all test suites pass**
+- [ ] **Step 1: Run backend and frontend test suites**
 Run: `cd backend/api && mvn -q test && cd ../../frontend && npx tsc --noEmit && npx vitest run`
-Expected: PASS across all layers.
+Expected: ALL TESTS PASS.

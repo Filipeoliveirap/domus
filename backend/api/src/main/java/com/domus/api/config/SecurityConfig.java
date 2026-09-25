@@ -74,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/igrejas/registrar",
                                 "/igrejas/registrar-congregacao",
+                                "/igrejas/convites/**",
                                 "/auth/login",
                                 "/auth/google/login",
                                 "/auth/google/registrar",

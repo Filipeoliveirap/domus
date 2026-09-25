@@ -9,13 +9,13 @@ import styles from './CropperFoto.module.css'
 
 interface Props {
   arquivo: File
-  /** Círculo é 1:1 (foto de pessoa, logo); banner é 3:1 (ex.: capa de evento). */
-  formato: 'circulo' | 'banner'
+  /** Círculo é 1:1 (foto de pessoa, logo); banner é 3:1 (capa de evento); post é livre/adaptativo para feed. */
+  formato: 'circulo' | 'banner' | 'post'
   onCancelar: () => void
   onConfirmar: (recortado: File) => void
 }
 
-const SAIDA: Record<Props['formato'], { largura: number; altura: number }> = {
+const SAIDA: Record<'circulo' | 'banner', { largura: number; altura: number }> = {
   circulo: { largura: 480, altura: 480 },
   banner: { largura: 1200, altura: 675 },
 }
@@ -41,7 +41,24 @@ async function getCroppedImg(imageUrl: string, pixelCrop: Area, formato: Props['
   // Sem isto, drawImage pode desenhar nada → canvas preto (JPEG não tem alpha).
   try { await img.decode() } catch { /* fallback: já carregou */ }
 
-  const { largura, altura } = SAIDA[formato]
+  let largura: number
+  let altura: number
+
+  if (formato === 'post') {
+    largura = pixelCrop.width
+    altura = pixelCrop.height
+    const MAX_DIM = 1920
+    if (largura > MAX_DIM || altura > MAX_DIM) {
+      const ratio = Math.min(MAX_DIM / largura, MAX_DIM / altura)
+      largura = Math.round(largura * ratio)
+      altura = Math.round(altura * ratio)
+    }
+  } else {
+    const dim = SAIDA[formato]
+    largura = dim.largura
+    altura = dim.altura
+  }
+
   const canvas = document.createElement('canvas')
   canvas.width = largura
   canvas.height = altura
@@ -107,6 +124,8 @@ export function CropperFoto({ arquivo, formato, onCancelar, onConfirmar }: Props
   const [mediaErro, setMediaErro] = useState(false)
   const [urlBlob, setUrlBlob] = useState<string | null>(null)
   const [urlBase64, setUrlBase64] = useState<string | null>(null)
+  const [aspectoOpcao, setAspectoOpcao] = useState<'livre' | 'original' | '1:1' | '16:9' | '4:5' | '9:16' | '3:4'>('original')
+  const [naturalAspect, setNaturalAspect] = useState<number | undefined>(undefined)
   const canvasPreviewRef = useRef<HTMLCanvasElement | null>(null)
   const timeoutErroRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -185,7 +204,57 @@ export function CropperFoto({ arquivo, formato, onCancelar, onConfirmar }: Props
 
   const urlParaUsar = urlBase64 || urlBlob
 
-  const aspect = formato === 'circulo' ? 1 : 16 / 9
+  useEffect(() => {
+    if (!urlParaUsar) return
+    let ativo = true
+    createImage(urlParaUsar)
+      .then((img) => {
+        if (ativo && img.naturalWidth && img.naturalHeight) {
+          setNaturalAspect(img.naturalWidth / img.naturalHeight)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      ativo = false
+    }
+  }, [urlParaUsar])
+
+  useEffect(() => {
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+  }, [aspectoOpcao, naturalAspect])
+
+  let aspect: number | undefined
+  if (formato === 'circulo') {
+    aspect = 1
+  } else if (formato === 'banner') {
+    aspect = 16 / 9
+  } else {
+    switch (aspectoOpcao) {
+      case '1:1':
+        aspect = 1
+        break
+      case '16:9':
+        aspect = 16 / 9
+        break
+      case '4:5':
+        aspect = 4 / 5
+        break
+      case '9:16':
+        aspect = 9 / 16
+        break
+      case '3:4':
+        aspect = 3 / 4
+        break
+      case 'original':
+        aspect = naturalAspect
+        break
+      case 'livre':
+      default:
+        aspect = undefined
+        break
+    }
+  }
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     // O react-easy-crop dispara este callback antes da imagem terminar de carregar,
@@ -257,8 +326,11 @@ export function CropperFoto({ arquivo, formato, onCancelar, onConfirmar }: Props
                 onCropComplete={onCropComplete}
                 cropShape={formato === 'circulo' ? 'round' : 'rect'}
                 showGrid
-                objectFit="cover"
-                onMediaLoaded={() => {
+                objectFit={formato === 'post' ? 'contain' : 'cover'}
+                onMediaLoaded={(mediaSize) => {
+                  if (mediaSize.naturalWidth && mediaSize.naturalHeight) {
+                    setNaturalAspect(mediaSize.naturalWidth / mediaSize.naturalHeight)
+                  }
                   // Imagem carregou — cancela o timeout de erro.
                   if (timeoutErroRef.current) {
                     clearTimeout(timeoutErroRef.current)
@@ -297,6 +369,62 @@ export function CropperFoto({ arquivo, formato, onCancelar, onConfirmar }: Props
             </div>
           )}
         </div>
+
+        {formato === 'post' && (
+          <div className={styles.seletorAspecto}>
+            <span className={styles.aspectoLabel}>Formato:</span>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === 'livre' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('livre')}
+            >
+              Livre
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === 'original' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('original')}
+              disabled={!naturalAspect}
+            >
+              Original
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === '1:1' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('1:1')}
+            >
+              1:1
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === '16:9' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('16:9')}
+            >
+              16:9
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === '4:5' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('4:5')}
+            >
+              4:5
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === '9:16' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('9:16')}
+            >
+              9:16 (Mobile)
+            </button>
+            <button
+              type="button"
+              className={`${styles.btnAspecto} ${aspectoOpcao === '3:4' ? styles.btnAspectoAtivo : ''}`}
+              onClick={() => setAspectoOpcao('3:4')}
+            >
+              3:4
+            </button>
+          </div>
+        )}
 
         <div className={styles.controles}>
           <button

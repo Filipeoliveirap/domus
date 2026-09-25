@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Cake, Calendar, MapPin, Clock, Quote, ArrowRight, PartyPopper, X, Building2, CheckCircle2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import { useFecharAnimado } from '@/hooks/useFecharAnimado'
+import { CarrosselSuave, type CarrosselSuaveRef } from '@/components/common/CarrosselSuave/CarrosselSuave'
 import { VisualizadorFoto } from '@/components/common/VisualizadorFoto/VisualizadorFoto'
 import { DrawerDetalhePessoa } from '@/app/(app)/pessoas/(lista)/(detalhe)/DrawerDetalhePessoa'
+import { ModalPerfilResumo, type PerfilResumoDados, type PosicaoTarget } from '@/components/common/ModalPerfilResumo/ModalPerfilResumo'
 import { useInicio } from '@/hooks/inicio/useInicio'
 import { useMinhaInscricao } from '@/hooks/inscricao/useMinhaInscricao'
 import { versiculoDoDia } from '@/lib/versiculos'
@@ -77,11 +79,13 @@ function ItemAniversariante({
   hoje,
   onVerFoto,
   onAbrirPessoa,
+  onAbrirPerfil,
 }: {
   aniversariante: Aniversariante
   hoje: number
   onVerFoto: (a: Aniversariante) => void
   onAbrirPessoa: (id: string) => void
+  onAbrirPerfil: (e: React.MouseEvent, a: Aniversariante) => void
 }) {
   const ehHoje = a.dia === hoje
   const primeiroNome = doisPrimeirosNomes(a.nome)
@@ -92,8 +96,8 @@ function ItemAniversariante({
   return (
     <li
       className={`${styles.itemAniv} ${ehHoje ? styles.anivHoje : ''} ${styles.itemAnivClicavel}`}
-      onClick={() => onAbrirPessoa(a.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPessoa(a.id) }}
+      onClick={(e) => onAbrirPerfil(e, a)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onAbrirPerfil(a) }}
       role="button"
       tabIndex={0}
     >
@@ -126,12 +130,14 @@ function ModalAniversariantes({
   aoFechar,
   onVerFoto,
   onAbrirPessoa,
+  onAbrirPerfil,
 }: {
   aniversariantes: Aniversariante[]
   hoje: number
   aoFechar: () => void
   onVerFoto: (a: Aniversariante) => void
   onAbrirPessoa: (id: string) => void
+  onAbrirPerfil: (a: Aniversariante) => void
 }) {
   const { saindo, fechar } = useFecharAnimado(aoFechar, 220)
   useEffect(() => {
@@ -181,6 +187,7 @@ function ModalAniversariantes({
                 hoje={hoje}
                 onVerFoto={onVerFoto}
                 onAbrirPessoa={handleAbrirPessoa}
+                onAbrirPerfil={onAbrirPerfil}
               />
             ))}
           </ul>
@@ -201,6 +208,7 @@ function SkeletonLista() {
 
 export default function InicioPage() {
   const router = useRouter()
+  const carrosselEventosRef = useRef<CarrosselSuaveRef>(null)
   const nome = useAuthStore((s) => s.nome)
   const minhaIgrejaId = useAuthStore((s) => s.igrejaId)
   const primeiroNome = doisPrimeirosNomes(nome ?? '')
@@ -210,6 +218,21 @@ export default function InicioPage() {
   const [eventoAberto, setEventoAberto] = useState<string | null>(null)
   const [fotoAniv, setFotoAniv] = useState<Aniversariante | null>(null)
   const [pessoaDetalheId, setPessoaDetalheId] = useState<string | null>(null)
+  const [perfilResumo, setPerfilResumo] = useState<PerfilResumoDados | null>(null)
+  const [posicaoTarget, setPosicaoTarget] = useState<PosicaoTarget | null>(null)
+
+  const handleAbrirPerfil = (e: React.MouseEvent, a: Aniversariante) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosicaoTarget({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+    })
+    setPerfilResumo({ id: a.id, nome: a.nome, fotoId: a.fotoId })
+  }
   const hoje = new Date().getDate()
   const eventos = data?.proximosEventos ?? []
 
@@ -283,7 +306,7 @@ export default function InicioPage() {
                   acaoPrimaria={{ label: 'Ver eventos', onClick: () => router.push('/eventos') }}
                 />
               ) : (
-                <div className={styles.trilhaEventos}>
+                <CarrosselSuave ref={carrosselEventosRef} className={styles.trilhaEventos}>
                   {eventos.map((e: EventoResumo) => {
                     const d = dataEvento(e.inicio)
                     const ehOutraIgreja = e.igrejaOrganizadora.id !== minhaIgrejaId
@@ -325,7 +348,7 @@ export default function InicioPage() {
                       </button>
                     )
                   })}
-                </div>
+                </CarrosselSuave>
               )}
             </Transicao>
           </section>
@@ -370,6 +393,7 @@ export default function InicioPage() {
                       hoje={hoje}
                       onVerFoto={setFotoAniv}
                       onAbrirPessoa={setPessoaDetalheId}
+                      onAbrirPerfil={handleAbrirPerfil}
                     />
                   ))}
                 </ul>
@@ -386,6 +410,7 @@ export default function InicioPage() {
           aoFechar={() => setModalAberto(false)}
           onVerFoto={setFotoAniv}
           onAbrirPessoa={setPessoaDetalheId}
+          onAbrirPerfil={handleAbrirPerfil}
         />
       )}
 
@@ -408,6 +433,18 @@ export default function InicioPage() {
         <DrawerDetalhePessoa
           pessoaId={pessoaDetalheId}
           onClose={() => setPessoaDetalheId(null)}
+        />
+      )}
+
+      {perfilResumo && (
+        <ModalPerfilResumo
+          dados={perfilResumo}
+          posicaoTarget={posicaoTarget}
+          aoFechar={() => {
+            setPerfilResumo(null)
+            setPosicaoTarget(null)
+          }}
+          onVerDetalhesCompletos={(id) => setPessoaDetalheId(id)}
         />
       )}
     </div>

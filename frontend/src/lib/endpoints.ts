@@ -227,8 +227,12 @@ export const Endpoints = {
     MURAL: '/postagens/mural',
     FEED: '/postagens/feed',
     CRIAR: '/postagens',
+    ATUALIZAR: (id: string) => `/postagens/${id}`,
     CURTIR: (id: string) => `/postagens/${id}/curtir`,
     COMENTAR: (id: string) => `/postagens/${id}/comentarios`,
+    CURTIR_COMENTARIO: (comentarioId: string) => `/postagens/comentarios/${comentarioId}/curtir`,
+    ATUALIZAR_COMENTARIO: (postagemId: string, comentarioId: string) => `/postagens/${postagemId}/comentarios/${comentarioId}`,
+    DELETAR_COMENTARIO: (postagemId: string, comentarioId: string) => `/postagens/${postagemId}/comentarios/${comentarioId}`,
     DELETAR: (id: string) => `/postagens/${id}`,
   },
 }

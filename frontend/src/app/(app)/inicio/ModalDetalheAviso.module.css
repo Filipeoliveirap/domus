@@ -107,6 +107,13 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-main, #131b2e);
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.nomeAutor:hover {
+  color: var(--color-primary, #004ac6);
+  text-decoration: underline;
 }
 
 .metaPost {
@@ -121,6 +128,19 @@
   padding: 3px 10px;
   border-radius: 12px;
   background: var(--bg-primary-subtle, rgba(0, 74, 198, 0.1));
+  color: var(--color-primary, #004ac6);
+}
+
+.tagRede {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 74, 198, 0.12);
   color: var(--color-primary, #004ac6);
 }
 
@@ -140,19 +160,25 @@
 
 .fotoContainer {
   position: relative;
-  width: 100%;
-  max-height: 380px;
-  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto;
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
   cursor: pointer;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fotoAviso {
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: 380px;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
   display: block;
 }
 
@@ -179,7 +205,36 @@
   padding: 14px 20px;
   border-top: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btnAcaoAviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface-low, #faf8ff);
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.2));
+  color: var(--text-main, #131b2e);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.btnAcaoAviso:hover {
+  background: var(--bg-surface-high, #e2e7ff);
+}
+
+.btnExcluirAviso {
+  color: #d32f2f;
+  border-color: rgba(211, 47, 47, 0.2);
+}
+
+.btnExcluirAviso:hover {
+  background: rgba(211, 47, 47, 0.08);
 }
 
 .btnFecharRodape {
@@ -191,6 +246,54 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    max-width: 100%;
+    max-height: 85dvh;
+    border-radius: 18px 18px 0 0;
+    animation: sheetSobe 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .overlay.saindo .modal {
+    animation: sheetDesce 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  .fotoContainer {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, rgba(115, 118, 134, 0.15));
+  cursor: pointer;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+  .fotoAviso {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  display: block;
+}
+}
+
+@keyframes sheetSobe {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sheetDesce {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
 }
 
 @keyframes fadeIn {

@@ -10,6 +10,7 @@ export interface CriarPostagemPayload {
   fotoId?: string | null
   versiculoRef?: string | null
   fixado?: boolean
+  restritoPropriaIgreja?: boolean
 }
 
 export interface PaginaFeedResponse {
@@ -33,13 +34,27 @@ export const postagemService = {
   criar: (payload: CriarPostagemPayload): Promise<Postagem> =>
     api.post<Postagem>(Endpoints.postagens.CRIAR, payload).then((res) => res.data),
 
+  atualizar: (postagemId: string, payload: Partial<CriarPostagemPayload>): Promise<Postagem> =>
+    api.put<Postagem>(Endpoints.postagens.ATUALIZAR(postagemId), payload).then((res) => res.data),
+
   curtir: (postagemId: string, tipo: TipoReacao): Promise<Postagem> =>
     api.post<Postagem>(Endpoints.postagens.CURTIR(postagemId), { tipo }).then((res) => res.data),
 
-  comentar: (postagemId: string, conteudo: string): Promise<Comentario> =>
+  comentar: (postagemId: string, conteudo: string, paiComentarioId?: string | null): Promise<Comentario> =>
     api
-      .post<Comentario>(Endpoints.postagens.COMENTAR(postagemId), { conteudo })
+      .post<Comentario>(Endpoints.postagens.COMENTAR(postagemId), { conteudo, paiComentarioId })
       .then((res) => res.data),
+
+  curtirComentario: (comentarioId: string): Promise<Comentario> =>
+    api.post<Comentario>(Endpoints.postagens.CURTIR_COMENTARIO(comentarioId)).then((res) => res.data),
+
+  atualizarComentario: (postagemId: string, comentarioId: string, conteudo: string): Promise<Comentario> =>
+    api
+      .put<Comentario>(Endpoints.postagens.ATUALIZAR_COMENTARIO(postagemId, comentarioId), { conteudo })
+      .then((res) => res.data),
+
+  deletarComentario: (postagemId: string, comentarioId: string): Promise<void> =>
+    api.delete(Endpoints.postagens.DELETAR_COMENTARIO(postagemId, comentarioId)).then(() => undefined),
 
   deletar: (postagemId: string): Promise<void> =>
     api.delete(Endpoints.postagens.DELETAR(postagemId)).then(() => undefined),

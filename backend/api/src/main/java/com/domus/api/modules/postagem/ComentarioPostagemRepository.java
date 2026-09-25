@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface ComentarioPostagemRepository extends JpaRepository<ComentarioPostagem, UUID> {
 
-    List<ComentarioPostagem> findByPostagemIdOrderByCriadoEmAsc(UUID postagemId);
+    List<ComentarioPostagem> findByPostagemIdOrderByCriadoEmDesc(UUID postagemId);
 
     long countByPostagemId(UUID postagemId);
 

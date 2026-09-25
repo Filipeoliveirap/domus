@@ -44,7 +44,7 @@ public class Postagem {
     @Column(length = 150)
     private String titulo;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String conteudo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -56,6 +56,10 @@ public class Postagem {
 
     @Column(nullable = false)
     private boolean fixado;
+
+    @Column(name = "restrito_propria_igreja", nullable = false)
+    @Builder.Default
+    private boolean restritoPropriaIgreja = true;
 
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)

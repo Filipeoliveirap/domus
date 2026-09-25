@@ -2,15 +2,15 @@
 
 import { useRef, useState } from 'react'
 import Image from 'next/image'
-import { Send, Image as ImageIcon, X, Pencil } from 'lucide-react'
-import { CropperFoto } from '@/components/common/UploadFoto/CropperFoto'
+import { Send, Image as ImageIcon, Globe, X } from 'lucide-react'
+import { SeletorEPreviaFoto, type SeletorEPreviaFotoRef } from '@/components/common/UploadFoto/SeletorEPreviaFoto'
 import { useAuthStore } from '@/store/authStore'
 import { useCriarPostagem } from '@/hooks/postagem/useCriarPostagem'
+import { useVinculoStatus } from '@/hooks/igreja/useVinculo'
+import { useRotulos } from '@/lib/rotulos/useRotulos'
+import { useArrastarParaRolar } from '@/hooks/useArrastarParaRolar'
 import { iniciais, doisPrimeirosNomes } from '@/lib/formats/pessoaFormat'
 import { urlFoto } from '@/lib/urlFoto'
-import { api } from '@/lib/api'
-import { Endpoints } from '@/lib/endpoints'
-import { notificar } from '@/components/common/Notificacao/notificar'
 import type { TipoPostagem } from '@/types/postagem.type'
 import styles from './CaixaCriarPostagem.module.css'
 
@@ -28,44 +28,24 @@ export function CaixaCriarPostagem() {
   const fotoIdPerfil = useAuthStore((s) => s.fotoId)
   const urlPerfil = urlFoto(fotoIdPerfil, 'THUMB')
 
+  const { data: vinculoStatus } = useVinculoStatus()
+  const temFamilia = vinculoStatus != null && vinculoStatus.estado !== 'INDEPENDENTE'
+  const { congregacao, concordar } = useRotulos()
+
   const criarPostagem = useCriarPostagem()
   const [conteudo, setConteudo] = useState('')
   const [tipo, setTipo] = useState<TipoPostagem>('DEVOCIONAL')
   const [fotoId, setFotoId] = useState<string | null>(null)
-  const [carregandoFoto, setCarregandoFoto] = useState(false)
-  const [arquivoParaRecorte, setArquivoParaRecorte] = useState<File | null>(null)
+  const [compartilharRede, setCompartilharRede] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const seletorFotoRef = useRef<SeletorEPreviaFotoRef>(null)
+  const { ref: refSeletorTags, propsArrasto: propsArrastoTags } = useArrastarParaRolar<HTMLDivElement>()
 
-  const handleSelecionarArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setArquivoParaRecorte(file)
-    // Limpa valor do input para permitir re-selecionar o mesmo arquivo se necessário
-    e.target.value = ''
-  }
-
-  const handleConfirmarRecorte = async (arquivoRecortado: File) => {
-    setArquivoParaRecorte(null)
-    try {
-      setCarregandoFoto(true)
-      const formData = new FormData()
-      formData.append('arquivo', arquivoRecortado)
-
-      const res = await api.post<{ id: string }>(Endpoints.fotos.UPLOAD, formData, {
-        headers: { 'Content-Type': undefined },
-      })
-      setFotoId(res.data.id)
-    } catch {
-      notificar.erro('Não foi possível enviar a foto', 'Tente enviar a imagem novamente.')
-    } finally {
-      setCarregandoFoto(false)
-    }
-  }
+  const podePublicar = Boolean(conteudo.trim() || fotoId)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!conteudo.trim()) return
+    if (!podePublicar) return
 
     criarPostagem.mutate(
       {
@@ -73,17 +53,19 @@ export function CaixaCriarPostagem() {
         oficial: false,
         conteudo: conteudo.trim(),
         fotoId: fotoId || undefined,
+        restritoPropriaIgreja: temFamilia ? !compartilharRede : true,
       },
       {
         onSuccess: () => {
           setConteudo('')
           setFotoId(null)
+          setCompartilharRede(false)
         },
       },
     )
   }
 
-  const urlPreviewFoto = urlFoto(fotoId, 'DISPLAY')
+  const textoRotuloRede = `${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`
 
   return (
     <form className={styles.caixa} onSubmit={handleSubmit}>
@@ -104,39 +86,34 @@ export function CaixaCriarPostagem() {
             value={conteudo}
             onChange={(e) => setConteudo(e.target.value)}
           />
+          {compartilharRede && (
+            <div className={styles.tagRedeCompartilhada}>
+              <Globe size={12} />
+              <span>
+                Será compartilhado com {concordar(congregacao.genero, 'os_min')} demais {congregacao.plural.toLowerCase()}
+              </span>
+              <button
+                type="button"
+                className={styles.btnRemoverTagRede}
+                onClick={() => setCompartilharRede(false)}
+                title="Remover compartilhamento"
+                aria-label="Remover compartilhamento"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {fotoId && urlPreviewFoto && (
-        <div className={styles.previewContainer}>
-          <button
-            type="button"
-            className={styles.btnEditarFoto}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Pencil size={13} />
-            Editar
-          </button>
-          <Image
-            src={urlPreviewFoto}
-            alt="Prévia da imagem"
-            width={600}
-            height={260}
-            unoptimized
-            className={styles.previewImagem}
-          />
-          <button
-            type="button"
-            className={styles.btnRemoverFoto}
-            onClick={() => setFotoId(null)}
-            aria-label="Remover foto"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
+      <SeletorEPreviaFoto
+        ref={seletorFotoRef}
+        fotoId={fotoId}
+        onChange={setFotoId}
+        formato="post"
+      />
 
-      <div className={styles.seletorTags}>
+      <div ref={refSeletorTags} {...propsArrastoTags} className={styles.seletorTags}>
         {TAGS_CATEGORIA.map((tag) => (
           <button
             key={tag.valor}
@@ -151,43 +128,52 @@ export function CaixaCriarPostagem() {
 
       <div className={styles.barraAcoes}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleSelecionarArquivo}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-          <button
-            type="button"
-            className={styles.btnAcaoIcone}
-            title="Adicionar Foto"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={carregandoFoto}
-          >
-            <ImageIcon size={18} />
-          </button>
-          {carregandoFoto && <span style={{ fontSize: 11, color: '#737686' }}>Enviando foto...</span>}
+          <div className={styles.tooltipWrap}>
+            <button
+              type="button"
+              className={styles.btnAcaoIcone}
+              onClick={() => seletorFotoRef.current?.abrirSeletor()}
+              aria-label="Adicionar foto"
+            >
+              <ImageIcon size={18} />
+            </button>
+            <div className={styles.tooltipBox} role="tooltip">
+              Adicionar foto
+            </div>
+          </div>
+
+          {temFamilia && (
+            <div className={styles.tooltipWrap}>
+              <button
+                type="button"
+                className={`${styles.btnAcaoIcone} ${compartilharRede ? styles.btnRedeAtivo : ''}`}
+                onClick={() => setCompartilharRede((v) => !v)}
+                aria-label={
+                  compartilharRede
+                    ? `Compartilhando com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`
+                    : `Compartilhar com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`
+                }
+              >
+                <Globe size={18} />
+              </button>
+              <div className={styles.tooltipBox} role="tooltip">
+                {compartilharRede
+                  ? `Compartilhando com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`
+                  : `Compartilhar com ${concordar(congregacao.genero, 'os_min')} demais ${congregacao.plural.toLowerCase()}`}
+              </div>
+            </div>
+          )}
         </div>
 
         <button
           type="submit"
           className={styles.btnPublicar}
-          disabled={criarPostagem.isPending || carregandoFoto || !conteudo.trim()}
+          disabled={criarPostagem.isPending || !podePublicar}
         >
           <Send size={14} />
           {criarPostagem.isPending ? 'Publicando...' : 'Publicar'}
         </button>
       </div>
-
-      {arquivoParaRecorte && (
-        <CropperFoto
-          arquivo={arquivoParaRecorte}
-          formato="banner"
-          onCancelar={() => setArquivoParaRecorte(null)}
-          onConfirmar={handleConfirmarRecorte}
-        />
-      )}
     </form>
   )
 }

@@ -39,27 +39,27 @@ export default function PreviewModaisDevPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans space-y-8">
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', color: 'var(--color-text-primary)', padding: '32px', fontFamily: 'sans-serif' }}>
       {simularPausado && <BannerAssinaturaPausada />}
 
-      <div className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-        <div>
-          <h1 className="text-xl font-bold text-indigo-400">⚡ Painel Dev de Prévia de UX / Modais</h1>
-          <p className="text-xs text-slate-400 mt-1">
+      <div style={{ maxWidth: '640px', margin: '0 auto', background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--color-primary)' }}>⚡ Painel Dev de Prévia de UX / Modais</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
             Ferramenta interna de desenvolvimento para visualizar e validar os componentes de transbordo e bloqueios sem precisar cadastrar dados no banco.
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
-            <h2 className="text-sm font-semibold text-white">1. Modal de Limite de Cota Excedido (Igreja Mãe vs Filha)</h2>
-            <div className="flex flex-wrap gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ padding: '16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '12px' }}>1. Modal de Limite de Cota Excedido (Igreja Mãe vs Filha)</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
               <button
                 onClick={() => {
                   useAuthStore.setState({ igrejaMaeId: null }) // Simula Igreja Mãe
                   setModalLimiteMaeAberto(true)
                 }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition"
+                style={{ padding: '8px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
               >
                 Abrir Modal (Igreja Mãe - Com Botão Upgrade)
               </button>
@@ -69,18 +69,18 @@ export default function PreviewModaisDevPage() {
                   useAuthStore.setState({ igrejaMaeId: 'mae-123' }) // Simula Igreja Filha
                   setModalLimiteFilhaAberto(true)
                 }}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition"
+                style={{ padding: '8px 16px', background: '#D97706', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
               >
                 Abrir Modal (Igreja Filha - Restrito)
               </button>
             </div>
           </div>
 
-          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
-            <h2 className="text-sm font-semibold text-white">2. Banner de Dunning (Status PAUSADA - Leitura Apenas)</h2>
+          <div style={{ padding: '16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '12px' }}>2. Banner de Dunning (Status PAUSADA - Leitura Apenas)</h2>
             <button
               onClick={toggleSimulacaoPausada}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${simularPausado ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+              style={{ padding: '8px 16px', background: simularPausado ? '#DC2626' : '#059669', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
             >
               {simularPausado ? 'Desativar Banner Pausado' : 'Simular Status PAUSADA (Modo Leitura)'}
             </button>

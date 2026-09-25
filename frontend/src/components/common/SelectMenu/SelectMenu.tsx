@@ -48,7 +48,7 @@ export function SelectMenu({
     return () => document.removeEventListener('keydown', aoTeclar)
   }, [aberto])
 
-  const todas: OpcaoSelectMenu[] = [{ value: '', label: placeholder }, ...options]
+  const todas: OpcaoSelectMenu[] = placeholder ? [{ value: '', label: placeholder }, ...options] : options
   const selecionada = todas.find((o) => o.value === value)
 
   function escolher(valor: string) {

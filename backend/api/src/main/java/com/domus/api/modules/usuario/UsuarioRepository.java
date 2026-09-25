@@ -28,7 +28,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     /** Projeção evita LazyInitializationException: entidade chega desanexada ao controller (SecurityFilter roda antes do open-in-view). */
     @Query("""
     SELECT new com.domus.api.modules.auth.DTO.SessaoDTO(
-        u.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome,
+        u.id, u.pessoa.id, u.pessoa.nome, u.role.nome, u.igreja.id, u.igreja.nome,
         u.pessoa.foto.id, u.pessoa.cargo, u.igreja.sigla, u.igreja.logoFoto.id,
         new com.domus.api.modules.igreja.DTO.RotulosDTO(
             u.igreja.ministerioNomeSingular, u.igreja.ministerioNomePlural, u.igreja.ministerioGenero,

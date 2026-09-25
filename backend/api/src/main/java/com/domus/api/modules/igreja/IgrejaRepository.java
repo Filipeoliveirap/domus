@@ -25,6 +25,10 @@ public interface IgrejaRepository extends JpaRepository<Igreja, UUID> {
     /** "Sou mãe?" é ter pelo menos uma filha — não é possuir um código. */
     boolean existsByIgrejaMaeId(UUID igrejaMaeId);
 
+    long countByIgrejaMaeId(UUID igrejaMaeId);
+
+    Optional<Igreja> findByMpPreapprovalId(String mpPreapprovalId);
+
     List<Igreja> findByIgrejaMaeIdOrderByNomeAsc(UUID igrejaMaeId);
 
     /** Só os ids das filhas — evita carregar entidade à toa no cálculo da família. */

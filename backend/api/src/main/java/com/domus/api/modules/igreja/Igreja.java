@@ -47,7 +47,7 @@ public class Igreja {
     @Enumerated(EnumType.STRING)
     @Column(name = "plano", length = 50)
     @Builder.Default
-    private PlanoAssinatura plano = PlanoAssinatura.BASICO;
+    private PlanoAssinatura plano = PlanoAssinatura.ENTERPRISE;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_assinatura", length = 30)

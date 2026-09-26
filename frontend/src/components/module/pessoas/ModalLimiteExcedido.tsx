@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { useRotulos } from '@/lib/rotulos/useRotulos'
 import { useAuthStore } from '@/store/authStore'
+import styles from './ModalLimiteExcedido.module.css'
 
 interface ModalLimiteExcedidoProps {
   aberto: boolean
@@ -32,44 +33,38 @@ export function ModalLimiteExcedido({ aberto, onFechar, limite }: ModalLimiteExc
   }
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl space-y-5">
-        <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+    <div className={styles.overlay}>
+      <div className={styles.modal}>
+        <div className={styles.iconeBox}>
           ⚠️
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-white">Limite do Plano Atingido</h2>
-          <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+          <h2 className={styles.titulo}>Limite do Plano Atingido</h2>
+          <p className={styles.descricao}>
             {prefixoFamilia} atingiram a capacidade máxima de {limite ? `${limite} ` : ''}pessoas ativas permitidas pelo plano contratado.
           </p>
         </div>
 
         {ehIgrejaFilha ? (
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-amber-300/90 leading-relaxed">
-            <p className="font-semibold text-amber-300 mb-1">🔒 Upgrade restrito à Igreja Contratante</p>
+          <div className={styles.caixaAlerta}>
+            <p className={styles.caixaAlertaTitulo}>🔒 Upgrade restrito à Igreja Contratante</p>
             Esta congregação está vinculada a um plano gerenciado pela igreja matriz. Entre em contato com a administração da igreja contratante para solicitar o aumento da capacidade.
           </div>
         ) : (
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-400 leading-relaxed">
+          <div className={styles.caixaInfo}>
             Para continuar cadastrando novas pessoas e liberar recursos avançados, faça o upgrade do seu plano Domus.
           </div>
         )}
 
-        <div className="flex flex-col gap-2 pt-2">
+        <div className={styles.botoesGroup}>
           {!ehIgrejaFilha && (
-            <Link
-              href="/configuracoes/assinatura"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-sm transition text-center shadow-lg shadow-indigo-600/20"
-            >
+            <Link href="/configuracoes/assinatura" className={styles.btnPrimary}>
               Fazer Upgrade do Plano
             </Link>
           )}
 
-          <button
-            onClick={onFechar}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition"
-          >
+          <button onClick={onFechar} className={styles.btnSecondary}>
             {ehIgrejaFilha ? 'Entendi' : 'Fechar'}
           </button>
         </div>

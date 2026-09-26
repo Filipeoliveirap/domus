@@ -1,0 +1,157 @@
+.paginaAdmin {
+  min-height: 100vh;
+  background: #090d16;
+  color: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans, sans-serif);
+}
+
+.headerAdmin {
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logoBox {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logoTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #818cf8;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+}
+
+.badgeTag {
+  font-size: 10px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.navAdmin {
+  display: flex;
+  gap: 12px;
+}
+
+.navLink {
+  padding: 6px 12px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.navLink:hover {
+  color: #ffffff;
+  background: #1e293b;
+}
+
+.navLinkAtivo {
+  color: #ffffff;
+  background: #4f46e5;
+}
+
+.userBox {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.btnSair {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  padding: 6px 14px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.btnSair:hover {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.mainContent {
+  flex: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* Card Escuro Admin */
+.cardDark {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-lg, 12px);
+  padding: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.tabelaAdmin {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.tabelaAdmin th {
+  background: #020617;
+  color: #94a3b8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 14px 16px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.tabelaAdmin td {
+  padding: 16px;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+}
+
+.tabelaAdmin tr:hover td {
+  background: #1e293b;
+}
+
+.badgeStatusAtivo {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badgeStatusSuspenso {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}

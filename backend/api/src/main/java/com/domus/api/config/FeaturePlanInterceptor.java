@@ -13,7 +13,7 @@ import java.io.PrintWriter;
 public class FeaturePlanInterceptor {
 
     public boolean validarFeature(HttpServletResponse response, Igreja igreja, FeaturePlan feature) throws IOException {
-        PlanoAssinatura plano = (igreja != null && igreja.getPlano() != null) ? igreja.getPlano() : PlanoAssinatura.ENTERPRISE;
+        PlanoAssinatura plano = (igreja != null && igreja.getPlano() != null) ? igreja.getPlano() : PlanoAssinatura.BASICO;
 
         if (!plano.temFeature(feature)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);

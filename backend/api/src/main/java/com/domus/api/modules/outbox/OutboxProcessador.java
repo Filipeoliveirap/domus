@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Properties configuráveis:
  * <ul>
  *   <li>{@code app.outbox.intervalo-min-ms} (default 3000)</li>
- *   <li>{@code app.outbox.intervalo-max-ms} (default 300000)</li>
+ *   <li>{@code app.outbox.intervalo-max-ms} (default 600000)</li>
  *   <li>{@code app.outbox.delay-inicial-ms} (default 5000)</li>
  * </ul>
  *
@@ -40,12 +40,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * ausente e a fila fica vazia 99.99% do tempo em produção — causando
  * queries ociosas em massa que mantinham o Neon acordado.
  *
- * <p><strong>Por que cap em 5min:</strong> o Neon Free/Launch só suspende
- * o compute após 5min de inatividade. Se o cap do backoff for menor que
- * isso (ex.: 30s), cada poll reseta o timer de inatividade e o Neon
- * nunca suspende — a redução de CU-h prometida não acontece. Cap de 5min
- * iguala o threshold do Neon: em idle profundo, o compute SUSPENSA e
- * deixa de consumir CU-h até o próximo INSERT/UPDATE na app.
+ * <p><strong>Por que cap em 10min:</strong> o Neon Free/Launch suspende
+ * o compute após 5min de inatividade. Cap de 10min supera esse threshold
+ * com folga, garantindo que o timer de 5min do Neon transcorra sem qualquer
+ * query, liberando o auto-suspend e reduzindo CU-h em repouso.
  */
 @Component
 @RequiredArgsConstructor
@@ -58,7 +56,7 @@ public class OutboxProcessador {
     @Value("${app.outbox.intervalo-min-ms:3000}")
     private long intervaloMinMs;
 
-    @Value("${app.outbox.intervalo-max-ms:300000}")
+    @Value("${app.outbox.intervalo-max-ms:600000}")
     private long intervaloMaxMs;
 
     @Scheduled(

@@ -11,8 +11,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /** Expira cobrança de evento pago vencida, liberando a vaga, e cancela a inscrição
- * vinculada (que nasceu AGUARDANDO_PAGAMENTO — ninguém pagou a tempo). Roda a cada 5
- * minutos — suficiente dado que o prazo mínimo de cobrança é 30 minutos. */
+ * vinculada (que nasceu AGUARDANDO_PAGAMENTO — ninguém pagou a tempo). Roda a cada 15
+ * minutos por padrão — suficiente dado que o prazo mínimo de cobrança é 30 minutos,
+ * e permite que o auto-suspend do Neon (5min) funcione sem ser acordado. */
 @Component
 public class CobrancaEventoExpiracaoJob {
 
@@ -25,7 +26,9 @@ public class CobrancaEventoExpiracaoJob {
         this.inscricaoRepository = inscricaoRepository;
     }
 
-    @Scheduled(fixedRate = 5 * 60 * 1000)
+    @Scheduled(
+            fixedDelayString = "${app.pagamento.expiracao-job.intervalo-ms:900000}",
+            initialDelayString = "60000")
     public void executar() {
         var vencidas = repository.findByStatusAndExpiraEmBefore(StatusCobranca.PENDENTE, Instant.now());
         if (vencidas.isEmpty()) return;

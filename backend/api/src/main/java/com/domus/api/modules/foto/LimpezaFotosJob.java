@@ -27,7 +27,7 @@ public class LimpezaFotosJob {
     @Value("${app.fotos.arquivada-meses:6}")
     private int arquivadaMeses;
 
-    @Scheduled(fixedDelayString = "PT1H")
+    @Scheduled(cron = "0 15 3 * * *")
     @Transactional
     public void limparOrfas() {
         LocalDateTime corte = LocalDateTime.now().minusHours(orfaHoras);

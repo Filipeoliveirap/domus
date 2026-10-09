@@ -93,12 +93,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean excedeu(String prefixo, String ip, long minuto, int limite) {
-        String chave = prefixo + ip + ":" + minuto;
-        Long contador = redisTemplate.opsForValue().increment(chave);
-        if (contador != null && contador == 1L) {
-            redisTemplate.expire(chave, JANELA);
+        try {
+            String chave = prefixo + ip + ":" + minuto;
+            Long contador = redisTemplate.opsForValue().increment(chave);
+            if (contador != null && contador == 1L) {
+                redisTemplate.expire(chave, JANELA);
+            }
+            return contador != null && contador > limite;
+        } catch (Exception e) {
+            log.warn("Falha no Redis durante rate limit (prefixo={}, ip={}): {}. Ignorando limite para permitir operacao.",
+                    prefixo, ip, e.getMessage());
+            return false;
         }
-        return contador != null && contador > limite;
     }
 
     private boolean ehRotaAuth(String uri) {

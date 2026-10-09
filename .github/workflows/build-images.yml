@@ -56,4 +56,4 @@ jobs:
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
             -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" 'bash -c "deploy; sleep 8; echo === API LOGS ===; docker logs --tail 150 domus-api-1; echo === FRONT LOGS ===; docker logs --tail 150 domus-front-1"'
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "docker logs --tail 300 domus-api-1"

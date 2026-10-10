@@ -69,6 +69,9 @@ public class AuthenticationController {
     // LazyInitializationException. Usa o ID e busca o resto.
     @GetMapping("/me")
     public ResponseEntity<SessaoDTO> me(@AuthenticationPrincipal Usuario usuario) {
+        if (usuario == null) {
+            throw new SessaoExpiradaException("SESSAO_INVALIDA", "Sessão expirada. Faça login novamente.");
+        }
         return ResponseEntity.ok(authService.sessaoDe(usuario.getId()));
     }
 

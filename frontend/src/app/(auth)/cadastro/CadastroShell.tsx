@@ -5,6 +5,7 @@ import { PainelWizard, COPY_PASSO } from './PainelWizard'
 import { TrocaPasso } from './TrocaPasso'
 import { Passo1 } from './Passo1'
 import { Passo2 } from './Passo2'
+import { Passo3Checkout } from './Passo3Checkout'
 import { Passo3 } from './Passo3'
 import { SecurityFooter } from './SecurityFooter'
 import styles from './CadastroShell.module.css'
@@ -13,7 +14,7 @@ import type { useRegistrarIgreja } from '@/hooks/auth/UseRegistrarIgreja'
 type HookRetorno = ReturnType<typeof useRegistrarIgreja>
 
 export function CadastroShell(h: HookRetorno) {
-  const totalPassos: 2 | 3 = h.googleData ? 2 : 3
+  const totalPassos: 2 | 4 = h.googleData ? 2 : 4
   const primeiroNome = h.dadosSucesso?.nome?.trim().split(/\s+/)[0]
   const formAreaRef = useRef<HTMLDivElement>(null)
 
@@ -22,16 +23,18 @@ export function CadastroShell(h: HookRetorno) {
       ? 'Cadastre sua igreja'
       : h.passo === 2
         ? 'Crie sua conta de administrador'
-        : ''
+        : h.passo === 3
+          ? h.codigoConvite ? 'Confirme o vínculo da igreja' : 'Ative seus 14 dias de teste'
+          : ''
   const subtituloForm =
     h.passo === 1
       ? 'Comece pelos dados da comunidade.'
       : h.passo === 2
         ? 'Seus dados pessoais para gerenciar o Domus.'
-        : ''
+        : h.passo === 3
+          ? h.codigoConvite ? 'Sua assinatura já está coberta pela igreja matriz.' : 'Sem cobrança imediata. Cancele quando quiser.'
+          : ''
 
-  // Foco no primeiro campo da cena nova, só no desktop (no mobile o foco automático abre o
-  // teclado empurrando o layout antes da animação assentar — mesmo motivo do ModalMinisterioForm).
   useEffect(() => {
     if (!window.matchMedia('(min-width: 768px)').matches) return
     const t = window.setTimeout(() => {
@@ -68,13 +71,26 @@ export function CadastroShell(h: HookRetorno) {
         watch={h.watch2}
         erroGeral={h.erroGeral}
         isLoading={h.isLoading}
-        onSubmit={h.onSubmit}
+        onAvancar={h.irParaPasso3}
         onVoltar={h.voltarParaPasso1}
+      />
+    ) : h.passo === 3 ? (
+      <Passo3Checkout
+        planoId={h.planoId}
+        codigoConvite={h.codigoConvite}
+        matrizNome={h.matrizNome}
+        isLoading={h.isLoading}
+        erroGeral={h.erroGeral}
+        onSubmit={h.onSubmitCheckout}
+        onVoltar={h.voltarParaPasso2}
       />
     ) : (
       <Passo3
         nomeIgreja={h.dadosSucesso?.nomeIgreja ?? ''}
         nome={h.dadosSucesso?.nome ?? ''}
+        ehFilial={Boolean(h.codigoConvite)}
+        planoId={h.planoId}
+        codigoConviteMatriz={h.dadosSucesso?.codigoVinculo}
         irParaPessoas={h.irParaPessoas}
         irParaPerfilIgreja={h.irParaPerfilIgreja}
         irParaMeuPerfil={h.irParaMeuPerfil}
@@ -89,7 +105,7 @@ export function CadastroShell(h: HookRetorno) {
 
         <div className={styles.formArea} ref={formAreaRef}>
           <p className={styles.passoLabel}>
-            Passo {totalPassos === 2 && h.passo === 3 ? 2 : h.passo} de {totalPassos}
+            Passo {totalPassos === 2 && h.passo === 4 ? 2 : h.passo} de {totalPassos}
             {' · '}
             {COPY_PASSO[h.passo].curto}
           </p>
@@ -104,7 +120,7 @@ export function CadastroShell(h: HookRetorno) {
             {cena}
           </TrocaPasso>
 
-          {h.passo !== 3 && <SecurityFooter />}
+          {h.passo !== 4 && <SecurityFooter />}
         </div>
       </div>
     </div>

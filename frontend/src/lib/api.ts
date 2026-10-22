@@ -10,6 +10,7 @@ declare module 'axios' {
 import * as Sentry from '@sentry/nextjs'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/store/authStore'
+import { useModoLeituraStore } from '@/store/modoLeituraStore'
 import { Endpoints } from '@/lib/endpoints'
 
 export const api = axios.create({
@@ -102,6 +103,15 @@ api.interceptors.response.use(
     const status = error.response?.status
     const url = original?.url ?? ''
     const ehRotaAuth = rotasAuth.some((rota) => url.includes(rota))
+
+    if (status === 402 && error.response?.data) {
+      const errCode = error.response.data.error
+      if (errCode === 'ASSINATURA_PAUSADA_DESVINCULADA' || errCode === 'ASSINATURA_PAUSADA_LEITURA_APENAS') {
+        const motivo = errCode === 'ASSINATURA_PAUSADA_DESVINCULADA' ? 'DESVINCULADA' : 'CARTAO_PENDENTE'
+        useModoLeituraStore.getState().abrir(motivo, (error.response.data as { message?: string }).message)
+        return Promise.reject(error)
+      }
+    }
 
     if (status === 403 && original && error.response?.data?.error === 'CSRF_INVALIDO') {
       if (original._retryCsrf) {

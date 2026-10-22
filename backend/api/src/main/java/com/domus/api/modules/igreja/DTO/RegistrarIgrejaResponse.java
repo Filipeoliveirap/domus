@@ -9,6 +9,10 @@ public record RegistrarIgrejaResponse (
         String nome,
         String role,
         UUID igrejaId,
-        String igrejaNome
-)
-{ }
+        String igrejaNome,
+        String codigoVinculo
+) {
+    public RegistrarIgrejaResponse(UUID id, String token, String refreshToken, String nome, String role, UUID igrejaId, String igrejaNome) {
+        this(id, token, refreshToken, nome, role, igrejaId, igrejaNome, null);
+    }
+}

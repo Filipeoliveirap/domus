@@ -44,6 +44,7 @@ const configuracoesSubItems: { href: string; label: string; roles: Role[] }[] = 
   { href: '/perfil', label: 'Meu Perfil', roles: ['ADMIN_IGREJA', 'LIDER', 'ACESSO_COMUM'] },
   { href: '/configuracoes/igreja', label: 'Dados da Igreja', roles: ['ADMIN_IGREJA'] },
   { href: '/configuracoes/igrejas-vinculadas', label: 'Igrejas Vinculadas', roles: ['ADMIN_IGREJA'] },
+  { href: '/configuracoes/assinatura', label: 'Assinatura', roles: ['ADMIN_IGREJA'] },
 ]
 
 const roleLabels: Record<string, string> = {

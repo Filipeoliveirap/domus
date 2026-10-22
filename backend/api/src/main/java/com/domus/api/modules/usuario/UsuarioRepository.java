@@ -33,11 +33,32 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
         new com.domus.api.modules.igreja.DTO.RotulosDTO(
             u.igreja.ministerioNomeSingular, u.igreja.ministerioNomePlural, u.igreja.ministerioGenero,
             u.igreja.congregacaoNomeSingular, u.igreja.congregacaoNomePlural, u.igreja.congregacaoGenero,
-            u.igreja.celulaNomeSingular, u.igreja.celulaNomePlural, u.igreja.celulaGenero))
+            u.igreja.celulaNomeSingular, u.igreja.celulaNomePlural, u.igreja.celulaGenero),
+        u.igreja.igrejaMae.id, u.igreja.statusAssinatura)
     FROM Usuario u
     WHERE u.id = :id
     """)
     Optional<SessaoDTO> findSessaoById(@Param("id") UUID id);
+
+    /** Projeção do cache do principal para o SecurityFilter sem tocar em proxies Lazy. */
+    @Query("""
+    SELECT new com.domus.api.modules.usuario.PrincipalCache(
+        u.id,
+        u.igreja.id,
+        u.pessoa.id,
+        u.role.id,
+        u.role.nome,
+        u.ativo,
+        u.igreja.statusTenant,
+        u.igreja.statusAssinatura,
+        u.igreja.igrejaMae.id,
+        u.igreja.motivoSuspensao,
+        u.igreja.plano
+    )
+    FROM Usuario u
+    WHERE u.id = :id
+    """)
+    Optional<PrincipalCache> findPrincipalCacheById(@Param("id") UUID id);
 
     /** Id da foto via FK, sem inicializar o proxy LAZY de {@code Foto}. */
     @Query("SELECT u.pessoa.foto.id FROM Usuario u WHERE u.id = :id")
@@ -123,6 +144,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     int restaurarPorId(@Param("id") UUID id, @Param("igrejaId") UUID igrejaId);
 
     long countByIgrejaId(UUID igrejaId);
+
+    List<Usuario> findAllByIgrejaId(UUID igrejaId);
 
     /** E-mails de todos os ADMIN_IGREJA ativos — usado pra avisar todo mundo que pode agir
      *  sobre a exclusão da igreja, não só quem agendou. */

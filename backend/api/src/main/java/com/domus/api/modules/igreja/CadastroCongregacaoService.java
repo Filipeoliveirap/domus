@@ -67,6 +67,8 @@ public class CadastroCongregacaoService {
                 .ativo(true)
                 .build();
         usuario = usuarioRepository.save(usuario);
+        igrejaFilha.setVinculadoPor(usuario);
+        igrejaRepository.save(igrejaFilha);
 
         log.info("Congregação registrada via código de convite. igreja_id={}, matriz_id={}, admin_email={}",
                 igrejaFilha.getId(), convite.getMatriz().getId(), request.emailAdmin());

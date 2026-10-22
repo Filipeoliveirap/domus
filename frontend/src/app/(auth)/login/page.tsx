@@ -167,7 +167,7 @@ export default function LoginPage() {
 
         <div className={styles.footer}>
           <span className={styles.footerText}>Ainda não tem conta?</span>
-          <Link href="/cadastro" className={styles.footerLink}>
+          <Link href="/#planos" className={styles.footerLink}>
             Cadastre sua igreja
           </Link>
         </div>

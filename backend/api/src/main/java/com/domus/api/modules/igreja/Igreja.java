@@ -37,6 +37,14 @@ public class Igreja {
     private String telefoneContato;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status_tenant", length = 20, nullable = false)
+    @Builder.Default
+    private StatusTenant statusTenant = StatusTenant.ATIVO;
+
+    @Column(name = "motivo_suspensao", length = 255)
+    private String motivoSuspensao;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "plano", length = 50)
     @Builder.Default
     private PlanoAssinatura plano = PlanoAssinatura.BASICO;
@@ -112,7 +120,7 @@ public class Igreja {
     @JoinColumn(name = "igreja_mae_id")
     private Igreja igrejaMae;
 
-    @Column(name = "codigo_vinculo", length = 9, unique = true)
+    @Column(name = "codigo_vinculo", length = 20, unique = true)
     private String codigoVinculo;
 
     @Column(name = "codigo_gerado_em")

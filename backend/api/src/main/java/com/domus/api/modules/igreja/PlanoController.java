@@ -10,12 +10,13 @@ import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/planos")
+@RequestMapping({"/planos", "/api/planos"})
 public class PlanoController {
 
     @GetMapping
     public ResponseEntity<List<PlanoDTO>> listarPlanos() {
         List<PlanoDTO> planos = Arrays.stream(PlanoAssinatura.values())
+            .filter(p -> !"PREMIUM".equals(p.name()))
             .map(PlanoDTO::de)
             .toList();
         return ResponseEntity.ok(planos);

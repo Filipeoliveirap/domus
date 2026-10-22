@@ -31,6 +31,8 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
   const { ministerio } = useRotulos()
   const ehEdicao = !!pessoaId
 
+  const [modalLimiteAberto, setModalLimiteAberto] = useState(false)
+
   const form = useAppForm<PessoaFormInput, PessoaFormData>({
     resolver: zodResolver(pessoaSchema),
     defaultValues: {
@@ -125,6 +127,14 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
           form.setError('email', { type: 'server', message: e.message })
           return
         }
+        if (e?.error?.startsWith('ASSINATURA_PAUSADA_')) {
+          // Modal global de modo leitura já acionado pelo interceptor
+          return
+        }
+        if (e?.error === 'PLANO_LIMITE_EXCEDIDO' || e?.error === 'LIMITE_PLANO_EXCEDIDO') {
+          setModalLimiteAberto(true)
+          return
+        }
         setErroGeral(e?.message ?? 'Erro ao salvar pessoa. Tente novamente.')
       } else {
         setErroGeral('Erro ao salvar pessoa. Tente novamente.')
@@ -136,7 +146,7 @@ export function useCadastrarPessoa({ pessoaId, pessoaInicial }: UsePessoaFormPar
 
   return {
     ...form, onSubmit, erroGeral, isLoading, ehEdicao, saindo,
-    redesSelecionadas, setRedesSelecionadas,
+    redesSelecionadas, setRedesSelecionadas, modalLimiteAberto, setModalLimiteAberto,
   }
 }
 

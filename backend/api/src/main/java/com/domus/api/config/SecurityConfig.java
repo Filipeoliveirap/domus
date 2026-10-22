@@ -74,6 +74,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/igrejas/registrar",
                                 "/igrejas/registrar-congregacao",
+                                "/igrejas/convites/**",
+                                "/planos",
+                                "/api/planos",
+                                "/api/webhooks/mercadopago/assinatura",
                                 "/auth/login",
                                 "/auth/google/login",
                                 "/auth/google/registrar",
@@ -90,6 +94,8 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN, LIDER)
                         .requestMatchers("/cobrancas/**").permitAll()
                         .requestMatchers("/igrejas/minha").hasRole(ADMIN)
+                        .requestMatchers("/igrejas/minha/assinatura", "/igrejas/minha/assinatura/**",
+                                         "/api/igrejas/minha/assinatura", "/api/igrejas/minha/assinatura/**").hasRole(ADMIN)
                         // "/igrejas/minha" acima só casa o path exato — /minha/logo e /minha/rotulos
                         // são outros paths e, sem matcher próprio, caíam em anyRequest().authenticated()
                         // (qualquer perfil logado trocava a logo/os rótulos da igreja inteira — achado

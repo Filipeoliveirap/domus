@@ -1,7 +1,12 @@
 package com.domus.api.modules.igreja.familia;
 
+import com.domus.api.modules.igreja.CodigoConviteCongregacao;
+import com.domus.api.modules.igreja.CodigoConviteRepository;
+import com.domus.api.modules.igreja.CodigoConviteService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.StatusAssinatura;
+import com.domus.api.modules.igreja.exception.PlanoLimiteExcedidoException;
 import com.domus.api.modules.igreja.familia.DTO.VinculoDTOs.*;
 import com.domus.api.modules.usuario.UsuarioRepository;
 import com.domus.api.shared.exception.AcessoNegadoException;
@@ -14,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /** Formação e desmanche da família de igrejas. A filha digita o código da mãe — a mãe apenas gera e consente em receber. */
@@ -27,6 +33,9 @@ public class VinculoService {
     private final CodigoVinculoGenerator gerador;
     private final UsuarioRepository usuarioRepository;
     private final com.domus.api.modules.notificacao.NotificacaoService notificacaoService;
+    private final CodigoConviteService codigoConviteService;
+    private final CodigoConviteRepository codigoConviteRepository;
+    private final com.domus.api.modules.usuario.PrincipalCacheService principalCacheService;
 
     /** Rótulo plural do agrupamento de igrejas na cópia visível: o padrão do front é "Unidades",
      *  mas a igreja pode ter customizado (ex.: "Congregações", "Redes"). Domínio, rotas e nomes de
@@ -68,23 +77,12 @@ public class VinculoService {
                     "Sua igreja é uma congregação e não pode ter congregações próprias.");
         }
 
-        // Falha explícita em vez de salvar um código colidido e estourar 500 na UNIQUE.
-        String codigo = null;
-        for (int tentativa = 0; tentativa < 10 && codigo == null; tentativa++) {
-            String candidato = gerador.gerar();
-            if (igrejaRepository.findByCodigoVinculo(candidato).isEmpty()) {
-                codigo = candidato;
-            }
-        }
-        if (codigo == null) {
-            throw new BusinessException("CODIGO_INDISPONIVEL",
-                    "Não foi possível gerar um código agora. Tente novamente.");
-        }
+        String codigo = codigoConviteService.gerarCodigo(igreja).codigo();
 
         igreja.setCodigoVinculo(codigo);
         igreja.setCodigoGeradoEm(LocalDateTime.now());
         igrejaRepository.save(igreja);
-        log.info("Código de vínculo gerado. igreja_id={}", igrejaId);
+        log.info("Código de vínculo gerado. igreja_id={}, codigo={}", igrejaId, codigo);
         return codigo;
     }
 
@@ -96,9 +94,19 @@ public class VinculoService {
             throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
         }
 
-        UUID maeId = igrejaRepository.findByCodigoVinculo(codigo)
-                .map(Igreja::getId)
-                .orElseThrow(() -> new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido."));
+        Optional<CodigoConviteCongregacao> conviteOpt = codigoConviteRepository.findByCodigo(codigo);
+        UUID maeId;
+        if (conviteOpt.isPresent()) {
+            CodigoConviteCongregacao convite = conviteOpt.get();
+            if (convite.getUsadoEm() != null) {
+                throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
+            }
+            maeId = convite.getMatriz().getId();
+        } else {
+            maeId = igrejaRepository.findByCodigoVinculo(codigo)
+                    .map(Igreja::getId)
+                    .orElseThrow(() -> new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido."));
+        }
 
         if (maeId.equals(igrejaId)) {
             throw new BusinessException("AUTO_VINCULO",
@@ -116,7 +124,7 @@ public class VinculoService {
         Igreja filha = buscar(igrejaId);
 
         // O código pode ter sido rotacionado entre a busca e o lock.
-        if (!codigo.equals(mae.getCodigoVinculo())) {
+        if (conviteOpt.isEmpty() && !codigo.equals(mae.getCodigoVinculo())) {
             throw new BusinessException("CODIGO_INVALIDO", "Código de vínculo inválido.");
         }
 
@@ -136,6 +144,11 @@ public class VinculoService {
                     "Sua igreja já faz parte de um grupo. Saia dele antes de entrar em outro.");
         }
 
+        long congregacoesAtuais = igrejaRepository.countByIgrejaMaeId(mae.getId());
+        if (mae.getPlano() != null && congregacoesAtuais >= mae.getPlano().getLimiteCongregacoes()) {
+            throw new PlanoLimiteExcedidoException("A igreja matriz atingiu o limite de congregações do plano atual.");
+        }
+
         filha.setIgrejaMae(mae);
         // Uma congregação não tem congregações — o código dela, se existir, perde o sentido.
         filha.setCodigoVinculo(null);
@@ -143,7 +156,17 @@ public class VinculoService {
         filha.setVinculadoEm(LocalDateTime.now());
         // getReferenceById devolve um proxy: grava a FK sem carregar o usuário do banco.
         filha.setVinculadoPor(usuarioRepository.getReferenceById(usuarioId));
+        filha.setStatusAssinatura(StatusAssinatura.ATIVA);
+        if (mae.getPlano() != null) {
+            filha.setPlano(mae.getPlano());
+        }
         igrejaRepository.save(filha);
+
+        conviteOpt.ifPresent(c -> {
+            c.setUsadoEm(LocalDateTime.now());
+            c.setIgrejaFilha(filha);
+            codigoConviteRepository.save(c);
+        });
 
         List<com.domus.api.modules.usuario.Usuario> adminsDaSede = usuarioRepository
                 .findByIgrejaIdAndRole_NomeAndAtivoTrue(mae.getId(),
@@ -158,6 +181,7 @@ public class VinculoService {
 
         log.info("Vínculo criado. filha_igreja_id={}, mae_igreja_id={}, por_usuario_id={}",
                 filha.getId(), mae.getId(), usuarioId);
+        usuarioRepository.findIdsAtivosPorIgreja(filha.getId()).forEach(principalCacheService::invalidar);
         return status(igrejaId);
     }
 
@@ -197,17 +221,23 @@ public class VinculoService {
         filha.setIgrejaMae(null);
         filha.setVinculadoEm(null);
         filha.setVinculadoPor(null);
+        filha.setPlano(null);
+        filha.setStatusAssinatura(com.domus.api.modules.igreja.StatusAssinatura.PAUSADA);
+        filha.setMotivoSuspensao("DESVINCULADA_MATRIZ");
+        filha.setMpPreapprovalId(null);
+        usuarioRepository.findIdsAtivosPorIgreja(filha.getId()).forEach(principalCacheService::invalidar);
     }
 
     /** Endereço é opcional, então cidade/uf podem vir nulos — a tela trata. */
     private IgrejaResumo resumir(Igreja igreja, LocalDateTime vinculadoEm) {
         var endereco = igreja.getEndereco();
+        LocalDateTime dataVinculo = vinculadoEm != null ? vinculadoEm : igreja.getCreatedAt();
         return new IgrejaResumo(
                 igreja.getId(),
                 igreja.getNome(),
                 endereco != null ? endereco.getCidade() : null,
                 endereco != null ? endereco.getUf() : null,
-                vinculadoEm);
+                dataVinculo);
     }
 
     private void travar(UUID igrejaId) {

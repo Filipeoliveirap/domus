@@ -5,5 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 public record CriarAssinaturaRequest(
     @NotBlank String cardTokenId,
     @NotBlank String payerEmail,
-    @NotBlank String cpfTitular
-) {}
+    String cpfTitular
+) {
+    public CriarAssinaturaRequest(String cardTokenId, String payerEmail) {
+        this(cardTokenId, payerEmail, null);
+    }
+}

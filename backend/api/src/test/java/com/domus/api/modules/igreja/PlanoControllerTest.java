@@ -25,9 +25,9 @@ class PlanoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value("BASICO"))
-            .andExpect(jsonPath("$[0].valorMensal").value(79.0))
-            .andExpect(jsonPath("$[0].limitePessoas").value(60))
+            .andExpect(jsonPath("$[0].valorMensal").value(49.0))
+            .andExpect(jsonPath("$[0].limitePessoas").value(50))
             .andExpect(jsonPath("$[1].id").value("PRO"))
-            .andExpect(jsonPath("$[1].valorMensal").value(179.0));
+            .andExpect(jsonPath("$[1].valorMensal").value(129.0));
     }
 }

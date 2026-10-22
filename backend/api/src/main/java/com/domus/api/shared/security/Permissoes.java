@@ -39,6 +39,9 @@ public final class Permissoes {
         return temCapacidade(role, capacidadesExtras, SO_ADMIN, "SECRETARIO");
     }
 
+    /** Exclusivo de administrador da igreja (dados fiscais, exclusão, assinaturas). */
+    public static boolean ehAdmin(String role) { return tem(role, SO_ADMIN); }
+
     /** Criar, editar e arquivar eventos. */
     public static boolean podeGerenciarEventos(String role) { return tem(role, GESTORES); }
 

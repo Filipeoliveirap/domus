@@ -11,37 +11,63 @@ import java.security.SecureRandom;
 @Component
 public class CodigoVinculoGenerator {
 
-    private static final String ALFABETO = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-    private static final int TAMANHO = 8;
+    private static final String ALFABETO_UNAMBIGUO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final int TAMANHO_ALEATORIO = 6;
+    private static final int TAMANHO_LEGADO = 8;
 
     private final SecureRandom random = new SecureRandom();
 
-    /** Devolve já formatado com o hífen, como será exibido e armazenado. */
+    /** Devolve no padrão DOMUS-XXXXXX com hífen. */
     public String gerar() {
-        StringBuilder sb = new StringBuilder(TAMANHO + 1);
-        for (int i = 0; i < TAMANHO; i++) {
-            if (i == TAMANHO / 2) {
-                sb.append('-');
-            }
-            sb.append(ALFABETO.charAt(random.nextInt(ALFABETO.length())));
+        StringBuilder sb = new StringBuilder("DOMUS-");
+        for (int i = 0; i < TAMANHO_ALEATORIO; i++) {
+            sb.append(ALFABETO_UNAMBIGUO.charAt(random.nextInt(ALFABETO_UNAMBIGUO.length())));
         }
         return sb.toString();
     }
 
-    /** Aceita minúsculas, com/sem hífen, com espaços; devolve o formato canônico ou {@code null} se inválido. */
+    /**
+     * Aceita:
+     * - DOMUS-XXXXXX (com ou sem hífen, minúsculas ou maiúsculas)
+     * - Links contendo ?codigo=...
+     * - Formato legado de 8 caracteres (XK4P-2M7Q)
+     */
     public String normalizar(String digitado) {
-        if (digitado == null) {
+        if (digitado == null || digitado.isBlank()) {
             return null;
         }
-        String limpo = digitado.toUpperCase().replaceAll("[^0-9A-Z]", "");
-        if (limpo.length() != TAMANHO) {
-            return null;
+
+        String valor = digitado.trim();
+        // Se colar link completo, extrai o valor de codigo=
+        if (valor.contains("codigo=")) {
+            int inicio = valor.indexOf("codigo=") + 7;
+            int fim = valor.indexOf('&', inicio);
+            valor = (fim != -1) ? valor.substring(inicio, fim) : valor.substring(inicio);
         }
-        for (char c : limpo.toCharArray()) {
-            if (ALFABETO.indexOf(c) < 0) {
-                return null;
+
+        String limpo = valor.toUpperCase().replaceAll("[^0-9A-Z]", "");
+
+        // Padrão DOMUS (DOMUS + 6 caracteres = 11 chars limpos)
+        if (limpo.startsWith("DOMUS") && limpo.length() == 5 + TAMANHO_ALEATORIO) {
+            String sufixo = limpo.substring(5);
+            for (char c : sufixo.toCharArray()) {
+                if (ALFABETO_UNAMBIGUO.indexOf(c) < 0) {
+                    return null;
+                }
             }
+            return "DOMUS-" + sufixo;
         }
-        return limpo.substring(0, TAMANHO / 2) + "-" + limpo.substring(TAMANHO / 2);
+
+        // Padrão Legado (8 caracteres)
+        if (limpo.length() == TAMANHO_LEGADO) {
+            for (char c : limpo.toCharArray()) {
+                if (ALFABETO_UNAMBIGUO.indexOf(c) < 0) {
+                    return null;
+                }
+            }
+            return limpo.substring(0, TAMANHO_LEGADO / 2) + "-" + limpo.substring(TAMANHO_LEGADO / 2);
+        }
+
+        return null;
     }
 }

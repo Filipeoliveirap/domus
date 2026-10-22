@@ -53,6 +53,8 @@ public class IgrejaService {
     private final FotoService fotoService;
     private final OutboxRegistrador outboxRegistrador;
     private final TermoAceiteService termoAceiteService;
+    private final com.domus.api.modules.pagamento.assinatura.MercadoPagoSubscriptionService mpSubscriptionService;
+    private final CodigoConviteService codigoConviteService;
 
     @Transactional
     public RegistrarIgrejaResponse registrar(RegistrarIgrejaAdminRequest request, String ip) {
@@ -69,6 +71,56 @@ public class IgrejaService {
                 null
         ), request.isAceitouTermos(), ip);
 
+        Igreja igreja = admin.getIgreja();
+
+        // Se veio com código de convite: igreja filha vinculada à matriz (sem checkout)
+        if (request.getCodigoConvite() != null && !request.getCodigoConvite().isBlank()) {
+            codigoConviteService.validarEConsumirCodigo(request.getCodigoConvite().trim(), igreja);
+            igreja.setVinculadoPor(admin);
+            igrejaRepository.save(igreja);
+        } else {
+            // Igreja Matriz: configura plano escolhido e ativa assinatura trial no Mercado Pago
+            PlanoAssinatura plano = PlanoAssinatura.PRO;
+            if (request.getPlano() != null && !request.getPlano().isBlank()) {
+                try {
+                    plano = PlanoAssinatura.valueOf(request.getPlano().trim().toUpperCase());
+                } catch (IllegalArgumentException ignored) {
+                    plano = PlanoAssinatura.PRO;
+                }
+            }
+            igreja.setPlano(plano);
+
+            // Gera código de vínculo para matriz com congregações inclusas no plano
+            if (plano.getLimiteCongregacoes() > 0) {
+                try {
+                    var codResp = codigoConviteService.gerarCodigo(igreja);
+                    igreja.setCodigoVinculo(codResp.codigo());
+                    igreja.setCodigoGeradoEm(java.time.LocalDateTime.now());
+                } catch (Exception e) {
+                    log.warn("Não foi possível gerar código de convite antecipado: {}", e.getMessage());
+                }
+            }
+
+            if (request.getCardTokenId() != null && !request.getCardTokenId().isBlank()) {
+                try {
+                    var respAssinatura = mpSubscriptionService.criarAssinaturaTrial(
+                            igreja,
+                            new com.domus.api.modules.pagamento.assinatura.dto.CriarAssinaturaRequest(
+                                    request.getCardTokenId().trim(),
+                                    request.getEmailAdmin()
+                            )
+                    );
+                    igreja.setMpPreapprovalId(respAssinatura.preapprovalId());
+                    igreja.setStatusAssinatura(StatusAssinatura.TRIAL);
+                    igreja.setTrialExpiraEm(java.time.LocalDateTime.now().plusDays(14));
+                } catch (Exception e) {
+                    log.error("Falha ao validar cartão no Mercado Pago para cadastro. igrejaId={}", igreja.getId(), e);
+                    throw new BusinessException("CARTAO_RECUSADO", "Cartão recusado pelo Mercado Pago. Verifique os dados ou utilize outro cartão.");
+                }
+            }
+            igrejaRepository.save(igreja);
+        }
+
         var token = tokenService.generateToken(admin);
         var refreshToken = refreshTokenService.criar(admin.getId());
 
@@ -79,7 +131,8 @@ public class IgrejaService {
                 admin.getNome(),
                 admin.getRole().getNome(),
                 admin.getIgreja().getId(),
-                admin.getIgreja().getNome()
+                admin.getIgreja().getNome(),
+                igreja.getCodigoVinculo()
         );
     }
 
@@ -104,6 +157,8 @@ public class IgrejaService {
                 .emailContato(dados.emailContato())
                 .cnpj(dados.cnpj())
                 .telefoneContato(dados.telefoneContato())
+                .statusAssinatura(StatusAssinatura.TRIAL)
+                .trialExpiraEm(java.time.LocalDateTime.now().plusDays(14))
                 .build();
         igrejaRepository.save(igreja);
         log.info("Igreja criada. id={}, nome={}", igreja.getId(), igreja.getNome());

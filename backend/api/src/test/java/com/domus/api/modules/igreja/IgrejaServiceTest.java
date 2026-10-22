@@ -44,6 +44,8 @@ class IgrejaServiceTest {
     FotoService fotoService;
     OutboxRegistrador outboxRegistrador;
     TermoAceiteService termoAceiteService;
+    com.domus.api.modules.pagamento.assinatura.MercadoPagoSubscriptionService mpSubscriptionService;
+    CodigoConviteService codigoConviteService;
     IgrejaService igrejaService;
 
     UUID igrejaId = UUID.randomUUID();
@@ -61,10 +63,12 @@ class IgrejaServiceTest {
         fotoService = mock(FotoService.class);
         outboxRegistrador = mock(OutboxRegistrador.class);
         termoAceiteService = mock(TermoAceiteService.class);
+        mpSubscriptionService = mock(com.domus.api.modules.pagamento.assinatura.MercadoPagoSubscriptionService.class);
+        codigoConviteService = mock(CodigoConviteService.class);
         igrejaService = new IgrejaService(
                 igrejaRepository, usuarioRepository, roleRepository, passwordEncoder,
                 tokenService, refreshTokenService, pessoaRepository, cacheManager,
-                fotoService, outboxRegistrador, termoAceiteService);
+                fotoService, outboxRegistrador, termoAceiteService, mpSubscriptionService, codigoConviteService);
     }
 
     @Test

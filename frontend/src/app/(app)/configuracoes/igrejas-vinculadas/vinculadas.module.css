@@ -384,3 +384,54 @@
   .formCodigo { flex-direction: column; }
   .inputCodigo { width: 100%; }
 }
+
+/* ---- Recurso Bloqueado (Plano Básico) ---- */
+.cardBloqueado {
+  background: var(--color-bg-white);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bloqueadoHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bloqueadoBadge {
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bloqueadoTexto {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary, #475569);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.btnUpgradeInline {
+  background: none;
+  border: none;
+  color: var(--color-primary, #2563eb);
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  text-decoration: none;
+}
+
+.btnUpgradeInline:hover {
+  text-decoration: underline;
+}

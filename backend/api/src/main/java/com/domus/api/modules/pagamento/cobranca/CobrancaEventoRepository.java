@@ -42,6 +42,8 @@ public interface CobrancaEventoRepository extends JpaRepository<CobrancaEvento, 
 
     List<CobrancaEvento> findByStatusAndExpiraEmBefore(StatusCobranca status, Instant momento);
 
+    boolean existsByStatus(StatusCobranca status);
+
     /** Todas as cobranças de um evento de uma vez (não uma por inscrição em loop) — usado
      *  por {@code InscricaoService.aplicarMudancaValorPago}/{@code calcularImpactoMudancaValorPago}
      *  pra calcular quanto cada pessoa JÁ pagou no total, incluindo histórico de complementos

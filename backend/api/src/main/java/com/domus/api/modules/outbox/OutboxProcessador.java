@@ -5,45 +5,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Polla a tabela `outbox` periodicamente e delega o processamento ao
- * {@link OutboxDrenador}. Aplica backoff exponencial entre polls quando a
- * fila está vazia para reduzir CU-h no Neon Free — sem backoff, cada poll
- * mantém o compute acordado indefinidamente.
+ * Processa a tabela `outbox` e delega o processamento ao {@link OutboxDrenador}.
  *
- * <p>Estratégia:
+ * <p>Estratégia híbrida reativa + heartbeat para Neon Free/Launch:
  * <ul>
- *   <li>{@code @Scheduled(fixedDelay)} — delay mínimo de {@code intervaloMinMs}
- *       (default 3s) entre o fim de uma execução e o início da próxima.</li>
- *   <li>Se a fila está vazia, {@link #pollOutbox()} aplica um backoff
- *       exponencial crescente (3s → 6s → 12s → ... até {@code intervaloMaxMs}
- *       = 5min) e dorme dentro do método antes de retornar.</li>
- *   <li>Como o sleep acontece DEPOIS do drenador ter commitado/rollbackado,
- *       não seguramos conexão JDBC aberta durante o sleep.</li>
- *   <li>Quando aparece trabalho, o contador de idle reseta e voltamos a
- *       pollar no intervalo mínimo — UX preservada.</li>
+ *   <li>Orientado a eventos: quando um serviço registra um evento via {@link OutboxRegistrador},
+ *       um {@link OutboxItemSalvoEvent} é emitido e capturado via
+ *       {@code @TransactionalEventListener(AFTER_COMMIT)}. Isso ativa {@code temTrabalhoPendente = true}.</li>
+ *   <li>Enquanto houver eventos ({@code processados > 0}), o loop a cada 3s continua drenando até zerar a fila.</li>
+ *   <li>Quando a fila zera ({@code processados == 0}), {@code temTrabalhoPendente} vira {@code false}.</li>
+ *   <li>Em repouso, {@link #pollOutbox()} checa apenas a flag em memória e retorna imediatamente (0ms),
+ *       sem abrir conexão JDBC nem executar queries SQL contra o Postgres, permitindo que o Neon entre em
+ *       scale-to-zero (auto-suspend após 5min de inatividade).</li>
+ *   <li>Heartbeat de segurança: a cada 6 horas (ou no startup), acorda uma única vez para garantir que nenhum
+ *       registro pendente fique retido por eventuais falhas transitórias.</li>
  * </ul>
- *
- * <p>Properties configuráveis:
- * <ul>
- *   <li>{@code app.outbox.intervalo-min-ms} (default 3000)</li>
- *   <li>{@code app.outbox.intervalo-max-ms} (default 600000)</li>
- *   <li>{@code app.outbox.delay-inicial-ms} (default 5000)</li>
- * </ul>
- *
- * <p>Antes desta mudança o intervalo era fixo em 30s, mas o painel
- * Monitoring → Query performance do Neon mostrou ~31 calls/min (1 a cada
- * 2s) para a query do outbox. A investigação revelou que o backoff estava
- * ausente e a fila fica vazia 99.99% do tempo em produção — causando
- * queries ociosas em massa que mantinham o Neon acordado.
- *
- * <p><strong>Por que cap em 10min:</strong> o Neon Free/Launch suspende
- * o compute após 5min de inatividade. Cap de 10min supera esse threshold
- * com folga, garantindo que o timer de 5min do Neon transcorra sem qualquer
- * query, liberando o auto-suspend e reduzindo CU-h em repouso.
  */
 @Component
 @RequiredArgsConstructor
@@ -51,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class OutboxProcessador {
 
     private final OutboxDrenador drenador;
+    private final AtomicBoolean temTrabalhoPendente = new AtomicBoolean(true);
     private final AtomicLong ciclosIdleConsecutivos = new AtomicLong(0);
 
     @Value("${app.outbox.intervalo-min-ms:3000}")
@@ -59,36 +43,55 @@ public class OutboxProcessador {
     @Value("${app.outbox.intervalo-max-ms:600000}")
     private long intervaloMaxMs;
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onNovoEventoOutbox(OutboxItemSalvoEvent event) {
+        notificarTrabalho();
+    }
+
+    public void notificarTrabalho() {
+        temTrabalhoPendente.set(true);
+        ciclosIdleConsecutivos.set(0);
+    }
+
+    @Scheduled(cron = "${app.outbox.heartbeat-cron:0 0 */6 * * *}")
+    public void heartbeat() {
+        log.debug("Heartbeat periódico do Outbox disparado.");
+        temTrabalhoPendente.set(true);
+    }
+
     @Scheduled(
             fixedDelayString = "${app.outbox.intervalo-min-ms:3000}",
             initialDelayString = "${app.outbox.delay-inicial-ms:5000}")
     public void pollOutbox() {
+        if (!temTrabalhoPendente.get()) {
+            return;
+        }
+
         long inicioMs = System.currentTimeMillis();
         int processados;
         try {
             processados = drenador.drenar();
         } catch (Exception e) {
-            // Falha no dreno: tratar como idle para entrar em backoff.
             log.warn("Falha ao drenar outbox: {}. Aplicando backoff.", e.getMessage());
             processados = 0;
         }
         long duracaoMs = System.currentTimeMillis() - inicioMs;
 
         if (processados == 0) {
+            temTrabalhoPendente.set(false);
             long idle = ciclosIdleConsecutivos.incrementAndGet();
             long backoff = calcularBackoff(idle);
             if (deveLogarMarco(idle)) {
-                log.info("Outbox ocioso há {} ciclo(s) (poll durou {}ms). Backoff {}ms (cap {}ms).",
-                        idle, duracaoMs, backoff, intervaloMaxMs);
+                log.info("Outbox ocioso há {} ciclo(s) (poll durou {}ms). Fila vazia, entrando em repouso.",
+                        idle, duracaoMs);
             } else {
-                log.debug("Outbox idle (poll #{}, {}ms). Backoff {}ms.", idle, duracaoMs, backoff);
+                log.debug("Outbox idle (poll #{}, {}ms). Fila vazia.", idle, duracaoMs);
             }
-            dormir(backoff);
         } else {
             long idleAnterior = ciclosIdleConsecutivos.getAndSet(0);
             if (idleAnterior > 0) {
-                log.info("Outbox voltou a ter trabalho após {} ciclo(s) idle. Processou {} evento(s) em {}ms. Resetando backoff.",
-                        idleAnterior, processados, duracaoMs);
+                log.info("Outbox processou {} evento(s) em {}ms. Resetando backoff.",
+                        processados, duracaoMs);
             } else {
                 log.debug("Outbox processou {} evento(s) em {}ms.", processados, duracaoMs);
             }

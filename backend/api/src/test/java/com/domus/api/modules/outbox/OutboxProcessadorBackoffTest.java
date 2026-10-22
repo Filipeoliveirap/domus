@@ -53,6 +53,27 @@ class OutboxProcessadorBackoffTest {
                         + autoSuspendNeonMs + "ms), senão o Neon nunca suspende e a redução de CU-h não acontece.";
     }
 
+    @Test
+    void entraEmRepousoQuandoFilaVaziaENaoChamaDrenadorNovamente() {
+        OutboxDrenador drenador = org.mockito.Mockito.mock(OutboxDrenador.class);
+        org.mockito.Mockito.when(drenador.drenar()).thenReturn(0);
+
+        OutboxProcessador p = new OutboxProcessador(drenador);
+
+        // 1º poll: drena e zera
+        p.pollOutbox();
+        org.mockito.Mockito.verify(drenador, org.mockito.Mockito.times(1)).drenar();
+
+        // 2º poll: em repouso (não chama drenador)
+        p.pollOutbox();
+        org.mockito.Mockito.verify(drenador, org.mockito.Mockito.times(1)).drenar();
+
+        // Evento novo chega: notifica trabalho e reativa poll
+        p.notificarTrabalho();
+        p.pollOutbox();
+        org.mockito.Mockito.verify(drenador, org.mockito.Mockito.times(2)).drenar();
+    }
+
     private void setField(Object o, String name, Object value) throws Exception {
         Field f = o.getClass().getDeclaredField(name);
         f.setAccessible(true);

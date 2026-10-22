@@ -1,9 +1,10 @@
 import { useAuthStore } from "@/store/authStore";
 import { registrarIgrejaSchema1, type RegistrarIgrejaFormData1, registrarIgrejaSchema2, type RegistrarIgrejaFormData2 } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { authService } from "@/services/auth.service";
+import { consultarCodigoConvite } from "@/services/plano.service";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useAppForm } from "../forms/useAppForm";
@@ -12,17 +13,43 @@ import type { ApiError } from "@/types/api.types";
 
 export function useRegistrarIgreja () {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const login = useAuthStore(state => state.login)
     const [erroGeral, setErroGeral] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [passo, setPasso] = useState<1 | 2 | 3>(1)
-    // Direção da última troca de passo — alimenta a animação do <TrocaPasso>.
+    const [passo, setPasso] = useState<1 | 2 | 3 | 4>(1)
     const [direcaoPasso, setDirecaoPasso] = useState<1 | -1>(1)
     const [dataPasso1, setDataPasso1] = useState<RegistrarIgrejaFormData1 | null>(null)
-    const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string } | null>(null)
+    const [dataPasso2, setDataPasso2] = useState<RegistrarIgrejaFormData2 | null>(null)
+    const [dadosSucesso, setDadosSucesso] = useState<{ nome: string; nomeIgreja: string; codigoVinculo?: string | null } | null>(null)
     const [googleData, setGoogleData] = useState<{ idToken: string; nome: string; email: string } | null>(null)
     const [aceitouTermosGoogle, setAceitouTermosGoogle] = useState(false)
 
+    // Parâmetros de URL: ?plano= e ?codigo=
+    const [planoId, setPlanoId] = useState<string>('PRO')
+    const [codigoConvite, setCodigoConvite] = useState<string | null>(null)
+    const [matrizNome, setMatrizNome] = useState<string | null>(null)
+
+    useEffect(() => {
+        const planoUrl = searchParams.get('plano')
+        if (planoUrl) {
+            setPlanoId(planoUrl.toUpperCase())
+        }
+
+        const codigoUrl = searchParams.get('codigo')
+        if (codigoUrl) {
+            const codFormatado = codigoUrl.trim().toUpperCase()
+            setCodigoConvite(codFormatado)
+            consultarCodigoConvite(codFormatado)
+                .then(resp => {
+                    if (resp.estado === 'VALIDO') {
+                        setMatrizNome(resp.matrizNome)
+                        if (resp.planoNome) setPlanoId(resp.planoNome)
+                    }
+                })
+                .catch(() => undefined)
+        }
+    }, [searchParams])
 
     const {
         register,
@@ -61,7 +88,7 @@ export function useRegistrarIgreja () {
         requiredChecks: ['aceitouTermos'],
     })
 
-    const irParaPasso2 = (data : RegistrarIgrejaFormData1) => {
+    const irParaPasso2 = (data: RegistrarIgrejaFormData1) => {
         setDataPasso1(data)
         setDirecaoPasso(1)
         setPasso(2)
@@ -72,9 +99,21 @@ export function useRegistrarIgreja () {
         setPasso(1)
     }
 
-    const onSubmit = async (dataPasso2: RegistrarIgrejaFormData2) => {
-        if(!dataPasso1) return
-        
+    const irParaPasso3 = (data: RegistrarIgrejaFormData2) => {
+        setDataPasso2(data)
+        setDirecaoPasso(1)
+        setPasso(3)
+    }
+
+    const voltarParaPasso2 = () => {
+        setDirecaoPasso(-1)
+        setPasso(2)
+    }
+
+    // Submissão final no Passo 3 (Checkout de Trial ou Vínculo Gratuito)
+    const onSubmitCheckout = async (cardTokenId?: string) => {
+        if (!dataPasso1 || !dataPasso2) return
+
         setErroGeral(null)
         setIsLoading(true)
 
@@ -86,20 +125,26 @@ export function useRegistrarIgreja () {
                 telefoneContato: dataPasso1.telefoneContato.replace(/\D/g, ''),
                 cnpj: dataPasso1.cnpj?.replace(/\D/g, '') || undefined,
             }
+
             const response = await authService.registrarIgreja({
                 ...dadosIgreja,
-                ...dadosAdmin,    
+                ...dadosAdmin,
+                plano: planoId,
+                cardTokenId: cardTokenId || undefined,
+                codigoConvite: codigoConvite || undefined,
             })
+
             login(response)
             marcarBoasVindasVista()
             setDadosSucesso({
                 nome: response.nome,
                 nomeIgreja: dataPasso1.nomeIgreja,
+                codigoVinculo: response.codigoVinculo,
             })
             setDirecaoPasso(1)
-            setPasso(3)
+            setPasso(4)
 
-        } catch (error : unknown) {
+        } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
                 const data = error.response?.data
                 const codigo = data?.error
@@ -111,6 +156,8 @@ export function useRegistrarIgreja () {
                 }
                 if (codigo === 'EMAIL_DUPLICADO') {
                     setError2('emailAdmin', { type: 'server', message: data?.message })
+                    setDirecaoPasso(-1)
+                    setPasso(2)
                     return
                 }
 
@@ -137,7 +184,6 @@ export function useRegistrarIgreja () {
 
     const onGoogleError = () => setErroGeral('Não foi possível iniciar o cadastro com Google.')
 
-    // Finaliza o cadastro Google usando os dados da igreja do Passo1.
     const onSubmitGoogle = async (dataIgreja: RegistrarIgrejaFormData1) => {
         if (!googleData) return
         setErroGeral(null)
@@ -154,7 +200,7 @@ export function useRegistrarIgreja () {
             marcarBoasVindasVista()
             setDadosSucesso({ nome: response.nome, nomeIgreja: dataIgreja.nomeIgreja })
             setDirecaoPasso(1)
-            setPasso(3)
+            setPasso(4)
         } catch (error: unknown) {
             if (axios.isAxiosError<ApiError>(error)) {
                 const data = error.response?.data
@@ -177,12 +223,17 @@ export function useRegistrarIgreja () {
     const irParaMeuPerfil = () => router.push('/perfil')
     const irParaPainelInicial = () => router.push('/inicio')
 
-
     return {
         passo,
         direcaoPasso,
+        planoId,
+        codigoConvite,
+        matrizNome,
         irParaPasso2,
         voltarParaPasso1,
+        irParaPasso3,
+        voltarParaPasso2,
+        onSubmitCheckout,
         register,
         handleSubmit,
         setValue,
@@ -193,7 +244,6 @@ export function useRegistrarIgreja () {
         errors2,
         erroGeral,
         isLoading,
-        onSubmit,
         passo1Incompleto,
         passo2Incompleto,
         googleData,

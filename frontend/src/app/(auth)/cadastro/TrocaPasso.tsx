@@ -6,32 +6,25 @@ import styles from './TrocaPasso.module.css'
 const SAIDA_MS = 340
 
 interface Camada {
-  passo: 1 | 2 | 3
+  passo: 1 | 2 | 3 | 4
   no: ReactNode
-  entrando: -1 | 1 | 0 // -1 entra da esquerda, 1 entra da direita, 0 = já assentada
+  entrando: -1 | 1 | 0
 }
 
-/**
- * Troca entre as cenas do wizard de cadastro. Direcional: avançar desliza a cena atual pra
- * esquerda e traz a nova da direita; voltar faz o inverso. A altura do palco acompanha a
- * cena nova. Anima só quando `passo` muda. Espelha o padrão do <TrocaCena>, mas horizontal.
- */
 export function TrocaPasso({
   passo,
   direcao,
   children,
 }: {
-  passo: 1 | 2 | 3
+  passo: 1 | 2 | 3 | 4
   direcao: 1 | -1
   children: ReactNode
 }) {
-  const [ativo, setAtivo] = useState<1 | 2 | 3>(passo)
+  const [ativo, setAtivo] = useState<1 | 2 | 3 | 4>(passo)
   const [camadas, setCamadas] = useState<Camada[]>([{ passo, no: children, entrando: 0 }])
   const palcoRef = useRef<HTMLDivElement>(null)
   const alturaEstavel = useRef(0)
 
-  // Ajuste de estado no render (estado derivado de prop): entra a cena nova, a antiga fica
-  // na lista pra animar a saída.
   if (ativo !== passo) {
     setAtivo(passo)
     setCamadas((prev) => {
@@ -41,7 +34,6 @@ export function TrocaPasso({
       return [...semDupe, { passo, no: children, entrando: direcao === 1 ? (1 as const) : (-1 as const) }]
     })
   } else {
-    // Mesma cena, conteúdo pode ter mudado (erro de API apareceu): atualiza o nó da ativa.
     const ativaAtual = camadas.find((c) => c.passo === passo && c.entrando === 0)
     if (ativaAtual && ativaAtual.no !== children) {
       setCamadas((prev) => prev.map((c) => (c === ativaAtual ? { ...c, no: children } : c)))
@@ -59,14 +51,11 @@ export function TrocaPasso({
     const palco = palcoRef.current
     const timers: number[] = []
     if (palco) {
-      const alturaNova = palco.scrollHeight // cena nova está em fluxo; a que sai é absolute
+      const alturaNova = palco.scrollHeight
       const encolhe = alturaNova < alturaEstavel.current
       palco.style.height = `${alturaEstavel.current}px`
-      void palco.offsetHeight // reflow: fixa o "de" antes de animar
+      void palco.offsetHeight
       if (encolhe) {
-        // Ao voltar pra um passo mais curto, segura a altura alta até a cena que sai quase
-        // terminar de deslizar — senão o `overflow: hidden` corta o rodapé dela e fica
-        // estranho (o avanço não tem isso porque o palco só cresce).
         timers.push(window.setTimeout(() => { palco.style.height = `${alturaNova}px` }, 150))
       } else {
         palco.style.height = `${alturaNova}px`
@@ -85,8 +74,6 @@ export function TrocaPasso({
       }, SAIDA_MS + 200),
     )
     return () => timers.forEach(window.clearTimeout)
-    // reage só à troca de cena
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ativo])
 
   return (

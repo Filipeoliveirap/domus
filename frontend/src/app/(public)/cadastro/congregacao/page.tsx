@@ -3,8 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { registrarCongregacaoFilha } from '@/services/plano.service';
+import Image from 'next/image';
+import { CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { registrarCongregacaoFilha, consultarCodigoConvite } from '@/services/plano.service';
 import { useAuthStore } from '@/store/authStore';
+import type { Role } from '@/types/usuario.types';
+import styles from './cadastroCongregacao.module.css';
 
 function CadastroCongregacaoConteudo() {
     const searchParams = useSearchParams();
@@ -18,6 +22,11 @@ function CadastroCongregacaoConteudo() {
     const [senha, setSenha] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [erroGeral, setErroGeral] = useState<string | null>(null);
+    const [infoConvite, setInfoConvite] = useState<{
+        matrizNome?: string;
+        estado?: string;
+        mensagemErro?: string;
+    } | null>(null);
 
     useEffect(() => {
         const codigoUrl = searchParams.get('codigo');
@@ -26,136 +35,219 @@ function CadastroCongregacaoConteudo() {
         }
     }, [searchParams]);
 
+    useEffect(() => {
+        if (!codigoConvite || codigoConvite.trim().length < 5) {
+            setInfoConvite(null);
+            return;
+        }
+
+        let ativo = true;
+        consultarCodigoConvite(codigoConvite)
+            .then((data) => {
+                if (!ativo) return;
+                if (data.estado === 'VALIDO') {
+                    setInfoConvite({ matrizNome: data.matrizNome, estado: 'VALIDO' });
+                } else if (data.estado === 'LIMITE_EXCEDIDO' || data.estado === 'MATRIZ_LIMITE_EXCEDIDO') {
+                    setInfoConvite({
+                        estado: data.estado,
+                        mensagemErro: `A igreja matriz ${data.matrizNome || ''} atingiu o limite de congregações do plano atual.`,
+                    });
+                } else if (data.estado === 'JA_UTILIZADO') {
+                    setInfoConvite({
+                        estado: 'JA_UTILIZADO',
+                        mensagemErro: `Código já utilizado para vincular a matriz ${data.matrizNome || ''}.`,
+                    });
+                } else {
+                    setInfoConvite({
+                        estado: 'EXPIRADO',
+                        mensagemErro: 'Código de convite inválido ou expirado.',
+                    });
+                }
+            })
+            .catch(() => {
+                if (ativo) setInfoConvite(null);
+            });
+
+        return () => {
+            ativo = false;
+        };
+    }, [codigoConvite]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErroGeral(null);
+
+        if (!codigoConvite || !nomeCongregacao || !emailAdmin || !nomeAdmin || !senha) {
+            setErroGeral('Preencha todos os campos obrigatórios.');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            const sessao = await registrarCongregacaoFilha({
-                codigoConvite: codigoConvite.trim(),
-                nome: nomeCongregacao.trim(),
-                nomeAdmin: nomeAdmin.trim(),
-                emailAdmin: emailAdmin.trim(),
+            const res = await registrarCongregacaoFilha({
+                codigoConvite,
+                nome: nomeCongregacao,
+                nomeAdmin,
+                emailAdmin,
                 senha,
             });
 
-            login(sessao);
+            login({
+                id: res.usuarioId,
+                pessoaId: null,
+                nome: res.nomeAdmin,
+                role: (res.role || 'ADMIN_IGREJA') as Role,
+                igrejaId: res.igrejaId,
+                igrejaNome: res.nomeIgreja,
+                fotoId: null,
+                cargo: 'Administrador',
+                igrejaSigla: null,
+                igrejaLogoId: null,
+                capacidadesExtras: [],
+                precisaAceitarTermos: false,
+                termosAceitosEm: new Date().toISOString(),
+                rotulos: null,
+                igrejaMaeId: null,
+                statusAssinatura: 'ATIVA',
+            });
+
             router.push('/inicio');
         } catch (err: any) {
-            setErroGeral(err.message || 'Ocorreu um erro ao registrar a congregação.');
+            setErroGeral(err.message || 'Erro ao cadastrar congregação. Verifique o código de convite.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="max-w-lg mx-auto py-12 px-4">
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Cadastro de Congregação</h1>
-            <p className="text-sm text-gray-600 mb-8">
-                Cadastre sua congregação sem custo utilizando o código de convite fornecido pela igreja matriz.
-            </p>
-
-            <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div>
-                    <label htmlFor="codigoConvite" className="block text-sm font-medium text-gray-700">
-                        Código de Convite da Matriz
-                    </label>
-                    <input
-                        id="codigoConvite"
-                        value={codigoConvite}
-                        onChange={(e) => setCodigoConvite(e.target.value.toUpperCase())}
-                        required
-                        placeholder="DOMUS-X7Y9Z0"
-                        className="w-full border rounded-lg p-2.5 mt-1 border-gray-300 font-mono text-center uppercase"
+        <div className={styles.container}>
+            <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                    <Image
+                        src="/images/logo2.png"
+                        alt="Domus"
+                        width={180}
+                        height={46}
+                        priority
+                        className={styles.logoImg}
                     />
+                    <h1 className={styles.titulo}>Cadastrar Congregação</h1>
+                    <p className={styles.subtitulo}>
+                        Sua congregação fará parte da rede da igreja matriz usando o código de convite fornecido.
+                    </p>
                 </div>
 
-                <div>
-                    <label htmlFor="nomeCongregacao" className="block text-sm font-medium text-gray-700">
-                        Nome da Congregação
-                    </label>
-                    <input
-                        id="nomeCongregacao"
-                        value={nomeCongregacao}
-                        onChange={(e) => setNomeCongregacao(e.target.value)}
-                        required
-                        placeholder="Ex: Igreja Graça - Bairro Centenário"
-                        className="w-full border rounded-lg p-2.5 mt-1 border-gray-300"
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="nomeAdmin" className="block text-sm font-medium text-gray-700">
-                        Nome do Líder / Administrador
-                    </label>
-                    <input
-                        id="nomeAdmin"
-                        value={nomeAdmin}
-                        onChange={(e) => setNomeAdmin(e.target.value)}
-                        required
-                        placeholder="Ex: Presbítero Marcos"
-                        className="w-full border rounded-lg p-2.5 mt-1 border-gray-300"
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="emailAdmin" className="block text-sm font-medium text-gray-700">
-                        E-mail do Administrador
-                    </label>
-                    <input
-                        id="emailAdmin"
-                        type="email"
-                        value={emailAdmin}
-                        onChange={(e) => setEmailAdmin(e.target.value)}
-                        required
-                        placeholder="marcos@igrejagraca.org"
-                        className="w-full border rounded-lg p-2.5 mt-1 border-gray-300"
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
-                        Senha
-                    </label>
-                    <input
-                        id="senha"
-                        type="password"
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        required
-                        minLength={6}
-                        className="w-full border rounded-lg p-2.5 mt-1 border-gray-300"
-                    />
-                </div>
-
-                {erroGeral && (
-                    <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-                        {erroGeral}
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.campoGroup}>
+                        <label className={styles.label} htmlFor="codigoConvite">Código de Vínculo da Matriz</label>
+                        <input
+                            id="codigoConvite"
+                            type="text"
+                            value={codigoConvite}
+                            onChange={(e) => setCodigoConvite(e.target.value.toUpperCase())}
+                            placeholder="Ex: DOMUS-XXXX"
+                            className={styles.input}
+                            required
+                        />
                     </div>
-                )}
 
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                >
-                    {isLoading ? 'Cadastrando...' : 'Concluir Cadastro Gratuitamente'}
-                </button>
+                    {infoConvite?.matrizNome && (
+                        <div className={styles.infoMatriz}>
+                            <CheckCircle2 size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
+                            <span>Igreja Matriz: <strong>{infoConvite.matrizNome}</strong></span>
+                        </div>
+                    )}
 
-                <div className="text-center pt-2">
-                    <Link href="/login" className="text-xs text-gray-500 hover:underline">
-                        Já tem conta? Voltar ao login
-                    </Link>
-                </div>
-            </form>
+                    {infoConvite?.mensagemErro && (
+                        <div className={styles.caixaErro} role="alert">
+                            <AlertCircle size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
+                            <span>{infoConvite.mensagemErro}</span>
+                        </div>
+                    )}
+
+                    <div className={styles.campoGroup}>
+                        <label className={styles.label} htmlFor="nomeCongregacao">Nome da Congregação</label>
+                        <input
+                            id="nomeCongregacao"
+                            type="text"
+                            value={nomeCongregacao}
+                            onChange={(e) => setNomeCongregacao(e.target.value)}
+                            placeholder="Ex: Domus Congregação Bairro Alto"
+                            className={styles.input}
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.campoGroup}>
+                        <label className={styles.label} htmlFor="nomeAdmin">Nome do Responsável / Admin</label>
+                        <input
+                            id="nomeAdmin"
+                            type="text"
+                            value={nomeAdmin}
+                            onChange={(e) => setNomeAdmin(e.target.value)}
+                            placeholder="Ex: Pr. Marcos Oliveira"
+                            className={styles.input}
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.campoGroup}>
+                        <label className={styles.label} htmlFor="emailAdmin">E-mail de Login do Admin</label>
+                        <input
+                            id="emailAdmin"
+                            type="email"
+                            value={emailAdmin}
+                            onChange={(e) => setEmailAdmin(e.target.value)}
+                            placeholder="admin@congregacao.com"
+                            className={styles.input}
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.campoGroup}>
+                        <label className={styles.label} htmlFor="senhaAdmin">Senha de Acesso</label>
+                        <input
+                            id="senhaAdmin"
+                            type="password"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            placeholder="••••••••"
+                            className={styles.input}
+                            required
+                        />
+                    </div>
+
+                    {erroGeral && (
+                        <div className={styles.caixaErro} role="alert">
+                            <AlertCircle size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
+                            <span>{erroGeral}</span>
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className={styles.btnSubmit}
+                    >
+                        {isLoading ? 'Cadastrando...' : 'Concluir Cadastro Gratuitamente'}
+                    </button>
+
+                    <div className={styles.footerLink}>
+                        <Link href="/login" className={styles.link}>
+                            <ArrowLeft size={14} />
+                            Já tem conta? Voltar ao login
+                        </Link>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
 
 export default function CadastroCongregacaoPage() {
     return (
-        <Suspense fallback={<div className="p-12 text-center text-gray-500">Carregando...</div>}>
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-secondary)' }}>Carregando...</div>}>
             <CadastroCongregacaoConteudo />
         </Suspense>
     );

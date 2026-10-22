@@ -62,6 +62,12 @@ public class AuthService {
             var auth = authenticationManager.authenticate(authToken);
 
             var usuario = (Usuario) auth.getPrincipal();
+
+            if (usuario.getIgreja() != null && usuario.getIgreja().getStatusTenant() == com.domus.api.modules.igreja.StatusTenant.SUSPENSO) {
+                log.warn("Tentativa de login em tenant suspenso. igreja_id={}", usuario.getIgreja().getId());
+                throw new BusinessException("TENANT_SUSPENSO", "Conta suspensa. Entre em contato com o suporte");
+            }
+
             var token = tokenService.generateToken(usuario);
             var refreshToken = refreshTokenService.criar(usuario.getId());
 
@@ -146,7 +152,9 @@ public class AuthService {
                         .map(UsuarioCapacidade::getCapacidade).toList(),
                 termoAceiteService.precisaAceitar(usuarioId),
                 termoAceiteService.dataUltimoAceite(usuarioId),
-                sessao.rotulos());
+                sessao.rotulos(),
+                sessao.igrejaMaeId(),
+                sessao.statusAssinatura());
     }
 
     /** Troca a própria senha e revoga as demais sessões, preservando a atual. */

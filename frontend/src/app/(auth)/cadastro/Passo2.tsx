@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, User, Mail, Lock, RotateCcw } from 'lucide-react'
 import type { UseFormRegister, UseFormHandleSubmit, FieldErrors, UseFormWatch } from 'react-hook-form'
 import type { RegistrarIgrejaFormData2 } from '@/lib/validators'
 import { Input } from '../../../components/common/input/Input'
@@ -18,13 +18,13 @@ interface Passo2Props {
   watch: UseFormWatch<RegistrarIgrejaFormData2>
   erroGeral: string | null
   isLoading: boolean
-  onSubmit: (data: RegistrarIgrejaFormData2) => Promise<void>
+  onAvancar: (data: RegistrarIgrejaFormData2) => void
   onVoltar: () => void
 }
 
 export function Passo2({
   register, handleSubmit, errors, watch,
-  erroGeral, isLoading, onSubmit, onVoltar,
+  erroGeral, isLoading, onAvancar, onVoltar,
 }: Passo2Props) {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
@@ -35,7 +35,7 @@ export function Passo2({
   const { rolarParaErro } = useRolarParaErro(formRef)
 
   return (
-    <form ref={formRef} className={styles.form} onSubmit={handleSubmit(onSubmit, () => rolarParaErro())}>
+    <form ref={formRef} className={styles.form} onSubmit={handleSubmit(onAvancar, () => rolarParaErro())}>
       <Input
         id="nomeAdmin"
         label="NOME COMPLETO*"
@@ -143,7 +143,8 @@ export function Passo2({
           isLoading={isLoading}
           disabled={isLoading}
         >
-          Criar conta
+          <span>Continuar</span>
+          <ArrowRight size={14} />
         </Button>
       </div>
     </form>

@@ -1,54 +1,310 @@
-'use client';
+'use client'
+
+import React, { useState } from 'react'
+import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronRight, Sparkles, CheckCircle2, CreditCard, ArrowUpRight, AlertOctagon, AlertTriangle, Lock, Church, Info } from 'lucide-react'
+import { obterResumoAssinatura, reativarAssinatura } from '@/services/assinatura.service'
+import { buscarPlanosServidor } from '@/services/plano.service'
+import { useAuthStore } from '@/store/authStore'
+import { podeGerenciarAssinatura } from '@/lib/permissoes'
+import { ModalAtualizarCartao } from '@/components/module/assinatura/ModalAtualizarCartao'
+import { ModalCancelarAssinatura } from '@/components/module/assinatura/ModalCancelarAssinatura'
+import { SkeletonAssinatura } from './SkeletonAssinatura'
+import { Transicao } from '@/components/common/Transicao/Transicao'
+import styles from './assinatura.module.css'
 
 export default function ConfigAssinaturaPage() {
-    return (
-        <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
-            <h1 className="text-3xl font-extrabold text-gray-900">Minha Assinatura Domus</h1>
+    const queryClient = useQueryClient()
+    const role = useAuthStore((s) => s.role)
+    const ehAdmin = podeGerenciarAssinatura(role)
+    const [modalCartaoAberto, setModalCartaoAberto] = useState(false)
+    const [modalCancelarAberto, setModalCancelarAberto] = useState(false)
 
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
-                <div className="flex justify-between items-start border-b pb-4">
-                    <div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded uppercase">
-                            Plano Atual
+    const { data: resumo, isLoading: carregandoResumo } = useQuery({
+        queryKey: ['assinatura-resumo'],
+        queryFn: obterResumoAssinatura,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+    })
+
+    const { data: planos = [] } = useQuery({
+        queryKey: ['planos-servidor'],
+        queryFn: buscarPlanosServidor,
+        staleTime: 1000 * 60 * 30,
+    })
+
+    const handleAtualizacaoSucesso = () => {
+        queryClient.invalidateQueries({ queryKey: ['assinatura-resumo'] })
+        setModalCartaoAberto(false)
+        setModalCancelarAberto(false)
+    }
+
+    const handleReativar = async () => {
+        try {
+            await reativarAssinatura()
+            queryClient.invalidateQueries({ queryKey: ['assinatura-resumo'] })
+        } catch (err: any) {
+            alert(err.message || 'Erro ao reativar assinatura')
+        }
+    }
+
+    if (carregandoResumo) {
+        return <SkeletonAssinatura />
+    }
+
+    if (!resumo) {
+        return (
+            <div className={styles.container}>
+                <p style={{ padding: '32px', textAlign: 'center', color: 'var(--color-danger)' }}>
+                    Não foi possível carregar as informações de assinatura.
+                </p>
+            </div>
+        )
+    }
+
+    const ehTrial = resumo.status === 'TRIAL'
+    const ehCancelada = resumo.status === 'CANCELADA'
+
+    return (
+        <Transicao modo="fade">
+            <div className={styles.container}>
+            <div className={styles.card}>
+                <div className={styles.cabecalhoPlano}>
+                    <div className={styles.planoInfo}>
+                        <span className={styles.badgePlano}>
+                            {resumo.ehMatriz ? (
+                                <>
+                                    <Sparkles size={13} aria-hidden="true" />
+                                    Plano Atual
+                                </>
+                            ) : (
+                                <>
+                                    <Church size={13} aria-hidden="true" />
+                                    Congregação Vinculada
+                                </>
+                            )}
                         </span>
-                        <h2 className="text-2xl font-bold mt-1 text-gray-900">Pro (R$ 179,00 / mês)</h2>
-                        <p className="text-sm text-gray-500 mt-1">Status: TRIAL (11 dias restantes)</p>
+                        <h2 className={styles.nomePlano}>
+                            {resumo.ehMatriz
+                                ? (resumo.plano
+                                    ? `${resumo.nomePlano} (R$ ${resumo.valorMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / mês)`
+                                    : 'Nenhum plano contratado')
+                                : `Plano ${resumo.nomePlano} (Coberto pela ${resumo.nomeMatriz || 'Igreja Sede'})`
+                            }
+                        </h2>
+                        {!resumo.ehMatriz ? (
+                            <p className={styles.statusTrial} style={{ color: '#16a34a' }}>
+                                Status: Cobertura Ativa • Mensalidade isenta
+                            </p>
+                        ) : (
+                            <>
+                                {resumo.status === 'PAUSADA' && (
+                                    <p className={styles.statusTrial} style={{ color: '#d97706' }}>
+                                        Status: Assinatura Pausada • Modo Somente Leitura
+                                    </p>
+                                )}
+                                {ehTrial && (
+                                    <p className={styles.statusTrial}>
+                                        Status: Período de Testes ({resumo.diasRestantesTrial} {resumo.diasRestantesTrial === 1 ? 'dia restante' : 'dias restantes'})
+                                    </p>
+                                )}
+                                {ehCancelada && (
+                                    <p className={styles.statusTrial} style={{ color: '#dc2626' }}>
+                                        Status: Assinatura Cancelada • Acesso garantido até{' '}
+                                        {resumo.cicloExpiraEm
+                                            ? new Date(resumo.cicloExpiraEm).toLocaleDateString('pt-BR')
+                                            : 'o término do ciclo'}{' '}
+                                        ({resumo.diasRestantesCiclo ?? 0} {resumo.diasRestantesCiclo === 1 ? 'dia restante' : 'dias restantes'})
+                                    </p>
+                                )}
+                            </>
+                        )}
                     </div>
-                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
-                        Em dia
+                    <span className={ehCancelada || resumo.status === 'PAUSADA' ? styles.badgeCancelada : styles.badgeEmDia}>
+                        {ehCancelada || resumo.status === 'PAUSADA' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} aria-hidden="true" />}
+                        {ehCancelada ? 'Cancelada' : resumo.status === 'PAUSADA' ? 'Pausada' : 'Em dia'}
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase font-semibold">Consumo de Pessoas Ativas</p>
-                        <p className="text-xl font-extrabold text-gray-800 mt-1">142 de 300 pessoas</p>
-                        <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
-                            <div className="bg-blue-600 h-2 rounded-full w-1/2"></div>
+                <div className={styles.gridConsumo}>
+                    <div className={styles.boxConsumo}>
+                        <div className={styles.consumoTopo}>
+                            <p className={styles.labelConsumo}>Consumo de Pessoas Ativas</p>
+                        </div>
+                        <p className={styles.valorConsumo}>
+                            {resumo.totalPessoas} de {resumo.limitePessoas === 99999 ? 'Ilimitadas' : resumo.limitePessoas} pessoas
+                        </p>
+                        <div className={styles.barraProgressoBg}>
+                            <div
+                                className={styles.barraProgressoFill}
+                                style={{
+                                    width: `${resumo.percentualPessoas}%`,
+                                    background: resumo.percentualPessoas > 80 ? '#f59e0b' : 'var(--color-primary)'
+                                }}
+                            ></div>
                         </div>
                     </div>
 
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase font-semibold">Congregações Vinculadas</p>
-                        <p className="text-xl font-extrabold text-gray-800 mt-1">1 de 3 congregações</p>
-                        <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
-                            <div className="bg-green-600 h-2 rounded-full w-1/3"></div>
+                    {!resumo.ehMatriz ? (
+                        <div className={styles.boxConsumo}>
+                            <div className={styles.consumoTopo}>
+                                <p className={styles.labelConsumo}>Rede de Congregações</p>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                                Sua igreja faz parte da rede da <strong>{resumo.nomeMatriz || 'Igreja Sede'}</strong>.
+                            </p>
+                            <p className={styles.valorConsumo}>
+                                {resumo.totalCongregacoes} de {resumo.limiteCongregacoes} congregações na rede
+                            </p>
+                            <div className={styles.barraProgressoBg}>
+                                <div
+                                    className={styles.barraProgressoFill}
+                                    style={{
+                                        width: `${resumo.percentualCongregacoes}%`,
+                                        background: 'var(--color-primary)'
+                                    }}
+                                ></div>
+                            </div>
                         </div>
-                    </div>
+                    ) : resumo.limiteCongregacoes > 0 ? (
+                        <div className={styles.boxConsumo}>
+                            <div className={styles.consumoTopo}>
+                                <p className={styles.labelConsumo}>Congregações Vinculadas</p>
+                            </div>
+                            <p className={styles.valorConsumo}>
+                                {resumo.totalCongregacoes} de {resumo.limiteCongregacoes} congregações
+                            </p>
+                            <div className={styles.barraProgressoBg}>
+                                <div
+                                    className={styles.barraProgressoFill}
+                                    style={{
+                                        width: `${resumo.percentualCongregacoes}%`,
+                                        background: resumo.percentualCongregacoes > 80 ? '#f59e0b' : 'var(--color-primary)'
+                                    }}
+                                ></div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={styles.boxBloqueado}>
+                            <div className={styles.bloqueadoHeader}>
+                                <Lock size={14} />
+                                <span>Congregações Filhas</span>
+                            </div>
+                            <p className={styles.bloqueadoTexto}>
+                                Exclusivo a partir do Plano Pro (até 2 congregações filhas inclusas).
+                            </p>
+                            {ehAdmin && (
+                                <Link
+                                    href="/planos"
+                                    className={styles.btnUpgradeInline}
+                                >
+                                    <span>Fazer upgrade para liberar filiais</span>
+                                    <ArrowUpRight size={14} />
+                                </Link>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                <div className="pt-4 flex flex-wrap gap-4 border-t">
-                    <button className="bg-blue-600 text-white font-bold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm">
-                        Alterar Plano
-                    </button>
-                    <button className="border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm">
-                        Atualizar Cartão de Crédito
-                    </button>
-                    <button className="border border-red-600 text-red-600 font-semibold px-5 py-2.5 rounded-lg hover:bg-red-50 transition text-sm">
-                        Cancelar Assinatura
-                    </button>
-                </div>
+                {!resumo.ehMatriz ? (
+                    <div style={{
+                        marginTop: '20px',
+                        padding: '16px 20px',
+                        background: 'var(--color-bg-page, #f8fafc)',
+                        border: '1px solid var(--color-border, #e2e8f0)',
+                        borderRadius: 'var(--radius-md, 8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                        flexWrap: 'wrap'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Info size={18} color="var(--color-primary, #2563eb)" style={{ flexShrink: 0 }} />
+                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary, #475569)', lineHeight: 1.4 }}>
+                                A gestão de plano, cobrança e faturamento é centralizada na igreja matriz <strong>{resumo.nomeMatriz || 'Sede'}</strong>.
+                            </p>
+                        </div>
+                        <Link href="/configuracoes/igrejas-vinculadas" className={styles.btnSecondary} style={{ textDecoration: 'none' }}>
+                            <Church size={15} />
+                            <span>Ver Igrejas Vinculadas</span>
+                        </Link>
+                    </div>
+                ) : !ehAdmin ? (
+                    <div style={{
+                        marginTop: '20px',
+                        padding: '14px 18px',
+                        background: 'var(--color-bg-page, #f8fafc)',
+                        border: '1px solid var(--color-border, #e2e8f0)',
+                        borderRadius: 'var(--radius-md, 8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        <Lock size={16} color="var(--color-text-muted, #64748b)" style={{ flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary, #475569)', lineHeight: 1.4 }}>
+                            A gestão de plano, cobrança e cartões da igreja é restrita a administradores.
+                        </p>
+                    </div>
+                ) : (
+                    <div className={styles.botoesAcao}>
+                        <Link
+                            href="/planos"
+                            className={styles.btnPrimary}
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <span>{resumo.status === 'PAUSADA' ? 'Contratar Plano' : 'Alterar Plano'}</span>
+                            <ArrowUpRight size={16} />
+                        </Link>
+                        {resumo.status !== 'PAUSADA' && (
+                            <button
+                                type="button"
+                                onClick={() => setModalCartaoAberto(true)}
+                                className={styles.btnSecondary}
+                            >
+                                <CreditCard size={16} />
+                                <span>Atualizar Cartão de Crédito</span>
+                            </button>
+                        )}
+                        {ehCancelada ? (
+                            <button
+                                type="button"
+                                onClick={handleReativar}
+                                className={styles.btnReativar}
+                            >
+                                <Sparkles size={16} />
+                                <span>Reativar Assinatura</span>
+                            </button>
+                        ) : resumo.status !== 'PAUSADA' ? (
+                            <button
+                                type="button"
+                                onClick={() => setModalCancelarAberto(true)}
+                                className={styles.btnDanger}
+                            >
+                                <AlertOctagon size={16} />
+                                <span>Cancelar Assinatura</span>
+                            </button>
+                        ) : null}
+                    </div>
+                )}
             </div>
-        </div>
-    );
+
+            {modalCartaoAberto && (
+                <ModalAtualizarCartao
+                    aoFechar={() => setModalCartaoAberto(false)}
+                    aoSucesso={handleAtualizacaoSucesso}
+                />
+            )}
+
+            {modalCancelarAberto && (
+                <ModalCancelarAssinatura
+                    aoFechar={() => setModalCancelarAberto(false)}
+                    aoSucesso={handleAtualizacaoSucesso}
+                />
+            )}
+            </div>
+        </Transicao>
+    )
 }

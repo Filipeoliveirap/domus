@@ -42,11 +42,12 @@ public class IgrejaController {
                 .header(HttpHeaders.SET_COOKIE, cookieFactory.refresh(response.refreshToken()).toString())
                 // Cadastro novo: a pessoa acabou de ser criada, ainda sem foto.
                 .body(new SessaoDTO(
-                        response.id(), response.nome(), response.role(),
+                        response.id(), response.id(), response.nome(), response.role(),
                         response.igrejaId(), response.igrejaNome(), null,
                         null, null, null, java.util.List.of(),
                         termoAceiteService.precisaAceitar(response.id()),
-                        termoAceiteService.dataUltimoAceite(response.id()), null));
+                        termoAceiteService.dataUltimoAceite(response.id()),
+                        null, null, null, response.codigoVinculo()));
     }
 
     // GET /igrejas/{id} foi removido: vazava dados de outra igreja sem checar tenant. Use /igrejas/minha (tenant vem do JWT).

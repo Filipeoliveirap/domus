@@ -96,6 +96,10 @@ public class MercadoPagoClient {
         return api.consultarAssinaturaPreapproval(accessToken, preapprovalId);
     }
 
+    public java.util.Map<String, Object> atualizarAssinaturaPreapproval(String accessToken, String preapprovalId, java.util.Map<String, Object> body) {
+        return api.atualizarAssinaturaPreapproval(accessToken, preapprovalId, body);
+    }
+
     private String obterAccessTokenPlano(UUID igrejaId) {
         var conta = contaRepository.findByIgrejaId(igrejaId)
             .orElseThrow(() -> new BusinessException("IGREJA_SEM_CONTA_PAGAMENTO",

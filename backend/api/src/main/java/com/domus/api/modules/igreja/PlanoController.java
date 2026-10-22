@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/planos")
+@RequestMapping({"/planos", "/api/planos"})
 public class PlanoController {
 
     @GetMapping

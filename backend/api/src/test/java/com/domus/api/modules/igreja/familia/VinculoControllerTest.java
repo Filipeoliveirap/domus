@@ -3,6 +3,7 @@ package com.domus.api.modules.igreja.familia;
 import com.domus.api.config.TokenService;
 import com.domus.api.modules.igreja.Igreja;
 import com.domus.api.modules.igreja.IgrejaRepository;
+import com.domus.api.modules.igreja.PlanoAssinatura;
 import com.domus.api.modules.pessoa.Pessoa;
 import com.domus.api.modules.pessoa.PessoaRepository;
 import com.domus.api.modules.pessoa.Vinculo;
@@ -15,6 +16,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -43,6 +45,15 @@ import com.domus.api.shared.testcontainers.PostgresTestContainerSupport;
 @Transactional
 class VinculoControllerTest implements PostgresTestContainerSupport {
 
+    @MockBean com.domus.api.modules.pessoa.busca.PessoaSearchRepository pessoaSearchRepository;
+    @MockBean com.domus.api.modules.evento.busca.EventoSearchRepository eventoSearchRepository;
+    @MockBean com.domus.api.modules.usuario.busca.UsuarioSearchRepository usuarioSearchRepository;
+    @MockBean com.domus.api.modules.financeiro.movimentacao.busca.MovimentacaoSearchRepository movimentacaoSearchRepository;
+    @MockBean com.domus.api.modules.financeiro.categoria.busca.CategoriaSearchRepository categoriaSearchRepository;
+    @MockBean com.domus.api.modules.celula.busca.CelulaSearchRepository celulaSearchRepository;
+    @MockBean com.domus.api.modules.ministerio.busca.MinisterioSearchRepository ministerioSearchRepository;
+    @MockBean com.domus.api.modules.visitante.busca.VisitanteSearchRepository visitanteSearchRepository;
+
     @Autowired MockMvc mockMvc;
     @Autowired TokenService tokenService;
     @Autowired IgrejaRepository igrejaRepository;
@@ -60,6 +71,7 @@ class VinculoControllerTest implements PostgresTestContainerSupport {
         igreja = igrejaRepository.save(Igreja.builder()
                 .nome("Igreja Teste Vinculo " + UUID.randomUUID())
                 .emailContato("vinculo-" + UUID.randomUUID() + "@teste.com")
+                .plano(PlanoAssinatura.PRO)
                 .build());
         entityManager.flush();
     }
@@ -173,5 +185,56 @@ class VinculoControllerTest implements PostgresTestContainerSupport {
 
         mockMvc.perform(auth.autenticado(delete("/igrejas-vinculadas/sair"), lider))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void gerarCodigo_planoBasico_recusaCom402() throws Exception {
+        Igreja basica = igrejaRepository.save(Igreja.builder()
+                .nome("Igreja Basica " + UUID.randomUUID())
+                .emailContato("basica-" + UUID.randomUUID() + "@teste.com")
+                .plano(PlanoAssinatura.BASICO)
+                .build());
+        Pessoa p = pessoaRepository.save(Pessoa.builder()
+                .igreja(basica).nome("Admin Basico").vinculo(Vinculo.MEMBRO).build());
+        Role role = roleRepository.findByNome("ADMIN_IGREJA").orElseThrow();
+        Usuario adminBasico = usuarioRepository.save(Usuario.builder()
+                .igreja(basica).pessoa(p).role(role).ativo(true).build());
+        entityManager.flush();
+
+        mockMvc.perform(auth.autenticado(post("/igrejas-vinculadas/codigo"), adminBasico))
+                .andExpect(status().is(402))
+                .andExpect(jsonPath("$.error").value("LIMITE_PLANO_EXCEDIDO"));
+    }
+
+    @Test
+    void entrar_comCodigoDomus_sucesso() throws Exception {
+        Usuario adminMatriz = usuarioComRole("ADMIN_IGREJA");
+        var res = mockMvc.perform(auth.autenticado(post("/igrejas-vinculadas/codigo"), adminMatriz))
+                .andExpect(status().isOk())
+                .andReturn();
+        String json = res.getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        String codigo = node.get("codigoVinculo").asText();
+
+        Igreja filhaIgreja = igrejaRepository.save(Igreja.builder()
+                .nome("Filha " + UUID.randomUUID())
+                .emailContato("filha-" + UUID.randomUUID() + "@teste.com")
+                .plano(PlanoAssinatura.BASICO)
+                .build());
+        Pessoa pFilha = pessoaRepository.save(Pessoa.builder()
+                .igreja(filhaIgreja).nome("Admin Filha").vinculo(Vinculo.MEMBRO).build());
+        Role role = roleRepository.findByNome("ADMIN_IGREJA").orElseThrow();
+        Usuario adminFilha = usuarioRepository.save(Usuario.builder()
+                .igreja(filhaIgreja).pessoa(pFilha).role(role).ativo(true).build());
+        entityManager.flush();
+
+        mockMvc.perform(auth.autenticado(
+                        post("/igrejas-vinculadas/entrar")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"codigo\":\"" + codigo + "\"}"),
+                        adminFilha))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("FILHA"))
+                .andExpect(jsonPath("$.mae.id").value(igreja.getId().toString()));
     }
 }

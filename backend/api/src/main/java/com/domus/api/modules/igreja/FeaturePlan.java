@@ -5,7 +5,8 @@ public enum FeaturePlan {
     CONTAS_A_PAGAR("Gestão e Lembretes de Contas a Pagar"),
     CHECKOUT_EVENTO("Cobrança de Eventos Pagos via PIX/Cartão"),
     RELATORIOS_AVANCADOS("Relatórios Avançados e Balancete Anual"),
-    CAMPOS_PERSONALIZADOS("Campos Personalizados em Eventos");
+    CAMPOS_PERSONALIZADOS("Campos Personalizados em Eventos"),
+    COMPARTILHAMENTO_CONGREGACOES("Rede de Congregações e Compartilhamento Integrado");
 
     private final String descricao;
 

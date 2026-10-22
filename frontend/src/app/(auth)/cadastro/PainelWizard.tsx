@@ -4,7 +4,7 @@ import Image from 'next/image'
 import styles from './PainelWizard.module.css'
 
 export const COPY_PASSO: Record<
-  1 | 2 | 3,
+  1 | 2 | 3 | 4,
   { rotulo: string; headline: string; texto: string; curto: string }
 > = {
   1: {
@@ -20,6 +20,12 @@ export const COPY_PASSO: Record<
     curto: 'Sua conta de admin',
   },
   3: {
+    rotulo: 'Ativação',
+    headline: 'Período de testes gratuito',
+    texto: '14 dias para experimentar todos os recursos sem cobrança imediata.',
+    curto: 'Ativação do plano',
+  },
+  4: {
     rotulo: 'Pronto',
     headline: 'Tudo certo',
     texto: 'Sua igreja foi criada. Escolha por onde começar.',
@@ -28,23 +34,22 @@ export const COPY_PASSO: Record<
 }
 
 interface Props {
-  passoAtual: 1 | 2 | 3
-  totalPassos: 2 | 3
+  passoAtual: 1 | 2 | 3 | 4
+  totalPassos: 2 | 3 | 4
   primeiroNome?: string
 }
 
 export function PainelWizard({ passoAtual, totalPassos, primeiroNome }: Props) {
   const copy = COPY_PASSO[passoAtual]
   const headline =
-    passoAtual === 3 && primeiroNome ? `Tudo certo, ${primeiroNome}` : copy.headline
+    passoAtual === 4 && primeiroNome ? `Tudo certo, ${primeiroNome}` : copy.headline
 
-  // Passos exibidos: no fluxo Google (totalPassos=2) o passo 3 é mostrado como "2 de 2".
-  const passoExibido = totalPassos === 2 && passoAtual === 3 ? 2 : passoAtual
+  const passoExibido = totalPassos === 2 && passoAtual === 4 ? 2 : passoAtual
   const numeros = Array.from({ length: totalPassos }, (_, i) => i + 1)
 
   return (
     <aside
-      className={`${styles.painel} ${passoAtual === 3 ? styles.celebra : ''}`}
+      className={`${styles.painel} ${passoAtual === 4 ? styles.celebra : ''}`}
       role="group"
       aria-label={`Passo ${passoExibido} de ${totalPassos}`}
     >
@@ -94,8 +99,6 @@ export function PainelWizard({ passoAtual, totalPassos, primeiroNome }: Props) {
                 >
                   {feito ? '✓' : n}
                 </span>
-                {/* a linha só preenche quando o passo foi CONCLUÍDO (você já passou dele).
-                    O passo atual: halo no círculo (desktop) / trilho destacado (mobile). */}
                 <span className={`${styles.progLinha} ${atual ? styles.progLinhaAtual : ''}`}>
                   <i style={{ width: feito ? '100%' : '0%' }} />
                 </span>

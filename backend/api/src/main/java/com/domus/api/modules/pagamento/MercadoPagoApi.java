@@ -76,6 +76,10 @@ public class MercadoPagoApi {
             log.error("{}: {} (status {})", contexto,
                 apiException.getApiResponse() != null ? apiException.getApiResponse().getContent() : "sem corpo",
                 apiException.getStatusCode());
+        } else if (e instanceof org.springframework.web.client.RestClientResponseException restEx) {
+            log.error("{}: {} (status {})", contexto, restEx.getResponseBodyAsString(), restEx.getStatusCode());
+        } else {
+            log.error("{}: {}", contexto, e.getMessage());
         }
     }
 
@@ -323,6 +327,21 @@ public class MercadoPagoApi {
         } catch (Exception e) {
             logarDetalheSeApiException("Falha ao consultar assinatura no Mercado Pago", e);
             return null;
+        }
+    }
+
+    public java.util.Map<String, Object> atualizarAssinaturaPreapproval(String accessToken, String preapprovalId, java.util.Map<String, Object> body) {
+        try {
+            return restClient.put()
+                .uri("https://api.mercadopago.com/preapproval/{id}", preapprovalId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {});
+        } catch (Exception e) {
+            logarDetalheSeApiException("Falha ao atualizar assinatura no Mercado Pago", e);
+            throw new BusinessException("MP_INDISPONIVEL", "Não foi possível atualizar a assinatura no Mercado Pago agora.");
         }
     }
 

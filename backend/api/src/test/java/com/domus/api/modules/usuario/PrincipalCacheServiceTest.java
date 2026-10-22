@@ -1,6 +1,9 @@
 package com.domus.api.modules.usuario;
 
 import com.domus.api.modules.igreja.Igreja;
+import com.domus.api.modules.igreja.PlanoAssinatura;
+import com.domus.api.modules.igreja.StatusAssinatura;
+import com.domus.api.modules.igreja.StatusTenant;
 import com.domus.api.modules.pessoa.Pessoa;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,14 +32,21 @@ class PrincipalCacheServiceTest {
         UUID igrejaId = UUID.randomUUID();
         UUID pessoaId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
-        Usuario usuario = Usuario.builder()
-                .id(usuarioId)
-                .ativo(true)
-                .igreja(Igreja.builder().id(igrejaId).build())
-                .pessoa(Pessoa.builder().id(pessoaId).build())
-                .role(Role.builder().id(roleId).nome("LIDER").build())
-                .build();
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+
+        PrincipalCache mockCache = new PrincipalCache(
+                usuarioId,
+                igrejaId,
+                pessoaId,
+                roleId,
+                "LIDER",
+                true,
+                StatusTenant.ATIVO,
+                StatusAssinatura.ATIVA,
+                null,
+                null,
+                PlanoAssinatura.PRO
+        );
+        when(usuarioRepository.findPrincipalCacheById(usuarioId)).thenReturn(Optional.of(mockCache));
 
         PrincipalCache cache = service.buscar(usuarioId);
 
@@ -51,7 +61,7 @@ class PrincipalCacheServiceTest {
     @Test
     void buscarDevolveNullQuandoUsuarioNaoExiste() {
         UUID usuarioId = UUID.randomUUID();
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.empty());
+        when(usuarioRepository.findPrincipalCacheById(usuarioId)).thenReturn(Optional.empty());
 
         assertThat(service.buscar(usuarioId)).isNull();
     }

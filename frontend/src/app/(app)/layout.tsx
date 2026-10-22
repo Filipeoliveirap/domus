@@ -3,6 +3,8 @@ import { TopBar } from '@/components/layout/TopBar'
 import styles from './layout.module.css'
 import { FaixaOffline } from '@/components/common/FaixaOffline/FaixaOffline'
 import { BannerExclusaoAgendada } from '@/components/common/BannerExclusaoAgendada/BannerExclusaoAgendada'
+import { BannerAssinaturaPausada } from '@/components/common/BannerAssinaturaPausada/BannerAssinaturaPausada'
+import { ModalAvisoModoLeitura } from '@/components/common/ModalAvisoModoLeitura/ModalAvisoModoLeitura'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { NavProgress } from '@/components/layout/NavProgress/NavProgress'
 import { TransicaoRota } from '@/components/common/Transicao/TransicaoRota'
@@ -19,6 +21,8 @@ export default function AppLayout({
       <PortalBoasVindas />
       <FaixaOffline />
       <BannerExclusaoAgendada />
+      <BannerAssinaturaPausada />
+      <ModalAvisoModoLeitura />
       <Sidebar />
       <TopBar />
       <main className={styles.main}>

@@ -63,3 +63,4 @@ export function podeGerenciarCelulas(r: Role | null | undefined, c?: string[] | 
 }
 
 export const podeConectarContaPagamento = (r: Role | null | undefined) => tem(r, SO_ADMIN)
+export const podeGerenciarAssinatura = (r: Role | null | undefined) => tem(r, SO_ADMIN)

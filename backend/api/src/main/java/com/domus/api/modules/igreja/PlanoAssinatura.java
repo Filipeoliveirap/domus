@@ -4,10 +4,16 @@ import java.math.BigDecimal;
 import java.util.Set;
 
 public enum PlanoAssinatura {
-    BASICO("Básico", 60, 0, new BigDecimal("79.00"), Set.of()),
-    PRO("Pro", 300, 3, new BigDecimal("179.00"), Set.of(FeaturePlan.values())),
-    PRO_PLUS("Pro+", 800, 5, new BigDecimal("299.00"), Set.of(FeaturePlan.values())),
-    ENTERPRISE("Enterprise", 99999, 9999, new BigDecimal("499.00"), Set.of(FeaturePlan.values()));
+    BASICO("Básico", 50, 0, new BigDecimal("49.00"), Set.of(
+        FeaturePlan.FEED_SOCIAL,
+        FeaturePlan.CONTAS_A_PAGAR,
+        FeaturePlan.CHECKOUT_EVENTO,
+        FeaturePlan.RELATORIOS_AVANCADOS,
+        FeaturePlan.CAMPOS_PERSONALIZADOS
+    )),
+    PRO("Pro", 200, 2, new BigDecimal("129.00"), Set.of(FeaturePlan.values())),
+    PRO_PLUS("Pro+", 600, 5, new BigDecimal("249.00"), Set.of(FeaturePlan.values())),
+    ENTERPRISE("Enterprise", 99999, 9999, new BigDecimal("449.00"), Set.of(FeaturePlan.values()));
 
     private final String nomeExibicao;
     private final int limitePessoas;

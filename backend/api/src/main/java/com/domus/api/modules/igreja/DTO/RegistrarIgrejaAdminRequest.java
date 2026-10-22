@@ -46,4 +46,10 @@ public class RegistrarIgrejaAdminRequest {
 
     private boolean aceitouTermos;
 
+    private String plano;
+
+    private String cardTokenId;
+
+    private String codigoConvite;
+
 }

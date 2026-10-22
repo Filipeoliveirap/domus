@@ -10,6 +10,7 @@ import styles from './configuracoes.module.css'
 const ABAS = [
   { href: '/configuracoes/igreja', label: 'Dados da Igreja' },
   { href: '/configuracoes/igrejas-vinculadas', label: 'Igrejas Vinculadas' },
+  { href: '/configuracoes/assinatura', label: 'Assinatura' },
 ]
 
 /**

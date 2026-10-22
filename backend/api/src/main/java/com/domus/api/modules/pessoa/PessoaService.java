@@ -92,8 +92,14 @@ public class PessoaService {
 
         validarDataBatismo(data);
 
-        Igreja igreja = igrejaRepository.findById(igrejaId)
+        Igreja igreja = igrejaRepository.buscarComLock(igrejaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+
+        if (igreja.getStatusAssinatura() == com.domus.api.modules.igreja.StatusAssinatura.PAUSADA || igreja.getPlano() == null) {
+            throw new PlanoLimiteExcedidoException(
+                    "Sua igreja está sem plano ativo ou em modo somente leitura. Contrate um plano para cadastrar pessoas."
+            );
+        }
 
         if (igreja.getPlano() != null) {
             long totalAtivas = membroRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId);
@@ -341,6 +347,25 @@ public class PessoaService {
 
     @Transactional
     public void restaurar(UUID id, UUID igrejaId) {
+        Igreja igreja = igrejaRepository.buscarComLock(igrejaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Igreja não encontrada."));
+
+        if (igreja.getStatusAssinatura() == com.domus.api.modules.igreja.StatusAssinatura.PAUSADA || igreja.getPlano() == null) {
+            throw new PlanoLimiteExcedidoException(
+                    "Sua igreja está sem plano ativo ou em modo somente leitura. Contrate um plano para restaurar cadastros."
+            );
+        }
+
+        if (igreja.getPlano() != null) {
+            long totalAtivas = membroRepository.countByIgrejaIdAndDeletedAtIsNull(igrejaId);
+            if (totalAtivas >= igreja.getPlano().getLimitePessoas()) {
+                throw new PlanoLimiteExcedidoException(
+                        String.format("Sua igreja atingiu o limite de %d pessoas do plano %s.",
+                                igreja.getPlano().getLimitePessoas(), igreja.getPlano().getNomeExibicao())
+                );
+            }
+        }
+
         int linhas = membroRepository.restaurarPorId(id, igrejaId);
         if (linhas == 0) {
             throw new ResourceNotFoundException("Pessoa não encontrada.");

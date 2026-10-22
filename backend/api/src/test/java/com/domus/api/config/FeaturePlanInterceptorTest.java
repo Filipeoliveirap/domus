@@ -28,24 +28,24 @@ class FeaturePlanInterceptorTest {
     private PrintWriter printWriter;
 
     @Test
-    void deveBloquearAcessoQuandoPlanoBasicoTentarAcessarFeedSocial() throws Exception {
+    void deveBloquearAcessoQuandoPlanoBasicoTentarAcessarCompartilhamentoCongregacoes() throws Exception {
         when(response.getWriter()).thenReturn(printWriter);
 
         Igreja igreja = new Igreja();
         igreja.setPlano(PlanoAssinatura.BASICO);
 
-        boolean liberado = interceptor.validarFeature(response, igreja, FeaturePlan.FEED_SOCIAL);
+        boolean liberado = interceptor.validarFeature(response, igreja, FeaturePlan.COMPARTILHAMENTO_CONGREGACOES);
 
         verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
         assertThat(liberado).isFalse();
     }
 
     @Test
-    void devePermitirAcessoQuandoPlanoProAcessarFeedSocial() throws Exception {
+    void devePermitirAcessoQuandoPlanoProAcessarCompartilhamentoCongregacoes() throws Exception {
         Igreja igreja = new Igreja();
         igreja.setPlano(PlanoAssinatura.PRO);
 
-        boolean liberado = interceptor.validarFeature(response, igreja, FeaturePlan.FEED_SOCIAL);
+        boolean liberado = interceptor.validarFeature(response, igreja, FeaturePlan.COMPARTILHAMENTO_CONGREGACOES);
 
         verify(response, never()).setStatus(anyInt());
         assertThat(liberado).isTrue();

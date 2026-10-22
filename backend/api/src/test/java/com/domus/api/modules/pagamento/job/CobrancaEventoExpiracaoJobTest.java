@@ -93,4 +93,24 @@ class CobrancaEventoExpiracaoJobTest {
 
         verify(repository, never()).saveAll(any());
     }
+
+    @Test
+    void entraEmRepousoQuandoNaoHaMaisCobrancasPendentes() {
+        when(repository.findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any()))
+            .thenReturn(List.of());
+        when(repository.existsByStatus(StatusCobranca.PENDENTE)).thenReturn(false);
+
+        // 1ª execução: verifica banco e detecta que não há pendências no sistema
+        job.executar();
+        verify(repository, times(1)).findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any());
+
+        // 2ª execução: em repouso na memória, não toca no banco de dados
+        job.executar();
+        verify(repository, times(1)).findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any());
+
+        // Nova cobrança criada reativa o job
+        job.notificarNovaCobranca();
+        job.executar();
+        verify(repository, times(2)).findByStatusAndExpiraEmBefore(eq(StatusCobranca.PENDENTE), any());
+    }
 }

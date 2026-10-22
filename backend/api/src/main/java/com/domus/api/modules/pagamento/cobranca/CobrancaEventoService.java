@@ -27,14 +27,23 @@ public class CobrancaEventoService {
     private final CobrancaEventoRepository repository;
     private final CalculadoraTaxaPagamento calculadora;
     private final LimitesPagamentoProperties limites;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final SecureRandom random = new SecureRandom();
 
     public CobrancaEventoService(CobrancaEventoRepository repository,
                                  CalculadoraTaxaPagamento calculadora,
-                                 LimitesPagamentoProperties limites) {
+                                 LimitesPagamentoProperties limites,
+                                 org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.calculadora = calculadora;
         this.limites = limites;
+        this.eventPublisher = eventPublisher;
+    }
+
+    public CobrancaEventoService(CobrancaEventoRepository repository,
+                                 CalculadoraTaxaPagamento calculadora,
+                                 LimitesPagamentoProperties limites) {
+        this(repository, calculadora, limites, null);
     }
 
     /**
@@ -98,7 +107,9 @@ public class CobrancaEventoService {
                                             UUID pessoaId, BigDecimal valor, UUID criadoPorUsuarioId) {
         var cobranca = new CobrancaEvento(igrejaId, eventoId, inscricaoId, pessoaId, valor,
             Instant.now().plus(PRAZO_PAGAMENTO_IMEDIATO), criadoPorUsuarioId, null);
-        return repository.save(cobranca);
+        var salva = repository.save(cobranca);
+        notificarNovaCobranca();
+        return salva;
     }
 
     public CobrancaEvento criarParaTerceiro(UUID igrejaId, Evento evento, UUID inscricaoId,
@@ -111,7 +122,15 @@ public class CobrancaEventoService {
 
         var cobranca = new CobrancaEvento(igrejaId, evento.getId(), inscricaoId, pessoaId,
             valor, expiraEm, criadoPorUsuarioId, token);
-        return repository.save(cobranca);
+        var salva = repository.save(cobranca);
+        notificarNovaCobranca();
+        return salva;
+    }
+
+    private void notificarNovaCobranca() {
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new NovaCobrancaCriadaEvent());
+        }
     }
 
     /** Link compartilhado dura 48h, mas nunca sobrevive além do prazo em que a inscrição

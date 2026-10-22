@@ -18,8 +18,8 @@ export function CompartilharConviteCongregacao({ codigo, nomeMatriz, onGerar, is
   const codFormatado = codigo ? encodeURIComponent(codigo.trim()) : ''
 
   const urlConvite = typeof window !== 'undefined'
-    ? `${window.location.origin}/convite/congregacao?codigo=${codFormatado}`
-    : `https://domusigreja.com.br/convite/congregacao?codigo=${codFormatado}`
+    ? `${window.location.origin}/cadastro/congregacao?codigo=${codFormatado}`
+    : `https://domusigreja.com.br/cadastro/congregacao?codigo=${codFormatado}`
 
   const mensagemWhatsapp = encodeURIComponent(
     `Olá! Aqui está o convite para conectar nossa igreja ao Domus com plano já coberto${nomeMatriz ? ` pela ${nomeMatriz}` : ''}:\n${urlConvite}`

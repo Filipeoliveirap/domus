@@ -313,4 +313,37 @@ class SecurityFilterTest {
         assertEquals(200, response.getStatus());
         verify(filterChain).doFilter(any(), any());
     }
+
+    @Test
+    void deveBloquearEscritaQuandoIgrejaFilhaEstiverComStatusAssinaturaPausada() throws Exception {
+        UUID usuarioId = UUID.randomUUID();
+        UUID igrejaFilhaId = UUID.randomUUID();
+        UUID matrizId = UUID.randomUUID();
+        PrincipalCache cache = new PrincipalCache(usuarioId, igrejaFilhaId, UUID.randomUUID(),
+                UUID.randomUUID(), "ADMIN_IGREJA", true);
+        Usuario reidratado = Usuario.builder()
+                .id(usuarioId)
+                .ativo(true)
+                .igreja(com.domus.api.modules.igreja.Igreja.builder()
+                        .id(igrejaFilhaId)
+                        .igrejaMae(com.domus.api.modules.igreja.Igreja.builder().id(matrizId).build())
+                        .statusAssinatura(com.domus.api.modules.igreja.StatusAssinatura.PAUSADA)
+                        .build())
+                .pessoa(com.domus.api.modules.pessoa.Pessoa.builder().build())
+                .role(com.domus.api.modules.usuario.Role.builder().nome("ADMIN_IGREJA").build())
+                .build();
+
+        when(tokenService.validateToken("jwt-do-cookie")).thenReturn(usuarioId.toString());
+        when(principalCacheService.buscar(usuarioId)).thenReturn(cache);
+        when(principalCacheService.reidratar(cache)).thenReturn(reidratado);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/eventos");
+        request.setCookies(new Cookie(AuthCookieFactory.COOKIE_ACCESS, "jwt-do-cookie"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals(402, response.getStatus());
+        verify(filterChain, never()).doFilter(any(), any());
+    }
 }

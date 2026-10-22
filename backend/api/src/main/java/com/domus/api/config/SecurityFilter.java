@@ -61,7 +61,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                     if (usuario != null && usuario.isEnabled()) {
                         // Verifica se o tenant está suspenso
                         if (usuario.getIgreja() != null) {
-                            var igrejaEfetiva = (usuario.getIgreja().getIgrejaMae() != null) ? usuario.getIgreja().getIgrejaMae() : usuario.getIgreja();
+                            var igrejaEfetiva = usuario.getIgreja();
                             if (igrejaEfetiva.getStatusTenant() == StatusTenant.SUSPENSO) {
                                 log.warn("Bloqueando requisição de tenant suspenso. igreja_id={}", usuario.getIgreja().getId());
                                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
